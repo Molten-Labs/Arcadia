@@ -1,0 +1,29 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ESNext",
+        "lib": ["ES2020", "DOM"],
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "allowJs": true,
+        "checkJs": false,
+        "noEmit": true,
+        "isolatedModules": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./src/*", "./*"],
+            "@/components/*": ["./src/components/*", "./components/*"],
+            "@/lib/*": ["./src/lib/*", "./lib/*"],
+            "@/pages/*": ["./src/pages/*", "./pages/*"]
+        },
+        "types": ["vite/client"]
+    },
+    "include": ["src/**/*", "vite-env.d.ts"],
+    "exclude": ["node_modules", "dist"],
+    "references": [{ "path": "./tsconfig.node.json" }]
+}

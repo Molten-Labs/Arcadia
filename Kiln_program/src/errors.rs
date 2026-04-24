@@ -1,14 +1,28 @@
 use pinocchio::program_error::ProgramError;
 
-#[derive(Clone, PartialEq, shank::ShankType)]
-pub enum MyProgramError {
-    InvalidInstructionData,
-    PdaMismatch,
-    InvalidOwner,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, shank::ShankType)]
+#[repr(u32)]
+pub enum KilnError {
+    InvalidInstructionData = 6_000,
+    InvalidAccountDiscriminator,
+    InvalidManagerProfilePda,
+    InvalidVaultConfigPda,
+    InvalidVaultStatePda,
+    InvalidTreasuryPda,
+    InvalidSystemProgram,
+    InvalidVaultConfiguration,
+    InvalidAmount,
+    ManagerMismatch,
+    VaultStateMismatch,
+    TreasuryMismatch,
+    TreasuryAccountingMismatch,
+    VaultPaused,
+    MathOverflow,
+    InsufficientJuniorCapital
 }
 
-impl From<MyProgramError> for ProgramError {
-    fn from(e: MyProgramError) -> Self {
-        Self::Custom(e as u32)
+impl From<KilnError> for ProgramError {
+    fn from(value: KilnError) -> Self {
+        Self::Custom(value as u32)
     }
 }

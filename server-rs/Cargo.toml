@@ -1,0 +1,66 @@
+[package]
+name = "server-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kiln Team <dev@kiln.example>"]
+license = "MIT"
+description = "Axum-based indexer & API server for Kiln — receives Helius webhooks, indexes events to Postgres and exposes read APIs for the frontend."
+repository = "https://example.com/kiln"
+
+[dependencies]
+# Web framework
+axum = "0.7"
+
+# Async runtime
+tokio = { version = "1.29", features = ["full"] }
+
+# Database: SQLx for Postgres (compile-time checked if enabled via env)
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "macros", "uuid", "chrono"] }
+
+# JSON (request/response)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Structured error handling & convenience
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging / telemetry
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+
+# Environment / config helpers
+dotenvy = "0.15"
+config = "0.14"
+
+# Utilities for HTTP helpers (CORS, compression, etc.)
+tower-http = { version = "0.4", features = ["cors", "trace", "compression"] }
+
+# Optional: graceful shutdown helpers
+tokio-util = "0.7"
+
+[features]
+# Nothing required by default. Consumers can enable DB compile-time checks by setting
+# the `DATABASE_URL` env and running `cargo sqlx prepare` if desired.
+default = []
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = true
+codegen-units = 1
+
+[workspace.metadata]
+# Helpful notes for maintainers
+notes = """
+This crate is an Axum server scaffold that connects to a Postgres database using SQLx.
+Typical env vars expected at runtime:
+- DATABASE_URL=postgres://user:pass@host:port/dbname
+- HELIUS_API_KEY=...
+- PORT=3000
+
+Common dev tasks:
+- Run migrations (depending on your chosen migration tool e.g. sqlx-cli, refinery, or diesel)
+- Set env vars in .env for local development
+- Start server: `cargo run -p server-rs`
+"""
