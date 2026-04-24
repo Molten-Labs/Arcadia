@@ -1,0 +1,26 @@
+[package]
+name = "Kiln_program"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pinocchio = "0.9.2"
+pinocchio-log = "0.5.1"
+pinocchio-pubkey = "0.3.0"
+pinocchio-system = "0.3.0"
+shank = "0.4.5"
+
+
+[dev-dependencies]
+solana-sdk = "3.0.0"
+litesvm = "0.8.1"
+litesvm-token = "0.8.1"
+
+
+[features]
+no-entrypoint = []
+std = []
+test-default = ["no-entrypoint", "std"]
