@@ -1,5 +1,40 @@
 import { Layout } from "@/components/Layout";
-import { Book, Code, Shield, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Book, Code, FileText, Shield } from "lucide-react";
+
+type DocCard = {
+  icon: typeof Book;
+  title: string;
+  desc: string;
+  to: string;
+};
+
+const docCards: DocCard[] = [
+  {
+    icon: Book,
+    title: "Getting started",
+    desc: "Connect a wallet, browse vaults, and make your first deposit.",
+    to: "/how-it-works",
+  },
+  {
+    icon: Shield,
+    title: "Risk model",
+    desc: "How junior/senior layers, cooldowns, and freezes work.",
+    to: "/faq",
+  },
+  {
+    icon: Code,
+    title: "Smart contracts",
+    desc: "Audited contract addresses, repos, and integration guides.",
+    to: "/trade",
+  },
+  {
+    icon: FileText,
+    title: "Trader guide",
+    desc: "Create a vault, fund junior capital, graduate, and manage.",
+    to: "/manager/create",
+  },
+];
 
 const Docs = () => (
   <Layout>
@@ -8,17 +43,16 @@ const Docs = () => (
       <p className="text-muted-foreground mt-2">Everything you need to use Kiln as an investor or trader.</p>
 
       <div className="grid md:grid-cols-2 gap-4 mt-10">
-        {[
-          { icon: Book, title: "Getting started", desc: "Connect a wallet, browse vaults, and make your first deposit." },
-          { icon: Shield, title: "Risk model", desc: "How junior/senior layers, cooldowns, and freezes work." },
-          { icon: Code, title: "Smart contracts", desc: "Audited contract addresses, repos, and integration guides." },
-          { icon: FileText, title: "Trader guide", desc: "Create a vault, fund junior capital, graduate, and manage." },
-        ].map(d => (
-          <div key={d.title} className="surface rounded-2xl p-6 hover:border-border-strong transition-colors cursor-pointer">
+        {docCards.map((d) => (
+          <Link
+            key={d.title}
+            to={d.to}
+            className="surface rounded-2xl p-6 hover:border-border-strong transition-colors"
+          >
             <d.icon className="w-5 h-5 text-primary mb-3" />
             <h2 className="font-display font-semibold">{d.title}</h2>
             <p className="text-sm text-muted-foreground mt-1">{d.desc}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -32,6 +66,33 @@ const Docs = () => (
         <p className="text-foreground/80 text-sm">Performance fees are only earned on NAV growth above the previous HWM. Drawdowns must be recovered before fees resume.</p>
         <h3 className="font-semibold mt-6 mb-2">Cooldown</h3>
         <p className="text-foreground/80 text-sm">Triggered when junior health falls below 50%. Trading is paused for 48 hours to prevent further losses while position sizes are recalibrated.</p>
+      </div>
+
+      <div className="mt-8 surface rounded-2xl p-8">
+        <h2 className="font-display font-bold text-2xl">Community channels</h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          Public social links are mapped in the footer and land on these canonical sections.
+        </p>
+        <div className="mt-6 space-y-5 text-sm">
+          <section id="community-twitter" className="scroll-mt-28">
+            <h3 className="font-semibold">Twitter</h3>
+            <p className="text-muted-foreground mt-1">
+              Follow launch updates, trader highlights, and product releases from the official Kiln account.
+            </p>
+          </section>
+          <section id="community-github" className="scroll-mt-28">
+            <h3 className="font-semibold">GitHub</h3>
+            <p className="text-muted-foreground mt-1">
+              Track SDK/docs iterations and integration examples as the production stack is published.
+            </p>
+          </section>
+          <section id="community-discord" className="scroll-mt-28">
+            <h3 className="font-semibold">Discord</h3>
+            <p className="text-muted-foreground mt-1">
+              Join support channels for onboarding help, incident updates, and strategy discussion.
+            </p>
+          </section>
+        </div>
       </div>
     </div>
   </Layout>

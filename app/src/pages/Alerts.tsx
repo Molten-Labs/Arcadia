@@ -1,15 +1,20 @@
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
-import { alerts as initial, getVault } from "@/lib/mockData";
+import { alerts as initial, getVault, type Alert } from "@/lib/mockData";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { fmtRelative } from "@/lib/format";
 import { Bell, Snowflake, Zap, AlertTriangle, Award, DollarSign } from "lucide-react";
 
-const iconMap: Record<string, any> = {
-  cooldown: AlertTriangle, freeze: Snowflake, instant_exit: Zap, junior_low: AlertTriangle,
-  fee: DollarSign, graduate: Award, paper_complete: Award,
+const iconMap: Record<Alert["kind"], typeof Bell> = {
+  cooldown: AlertTriangle,
+  freeze: Snowflake,
+  instant_exit: Zap,
+  junior_low: AlertTriangle,
+  fee: DollarSign,
+  graduate: Award,
+  paper_complete: Award,
 };
 
 const Alerts = () => {

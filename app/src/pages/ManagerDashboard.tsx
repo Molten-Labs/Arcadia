@@ -1,5 +1,5 @@
 import { Layout } from "@/components/Layout";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { vaults, traders } from "@/lib/mockData";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -10,8 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { fmtUSD, fmtPct } from "@/lib/format";
 import { Plus, DollarSign, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 
 const ManagerDashboard = () => {
+  const navigate = useNavigate();
+
   // Treat trader[0] as "you"
   const me = traders[0];
   const myVaults = vaults.filter(v => v.traderWallet === me.wallet);
@@ -19,6 +22,27 @@ const ManagerDashboard = () => {
   const junior = myVaults.reduce((s, v) => s + v.juniorCapital, 0);
   const fees = myVaults.reduce((s, v) => s + v.unclaimedFees, 0);
   const repPct = (me.reputation / me.nextTierAt) * 100;
+
+  const graduationTarget = myVaults.find((v) => v.status === "paper");
+
+  const handleClaimFees = () => {
+    if (fees <= 0) {
+      toast("No claimable fees yet", {
+        description: "Performance fees accrue only above high-water mark.",
+      });
+      return;
+    }
+
+    toast.success("Claim flow started", {
+      description: "Open the manager vault to execute claim transaction.",
+    });
+
+    const targetVault =
+      myVaults.find((v) => v.unclaimedFees > 0) ??
+      myVaults.find((v) => v.status === "active");
+
+    if (targetVault) navigate(`/manager/vault/${targetVault.id}`);
+  };
 
   return (
     <Layout>
@@ -42,7 +66,25 @@ const ManagerDashboard = () => {
           <StatCard label="Unclaimed fees" value={`$${fmtUSD(fees, { compact: true })}`} />
         </div>
 
-        <Banner variant="ember" title="Vault graduation eligible" action={<Button size="sm" className="bg-primary text-white border-0">Graduate</Button>}>
+        <Banner
+          variant="ember"
+          title="Vault graduation eligible"
+          action={
+            <Button
+              size="sm"
+              className="bg-primary text-white border-0"
+              onClick={() => {
+                if (!graduationTarget) {
+                  toast("No paper vault ready yet");
+                  return;
+                }
+                navigate(`/manager/vault/${graduationTarget.id}`);
+              }}
+            >
+              Graduate
+            </Button>
+          }
+        >
           First Steps has completed performance review and is eligible to graduate.
         </Banner>
 
@@ -61,10 +103,10 @@ const ManagerDashboard = () => {
                   <span className={`tabular text-sm font-semibold ${v.return30d >= 0 ? "text-success" : "text-destructive"}`}>{fmtPct(v.return30d)} 30d</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm border-y border-border py-3 mb-3">
-                  <div><div className="text-[10px] uppercase text-muted-foreground">TVL</div><div className="tabular font-semibold">${fmtUSD(v.tvl, { compact: true })}</div></div>
-                  <div><div className="text-[10px] uppercase text-muted-foreground">Junior</div><div className="tabular font-semibold">${fmtUSD(v.juniorCapital, { compact: true })}</div></div>
-                  <div><div className="text-[10px] uppercase text-muted-foreground">Senior</div><div className="tabular font-semibold">${fmtUSD(v.seniorCapital, { compact: true })}</div></div>
-                  <div><div className="text-[10px] uppercase text-muted-foreground">Max position</div><div className="tabular font-semibold">{v.maxPositionPct}%</div></div>
+                  <div><div className="text-xs uppercase text-muted-foreground">TVL</div><div className="tabular font-semibold">${fmtUSD(v.tvl, { compact: true })}</div></div>
+                  <div><div className="text-xs uppercase text-muted-foreground">Junior</div><div className="tabular font-semibold">${fmtUSD(v.juniorCapital, { compact: true })}</div></div>
+                  <div><div className="text-xs uppercase text-muted-foreground">Senior</div><div className="tabular font-semibold">${fmtUSD(v.seniorCapital, { compact: true })}</div></div>
+                  <div><div className="text-xs uppercase text-muted-foreground">Max position</div><div className="tabular font-semibold">{v.maxPositionPct}%</div></div>
                 </div>
                 <HealthMeter health={v.juniorHealth} />
               </Link>
@@ -87,7 +129,7 @@ const ManagerDashboard = () => {
             <div className="surface rounded-2xl p-6">
               <h3 className="font-display font-semibold mb-4 flex items-center gap-2"><DollarSign className="w-4 h-4" /> Quick actions</h3>
               <div className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start">Claim all fees (${fmtUSD(fees, { compact: true })})</Button>
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={handleClaimFees}>Claim all fees (${fmtUSD(fees, { compact: true })})</Button>
                 <Button variant="outline" size="sm" className="w-full justify-start" asChild><Link to="/manager/create">Create new vault</Link></Button>
               </div>
             </div>

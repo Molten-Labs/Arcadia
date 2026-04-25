@@ -58,7 +58,7 @@
     --status-active: 142 71% 45%;
     --status-cooldown: 38 92% 50%;
     --status-frozen: 0 84% 60%;
-    --status-closed: 215 16% 45%;
+    --status-closed: 215 22% 68%;
 
     /* Reputation tiers */
     --tier-novice: 215 16% 55%;
@@ -107,6 +107,19 @@
   }
   h1, h2, h3, h4, h5 { font-family: 'Sora', 'Inter', sans-serif; letter-spacing: -0.02em; }
   .font-mono, .tabular { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .hero-video {
+      display: none;
+    }
+  }
 }
 
 @layer utilities {
@@ -139,3 +152,96 @@
   50% { opacity: 1; }
 }
 .animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
+
+/* Slow drifting ember orbs */
+@keyframes ember-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.55; }
+  50% { transform: translate(40px, -30px) scale(1.15); opacity: 0.85; }
+}
+@keyframes ember-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  50% { transform: translate(-50px, 30px) scale(1.2); opacity: 0.7; }
+}
+@keyframes ember-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.35; }
+  50% { transform: translate(30px, 40px) scale(0.9); opacity: 0.6; }
+}
+.ember-orb-1 { animation: ember-drift-1 14s ease-in-out infinite; }
+.ember-orb-2 { animation: ember-drift-2 18s ease-in-out infinite; }
+.ember-orb-3 { animation: ember-drift-3 22s ease-in-out infinite; }
+
+/* Conic aurora rotation */
+@keyframes aurora-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.aurora-spin { animation: aurora-spin 40s linear infinite; }
+
+/* Animated grid drift */
+@keyframes grid-drift {
+  0% { background-position: 0 0; }
+  100% { background-position: 32px 32px; }
+}
+.grid-bg-animated {
+  background-image:
+    linear-gradient(hsl(var(--border) / 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--border) / 0.35) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: grid-drift 18s linear infinite;
+}
+
+/* Vertical line scan */
+@keyframes line-scan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.animate-line-scan { animation: line-scan 6s ease-in-out infinite; }
+
+/* Ticker marquee */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-ticker { animation: ticker 40s linear infinite; }
+
+/* Number flicker (live data feel) */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-flicker { animation: flicker 1.6s ease-in-out infinite; }
+
+/* Soft float for cards */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float { animation: float-y 5s ease-in-out infinite; }
+
+/* Shimmer sweep */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.18), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-glow,
+  .ember-orb-1,
+  .ember-orb-2,
+  .ember-orb-3,
+  .aurora-spin,
+  .grid-bg-animated,
+  .animate-line-scan,
+  .animate-ticker,
+  .animate-flicker,
+  .animate-float,
+  .animate-shimmer {
+    animation: none !important;
+  }
+}

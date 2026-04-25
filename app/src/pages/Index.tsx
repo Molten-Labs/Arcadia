@@ -11,7 +11,8 @@ import { GlassCard } from "@/components/GlassCard";
 import { TradingDashboardPreview } from "@/components/TradingDashboardPreview";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
-import { HeroVideo } from "@/components/HeroVideo";
+import { EmberBackground } from "@/components/EmberBackground";
+import { PriceTicker } from "@/components/PriceTicker";
 
 const Landing = () => {
   const featured = vaults.filter(v => v.status === "active").slice(0, 3);
@@ -21,18 +22,8 @@ const Landing = () => {
     <Layout>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* HLS video background */}
-        <HeroVideo />
-        {/* vertical grid lines (desktop) */}
-        <div className="absolute inset-0 hidden md:block pointer-events-none">
-          <div className="absolute inset-y-0 left-1/4 w-px bg-white/[0.04]" />
-          <div className="absolute inset-y-0 left-1/2 w-px bg-white/[0.04]" />
-          <div className="absolute inset-y-0 left-3/4 w-px bg-white/[0.04]" />
-        </div>
-        {/* central glow */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[80%] h-[400px] pointer-events-none"
-             style={{ background: "radial-gradient(ellipse at center, hsl(16 87% 55% / 0.18) 0%, transparent 60%)", filter: "blur(25px)" }} />
-        <div className="absolute inset-0 grid-bg opacity-10 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
+        {/* Animated ember background (on-brand, no video) */}
+        <EmberBackground />
 
         <div className="container relative pt-20 pb-20 md:pt-28 md:pb-24">
           <div className="grid lg:grid-cols-[1fr_auto] gap-10 items-start">
@@ -70,13 +61,18 @@ const Landing = () => {
             </motion.div>
 
             {/* Floating glass trust card */}
-            <div className="hidden lg:block self-center -translate-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.7, delay: 0.3 }}
+              className="hidden lg:block self-center -translate-y-6 animate-float"
+            >
               <GlassCard
                 tag="2025 · Audited"
                 title={<>Built for <span className="italic font-display text-primary">institutional</span> trust.</>}
                 subtitle="30-day paper mode, on-chain reputation, dynamic risk limits, and instant exits when buffers run thin."
               />
-            </div>
+            </motion.div>
           </div>
 
           {/* Trading dashboard preview */}
@@ -86,44 +82,69 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Live price ticker */}
+      <PriceTicker />
+
       {/* Animated logo slider */}
       <InfiniteSlider />
 
       {/* Stats strip */}
-      <section className="border-b border-border">
-        <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="border-b border-border relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px animate-shimmer pointer-events-none" />
+        <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 relative">
           {[
             { l: "Total TVL", v: `$${fmtUSD(protocolStats.totalTVL, { compact: true })}` },
             { l: "Live vaults", v: protocolStats.totalVaults },
             { l: "Graduated", v: protocolStats.graduatedVaults },
             { l: "Protected capital", v: `$${fmtUSD(protocolStats.protectedCapital, { compact: true })}` },
-          ].map((s) => (
-            <div key={s.l}>
+          ].map((s, i) => (
+            <motion.div
+              key={s.l}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+            >
               <div className="text-xs uppercase tracking-wider text-muted-foreground">{s.l}</div>
-              <div className="font-display font-semibold text-2xl mt-1 tabular">{s.v}</div>
-            </div>
+              <div className="font-display font-semibold text-2xl mt-1 tabular animate-flicker">{s.v}</div>
+            </motion.div>
           ))}
         </div>
       </section>
 
       {/* How it works */}
       <section className="container py-20">
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-2xl mx-auto mb-12"
+        >
           <h2 className="font-display font-bold text-4xl">How Kiln works</h2>
           <p className="text-muted-foreground mt-3">Three steps. Aligned incentives. On-chain proof.</p>
-        </div>
+        </motion.div>
         <div className="grid md:grid-cols-3 gap-5">
           {[
             { n: "01", icon: Layers, title: "Trader funds junior capital", desc: "Every trader puts their own money down. This first-loss capital absorbs any drawdown before investors do." },
             { n: "02", icon: Activity, title: "Vault graduates after paper mode", desc: "30 days of public, on-chain track record. Investors see real performance — not pitch decks." },
             { n: "03", icon: Shield, title: "Investors deposit with protection", desc: "Senior capital sits behind the junior buffer. Risk controls trigger automatically as the buffer drops." },
-          ].map((s) => (
-            <div key={s.n} className="surface rounded-2xl p-6 shadow-card relative overflow-hidden group hover:border-border-strong transition-all">
+          ].map((s, i) => (
+            <motion.div
+              key={s.n}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: i * 0.12 }}
+              whileHover={{ y: -4 }}
+              className="surface rounded-2xl p-6 shadow-card relative overflow-hidden group hover:border-border-strong transition-colors"
+            >
               <div className="text-[80px] font-display font-bold text-primary/5 absolute -top-4 -right-2 leading-none">{s.n}</div>
               <s.icon className="w-6 h-6 text-primary mb-4 relative" />
               <h3 className="font-display font-semibold text-lg relative">{s.title}</h3>
               <p className="text-sm text-muted-foreground mt-2 relative">{s.desc}</p>
-            </div>
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </motion.div>
           ))}
         </div>
       </section>

@@ -1,66 +1,126 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletProvider } from "@/lib/wallet";
-import Index from "./pages/Index.tsx";
-import Vaults from "./pages/Vaults.tsx";
-import VaultDetail from "./pages/VaultDetail.tsx";
-import Traders from "./pages/Traders.tsx";
-import TraderProfile from "./pages/TraderProfile.tsx";
-import Portfolio from "./pages/Portfolio.tsx";
-import Alerts from "./pages/Alerts.tsx";
-import Settings from "./pages/Settings.tsx";
-import ManagerDashboard from "./pages/ManagerDashboard.tsx";
-import ManagerVault from "./pages/ManagerVault.tsx";
-import CreateVault from "./pages/CreateVault.tsx";
-import Trade from "./pages/Trade.tsx";
-import HowItWorks from "./pages/HowItWorks.tsx";
-import Docs from "./pages/Docs.tsx";
-import FAQ from "./pages/FAQ.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
+const Index = lazy(() => import("./pages/Index.tsx"));
+const Vaults = lazy(() => import("./pages/Vaults.tsx"));
+const VaultDetail = lazy(() => import("./pages/VaultDetail.tsx"));
+const Traders = lazy(() => import("./pages/Traders.tsx"));
+const TraderProfile = lazy(() => import("./pages/TraderProfile.tsx"));
+const Portfolio = lazy(() => import("./pages/Portfolio.tsx"));
+const Alerts = lazy(() => import("./pages/Alerts.tsx"));
+const Settings = lazy(() => import("./pages/Settings.tsx"));
+const ManagerDashboard = lazy(() => import("./pages/ManagerDashboard.tsx"));
+const ManagerVault = lazy(() => import("./pages/ManagerVault.tsx"));
+const CreateVault = lazy(() => import("./pages/CreateVault.tsx"));
+const Trade = lazy(() => import("./pages/Trade.tsx"));
+const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
+const Docs = lazy(() => import("./pages/Docs.tsx"));
+const FAQ = lazy(() => import("./pages/FAQ.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
 
+const RouteFallback = () => (
+    <div className="min-h-screen bg-background">
+        <div className="container py-16">
+            <div className="surface rounded-2xl p-8 text-center text-sm text-muted-foreground">
+                Loading route…
+            </div>
+        </div>
+    </div>
+);
+
 const App = () => (
-    <QueryClientProvider client={queryClient}>
-        <WalletProvider>
-            <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/vaults" element={<Vaults />} />
-                        <Route path="/vault/:id" element={<VaultDetail />} />
-                        <Route path="/traders" element={<Traders />} />
-                        <Route
-                            path="/trader/:wallet"
-                            element={<TraderProfile />}
-                        />
-                        <Route path="/portfolio" element={<Portfolio />} />
-                        <Route path="/alerts" element={<Alerts />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/manager" element={<ManagerDashboard />} />
-                        <Route
-                            path="/manager/create"
-                            element={<CreateVault />}
-                        />
-                        <Route
-                            path="/manager/vault/:id"
-                            element={<ManagerVault />}
-                        />
-                        <Route path="/trade" element={<Trade />} />
-                        <Route path="/how-it-works" element={<HowItWorks />} />
-                        <Route path="/docs" element={<Docs />} />
-                        <Route path="/faq" element={<FAQ />} />
-                        <Route path="*" element={<NotFound />} />
-                    </Routes>
-                </BrowserRouter>
-            </TooltipProvider>
-        </WalletProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+            <WalletProvider>
+                <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                        <Suspense fallback={<RouteFallback />}>
+                            <Routes>
+                                <Route path="/" element={<Index />} />
+                                <Route path="/vaults" element={<Vaults />} />
+                                <Route
+                                    path="/vault/:id"
+                                    element={<VaultDetail />}
+                                />
+                                <Route path="/traders" element={<Traders />} />
+                                <Route
+                                    path="/trader/:wallet"
+                                    element={<TraderProfile />}
+                                />
+                                <Route
+                                    path="/portfolio"
+                                    element={
+                                        <ProtectedRoute allowedRoles={["investor"]}>
+                                            <Portfolio />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/alerts"
+                                    element={
+                                        <ProtectedRoute>
+                                            <Alerts />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/settings"
+                                    element={
+                                        <ProtectedRoute>
+                                            <Settings />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/manager"
+                                    element={
+                                        <ProtectedRoute allowedRoles={["trader"]}>
+                                            <ManagerDashboard />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/manager/create"
+                                    element={
+                                        <ProtectedRoute allowedRoles={["trader"]}>
+                                            <CreateVault />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/manager/vault/:id"
+                                    element={
+                                        <ProtectedRoute allowedRoles={["trader"]}>
+                                            <ManagerVault />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route path="/trade" element={<Trade />} />
+                                <Route
+                                    path="/how-it-works"
+                                    element={<HowItWorks />}
+                                />
+                                <Route path="/docs" element={<Docs />} />
+                                <Route path="/faq" element={<FAQ />} />
+                                <Route path="*" element={<NotFound />} />
+                            </Routes>
+                        </Suspense>
+                    </BrowserRouter>
+                </TooltipProvider>
+            </WalletProvider>
+        </QueryClientProvider>
+    </AppErrorBoundary>
 );
 
 export default App;

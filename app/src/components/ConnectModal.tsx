@@ -1,0 +1,726 @@
+import {
+    useEffect,
+    useRef,
+    useState,
+    type ButtonHTMLAttributes,
+    type ReactNode,
+} from "react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import { useWallet, type Role, type Network, shortAddr } from "@/lib/wallet";
+import {
+    Wallet,
+    Shield,
+    TrendingUp,
+    Layers,
+    ArrowRight,
+    Check,
+    Loader2,
+    AlertCircle,
+    Globe,
+    Copy,
+    ExternalLink,
+    X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+
+type Step = "role" | "network" | "wallet" | "connecting" | "success" | "error";
+
+const wallets = [
+    {
+        name: "Phantom",
+        color: "from-purple-500 to-purple-700",
+        detected: true,
+        recommended: true,
+    },
+    {
+        name: "Solflare",
+        color: "from-orange-500 to-yellow-600",
+        detected: true,
+        recommended: false,
+    },
+    {
+        name: "Backpack",
+        color: "from-red-500 to-pink-600",
+        detected: false,
+        recommended: false,
+    },
+    {
+        name: "Demo Wallet",
+        color: "from-primary to-primary-glow",
+        detected: true,
+        recommended: false,
+        demo: true,
+    },
+];
+
+export const ConnectModal = ({
+    open,
+    onOpenChange,
+}: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+}) => {
+    const {
+        connect,
+        setRole,
+        setNetwork,
+        network,
+        role,
+        address,
+        connected,
+        disconnect,
+        walletName,
+    } = useWallet();
+    const navigate = useNavigate();
+
+    const [step, setStep] = useState<Step>(connected ? "success" : "role");
+    const [chosenRole, setChosenRole] = useState<Role | null>(null);
+    const [chosenWallet, setChosenWallet] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const routeTimerRef = useRef<number | null>(null);
+
+    // Sync to current connection state when opened
+    useEffect(() => {
+        if (open) {
+            if (connected) {
+                setStep("success");
+                // Pre-fill chosenRole from the persisted wallet role so the
+                // success panel can route correctly on reopen.
+                setChosenRole(role);
+            } else {
+                setStep("role");
+                setChosenRole(null);
+                setChosenWallet(null);
+                setError(null);
+            }
+        }
+    }, [open, connected, role]);
+
+    useEffect(() => {
+        return () => {
+            if (routeTimerRef.current !== null) {
+                window.clearTimeout(routeTimerRef.current);
+            }
+        };
+    }, []);
+
+    const reset = () => {
+        if (routeTimerRef.current !== null) {
+            window.clearTimeout(routeTimerRef.current);
+            routeTimerRef.current = null;
+        }
+        setStep("role");
+        setChosenRole(null);
+        setChosenWallet(null);
+        setError(null);
+    };
+
+    const handleConnect = async (name: string) => {
+        setChosenWallet(name);
+        setStep("connecting");
+        setError(null);
+        try {
+            if (name === "Backpack")
+                throw new Error(
+                    "Backpack is not available in this demo environment. Choose Phantom, Solflare, or Demo Wallet to continue.",
+                );
+            await connect(name);
+            if (chosenRole) setRole(chosenRole);
+            setStep("success");
+            toast.success(`Connected with ${name}`, {
+                description: `Deterministic demo session · Network: ${network}`,
+            });
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Connection failed");
+            setStep("error");
+        }
+    };
+
+    const handleCopy = () => {
+        if (!address) return;
+        navigator.clipboard.writeText(address);
+        toast.success("Address copied");
+    };
+
+    const handleDisconnect = () => {
+        disconnect();
+        onOpenChange(false);
+        reset();
+        toast("Wallet disconnected");
+    };
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(o) => {
+                onOpenChange(o);
+                if (!o) setTimeout(reset, 200);
+            }}
+        >
+            <DialogContent className="surface-elevated border-border-strong sm:max-w-lg p-0 overflow-hidden">
+                {/* Step indicator */}
+                {(step === "role" ||
+                    step === "network" ||
+                    step === "wallet") && <StepBar current={step} />}
+
+                <div className="p-6">
+                    <AnimatePresence mode="wait">
+                        {step === "role" && (
+                            <motion.div key="role" {...fade}>
+                                <DialogHeader>
+                                    <DialogTitle className="font-display text-2xl">
+                                        How will you use Kiln?
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        Pick the experience that fits you. You
+                                        can switch roles anytime from your
+                                        wallet menu.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                                    <RoleCard
+                                        icon={Layers}
+                                        title="Investor"
+                                        desc="Discover graduated traders, deposit into vaults, and monitor risk in real time."
+                                        bullets={[
+                                            "Browse vetted vaults",
+                                            "First-loss protection",
+                                            "Instant exits when buffers thin",
+                                        ]}
+                                        selected={chosenRole === "investor"}
+                                        onClick={() =>
+                                            setChosenRole("investor")
+                                        }
+                                    />
+                                    <RoleCard
+                                        icon={TrendingUp}
+                                        title="Trader"
+                                        desc="Create a vault, fund junior capital, and build an on-chain track record investors trust."
+                                        bullets={[
+                                            "Pro trading terminal",
+                                            "Earn fees above HWM",
+                                            "Build reputation tier",
+                                        ]}
+                                        selected={chosenRole === "trader"}
+                                        onClick={() => setChosenRole("trader")}
+                                    />
+                                </div>
+                                <PrimaryButton
+                                    className="mt-5"
+                                    disabled={!chosenRole}
+                                    onClick={() => setStep("network")}
+                                >
+                                    Continue <ArrowRight className="w-4 h-4" />
+                                </PrimaryButton>
+                            </motion.div>
+                        )}
+
+                        {step === "network" && (
+                            <motion.div key="network" {...fade}>
+                                <DialogHeader>
+                                    <DialogTitle className="font-display text-2xl">
+                                        Choose a network
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        This frontend preview uses deterministic
+                                        demo sessions. Choose the network
+                                        context you want the interface to
+                                        simulate.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                                    <NetworkCard
+                                        name="Mainnet"
+                                        badge="Live"
+                                        badgeTone="success"
+                                        desc="Mainnet-style context for reviewing production flows and risk copy."
+                                        selected={network === "mainnet"}
+                                        onClick={() => setNetwork("mainnet")}
+                                    />
+                                    <NetworkCard
+                                        name="Devnet"
+                                        badge="Sandbox"
+                                        badgeTone="info"
+                                        desc="Sandbox context for testing flows without implying real value."
+                                        selected={network === "devnet"}
+                                        onClick={() => setNetwork("devnet")}
+                                    />
+                                </div>
+                                <div className="flex gap-2 mt-5">
+                                    <SecondaryButton
+                                        onClick={() => setStep("role")}
+                                    >
+                                        Back
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        onClick={() => setStep("wallet")}
+                                    >
+                                        Continue{" "}
+                                        <ArrowRight className="w-4 h-4" />
+                                    </PrimaryButton>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === "wallet" && (
+                            <motion.div key="wallet" {...fade}>
+                                <DialogHeader>
+                                    <DialogTitle className="font-display text-2xl">
+                                        Start a wallet session
+                                    </DialogTitle>
+                                    <DialogDescription className="flex items-center gap-2 flex-wrap">
+                                        Continuing as <Pill>{chosenRole}</Pill>{" "}
+                                        on <Pill icon={Globe}>{network}</Pill>.
+                                        Connections are deterministic demo
+                                        sessions in this build.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-2 mt-4">
+                                    {wallets.map((w) => (
+                                        <button
+                                            key={w.name}
+                                            onClick={() =>
+                                                handleConnect(w.name)
+                                            }
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left group"
+                                        >
+                                            <div
+                                                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${w.color} flex items-center justify-center shrink-0`}
+                                            >
+                                                <Wallet className="w-5 h-5 text-white" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-medium flex items-center gap-2">
+                                                    {w.name}
+                                                    {w.recommended && (
+                                                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                                                            Recommended
+                                                        </span>
+                                                    )}
+                                                    {w.demo && (
+                                                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-info/15 text-info">
+                                                            Demo
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                    <span
+                                                        className={`w-1.5 h-1.5 rounded-full ${w.detected ? "bg-success" : "bg-muted-foreground/40"}`}
+                                                    />
+                                                    {w.detected
+                                                        ? "Demo adapter available"
+                                                        : "Not available in demo"}
+                                                </div>
+                                            </div>
+                                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-[color,transform]" />
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2 mt-5">
+                                    <SecondaryButton
+                                        onClick={() => setStep("network")}
+                                    >
+                                        Back
+                                    </SecondaryButton>
+                                </div>
+                                <InfoNote>
+                                    Kiln never custodies funds. This build uses
+                                    transparent demo wallet sessions until a
+                                    production Solana wallet adapter is
+                                    connected.
+                                </InfoNote>
+                            </motion.div>
+                        )}
+
+                        {step === "connecting" && (
+                            <motion.div
+                                key="connecting"
+                                {...fade}
+                                className="py-8 text-center"
+                            >
+                                <div className="relative w-16 h-16 mx-auto mb-5">
+                                    <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse-glow" />
+                                    <div className="absolute inset-2 rounded-full bg-gradient-ember flex items-center justify-center">
+                                        <Loader2 className="w-7 h-7 text-white animate-spin" />
+                                    </div>
+                                </div>
+                                <DialogTitle className="font-display text-xl">
+                                    Connecting to {chosenWallet}
+                                </DialogTitle>
+                                <DialogDescription className="mt-2">
+                                    Creating a deterministic {chosenWallet}{" "}
+                                    session for this preview…
+                                </DialogDescription>
+                                <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                                    <Globe className="w-3 h-3" /> {network} ·{" "}
+                                    {chosenRole}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === "error" && (
+                            <motion.div
+                                key="error"
+                                {...fade}
+                                className="py-6 text-center"
+                            >
+                                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-destructive/15 flex items-center justify-center">
+                                    <AlertCircle className="w-7 h-7 text-destructive" />
+                                </div>
+                                <DialogTitle className="font-display text-xl">
+                                    Connection failed
+                                </DialogTitle>
+                                <DialogDescription className="mt-2">
+                                    {error ??
+                                        "Something went wrong while connecting your wallet."}
+                                </DialogDescription>
+                                <div className="flex gap-2 mt-5">
+                                    <SecondaryButton
+                                        onClick={() => setStep("wallet")}
+                                    >
+                                        Choose another
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        onClick={() =>
+                                            chosenWallet &&
+                                            handleConnect(chosenWallet)
+                                        }
+                                    >
+                                        Retry <ArrowRight className="w-4 h-4" />
+                                    </PrimaryButton>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === "success" && (
+                            <motion.div
+                                key="success"
+                                {...fade}
+                                className="py-2"
+                            >
+                                <div className="text-center">
+                                    <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-success/15 flex items-center justify-center">
+                                        <Check className="w-7 h-7 text-success" />
+                                    </div>
+                                    <DialogTitle className="font-display text-xl">
+                                        Wallet connected
+                                    </DialogTitle>
+                                    <DialogDescription className="mt-1">
+                                        You're signed in
+                                        {walletName
+                                            ? ` with ${walletName}`
+                                            : ""}{" "}
+                                        using a deterministic demo session.
+                                    </DialogDescription>
+                                </div>
+
+                                <div className="mt-5 surface rounded-xl p-4 space-y-3">
+                                    <Detail label="Address">
+                                        <div className="flex items-center gap-1.5 font-mono text-sm">
+                                            {shortAddr(address)}
+                                            <button
+                                                onClick={handleCopy}
+                                                className="text-muted-foreground hover:text-foreground p-1 -m-1"
+                                            >
+                                                <Copy className="w-3.5 h-3.5" />
+                                            </button>
+                                            <a
+                                                href={`https://solscan.io/account/${address}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-muted-foreground hover:text-foreground p-1 -m-1"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                            </a>
+                                        </div>
+                                    </Detail>
+                                    <Detail label="Network">
+                                        <span className="inline-flex items-center gap-1.5 text-sm">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-glow" />
+                                            {network}
+                                        </span>
+                                    </Detail>
+                                    <Detail label="Role">
+                                        <div className="flex items-center gap-1 p-0.5 rounded-md bg-secondary">
+                                            {(
+                                                ["investor", "trader"] as Role[]
+                                            ).map((r) => {
+                                                const active =
+                                                    (chosenRole ?? role) === r;
+                                                return (
+                                                    <button
+                                                        key={r}
+                                                        onClick={() => {
+                                                            setChosenRole(r);
+                                                            setRole(r);
+                                                        }}
+                                                        className={cn(
+                                                            "px-2.5 py-0.5 rounded text-xs capitalize transition-colors",
+                                                            active
+                                                                ? "bg-background text-foreground shadow-sm"
+                                                                : "text-muted-foreground hover:text-foreground",
+                                                        )}
+                                                    >
+                                                        {r}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </Detail>
+                                </div>
+
+                                <div className="flex gap-2 mt-5">
+                                    <SecondaryButton onClick={handleDisconnect}>
+                                        <X className="w-4 h-4" /> Disconnect
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        onClick={() => {
+                                            const target =
+                                                (chosenRole ?? role) ===
+                                                "trader"
+                                                    ? "/manager"
+                                                    : "/portfolio";
+                                            onOpenChange(false);
+                                            routeTimerRef.current =
+                                                window.setTimeout(() => {
+                                                    navigate(target);
+                                                    reset();
+                                                }, 120);
+                                        }}
+                                    >
+                                        Go to dashboard{" "}
+                                        <ArrowRight className="w-4 h-4" />
+                                    </PrimaryButton>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+/* ---------- helpers ---------- */
+
+const fade = {
+    initial: { opacity: 0, y: 8 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -6 },
+    transition: { duration: 0.18 },
+};
+
+const StepBar = ({ current }: { current: Step }) => {
+    const steps: Step[] = ["role", "network", "wallet"];
+    const idx = steps.indexOf(current);
+    return (
+        <div className="flex items-center gap-2 px-6 pt-5">
+            {steps.map((s, i) => (
+                <div
+                    key={s}
+                    className="flex-1 h-1 rounded-full bg-secondary overflow-hidden"
+                >
+                    <div
+                        className={cn(
+                            "h-full transition-[width] duration-500",
+                            i <= idx ? "bg-gradient-ember w-full" : "w-0",
+                        )}
+                    />
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const PrimaryButton = ({
+    children,
+    className,
+    ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button
+        {...rest}
+        className={cn(
+            "flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-ember text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed",
+            className,
+        )}
+    >
+        {children}
+    </button>
+);
+
+const SecondaryButton = ({
+    children,
+    className,
+    ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button
+        {...rest}
+        className={cn(
+            "inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-border bg-secondary/40 text-foreground font-medium hover:border-border-strong hover:bg-secondary transition-colors",
+            className,
+        )}
+    >
+        {children}
+    </button>
+);
+
+const Pill = ({
+    children,
+    icon: Icon,
+}: {
+    children: ReactNode;
+    icon?: typeof Globe;
+}) => (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary text-foreground text-xs font-medium capitalize">
+        {Icon && <Icon className="w-3 h-3" />}
+        {children}
+    </span>
+);
+
+const InfoNote = ({ children }: { children: ReactNode }) => (
+    <div className="mt-4 flex items-start gap-2 p-3 rounded-lg bg-info/10 border border-info/20 text-xs text-foreground/80">
+        <Shield className="w-4 h-4 shrink-0 mt-0.5 text-info" />
+        <span>{children}</span>
+    </div>
+);
+
+const Detail = ({
+    label,
+    children,
+}: {
+    label: string;
+    children: ReactNode;
+}) => (
+    <div className="flex items-center justify-between gap-3">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            {label}
+        </div>
+        <div>{children}</div>
+    </div>
+);
+
+const RoleCard = ({
+    icon: Icon,
+    title,
+    desc,
+    bullets,
+    selected,
+    onClick,
+}: {
+    icon: typeof Layers;
+    title: string;
+    desc: string;
+    bullets: string[];
+    selected: boolean;
+    onClick: () => void;
+}) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "text-left p-4 rounded-xl border transition-colors relative overflow-hidden",
+            selected
+                ? "border-primary bg-primary/5 shadow-ember"
+                : "border-border hover:border-border-strong bg-card/50",
+        )}
+    >
+        {selected && (
+            <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+            </div>
+        )}
+        <div
+            className={cn(
+                "w-9 h-9 rounded-lg flex items-center justify-center mb-3",
+                selected ? "bg-gradient-ember" : "bg-secondary",
+            )}
+        >
+            <Icon
+                className={cn(
+                    "w-4 h-4",
+                    selected ? "text-white" : "text-primary",
+                )}
+            />
+        </div>
+        <div className="font-display font-semibold">{title}</div>
+        <p className="text-xs text-muted-foreground mt-1 mb-3">{desc}</p>
+        <ul className="space-y-1">
+            {bullets.map((b) => (
+                <li
+                    key={b}
+                    className="text-[11px] text-muted-foreground flex items-start gap-1.5"
+                >
+                    <span className="w-1 h-1 rounded-full bg-primary mt-1.5" />{" "}
+                    {b}
+                </li>
+            ))}
+        </ul>
+    </button>
+);
+
+const NetworkCard = ({
+    name,
+    badge,
+    badgeTone,
+    desc,
+    selected,
+    onClick,
+}: {
+    name: string;
+    badge: string;
+    badgeTone: "success" | "info";
+    desc: string;
+    selected: boolean;
+    onClick: () => void;
+}) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "text-left p-4 rounded-xl border transition-colors relative",
+            selected
+                ? "border-primary bg-primary/5 shadow-ember"
+                : "border-border hover:border-border-strong bg-card/50",
+        )}
+    >
+        {selected && (
+            <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <Check className="w-3 h-3 text-white" />
+            </div>
+        )}
+        <div className="flex items-center gap-2 mb-2">
+            <div
+                className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center",
+                    selected ? "bg-gradient-ember" : "bg-secondary",
+                )}
+            >
+                <Globe
+                    className={cn(
+                        "w-4 h-4",
+                        selected ? "text-white" : "text-primary",
+                    )}
+                />
+            </div>
+            <span
+                className={cn(
+                    "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded",
+                    badgeTone === "success"
+                        ? "bg-success/15 text-success"
+                        : "bg-info/15 text-info",
+                )}
+            >
+                {badge}
+            </span>
+        </div>
+        <div className="font-display font-semibold">{name}</div>
+        <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+    </button>
+);

@@ -117,7 +117,11 @@ const Vaults = () => {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vaults..." className="pl-9" />
               </div>
-              <select value={sort} onChange={(e) => setSort(e.target.value as any)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as "reputation" | "tvl" | "return" | "drawdown" | "recent")}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
                 <option value="reputation">Sort: Reputation</option>
                 <option value="tvl">Sort: TVL</option>
                 <option value="return">Sort: 30d return</option>
