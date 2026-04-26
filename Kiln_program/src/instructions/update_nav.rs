@@ -173,6 +173,9 @@ pub fn graduate_vault(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
     if state.current_nav <= state.original_junior_deposit {
         return Err(KilnError::InvalidVaultConfiguration.into());
     }
+    if state.paper_trade_count < state.min_qualifying_trades {
+        return Err(KilnError::GraduationRequirementsNotMet.into());
+    }
 
     // Mark as graduated
     state.is_paper_mode = 0;
@@ -181,8 +184,7 @@ pub fn graduate_vault(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
 
     // Update manager profile counters
     let mut mgr = ManagerProfile::load_mut(manager_profile)?;
-    mgr.active_vaults = mgr.active_vaults.checked_sub(1).unwrap_or(0);
-    // Note: graduated vaults count could be tracked elsewhere; incrementing total_vaults is not done here
+    mgr.active_vaults = mgr.active_vaults.checked_sub(1).ok_or(KilnError::MathOverflow)?;
 
     Ok(())
 }
