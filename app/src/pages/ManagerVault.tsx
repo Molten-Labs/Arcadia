@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
-import { getVault, getTrader } from "@/lib/mockData";
+import { useVault } from "@/hooks/useVaults";
+import { useBalance } from "@/hooks/useBalance";
+import { useKilnTransactions } from "@/hooks/useTransactions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { HealthMeter } from "@/components/HealthMeter";
 import { CapitalStack } from "@/components/CapitalStack";
@@ -9,99 +11,96 @@ import { StatCard } from "@/components/StatCard";
 import { Banner } from "@/components/Banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { fmtUSD, fmtPct } from "@/lib/format";
-import { ArrowLeft, Check, ArrowDownUp, X } from "lucide-react";
-import { TxModal } from "@/components/TxModal";
+import { fmtUSD } from "@/lib/format";
+import { shortAddr } from "@/lib/wallet";
+import { ArrowLeft, Check, ArrowDownUp, X, Loader2 } from "lucide-react";
+import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { toast } from "sonner";
 
 const QUICK_AMOUNTS = [25, 50, 75, 100] as const;
 
 const ManagerVault = () => {
   const { id } = useParams();
-  const [from, setFrom] = useState("USDC");
-  const [to, setTo] = useState("SOL");
+  const { data: v, isLoading } = useVault(id);
+  const { data: balance } = useBalance();
+  const { depositJunior, withdrawJunior, claimFees } = useKilnTransactions();
   const [amount, setAmount] = useState("");
-  const [tx, setTx] = useState<{ open: boolean; kind: string }>({ open: false, kind: "swap" });
-  const [validationError, setValidationError] = useState("");
-  const v = id ? getVault(id) : undefined;
-  const trader = v ? getTrader(v.traderWallet) : undefined;
-  const allowedAssets = useMemo(() => v?.allowedAssets ?? [], [v]);
+  const [sending, setSending] = useState(false);
+
+  const solBalance = balance ?? 0;
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container py-20 text-center text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Loading vault...
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!v) return <Navigate to="/manager" replace />;
+
+  const parsedAmount = Number(amount);
+  const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const lamports = hasValidAmount ? BigInt(Math.floor(parsedAmount * LAMPORTS_PER_SOL)) : 0n;
+  const aboveHwm = Math.max(0, v.currentNav - v.highWaterMark);
 
   const checks = [
     { ok: true, label: "Whitelisted asset" },
     { ok: true, label: "Position size within limits" },
-    { ok: v?.status !== "cooldown", label: "No cooldown" },
+    { ok: v.status !== "cooldown", label: "No cooldown" },
     { ok: true, label: "Oracle price fresh (< 30s)" },
-    { ok: v?.status !== "frozen", label: "Trading enabled" },
+    { ok: v.tradingEnabled, label: "Trading enabled" },
   ];
-
-  const fromOptions = useMemo(() => {
-    const options = allowedAssets.filter((asset) => asset !== to);
-    return options.length > 0 ? options : allowedAssets;
-  }, [to, allowedAssets]);
-
-  const toOptions = useMemo(() => {
-    const options = allowedAssets.filter((asset) => asset !== from);
-    return options.length > 0 ? options : allowedAssets;
-  }, [from, allowedAssets]);
-
-  useEffect(() => {
-    if (fromOptions.length > 0 && !fromOptions.includes(from)) {
-      setFrom(fromOptions[0]);
-    }
-  }, [from, fromOptions]);
-
-  useEffect(() => {
-    if (toOptions.length > 0 && !toOptions.includes(to)) {
-      setTo(toOptions[0]);
-    }
-  }, [to, toOptions]);
-
-  const parsedAmount = Number(amount);
-  const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
-  const estimate = hasValidAmount ? (parsedAmount / 184).toFixed(4) : "0.0000";
   const allOk = checks.every(c => c.ok);
-  const canExecuteTrade = allOk && hasValidAmount;
 
-  useEffect(() => {
-    if (!amount.trim()) {
-      setValidationError("");
-      return;
+  const handleDepositJunior = async () => {
+    if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
+    setSending(true);
+    try {
+      await depositJunior(new PublicKey(v.configPubkey), lamports);
+      setAmount("");
+      toast.success("Junior capital deposited");
+    } catch (e) {
+      toast.error("Deposit failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
     }
-
-    if (!hasValidAmount) {
-      setValidationError("Enter a valid trade size greater than 0.");
-      return;
-    }
-
-    if (!allOk) {
-      setValidationError("Resolve pre-trade checks before executing.");
-      return;
-    }
-
-    setValidationError("");
-  }, [amount, hasValidAmount, allOk]);
-
-  const submitTrade = () => {
-    if (!hasValidAmount) {
-      setValidationError("Enter a valid trade size greater than 0.");
-      return;
-    }
-    if (!allOk) {
-      setValidationError("Resolve pre-trade checks before executing.");
-      return;
-    }
-    setValidationError("");
-    setTx({ open: true, kind: "swap" });
   };
 
-  if (!v) return <Navigate to="/manager" replace />;
+  const handleWithdrawJunior = async () => {
+    if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
+    setSending(true);
+    try {
+      await withdrawJunior(new PublicKey(v.configPubkey), lamports);
+      setAmount("");
+      toast.success("Junior capital withdrawn");
+    } catch (e) {
+      toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleClaimFees = async () => {
+    setSending(true);
+    try {
+      await claimFees(new PublicKey(v.configPubkey));
+      toast.success("Fees claimed");
+    } catch (e) {
+      toast.error("Claim failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <Layout>
       <div className="container py-8">
         <Link
           to="/manager"
-          className="inline-flex h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 mb-6"
+          className="inline-flex h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Manager dashboard
         </Link>
@@ -112,109 +111,73 @@ const ManagerVault = () => {
               <h1 className="font-display font-bold text-3xl">{v.name}</h1>
               <StatusBadge status={v.status} />
             </div>
-            <p className="text-sm text-muted-foreground">Manager view · {trader?.name}</p>
+            <p className="text-sm text-muted-foreground">Manager view · {shortAddr(v.managerPubkey)}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => setTx({ open: true, kind: "deposit junior" })}>Deposit junior</Button>
-            <Button variant="outline" size="sm" onClick={() => setTx({ open: true, kind: "claim fees" })}>Claim fees (${fmtUSD(v.unclaimedFees, { compact: true })})</Button>
-            <Button variant="outline" size="sm" onClick={() => setTx({ open: true, kind: "withdraw junior" })}>Withdraw junior</Button>
+            <Button variant="outline" size="sm" onClick={handleDepositJunior} disabled={sending || !hasValidAmount}>
+              Deposit junior
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleClaimFees} disabled={sending}>
+              Claim fees
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleWithdrawJunior} disabled={sending || !hasValidAmount}>
+              Withdraw junior
+            </Button>
           </div>
         </div>
 
         {v.status === "paper" && (
-          <Banner variant="info" title={`Paper mode — Day ${v.paperDaysElapsed}/${v.paperDaysRequired}`}>
+          <Banner variant="info" title={`Paper mode — ${v.paperTradeCount}/${v.minQualifyingTrades} trades`}>
             Investor deposits open after graduation. Build a positive track record.
           </Banner>
         )}
         {v.status === "cooldown" && <Banner variant="warning" title="Cooldown active">Trading paused. Position limits will tighten on resume.</Banner>}
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 my-6">
-          <StatCard label="NAV" value={`$${fmtUSD(v.tvl, { compact: true })}`} />
+          <StatCard label="NAV" value={`${fmtUSD(v.currentNav, { decimals: 2 })} SOL`} />
           <StatCard label="Junior health" value={`${v.juniorHealth}%`} />
-          <StatCard label="Max trade" value={`${v.maxPositionPct}%`} hint="of NAV" />
-          <StatCard label="30d PnL" value={fmtPct(v.return30d)} />
-          <StatCard label="Senior" value={`$${fmtUSD(v.seniorCapital, { compact: true })}`} />
+          <StatCard label="Fee" value={`${v.feeBps / 100}%`} />
+          <StatCard label="24h loss" value={`${v.rolling24hLossBps / 100}%`} />
+          <StatCard label="Senior" value={`${fmtUSD(v.seniorCapital, { decimals: 2 })} SOL`} />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Trade panel */}
+            {/* Amount input for junior operations */}
             <div className="surface-elevated rounded-2xl p-6">
-              <h3 className="font-display font-semibold mb-4 flex items-center gap-2"><ArrowDownUp className="w-4 h-4" /> Execute swap</h3>
+              <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
+                <ArrowDownUp className="w-4 h-4" /> Junior capital operations
+              </h3>
               <div className="space-y-3">
-                <div className="surface rounded-xl p-4">
-                  <div className="text-xs text-muted-foreground mb-2">From</div>
-                  <div className="flex gap-2">
+                <div>
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                    <span>Amount (SOL)</span>
+                    <span>Balance: {solBalance.toFixed(4)} SOL</span>
+                  </div>
+                  <div className="relative">
                     <Input
                       value={amount}
-                      onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
+                      onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                       placeholder="0.00"
                       inputMode="decimal"
-                      aria-label={`Trade size in ${from}`}
-                      className="text-lg tabular border-0 bg-transparent px-0 focus-visible:ring-0"
+                      className="text-lg tabular h-12 pr-14"
                     />
-                    <select
-                      value={from}
-                      onChange={(event) => setFrom(event.target.value)}
-                      className="h-10 rounded-lg bg-secondary px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      aria-label="Sell asset"
-                    >
-                      {fromOptions.map((asset) => <option key={asset}>{asset}</option>)}
-                    </select>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">SOL</span>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">Balance: 240,000 USDC</div>
                 </div>
-                <div className="flex justify-center -my-2 relative z-10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFrom(to);
-                      setTo(from);
-                    }}
-                    aria-label="Swap trade assets"
-                    className="h-10 w-10 rounded-full bg-secondary border-4 border-background flex items-center justify-center hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <ArrowDownUp className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="surface rounded-xl p-4">
-                  <div className="text-xs text-muted-foreground mb-2">To (estimated)</div>
-                  <div className="flex gap-2">
-                    <div className="text-lg tabular flex-1">{estimate}</div>
-                    <select
-                      value={to}
-                      onChange={(event) => setTo(event.target.value)}
-                      className="h-10 rounded-lg bg-secondary px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      aria-label="Buy asset"
+                <div className="flex gap-1.5">
+                  {QUICK_AMOUNTS.map(pct => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setAmount(String(solBalance * pct / 100))}
+                      className="h-10 flex-1 rounded-md bg-secondary text-xs font-medium hover:bg-accent"
                     >
-                      {toOptions.map((asset) => <option key={asset}>{asset}</option>)}
-                    </select>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">Pyth ref: $184.20 · slippage 0.3%</div>
+                      {pct}%
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              <div className="flex gap-1.5 mt-4">
-                {QUICK_AMOUNTS.map((percent) => (
-                  <button
-                    key={percent}
-                    type="button"
-                    onClick={() => {
-                      const baseAmount = Number(v.maxPositionPct * 1000);
-                      setAmount(((baseAmount * percent) / 100).toFixed(2));
-                    }}
-                    className="h-10 flex-1 rounded-md bg-secondary text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    {percent}%
-                  </button>
-                ))}
-              </div>
-
-              {validationError && (
-                <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-                  {validationError}
-                </div>
-              )}
 
               <div className="mt-5 surface rounded-xl p-4">
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Pre-trade checks</div>
@@ -228,9 +191,24 @@ const ManagerVault = () => {
                 </ul>
               </div>
 
-              <Button onClick={submitTrade} className="w-full mt-4 h-11 bg-gradient-ember text-white border-0" disabled={!canExecuteTrade}>
-                Execute swap
-              </Button>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={handleDepositJunior}
+                  disabled={sending || !hasValidAmount}
+                  className="flex-1 h-11 bg-gradient-ember text-white border-0"
+                >
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Deposit junior
+                </Button>
+                <Button
+                  onClick={handleWithdrawJunior}
+                  disabled={sending || !hasValidAmount}
+                  variant="outline"
+                  className="flex-1 h-11"
+                >
+                  Withdraw junior
+                </Button>
+              </div>
             </div>
 
             <div className="surface rounded-2xl p-6">
@@ -244,9 +222,8 @@ const ManagerVault = () => {
                 <h3 className="font-display font-semibold mb-3">Graduation checklist</h3>
                 <div className="text-sm space-y-2">
                   <Item ok>Junior capital posted</Item>
-                  <Item ok={(v.paperDaysElapsed || 0) >= 30}>30 days paper trading</Item>
-                  <Item ok={v.return30d > 0}>Positive PnL</Item>
-                  <Item ok={v.maxDrawdown > -10}>Drawdown {"<"} 10%</Item>
+                  <Item ok={v.paperTradeCount >= v.minQualifyingTrades}>{v.minQualifyingTrades}+ qualifying trades ({v.paperTradeCount} done)</Item>
+                  <Item ok={v.currentNav > v.highWaterMark}>Positive PnL</Item>
                 </div>
               </div>
             )}
@@ -255,33 +232,35 @@ const ManagerVault = () => {
               <h3 className="font-display font-semibold mb-4">Junior buffer</h3>
               <div className="text-3xl font-display font-bold tabular mb-3">{v.juniorHealth}%</div>
               <HealthMeter health={v.juniorHealth} size="lg" showLabel={false} />
-              <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => setTx({ open: true, kind: "add junior" })}>Add junior capital</Button>
             </div>
 
             <div className="surface rounded-2xl p-6">
               <h3 className="font-display font-semibold mb-2">Fees</h3>
               <div className="text-sm space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">HWM</span><span className="tabular">${fmtUSD(v.hwm)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Above HWM</span><span className="tabular">${fmtUSD(Math.max(0, v.tvl - v.hwm))}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Claimable</span><span className="tabular text-primary font-semibold">${fmtUSD(v.unclaimedFees)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">HWM</span><span className="tabular">{fmtUSD(v.highWaterMark, { decimals: 2 })} SOL</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Above HWM</span><span className="tabular">{fmtUSD(aboveHwm, { decimals: 2 })} SOL</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Fee rate</span><span className="tabular">{v.feeBps / 100}%</span></div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-4"
+                disabled={sending || aboveHwm <= 0}
+                onClick={handleClaimFees}
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Claim fees
+              </Button>
               <p className="text-[11px] text-muted-foreground mt-3">Fees only accrue on gains above the previous HWM.</p>
             </div>
           </div>
         </div>
       </div>
-      <TxModal open={tx.open} onOpenChange={(o) => setTx({ ...tx, open: o })} kind={tx.kind} />
     </Layout>
   );
 };
 
-const Item = ({
-  ok,
-  children,
-}: {
-  ok: boolean;
-  children: ReactNode;
-}) => (
+const Item = ({ ok, children }: { ok: boolean; children: ReactNode }) => (
   <div className="flex items-center gap-2">
     {ok ? <Check className="w-4 h-4 text-success" /> : <div className="w-4 h-4 rounded-full border-2 border-muted" />}
     <span className={ok ? "" : "text-muted-foreground"}>{children}</span>

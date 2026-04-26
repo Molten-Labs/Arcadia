@@ -15,7 +15,7 @@ import {
     ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ConnectModal } from "./ConnectModal";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -36,7 +36,7 @@ export const Nav = () => {
         disconnect,
     } = useWallet();
     const [open, setOpen] = useState(false);
-    const [connectOpen, setConnectOpen] = useState(false);
+    const { setVisible: openWalletModal } = useWalletModal();
     const location = useLocation();
 
     const publicLinks = [
@@ -132,7 +132,7 @@ export const Nav = () => {
                         )}
                         {!connected ? (
                             <Button
-                                onClick={() => setConnectOpen(true)}
+                                onClick={() => openWalletModal(true)}
                                 className="bg-gradient-ember hover:opacity-90 text-white border-0"
                             >
                                 <Wallet className="w-4 h-4 mr-2" />
@@ -287,7 +287,6 @@ export const Nav = () => {
                     </nav>
                 )}
             </header>
-            <ConnectModal open={connectOpen} onOpenChange={setConnectOpen} />
         </>
     );
 };

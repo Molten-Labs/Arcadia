@@ -3,19 +3,24 @@ import { OrderBook } from "./OrderBook";
 import { StatusBadge } from "./StatusBadge";
 import { TierBadge } from "./TierBadge";
 import { HealthMeter } from "./HealthMeter";
-import { vaults, traders } from "@/lib/mockData";
 import { fmtUSD, fmtPct } from "@/lib/format";
 import { motion } from "framer-motion";
 import { TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
-/**
- * TradingDashboardPreview
- * Hero-adjacent preview of the in-app vault trading UI. Inspired by
- * pro trading platforms but rendered with Kiln's institutional palette.
- */
+const previewVault = {
+  name: "Ember Macro I",
+  status: "active" as const,
+  tvl: 1_240_000,
+  return30d: 6.2,
+  juniorHealth: 78,
+  maxPositionPct: 18,
+  seniorCapital: 960_000,
+};
+const previewTrader = { name: "Aria Volkov", tier: "elite" as const };
+
 export const TradingDashboardPreview = () => {
-  const v = vaults[0];
-  const trader = traders[0];
+  const v = previewVault;
+  const trader = previewTrader;
 
   return (
     <motion.div

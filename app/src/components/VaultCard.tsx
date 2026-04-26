@@ -1,16 +1,13 @@
 import { Link } from "react-router-dom";
-import { Vault, getTrader } from "@/lib/mockData";
-import { fmtUSD, fmtPct } from "@/lib/format";
+import type { VaultView } from "@/hooks/useVaults";
+import { fmtUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
-import { TierBadge } from "./TierBadge";
 import { HealthMeter } from "./HealthMeter";
 import { ArrowRight, Zap } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { shortAddr } from "@/lib/wallet";
 
-export const VaultCard = ({ vault }: { vault: Vault }) => {
-  const trader = getTrader(vault.traderWallet);
+export const VaultCard = ({ vault }: { vault: VaultView }) => {
   const juniorPct = vault.tvl > 0 ? Math.round((vault.juniorCapital / vault.tvl) * 100) : 0;
-  const positive = vault.return30d >= 0;
 
   return (
     <Link
@@ -20,12 +17,11 @@ export const VaultCard = ({ vault }: { vault: Vault }) => {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-display font-semibold text-lg leading-tight truncate">{vault.name}</h3>
-          {trader && (
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-muted-foreground truncate">by {trader.name}</span>
-              <TierBadge tier={trader.tier} showIcon={false} className="scale-90 origin-left" />
-            </div>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground truncate font-mono">
+              by {shortAddr(vault.managerPubkey)}
+            </span>
+          </div>
         </div>
         <StatusBadge status={vault.status} />
       </div>
@@ -33,12 +29,14 @@ export const VaultCard = ({ vault }: { vault: Vault }) => {
       <div className="grid grid-cols-3 gap-3 py-3 border-y border-border">
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVL</div>
-          <div className="tabular font-semibold text-sm mt-0.5">${fmtUSD(vault.tvl, { compact: true })}</div>
+          <div className="tabular font-semibold text-sm mt-0.5">
+            {vault.tvl > 0 ? `${fmtUSD(vault.tvl, { compact: true })} SOL` : "—"}
+          </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">30d</div>
-          <div className={cn("tabular font-semibold text-sm mt-0.5", positive ? "text-success" : "text-destructive")}>
-            {fmtPct(vault.return30d)}
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">NAV</div>
+          <div className="tabular font-semibold text-sm mt-0.5">
+            {vault.currentNav > 0 ? `${fmtUSD(vault.currentNav, { compact: true })} SOL` : "—"}
           </div>
         </div>
         <div>
@@ -50,9 +48,12 @@ export const VaultCard = ({ vault }: { vault: Vault }) => {
       <HealthMeter health={vault.juniorHealth} />
 
       <div className="flex flex-wrap gap-1.5">
-        {vault.strategyTags.slice(0, 3).map((t) => (
-          <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{t}</span>
-        ))}
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          Fee: {vault.feeBps / 100}%
+        </span>
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          Slippage: {vault.maxSlippageBps / 100}%
+        </span>
         {vault.instantExit && (
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary inline-flex items-center gap-1">
             <Zap className="w-2.5 h-2.5" /> Instant exit
@@ -62,10 +63,10 @@ export const VaultCard = ({ vault }: { vault: Vault }) => {
 
       <div className="flex items-center justify-between pt-1">
         <span className="text-xs text-muted-foreground">
-          {vault.status === "paper" && vault.paperDaysElapsed != null
-            ? `${vault.paperDaysElapsed}/${vault.paperDaysRequired}d paper`
-            : vault.graduatedAt
-            ? `Graduated ${new Date(vault.graduatedAt).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
+          {vault.status === "paper"
+            ? `${vault.paperTradeCount}/${vault.minQualifyingTrades} trades`
+            : vault.graduatedAt > 0
+            ? `Graduated ${new Date(vault.graduatedAt * 1000).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
             : ""}
         </span>
         <span className="text-xs text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-[gap]">

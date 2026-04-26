@@ -1,9 +1,9 @@
+import { useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { vaults, traders, protocolStats } from "@/lib/mockData";
+import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
-import { TraderCard } from "@/components/TraderCard";
 import { fmtUSD } from "@/lib/format";
 import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users } from "lucide-react";
 import { motion } from "framer-motion";
@@ -15,14 +15,25 @@ import { EmberBackground } from "@/components/EmberBackground";
 import { PriceTicker } from "@/components/PriceTicker";
 
 const Landing = () => {
-  const featured = vaults.filter(v => v.status === "active").slice(0, 3);
-  const topTraders = [...traders].sort((a, b) => b.reputation - a.reputation).slice(0, 3);
+  const { data: vaults } = useVaults();
+  const allVaults = vaults ?? [];
+
+  const featured = useMemo(
+    () => allVaults.filter(v => v.status === "active").slice(0, 3),
+    [allVaults]
+  );
+
+  const protocolStats = useMemo(() => ({
+    totalVaults: allVaults.length,
+    totalTVL: allVaults.reduce((s, v) => s + v.tvl, 0),
+    graduatedVaults: allVaults.filter(v => v.status !== "paper").length,
+    protectedCapital: allVaults.reduce((s, v) => s + v.seniorCapital, 0),
+  }), [allVaults]);
 
   return (
     <Layout>
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* Animated ember background (on-brand, no video) */}
         <EmberBackground />
 
         <div className="container relative pt-20 pb-20 md:pt-28 md:pb-24">
@@ -35,7 +46,7 @@ const Landing = () => {
             >
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-card/60 backdrop-blur text-xs text-muted-foreground mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
-                Live on Solana mainnet · {protocolStats.totalVaults} vaults
+                Live on Solana devnet · {protocolStats.totalVaults} vaults
               </div>
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-4">
                 On-chain managed vaults
@@ -60,7 +71,6 @@ const Landing = () => {
               </div>
             </motion.div>
 
-            {/* Floating glass trust card */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -75,17 +85,13 @@ const Landing = () => {
             </motion.div>
           </div>
 
-          {/* Trading dashboard preview */}
           <div className="mt-14 max-w-5xl mx-auto">
             <TradingDashboardPreview />
           </div>
         </div>
       </section>
 
-      {/* Live price ticker */}
       <PriceTicker />
-
-      {/* Animated logo slider */}
       <InfiniteSlider />
 
       {/* Stats strip */}
@@ -93,10 +99,10 @@ const Landing = () => {
         <div className="absolute inset-x-0 top-0 h-px animate-shimmer pointer-events-none" />
         <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 relative">
           {[
-            { l: "Total TVL", v: `$${fmtUSD(protocolStats.totalTVL, { compact: true })}` },
+            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} SOL` },
             { l: "Live vaults", v: protocolStats.totalVaults },
             { l: "Graduated", v: protocolStats.graduatedVaults },
-            { l: "Protected capital", v: `$${fmtUSD(protocolStats.protectedCapital, { compact: true })}` },
+            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} SOL` },
           ].map((s, i) => (
             <motion.div
               key={s.l}
@@ -160,29 +166,18 @@ const Landing = () => {
             <Link to="/vaults">View all <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
           </Button>
         </div>
-        <div className="grid md:grid-cols-3 gap-5">
-          {featured.map(v => <VaultCard key={v.id} vault={v} />)}
-        </div>
-      </section>
-
-      {/* Calculator */}
-      <VaultCalculator />
-
-      {/* Featured traders */}
-      <section className="container py-12">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="font-display font-bold text-3xl">Top traders</h2>
-            <p className="text-muted-foreground mt-1">Discover managers like hiring talent — by their on-chain record.</p>
+        {featured.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-5">
+            {featured.map(v => <VaultCard key={v.id} vault={v} />)}
           </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/traders">View all <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
-          </Button>
-        </div>
-        <div className="grid md:grid-cols-3 gap-5">
-          {topTraders.map(t => <TraderCard key={t.wallet} trader={t} />)}
-        </div>
+        ) : (
+          <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
+            No active vaults yet. Connect your wallet and create the first one!
+          </div>
+        )}
       </section>
+
+      <VaultCalculator />
 
       {/* Trust strip */}
       <section className="container py-20">
