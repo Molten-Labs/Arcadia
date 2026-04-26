@@ -18,7 +18,20 @@ pub enum KilnError {
     TreasuryAccountingMismatch,
     VaultPaused,
     MathOverflow,
-    InsufficientJuniorCapital
+    InsufficientJuniorCapital,
+    GraduationRequirementsNotMet,
+    VaultNotGraduated,
+    VaultInCooldown,
+    VaultFrozen,
+    JuniorRatioViolation,
+    SlippageExceeded,
+    PositionTooLarge,
+    MinDepositNotMet,
+    TradingDisabled,
+    InsufficientSeniorCapital,
+    WithdrawalCooldownActive,
+    InvestorMismatch,
+    InvalidInvestorPositionPda,
 }
 
 impl From<KilnError> for ProgramError {

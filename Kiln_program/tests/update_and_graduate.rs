@@ -8,7 +8,11 @@ use solana_pubkey::Pubkey;
 use solana_sdk_ids::{sysvar, system_program};
 use solana_signer::Signer;
 use solana_transaction::Transaction;
-use wincode::serialize;
+fn to_bytes<T: Copy>(val: &T) -> Vec<u8> {
+    let ptr = val as *const T as *const u8;
+    let len = core::mem::size_of::<T>();
+    unsafe { core::slice::from_raw_parts(ptr, len) }.to_vec()
+}
 
 use Kiln_program::{
     instructions::{CreateVaultArgs, DepositJuniorArgs},
@@ -110,7 +114,7 @@ fn create_vault_ix(manager: &Keypair, vault_index: u16, args: CreateVaultArgs) -
     let (treasury, _) = treasury_pda(&vault_config);
 
     let mut data = vec![1];
-    data.extend_from_slice(&serialize(&args).expect("serialize create vault"));
+    data.extend_from_slice(&to_bytes(&args));
 
     Instruction {
         program_id: program_id(),
@@ -136,7 +140,7 @@ fn deposit_junior_ix(manager: &Keypair, vault_index: u16, amount_lamports: u64) 
 
     let mut data = vec![2];
     data.extend_from_slice(
-        &serialize(&DepositJuniorArgs { amount_lamports }).expect("serialize deposit"),
+        &to_bytes(&DepositJuniorArgs { amount_lamports }),
     );
 
     Instruction {
@@ -226,7 +230,7 @@ fn update_nav_sets_hwm_and_updates_nav() {
         _reserved: [0; 2],
         name: {
             let mut name = [0_u8; 32];
-            name[..8].copy_from_slice(b"UpdateNav");
+            name[..9].copy_from_slice(b"UpdateNav");
             name
         },
     };

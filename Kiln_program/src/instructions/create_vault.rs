@@ -63,12 +63,13 @@ pub fn create_vault(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let rent = Rent::from_account_info(rent_sysvar)?;
     let clock = Clock::from_account_info(clock_sysvar)?;
 
-    let manager_snapshot = ManagerProfile::load(manager_profile)?;
-    if manager_snapshot.owner != *manager.key() {
-        return Err(KilnError::ManagerMismatch.into());
-    }
-
-    let vault_index = manager_snapshot.total_vaults;
+    let vault_index = {
+        let manager_snapshot = ManagerProfile::load(manager_profile)?;
+        if manager_snapshot.owner != *manager.key() {
+            return Err(KilnError::ManagerMismatch.into());
+        }
+        manager_snapshot.total_vaults
+    };
     let index_bytes = vault_index.to_le_bytes();
     let (expected_config, config_bump) = find_program_address(
         &[VAULT_CONFIG_SEED, manager.key().as_ref(), &index_bytes],
