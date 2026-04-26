@@ -1,46 +1,48 @@
 import { useState, useMemo } from "react";
 import { Layout } from "@/components/Layout";
-import { vaults, VaultStatus, TraderTier, getTrader, protocolStats } from "@/lib/mockData";
+import { useVaults, type VaultView } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { fmtUSD } from "@/lib/format";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import type { VaultStatus } from "@/components/StatusBadge";
 
 const statusOptions: VaultStatus[] = ["active", "paper", "cooldown", "frozen"];
-const tierOptions: TraderTier[] = ["novice", "proven", "established", "veteran", "elite"];
 
 const Vaults = () => {
+  const { data: vaults, isLoading, error } = useVaults();
   const [query, setQuery] = useState("");
   const [statuses, setStatuses] = useState<VaultStatus[]>(["active", "paper"]);
-  const [tiers, setTiers] = useState<TraderTier[]>([]);
   const [minHealth, setMinHealth] = useState([0]);
   const [instantOnly, setInstantOnly] = useState(false);
-  const [sort, setSort] = useState<"reputation" | "tvl" | "return" | "drawdown" | "recent">("reputation");
+  const [sort, setSort] = useState<"tvl" | "health" | "recent">("tvl");
+
+  const allVaults = vaults ?? [];
+
+  const protocolStats = useMemo(() => ({
+    totalVaults: allVaults.length,
+    totalTVL: allVaults.reduce((s, v) => s + v.tvl, 0),
+    graduatedVaults: allVaults.filter(v => v.status !== "paper").length,
+    protectedCapital: allVaults.reduce((s, v) => s + v.seniorCapital, 0),
+  }), [allVaults]);
 
   const filtered = useMemo(() => {
-    return vaults
+    return allVaults
       .filter(v => statuses.length === 0 || statuses.includes(v.status))
-      .filter(v => {
-        const t = getTrader(v.traderWallet);
-        return tiers.length === 0 || (t && tiers.includes(t.tier));
-      })
       .filter(v => v.juniorHealth >= minHealth[0])
       .filter(v => !instantOnly || v.instantExit)
       .filter(v => v.name.toLowerCase().includes(query.toLowerCase()))
       .sort((a, b) => {
         if (sort === "tvl") return b.tvl - a.tvl;
-        if (sort === "return") return b.return30d - a.return30d;
-        if (sort === "drawdown") return b.maxDrawdown - a.maxDrawdown;
-        if (sort === "recent") return new Date(b.graduatedAt || b.createdAt).getTime() - new Date(a.graduatedAt || a.createdAt).getTime();
-        const ta = getTrader(a.traderWallet)?.reputation ?? 0;
-        const tb = getTrader(b.traderWallet)?.reputation ?? 0;
-        return tb - ta;
+        if (sort === "health") return b.juniorHealth - a.juniorHealth;
+        if (sort === "recent") return b.createdAt - a.createdAt;
+        return 0;
       });
-  }, [statuses, tiers, minHealth, instantOnly, query, sort]);
+  }, [allVaults, statuses, minHealth, instantOnly, query, sort]);
 
   const toggle = <T,>(arr: T[], setter: (v: T[]) => void, val: T) => {
     setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
@@ -55,17 +57,6 @@ const Vaults = () => {
             <label key={s} className="flex items-center gap-2 text-sm capitalize cursor-pointer">
               <Checkbox checked={statuses.includes(s)} onCheckedChange={() => toggle(statuses, setStatuses, s)} />
               {s}
-            </label>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Trader tier</h3>
-        <div className="space-y-2">
-          {tierOptions.map(t => (
-            <label key={t} className="flex items-center gap-2 text-sm capitalize cursor-pointer">
-              <Checkbox checked={tiers.includes(t)} onCheckedChange={() => toggle(tiers, setTiers, t)} />
-              {t}
             </label>
           ))}
         </div>
@@ -91,13 +82,12 @@ const Vaults = () => {
           <p className="text-muted-foreground mt-2">Discover managed vaults backed by trader skin in the game.</p>
         </div>
 
-        {/* KPI strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { l: "Live vaults", v: protocolStats.totalVaults },
-            { l: "Total TVL", v: `$${fmtUSD(protocolStats.totalTVL, { compact: true })}` },
+            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} SOL` },
             { l: "Graduated", v: protocolStats.graduatedVaults },
-            { l: "Protected capital", v: `$${fmtUSD(protocolStats.protectedCapital, { compact: true })}` },
+            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} SOL` },
           ].map(k => (
             <div key={k.l} className="surface rounded-xl p-4">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.l}</div>
@@ -119,14 +109,12 @@ const Vaults = () => {
               </div>
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value as "reputation" | "tvl" | "return" | "drawdown" | "recent")}
+                onChange={(e) => setSort(e.target.value as typeof sort)}
                 className="h-10 rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="reputation">Sort: Reputation</option>
                 <option value="tvl">Sort: TVL</option>
-                <option value="return">Sort: 30d return</option>
-                <option value="drawdown">Sort: Lowest drawdown</option>
-                <option value="recent">Sort: Recently graduated</option>
+                <option value="health">Sort: Junior health</option>
+                <option value="recent">Sort: Recently created</option>
               </select>
               <Sheet>
                 <SheetTrigger asChild>
@@ -139,21 +127,36 @@ const Vaults = () => {
                   <div className="mt-6">{Filters}</div>
                 </SheetContent>
               </Sheet>
-              {(statuses.length > 0 || tiers.length > 0 || instantOnly || minHealth[0] > 0) && (
-                <Button variant="ghost" size="sm" onClick={() => { setStatuses([]); setTiers([]); setMinHealth([0]); setInstantOnly(false); }}>
+              {(statuses.length > 0 || instantOnly || minHealth[0] > 0) && (
+                <Button variant="ghost" size="sm" onClick={() => { setStatuses([]); setMinHealth([0]); setInstantOnly(false); }}>
                   <X className="w-3 h-3 mr-1" /> Clear
                 </Button>
               )}
             </div>
 
-            <div className="text-xs text-muted-foreground mb-4">{filtered.length} vault{filtered.length !== 1 && "s"}</div>
-
-            {filtered.length === 0 ? (
-              <div className="surface rounded-2xl p-10 text-center text-muted-foreground">No vaults match your filters.</div>
-            ) : (
-              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                {filtered.map(v => <VaultCard key={v.id} vault={v} />)}
+            {isLoading ? (
+              <div className="surface rounded-2xl p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading vaults from chain...
               </div>
+            ) : error ? (
+              <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
+                Connect your wallet to browse on-chain vaults.
+              </div>
+            ) : (
+              <>
+                <div className="text-xs text-muted-foreground mb-4">{filtered.length} vault{filtered.length !== 1 && "s"}</div>
+                {filtered.length === 0 ? (
+                  <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
+                    {allVaults.length === 0
+                      ? "No vaults created yet. Be the first to create a vault!"
+                      : "No vaults match your filters."}
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filtered.map(v => <VaultCard key={v.id} vault={v} />)}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

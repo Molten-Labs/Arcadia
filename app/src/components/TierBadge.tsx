@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
-import { TraderTier } from "@/lib/mockData";
 import { Sparkles, Award, Shield, Star, Crown } from "lucide-react";
+
+export type TraderTier = "novice" | "proven" | "established" | "veteran" | "elite";
 
 const config: Record<TraderTier, { label: string; icon: typeof Sparkles; color: string; bg: string }> = {
   novice: { label: "Novice", icon: Sparkles, color: "text-tier-novice", bg: "bg-tier-novice/10 border-tier-novice/30" },

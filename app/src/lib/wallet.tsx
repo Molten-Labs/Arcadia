@@ -1,151 +1,140 @@
 import {
-    createContext,
-    useContext,
-    useEffect,
-    useState,
-    ReactNode,
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  ReactNode,
 } from "react";
+import {
+  ConnectionProvider,
+  WalletProvider as SolanaWalletProvider,
+  useWallet as useSolanaWallet,
+  useConnection,
+} from "@solana/wallet-adapter-react";
+import {
+  WalletModalProvider,
+  WalletMultiButton,
+} from "@solana/wallet-adapter-react-ui";
+import {
+  PhantomWalletAdapter,
+  SolflareWalletAdapter,
+} from "@solana/wallet-adapter-wallets";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { RPC_URL } from "./solana/constants";
+
+import "@solana/wallet-adapter-react-ui/styles.css";
 
 export type Role = "investor" | "trader";
 export type Network = "mainnet" | "devnet";
 
-interface WalletState {
-    connected: boolean;
-    address: string | null;
-    role: Role;
-    network: Network;
-    walletName: string | null;
-    connect: (walletName?: string) => Promise<void>;
-    disconnect: () => void;
-    setRole: (r: Role) => void;
-    setNetwork: (n: Network) => void;
+interface KilnWalletState {
+  connected: boolean;
+  address: string | null;
+  publicKey: PublicKey | null;
+  role: Role;
+  network: Network;
+  walletName: string | null;
+  connection: Connection | null;
+  connect: () => void;
+  disconnect: () => void;
+  setRole: (r: Role) => void;
+  setNetwork: (n: Network) => void;
 }
 
-const defaultState: WalletState = {
-    connected: false,
-    address: null,
-    role: "investor",
-    network: "mainnet",
-    walletName: null,
-    connect: async () => {},
-    disconnect: () => {},
-    setRole: () => {},
-    setNetwork: () => {},
+const defaultState: KilnWalletState = {
+  connected: false,
+  address: null,
+  publicKey: null,
+  role: "investor",
+  network: "devnet",
+  walletName: null,
+  connection: null,
+  connect: () => {},
+  disconnect: () => {},
+  setRole: () => {},
+  setNetwork: () => {},
 };
 
-const WalletContext = createContext<WalletState>(defaultState);
+const KilnWalletContext = createContext<KilnWalletState>(defaultState);
 
-const WALLET_SESSION_KEY = "kiln.demoWallet.session";
+const PREFS_KEY = "kiln.wallet.prefs";
 
-type StoredWalletSession = Pick<
-    WalletState,
-    "connected" | "address" | "role" | "network" | "walletName"
->;
+function KilnWalletInner({ children }: { children: ReactNode }) {
+  const { connected, publicKey, wallet, disconnect: solDisconnect, select } = useSolanaWallet();
+  const { connection } = useConnection();
 
-const demoWalletAddresses: Record<string, string> = {
-    Phantom: "8FpA9z3kQrLmN7vBcXdYuT2hJ5wK3xQ",
-    Solflare: "6nLk2pR8sVbQ4yMzFhD9xAcE7tWjP1",
-    Backpack: "4bYx7cTqN3vR9mLpH2sK8eDzUaWfG5",
-    "Demo Wallet": "9DemoVaULt7Session3Kiln8Wallet2",
-};
-
-const getStoredSession = (): StoredWalletSession | null => {
-    if (typeof window === "undefined") return null;
-
+  const stored = useMemo(() => {
     try {
-        const raw = window.localStorage.getItem(WALLET_SESSION_KEY);
-        if (!raw) return null;
-
-        const parsed = JSON.parse(raw) as Partial<StoredWalletSession>;
-        if (!parsed.connected || !parsed.address) return null;
-
-        return {
-            connected: true,
-            address: parsed.address,
-            role: parsed.role === "trader" ? "trader" : "investor",
-            network: parsed.network === "devnet" ? "devnet" : "mainnet",
-            walletName: parsed.walletName ?? "Demo Wallet",
-        };
+      const raw = localStorage.getItem(PREFS_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch {
-        window.localStorage.removeItem(WALLET_SESSION_KEY);
-        return null;
+      return null;
     }
-};
+  }, []);
+
+  const [role, setRole] = useState<Role>(stored?.role ?? "investor");
+  const [network, setNetwork] = useState<Network>(stored?.network ?? "devnet");
+
+  useEffect(() => {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ role, network }));
+  }, [role, network]);
+
+  const address = publicKey?.toBase58() ?? null;
+
+  const value: KilnWalletState = useMemo(
+    () => ({
+      connected,
+      address,
+      publicKey: publicKey ?? null,
+      role,
+      network,
+      walletName: wallet?.adapter.name ?? null,
+      connection,
+      connect: () => {
+        /* Wallet modal handles this via WalletMultiButton */
+      },
+      disconnect: () => {
+        solDisconnect();
+      },
+      setRole,
+      setNetwork,
+    }),
+    [connected, address, publicKey, role, network, wallet, connection, solDisconnect]
+  );
+
+  return (
+    <KilnWalletContext.Provider value={value}>
+      {children}
+    </KilnWalletContext.Provider>
+  );
+}
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
-    const storedSession = getStoredSession();
-    const [connected, setConnected] = useState(
-        storedSession?.connected ?? false,
-    );
-    const [address, setAddress] = useState<string | null>(
-        storedSession?.address ?? null,
-    );
-    const [role, setRole] = useState<Role>(storedSession?.role ?? "investor");
-    const [network, setNetwork] = useState<Network>(
-        storedSession?.network ?? "mainnet",
-    );
-    const [walletName, setWalletName] = useState<string | null>(
-        storedSession?.walletName ?? null,
-    );
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+    ],
+    []
+  );
 
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-
-        if (!connected || !address) {
-            window.localStorage.removeItem(WALLET_SESSION_KEY);
-            return;
-        }
-
-        window.localStorage.setItem(
-            WALLET_SESSION_KEY,
-            JSON.stringify({
-                connected,
-                address,
-                role,
-                network,
-                walletName,
-            } satisfies StoredWalletSession),
-        );
-    }, [connected, address, role, network, walletName]);
-
-    return (
-        <WalletContext.Provider
-            value={{
-                connected,
-                address,
-                role,
-                network,
-                walletName,
-                connect: async (name = "Demo Wallet") => {
-                    // Deterministic demo connection: no random failures, stable address per wallet.
-                    await new Promise((r) => setTimeout(r, 450));
-                    setConnected(true);
-                    setAddress(
-                        demoWalletAddresses[name] ??
-                            demoWalletAddresses["Demo Wallet"],
-                    );
-                    setWalletName(name);
-                },
-                disconnect: () => {
-                    setConnected(false);
-                    setAddress(null);
-                    setWalletName(null);
-                    if (typeof window !== "undefined") {
-                        window.localStorage.removeItem(WALLET_SESSION_KEY);
-                    }
-                },
-                setRole,
-                setNetwork,
-            }}
-        >
-            {children}
-        </WalletContext.Provider>
-    );
+  return (
+    <ConnectionProvider endpoint={RPC_URL}>
+      <SolanaWalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <KilnWalletInner>{children}</KilnWalletInner>
+        </WalletModalProvider>
+      </SolanaWalletProvider>
+    </ConnectionProvider>
+  );
 };
 
-export const useWallet = () => useContext(WalletContext);
+export const useWallet = () => useContext(KilnWalletContext);
 
 export const shortAddr = (addr: string | null) => {
-    if (!addr) return "";
-    return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+  if (!addr) return "";
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 };
+
+export { WalletMultiButton };

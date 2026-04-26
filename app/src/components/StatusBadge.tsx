@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
-import { VaultStatus } from "@/lib/mockData";
 import { Circle } from "lucide-react";
+
+export type VaultStatus = "paper" | "active" | "cooldown" | "frozen" | "closed";
 
 const config: Record<VaultStatus, { label: string; color: string; bg: string; dot: string }> = {
   paper: { label: "Paper Mode", color: "text-status-paper", bg: "bg-status-paper/10 border-status-paper/30", dot: "bg-status-paper" },
