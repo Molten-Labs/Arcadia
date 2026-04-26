@@ -33,5 +33,6 @@ fn process_instruction(
         ProgramInstruction::WithdrawSenior => instructions::withdraw_senior(accounts, instruction_data),
         ProgramInstruction::WithdrawJunior => instructions::withdraw_junior(accounts, instruction_data),
         ProgramInstruction::ClaimFees => instructions::claim_fees(accounts, instruction_data),
+        ProgramInstruction::ExecuteSwap => instructions::execute_swap(accounts, instruction_data),
     }
 }

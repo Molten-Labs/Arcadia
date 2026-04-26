@@ -6,8 +6,10 @@ pub mod claim_fees;
 pub mod create_vault;
 pub mod deposit_junior;
 pub mod deposit_senior;
+pub mod execute_swap;
 pub mod init_manager;
 pub mod update_nav;
+pub mod vault_guard;
 pub mod withdraw_junior;
 pub mod withdraw_senior;
 
@@ -15,6 +17,7 @@ pub use claim_fees::*;
 pub use create_vault::*;
 pub use deposit_junior::*;
 pub use deposit_senior::*;
+pub use execute_swap::*;
 pub use init_manager::*;
 pub use update_nav::*;
 pub use withdraw_junior::*;
@@ -32,6 +35,7 @@ pub enum ProgramInstruction {
     WithdrawSenior = 6,
     WithdrawJunior = 7,
     ClaimFees = 8,
+    ExecuteSwap = 9,
 }
 
 impl TryFrom<&u8> for ProgramInstruction {
@@ -48,6 +52,7 @@ impl TryFrom<&u8> for ProgramInstruction {
             6 => Ok(ProgramInstruction::WithdrawSenior),
             7 => Ok(ProgramInstruction::WithdrawJunior),
             8 => Ok(ProgramInstruction::ClaimFees),
+            9 => Ok(ProgramInstruction::ExecuteSwap),
             _ => Err(ProgramError::InvalidInstructionData),
         }
     }
@@ -146,6 +151,15 @@ pub enum KilnInstructionIdl {
     #[account(4, writable, name = "treasury")]
     #[account(5, name = "clock")]
     ClaimFees,
+
+    /// Execute a swap from the vault treasury (with vault guard checks).
+    #[account(0, signer, name = "manager")]
+    #[account(1, name = "manager_profile")]
+    #[account(2, name = "vault_config")]
+    #[account(3, writable, name = "vault_state")]
+    #[account(4, writable, name = "treasury")]
+    #[account(5, name = "clock")]
+    ExecuteSwap(ExecuteSwapArgsIdl),
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
@@ -176,4 +190,10 @@ pub struct WithdrawSeniorArgsIdl {
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub struct WithdrawJuniorArgsIdl {
     pub shares_to_burn: u64,
+}
+
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
+pub struct ExecuteSwapArgsIdl {
+    pub in_amount: u64,
+    pub minimum_amount_out: u64,
 }
