@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import bs58 from "bs58";
 
 // Account discriminators match the on-chain Rust structs
 const MANAGER_PROFILE_DISC = 1;
@@ -163,11 +164,11 @@ export function decodeInvestorPosition(data: Buffer): InvestorPositionData {
 export async function fetchAllVaults(connection: Connection) {
   const { PROGRAM_ID } = await import("./constants");
   const configAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
-    filters: [{ memcmp: { offset: 0, bytes: String.fromCharCode(VAULT_CONFIG_DISC) } }],
+    filters: [{ memcmp: { offset: 0, bytes: bs58.encode(Buffer.from([VAULT_CONFIG_DISC])) } }],
   });
 
   const stateAccounts = await connection.getProgramAccounts(PROGRAM_ID, {
-    filters: [{ memcmp: { offset: 0, bytes: String.fromCharCode(VAULT_STATE_DISC) } }],
+    filters: [{ memcmp: { offset: 0, bytes: bs58.encode(Buffer.from([VAULT_STATE_DISC])) } }],
   });
 
   const configs = configAccounts.map((a) => ({
@@ -192,7 +193,7 @@ export async function fetchAllVaults(connection: Connection) {
 export async function fetchAllManagers(connection: Connection) {
   const { PROGRAM_ID } = await import("./constants");
   const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-    filters: [{ memcmp: { offset: 0, bytes: String.fromCharCode(MANAGER_PROFILE_DISC) } }],
+    filters: [{ memcmp: { offset: 0, bytes: bs58.encode(Buffer.from([MANAGER_PROFILE_DISC])) } }],
   });
 
   return accounts.map((a) => ({

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useKilnTransactions } from "@/hooks/useTransactions";
 import { useBalance } from "@/hooks/useBalance";
 import { cn } from "@/lib/utils";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+
 
 const steps = ["Identity", "Risk setup", "Junior capital", "Paper mode", "Review"];
 
@@ -53,7 +53,6 @@ const CreateVault = () => {
         feeBps: profile.feeBps,
         maxSlippageBps: profile.maxSlippageBps,
         paperWindowSecs: 30 * 24 * 60 * 60,
-        juniorDepositLamports: BigInt(Math.floor(juniorSol * LAMPORTS_PER_SOL)),
       });
 
       toast.success("Vault created!");

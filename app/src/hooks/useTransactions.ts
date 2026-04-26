@@ -4,7 +4,8 @@ import {
   TransactionInstruction,
   SystemProgram,
   PublicKey,
-  LAMPORTS_PER_SOL,
+  SYSVAR_RENT_PUBKEY,
+  SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWallet } from "@/lib/wallet";
@@ -64,30 +65,33 @@ export function useKilnTransactions() {
     [connection, publicKey, sendTransaction, queryClient]
   );
 
+  // Disc 0: [manager, profile, rent, clock, system_program]
   const initManager = useCallback(async () => {
     if (!publicKey) throw new Error("Wallet not connected");
     const [profilePda] = getManagerProfilePDA(publicKey);
     const ix = buildInstruction(0, [
       { pubkey: publicKey, isSigner: true, isWritable: true },
       { pubkey: profilePda, isSigner: false, isWritable: true },
+      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+      { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ]);
     return send(ix, "Init Manager");
   }, [publicKey, send]);
 
+  // Disc 1: [manager, profile, config, state, treasury, rent, clock, system_program]
+  // Args layout (48 bytes): paperWindowSecs(i64,8) | minQualifyingTrades(u16,2) | maxSlippageBps(u16,2) | managerFeeBps(u16,2) | reserved(2) | name([u8;32],32)
   const createVault = useCallback(
     async (params: {
       name: string;
       feeBps: number;
       maxSlippageBps: number;
       paperWindowSecs: number;
-      juniorDepositLamports: bigint;
+      minQualifyingTrades?: number;
     }) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [profilePda] = getManagerProfilePDA(publicKey);
 
-      // We need to know the vault index from the manager profile
-      // For now, fetch the manager profile to get total_vaults
       if (!connection) throw new Error("No connection");
       const profileInfo = await connection.getAccountInfo(profilePda);
       let vaultIndex = 0;
@@ -99,12 +103,13 @@ export function useKilnTransactions() {
       const [statePda] = getVaultStatePDA(configPda);
       const [treasuryPda] = getTreasuryPDA(configPda);
 
-      const data = Buffer.alloc(2 + 2 + 8 + 8 + 32);
+      const data = Buffer.alloc(48);
       let offset = 0;
-      data.writeUInt16LE(params.feeBps, offset); offset += 2;
-      data.writeUInt16LE(params.maxSlippageBps, offset); offset += 2;
       data.writeBigInt64LE(BigInt(params.paperWindowSecs), offset); offset += 8;
-      data.writeBigUInt64LE(params.juniorDepositLamports, offset); offset += 8;
+      data.writeUInt16LE(params.minQualifyingTrades ?? 10, offset); offset += 2;
+      data.writeUInt16LE(params.maxSlippageBps, offset); offset += 2;
+      data.writeUInt16LE(params.feeBps, offset); offset += 2;
+      data.writeUInt16LE(0, offset); offset += 2; // reserved
       const nameBytes = Buffer.from(params.name, "utf8").subarray(0, 32);
       nameBytes.copy(data, offset);
 
@@ -114,6 +119,8 @@ export function useKilnTransactions() {
         { pubkey: configPda, isSigner: false, isWritable: true },
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Create Vault");
@@ -121,6 +128,7 @@ export function useKilnTransactions() {
     [publicKey, connection, send]
   );
 
+  // Disc 2: [manager, profile, vault_config, vault_state, treasury, clock, system_program]
   const depositJunior = useCallback(
     async (vaultConfigPubkey: PublicKey, lamports: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -137,6 +145,7 @@ export function useKilnTransactions() {
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Deposit Junior");
@@ -144,6 +153,7 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
+  // Disc 5: [investor, vault_config, vault_state, treasury, investor_position, rent, clock, system_program]
   const depositSenior = useCallback(
     async (vaultConfigPubkey: PublicKey, lamports: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -160,8 +170,8 @@ export function useKilnTransactions() {
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
         { pubkey: positionPda, isSigner: false, isWritable: true },
-        { pubkey: new PublicKey("SysvarRent111111111111111111111111"), isSigner: false, isWritable: false },
-        { pubkey: new PublicKey("SysvarC1ock11111111111111111111111111111111"), isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Deposit Senior");
@@ -169,6 +179,7 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
+  // Disc 6: [investor, vault_config, vault_state, treasury, investor_position, clock]
   const withdrawSenior = useCallback(
     async (vaultConfigPubkey: PublicKey, sharesToBurn: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -185,14 +196,14 @@ export function useKilnTransactions() {
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
         { pubkey: positionPda, isSigner: false, isWritable: true },
-        { pubkey: new PublicKey("SysvarC1ock11111111111111111111111111111111"), isSigner: false, isWritable: false },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Withdraw Senior");
     },
     [publicKey, send]
   );
 
+  // Disc 7: [manager, manager_profile, vault_config, vault_state, treasury, clock]
   const withdrawJunior = useCallback(
     async (vaultConfigPubkey: PublicKey, lamports: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -209,13 +220,14 @@ export function useKilnTransactions() {
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Withdraw Junior");
     },
     [publicKey, send]
   );
 
+  // Disc 8: [manager, manager_profile, vault_config, vault_state, treasury, clock]
   const claimFees = useCallback(
     async (vaultConfigPubkey: PublicKey) => {
       if (!publicKey) throw new Error("Wallet not connected");
@@ -223,13 +235,13 @@ export function useKilnTransactions() {
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
 
-      const ix = buildInstruction(9, [
+      const ix = buildInstruction(8, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
         { pubkey: profilePda, isSigner: false, isWritable: false },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ]);
       return send(ix, "Claim Fees");
     },

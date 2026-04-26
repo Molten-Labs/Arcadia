@@ -37,7 +37,7 @@ export interface VaultView {
   vaultIndex: number;
 }
 
-function lamportsToUsd(lamports: bigint): number {
+function lamportsToSol(lamports: bigint): number {
   return Number(lamports) / 1e9;
 }
 
@@ -58,8 +58,8 @@ function deriveHealth(state: VaultStateData): number {
 export function toVaultView(v: OnChainVault): VaultView | null {
   if (!v.state) return null;
   const s = v.state;
-  const junior = lamportsToUsd(s.juniorCapital);
-  const senior = lamportsToUsd(s.seniorCapital);
+  const junior = lamportsToSol(s.juniorCapital);
+  const senior = lamportsToSol(s.seniorCapital);
   const status = deriveStatus(s);
   const health = deriveHealth(s);
 
@@ -75,8 +75,8 @@ export function toVaultView(v: OnChainVault): VaultView | null {
     juniorCapital: junior,
     seniorCapital: senior,
     juniorHealth: health,
-    currentNav: lamportsToUsd(s.currentNav),
-    highWaterMark: lamportsToUsd(s.highWaterMark),
+    currentNav: lamportsToSol(s.currentNav),
+    highWaterMark: lamportsToSol(s.highWaterMark),
     feeBps: v.config.managerFeeBps,
     maxSlippageBps: v.config.maxSlippageBps,
     createdAt: Number(v.config.createdAt),
@@ -129,7 +129,7 @@ export function useManagers() {
         owner: m.data.owner.toBase58(),
         totalVaults: m.data.totalVaults,
         activeVaults: m.data.activeVaults,
-        totalJuniorDeposited: lamportsToUsd(m.data.totalJuniorDeposited),
+        totalJuniorDeposited: lamportsToSol(m.data.totalJuniorDeposited),
         createdAt: m.data.createdAt,
       }));
     },
