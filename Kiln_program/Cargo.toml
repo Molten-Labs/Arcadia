@@ -18,15 +18,15 @@ wincode = { version = "0.5.3", default-features = false, features = ["derive"] }
 
 
 [dev-dependencies]
-litesvm = "0.8.2"
-litesvm-token = "0.8.2"
-solana-instruction = "3.0.0"
-solana-keypair = "3.0.0"
-solana-native-token = "3.0.0"
-solana-pubkey = "3.0.0"
-solana-sdk-ids = "3.0.0"
-solana-signer = "3.0.0"
-solana-transaction = { version = "3.0.1", features = ["verify"] }
+litesvm = "0.10"
+litesvm-token = "0.10"
+solana-instruction = "3.0"
+solana-keypair = "3.0"
+solana-native-token = "3.0"
+solana-pubkey = "3.0"
+solana-sdk-ids = "3.0"
+solana-signer = "3.0"
+solana-transaction = { version = "3.0", features = ["verify"] }
 wincode = { version = "0.5.3", features = ["std", "derive"] }
 
 
