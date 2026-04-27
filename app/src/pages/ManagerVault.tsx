@@ -23,7 +23,7 @@ const ManagerVault = () => {
   const { id } = useParams();
   const { data: v, isLoading } = useVault(id);
   const { data: balance } = useBalance();
-  const { depositJunior, withdrawJunior, claimFees } = useKilnTransactions();
+  const { depositJunior, withdrawJunior, updateNav, graduateVault, executeSwap, claimFees } = useKilnTransactions();
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -45,6 +45,10 @@ const ManagerVault = () => {
   const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
   const lamports = hasValidAmount ? BigInt(Math.floor(parsedAmount * LAMPORTS_PER_SOL)) : 0n;
   const aboveHwm = Math.max(0, v.currentNav - v.highWaterMark);
+  const juniorSharesToBurn =
+    hasValidAmount && v.juniorCapital > 0 && v.juniorSharesOutstanding > 0
+      ? (lamports * BigInt(v.juniorSharesOutstanding)) / BigInt(Math.floor(v.juniorCapital * LAMPORTS_PER_SOL))
+      : 0n;
 
   const checks = [
     { ok: true, label: "Whitelisted asset" },
@@ -71,13 +75,52 @@ const ManagerVault = () => {
 
   const handleWithdrawJunior = async () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
+    if (juniorSharesToBurn === 0n) { toast.error("Amount is too small for current share price"); return; }
     setSending(true);
     try {
-      await withdrawJunior(new PublicKey(v.configPubkey), lamports);
+      await withdrawJunior(new PublicKey(v.configPubkey), juniorSharesToBurn);
       setAmount("");
       toast.success("Junior capital withdrawn");
     } catch (e) {
       toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleUpdateNav = async () => {
+    setSending(true);
+    try {
+      await updateNav(new PublicKey(v.configPubkey));
+      toast.success("NAV updated");
+    } catch (e) {
+      toast.error("NAV update failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleGraduateVault = async () => {
+    setSending(true);
+    try {
+      await graduateVault(new PublicKey(v.configPubkey), new PublicKey(v.managerPubkey));
+      toast.success("Graduation submitted");
+    } catch (e) {
+      toast.error("Graduation failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleGuardedSwap = async () => {
+    if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
+    setSending(true);
+    try {
+      await executeSwap(new PublicKey(v.configPubkey), lamports, 0n);
+      setAmount("");
+      toast.success("Guard-only swap check submitted");
+    } catch (e) {
+      toast.error("Swap check failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
       setSending(false);
     }
@@ -119,6 +162,12 @@ const ManagerVault = () => {
             </Button>
             <Button variant="outline" size="sm" onClick={handleClaimFees} disabled={sending}>
               Claim fees
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleUpdateNav} disabled={sending}>
+              Update NAV
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleGraduateVault} disabled={sending || v.status !== "paper"}>
+              Graduate
             </Button>
             <Button variant="outline" size="sm" onClick={handleWithdrawJunior} disabled={sending || !hasValidAmount}>
               Withdraw junior
@@ -199,6 +248,14 @@ const ManagerVault = () => {
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Deposit junior
+                </Button>
+                <Button
+                  onClick={handleGuardedSwap}
+                  disabled={sending || !hasValidAmount || !allOk}
+                  variant="outline"
+                  className="flex-1 h-11"
+                >
+                  Guard check
                 </Button>
                 <Button
                   onClick={handleWithdrawJunior}

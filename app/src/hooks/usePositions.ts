@@ -29,10 +29,8 @@ function estimateCurrentValue(
   pos: InvestorPositionData,
   vault: VaultView | null
 ): number {
-  if (!vault || vault.seniorCapital === 0) return lamportsToSol(pos.totalDeposited);
-  const deposited = lamportsToSol(pos.totalDeposited);
-  const navRatio = vault.currentNav > 0 ? vault.tvl / vault.currentNav : 1;
-  return deposited * navRatio;
+  if (!vault || vault.seniorSharesOutstanding === 0) return lamportsToSol(pos.totalDeposited);
+  return (Number(pos.seniorShares) / vault.seniorSharesOutstanding) * vault.seniorCapital;
 }
 
 export function usePositions() {

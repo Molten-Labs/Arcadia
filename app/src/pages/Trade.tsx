@@ -985,8 +985,7 @@ const Trade = () => {
                                 </Button>
 
                                 <div className="text-[10px] text-muted-foreground text-center pt-1">
-                                    Trades route through Jupiter · Pyth oracle ·
-                                    Est. fee ~0.1%
+                                    Demo order blotter · Jupiter/Pyth routing deferred
                                 </div>
                             </div>
                         </div>

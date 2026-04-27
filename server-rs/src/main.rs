@@ -19,30 +19,16 @@ struct HealthResponse {
     status: &'static str,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct WebhookPayload {
-    // Keep generic: most webhooks will be arbitrary JSON. Capture "kind" if present.
-    kind: Option<String>,
-    data: Value,
-}
-
 /// Simple application state shared across handlers.
 #[derive(Clone)]
 struct AppState {
     db: PgPool,
-    helius_api_key: Option<String>,
 }
 
 #[derive(Error, Debug)]
 enum AppError {
     #[error("database error: {0}")]
     Db(#[from] sqlx::Error),
-
-    #[error("bad request: {0}")]
-    BadRequest(String),
-
-    #[error("internal error")]
-    Internal,
 }
 
 impl IntoResponse for AppError {
@@ -50,11 +36,10 @@ impl IntoResponse for AppError {
         let (status, body) = match &self {
             AppError::Db(e) => {
                 error!("database error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "database error".to_string())
-            }
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
-            AppError::Internal => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "database error".to_string(),
+                )
             }
         };
         (status, body).into_response()
@@ -64,8 +49,7 @@ impl IntoResponse for AppError {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialize logging
-    let env_filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt()
         .with_env_filter(env_filter)
         .with_span_events(fmt::format::FmtSpan::CLOSE)
@@ -75,15 +59,18 @@ async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
 
     // Read configuration from environment
-    let database_url =
-        env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost/kiln".to_string());
+    let database_url = env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/kiln".to_string());
     let port: u16 = env::var("PORT")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(8080);
     let helius_api_key = env::var("HELIUS_API_KEY").ok();
 
-    info!("starting server; connecting to database: {}", mask_db_url(&database_url));
+    info!(
+        "starting server; connecting to database: {}",
+        mask_db_url(&database_url)
+    );
 
     // Create database pool
     let db = PgPoolOptions::new()
@@ -96,7 +83,11 @@ async fn main() -> anyhow::Result<()> {
         error!("failed to ensure events table exists: {:?}", e);
     }
 
-    let shared = Arc::new(AppState { db, helius_api_key });
+    if helius_api_key.is_none() {
+        info!("HELIUS_API_KEY not set; webhook receiver will still accept payloads");
+    }
+
+    let shared = Arc::new(AppState { db });
 
     // Build routes
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any);
@@ -109,8 +100,8 @@ async fn main() -> anyhow::Result<()> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("listening on {}", addr);
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
@@ -145,7 +136,7 @@ async fn webhook_handler(
 
     // Use `payload_json` directly as JSON; sqlx will encode serde_json::Value -> jsonb
     sqlx::query(query)
-        .bind(kind)
+        .bind(&kind)
         .bind(payload_json)
         .execute(&state.db)
         .await

@@ -12,7 +12,7 @@
 | Instruction Encoding | `wincode` | In-place instruction serialization / deserialization |
 | IDL | `Shank` | IDL generation for client typing |
 | Solana CLI | Agave / Solana CLI | `cargo build-sbf`, devnet deployment |
-| Frontend | Next.js 14 + TypeScript + Tailwind | App router |
+| Frontend | Vite + React + TypeScript + Tailwind | React Router |
 | Wallet | Solana Wallet Adapter | Phantom / Backpack |
 | Oracle | Deferred | SOL-only MVP uses treasury lamports for NAV; Pyth is required before adding non-SOL assets |
 | Swap | Deferred | No Jupiter CPI in the SOL-only MVP; paper trades must not count until real CPI lands |
@@ -28,7 +28,7 @@
 
 ```mermaid
 graph TB
-    subgraph FRONTEND["Frontend — Next.js 14"]
+    subgraph FRONTEND["Frontend — Vite React"]
         HOME[Vault Explorer]
         VD[Vault Detail]
         MD[Manager Dashboard]
@@ -560,11 +560,13 @@ Recommended MVP threshold:
 | `withdraw_senior` | Investor | 24h cooldown or instant if junior ratio below threshold |
 | `execute_swap` | Trader | cooldown and size checks; does not count paper trades until real CPI exists |
 | `claim_fees` | Trader | graduated only, above HWM |
-| `set_investor_position` | Investor | only owner may set alert threshold |
-| `pause_vault` | Admin | blocks deposits/swaps only |
-| `unpause_vault` | Admin | re-enables allowed operations if not frozen |
-| `propose_admin` | Admin | current admin only |
-| `accept_admin` | Pending admin | must match pending admin pubkey |
+| `set_investor_position` | Investor | post-MVP; only owner may set alert threshold |
+| `pause_vault` | Admin | post-MVP; blocks deposits/swaps only |
+| `unpause_vault` | Admin | post-MVP; re-enables allowed operations |
+| `propose_admin` | Admin | post-MVP; current admin only |
+| `accept_admin` | Pending admin | post-MVP; must match pending admin pubkey |
+
+Only instructions `0..9` are implemented on this branch. Admin rotation, pause controls, and investor alert updates are retained here as near-term architecture, not current ABI.
 
 ---
 

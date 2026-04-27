@@ -55,6 +55,10 @@ const VaultDetail = () => {
     const parsedAmount = Number(amount);
     const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
     const lamports = hasValidAmount ? BigInt(Math.floor(parsedAmount * LAMPORTS_PER_SOL)) : 0n;
+    const seniorSharesToBurn =
+        hasValidAmount && vault.seniorCapital > 0 && vault.seniorSharesOutstanding > 0
+            ? (lamports * BigInt(vault.seniorSharesOutstanding)) / BigInt(Math.floor(vault.seniorCapital * LAMPORTS_PER_SOL))
+            : 0n;
 
     const handleDeposit = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
@@ -77,11 +81,12 @@ const VaultDetail = () => {
 
     const handleWithdraw = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
-        if (!hasValidAmount) { toast.error("Enter shares to withdraw"); return; }
+        if (!hasValidAmount) { toast.error("Enter a valid SOL amount"); return; }
+        if (seniorSharesToBurn === 0n) { toast.error("Amount is too small for current share price"); return; }
 
         setSending(true);
         try {
-            await withdrawSenior(new PublicKey(vault.configPubkey), BigInt(Math.floor(parsedAmount)));
+            await withdrawSenior(new PublicKey(vault.configPubkey), seniorSharesToBurn);
             setAmount("");
         } catch (e) {
             toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });
@@ -291,7 +296,7 @@ const VaultDetail = () => {
                                         variant="outline"
                                         className="w-full mt-2"
                                     >
-                                        Withdraw (enter shares)
+                                        Withdraw SOL
                                     </Button>
                                 </>
                             )}

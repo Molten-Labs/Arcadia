@@ -21,6 +21,8 @@ export interface VaultView {
   tvl: number;
   juniorCapital: number;
   seniorCapital: number;
+  juniorSharesOutstanding: number;
+  seniorSharesOutstanding: number;
   juniorHealth: number;
   currentNav: number;
   highWaterMark: number;
@@ -74,6 +76,8 @@ export function toVaultView(v: OnChainVault): VaultView | null {
     tvl: junior + senior,
     juniorCapital: junior,
     seniorCapital: senior,
+    juniorSharesOutstanding: Number(s.juniorSharesOutstanding),
+    seniorSharesOutstanding: Number(s.seniorSharesOutstanding),
     juniorHealth: health,
     currentNav: lamportsToSol(s.currentNav),
     highWaterMark: lamportsToSol(s.highWaterMark),

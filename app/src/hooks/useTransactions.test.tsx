@@ -184,7 +184,7 @@ describe("useKilnTransactions", () => {
     expect(ix.data[0]).toBe(7);
     expect(ix.data.readBigUInt64LE(1)).toBe(1_000_000_000n);
     expectKey(ix, 0, manager, true, true);
-    expectKey(ix, 1, managerProfilePda, false, false);
+    expectKey(ix, 1, managerProfilePda, false, true);
     expectKey(ix, 2, vaultConfigPda, false, false);
     expectKey(ix, 3, vaultStatePda, false, true);
     expectKey(ix, 4, treasuryPda, false, true);

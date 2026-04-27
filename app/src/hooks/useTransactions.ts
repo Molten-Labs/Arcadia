@@ -216,7 +216,7 @@ export function useKilnTransactions() {
 
       const ix = buildInstruction(7, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
-        { pubkey: profilePda, isSigner: false, isWritable: false },
+        { pubkey: profilePda, isSigner: false, isWritable: true },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
         { pubkey: treasuryPda, isSigner: false, isWritable: true },
