@@ -92,7 +92,7 @@ pub fn apply_post_swap_cooldown(
 ) {
     // Track paper trades (qualifying = > 5% of original junior deposit)
     if state.is_paper_mode != 0 && state.original_junior_deposit > 0 {
-        let threshold = state.original_junior_deposit / 20; // 5%
+        let threshold = state.original_junior_deposit.checked_div(20).unwrap_or(0);
         if swap_amount >= threshold {
             state.paper_trade_count = state.paper_trade_count.saturating_add(1);
         }
@@ -104,9 +104,11 @@ pub fn apply_post_swap_cooldown(
 
     let loss = old_nav.saturating_sub(new_nav);
 
-    // Single trade loss as bps of old NAV
+    // Single trade loss as bps of old NAV (capped at 10_000)
     let loss_bps = if old_nav > 0 {
-        (loss.saturating_mul(10_000) / old_nav) as u16
+        let raw = loss.checked_mul(10_000).unwrap_or(u64::MAX)
+            .checked_div(old_nav).unwrap_or(0);
+        core::cmp::min(raw, 10_000) as u16
     } else {
         0
     };

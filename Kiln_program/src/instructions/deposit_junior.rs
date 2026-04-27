@@ -84,9 +84,10 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         state.junior_shares_outstanding,
     )?;
 
-    if state.original_junior_deposit == 0 {
-        state.original_junior_deposit = args.amount_lamports;
-    }
+    state.original_junior_deposit = state
+        .original_junior_deposit
+        .checked_add(args.amount_lamports)
+        .ok_or(KilnError::MathOverflow)?;
 
     state.junior_capital = state
         .junior_capital

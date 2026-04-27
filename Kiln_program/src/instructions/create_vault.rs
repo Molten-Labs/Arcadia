@@ -56,7 +56,13 @@ pub fn create_vault(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     let args: CreateVaultArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
-    if args.max_slippage_bps == 0 || args.manager_fee_bps > 2_000 || args.paper_window_secs <= 0 {
+    if args.max_slippage_bps == 0
+        || args.max_slippage_bps > 500
+        || args.manager_fee_bps > 2_000
+        || args.paper_window_secs <= 0
+        || args.min_qualifying_trades == 0
+        || args.min_qualifying_trades > 1_000
+    {
         return Err(KilnError::InvalidVaultConfiguration.into());
     }
 

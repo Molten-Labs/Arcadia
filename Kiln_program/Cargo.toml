@@ -30,6 +30,12 @@ solana-transaction = { version = "3.0", features = ["verify"] }
 wincode = { version = "0.5.3", features = ["std", "derive"] }
 
 
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+
 [features]
 no-entrypoint = []
 std = []

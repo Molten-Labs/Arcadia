@@ -38,32 +38,37 @@ pub struct GraduateVaultArgs {
 /// Recompute NAV for a vault, apply waterfall loss logic and update timestamps.
 ///
 /// Expected accounts (in order):
-/// 0: updater (caller) - optional signer
+/// 0: updater (signer) — must be the vault's manager
 /// 1: vault_config (readonly)
 /// 2: vault_state (writable)
-/// 3: treasury (writable) -- a system account holding lamports representing USDC in this simplified MVP
-/// 4: clock (readonly)
+/// 3: treasury (writable)
+/// 4: pyth_price (placeholder)
+/// 5: clock (readonly)
 pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    // Minimal decode to keep parity with wincode-based instruction shapes.
     let _args: UpdateNavArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
 
-    let [ _updater, vault_config, vault_state, treasury, clock_sys ] = accounts else {
+    let [ updater, vault_config, vault_state, treasury, _pyth_price, clock_sys ] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    // Basic writable checks
+    if !updater.is_signer() {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
     if !vault_state.is_writable() || !treasury.is_writable() {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    // Load current state/config
     let config = VaultConfig::load(vault_config)?;
+    if config.manager != *updater.key() {
+        return Err(KilnError::ManagerMismatch.into());
+    }
     let mut state = VaultState::load_mut(vault_state)?;
-
-    // Ensure state links to config
     if state.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
+    }
+    if config.treasury != *treasury.key() {
+        return Err(KilnError::TreasuryMismatch.into());
     }
 
     // Compute current_nav from treasury lamports minus configured rent reserve
@@ -146,14 +151,17 @@ pub fn graduate_vault(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
     }
 
     let config = VaultConfig::load(vault_config)?;
+    if config.manager != *caller.key() {
+        return Err(KilnError::ManagerMismatch.into());
+    }
+    if config.manager_profile != *manager_profile.key() {
+        return Err(KilnError::ManagerMismatch.into());
+    }
     let mut state = VaultState::load_mut(vault_state)?;
-
-    // verify linkage
     if state.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
     }
 
-    // Must be in paper mode
     if state.is_paper_mode == 0 {
         return Err(KilnError::InvalidVaultConfiguration.into());
     }

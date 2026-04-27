@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { useKilnTransactions } from "@/hooks/useTransactions";
 import { useBalance } from "@/hooks/useBalance";
 import { cn } from "@/lib/utils";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { useWallet } from "@/lib/wallet";
+import { getVaultConfigPDA, getManagerProfilePDA } from "@/lib/solana/pdas";
 
 
 const steps = ["Identity", "Risk setup", "Junior capital", "Paper mode", "Review"];
@@ -27,8 +30,9 @@ const CreateVault = () => {
   const [accept, setAccept] = useState(false);
   const [sending, setSending] = useState(false);
   const navigate = useNavigate();
-  const { initManager, createVault } = useKilnTransactions();
+  const { initManager, createVault, depositJunior } = useKilnTransactions();
   const { data: balance } = useBalance();
+  const { publicKey, connection } = useWallet();
   const solBalance = balance ?? 0;
 
   const next = () => setStep(s => Math.min(steps.length - 1, s + 1));
@@ -36,15 +40,16 @@ const CreateVault = () => {
 
   const handleCreate = async () => {
     const juniorSol = parseFloat(junior || "0");
-    if (juniorSol <= 0) { toast.error("Enter a valid junior deposit amount"); return; }
+    if (!Number.isFinite(juniorSol) || juniorSol <= 0) { toast.error("Enter a valid junior deposit amount"); return; }
     if (juniorSol > solBalance) { toast.error("Insufficient SOL balance"); return; }
+    if (!publicKey || !connection) { toast.error("Wallet not connected"); return; }
 
     setSending(true);
     try {
       try {
         await initManager();
       } catch {
-        // Manager profile may already exist, that's OK
+        // Manager profile may already exist
       }
 
       const profile = RISK_PROFILES[risk];
@@ -55,7 +60,17 @@ const CreateVault = () => {
         paperWindowSecs: 30 * 24 * 60 * 60,
       });
 
-      toast.success("Vault created!");
+      const [profilePda] = getManagerProfilePDA(publicKey);
+      const profileInfo = await connection.getAccountInfo(profilePda);
+      const vaultIndex = profileInfo
+        ? Buffer.from(profileInfo.data).readUInt16LE(56) - 1
+        : 0;
+      const [configPda] = getVaultConfigPDA(publicKey, vaultIndex);
+
+      const lamports = BigInt(Math.floor(juniorSol * LAMPORTS_PER_SOL));
+      await depositJunior(configPda, lamports);
+
+      toast.success("Vault created & funded!");
       navigate("/manager");
     } catch (e) {
       toast.error("Create vault failed", { description: e instanceof Error ? e.message : "Unknown error" });
