@@ -40,7 +40,7 @@ const Docs = () => (
   <Layout>
     <div className="container py-16 max-w-4xl">
       <h1 className="font-display font-bold text-4xl">Documentation</h1>
-      <p className="text-muted-foreground mt-2">Everything you need to use Kiln as an investor or trader.</p>
+      <p className="text-muted-foreground mt-2">Everything you need to use SynQ as an investor or trader.</p>
 
       <div className="grid md:grid-cols-2 gap-4 mt-10">
         {docCards.map((d) => (
@@ -77,7 +77,7 @@ const Docs = () => (
           <section id="community-twitter" className="scroll-mt-28">
             <h3 className="font-semibold">Twitter</h3>
             <p className="text-muted-foreground mt-1">
-              Follow launch updates, trader highlights, and product releases from the official Kiln account.
+              Follow launch updates, trader highlights, and product releases from the official SynQ account.
             </p>
           </section>
           <section id="community-github" className="scroll-mt-28">

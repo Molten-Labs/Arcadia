@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Flame } from "lucide-react";
+import { Orbit } from "lucide-react";
 
 type FooterLink = { to: string; label: string };
 
@@ -9,9 +9,9 @@ export const Footer = () => (
       <div className="col-span-2">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-7 h-7 rounded-lg bg-gradient-ember flex items-center justify-center">
-            <Flame className="w-3.5 h-3.5 text-white" />
+            <Orbit className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="font-display font-bold">Kiln</span>
+          <span className="font-display font-bold">SynQ</span>
         </div>
         <p className="text-sm text-muted-foreground max-w-sm">
           Managed vaults with real skin in the game. Traders prove themselves on-chain before they touch your capital.
@@ -20,7 +20,7 @@ export const Footer = () => (
       <FooterCol
         title="Product"
         links={[
-          { to: "/vaults", label: "Vaults" },
+          { to: "/vaults", label: "Marketplace" },
           { to: "/traders", label: "Traders" },
           { to: "/how-it-works", label: "How it works" },
         ]}
@@ -43,7 +43,7 @@ export const Footer = () => (
     </div>
     <div className="border-t border-border">
       <div className="container py-6 flex flex-col md:flex-row gap-3 justify-between text-xs text-muted-foreground">
-        <span>© 2025 Kiln Labs. Non-custodial. Use at your own risk.</span>
+        <span>© 2025 SynQ Labs. Non-custodial. Use at your own risk.</span>
         <span>All performance figures are historical and do not guarantee future results.</span>
       </div>
     </div>

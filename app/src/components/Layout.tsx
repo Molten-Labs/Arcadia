@@ -36,7 +36,7 @@ const DemoDisclosure = () => (
                         Frontend preview:
                     </strong>{" "}
                     wallet sessions, market data, vault actions, and
-                    transactions are deterministic demo flows until production
+                    transactions are deterministic SynQ demo flows until production
                     Solana adapters are connected.
                 </span>
             </div>

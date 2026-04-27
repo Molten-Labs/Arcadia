@@ -10,7 +10,7 @@ const Traders = () => {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"vaults" | "junior" | "recent">("vaults");
 
-  const allManagers = managers ?? [];
+  const allManagers = useMemo(() => managers ?? [], [managers]);
 
   const filtered = useMemo(() => {
     return allManagers
@@ -26,7 +26,7 @@ const Traders = () => {
     <Layout>
       <div className="container py-10">
         <div className="mb-8">
-          <h1 className="font-display font-bold text-4xl">Traders</h1>
+          <h1 className="font-display font-bold text-4xl">SynQ traders</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">Discover managers who earned investor trust on-chain. Compare track records and vault performance.</p>
         </div>
 

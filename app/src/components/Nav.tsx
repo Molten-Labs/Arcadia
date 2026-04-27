@@ -7,7 +7,7 @@ import {
     Bell,
     Menu,
     X,
-    Flame,
+    Orbit,
     ChevronDown,
     LogOut,
     ArrowLeftRight,
@@ -40,26 +40,24 @@ export const Nav = () => {
     const location = useLocation();
 
     const publicLinks = [
-        { to: "/vaults", label: "Vaults" },
+        { to: "/vaults", label: "Marketplace" },
         { to: "/traders", label: "Traders" },
-        { to: "/trade", label: "Trade" },
         { to: "/how-it-works", label: "How it works" },
         { to: "/docs", label: "Docs" },
     ];
 
     const investorLinks = [
-        { to: "/vaults", label: "Vaults" },
-        { to: "/traders", label: "Traders" },
-        { to: "/trade", label: "Trade" },
+        { to: "/vaults", label: "Marketplace" },
         { to: "/portfolio", label: "Portfolio" },
-        { to: "/alerts", label: "Alerts" },
+        { to: "/alerts", label: "Activity" },
+        { to: "/settings", label: "Settings" },
     ];
 
     const traderLinks = [
-        { to: "/trade", label: "Trade" },
         { to: "/manager", label: "Manager" },
-        { to: "/vaults", label: "Vaults" },
-        { to: "/traders", label: "Traders" },
+        { to: "/trade", label: "Trade" },
+        { to: "/manager/create", label: "Vault config" },
+        { to: "/traders", label: "Investors" },
         { to: "/alerts", label: "Alerts" },
     ];
 
@@ -75,11 +73,11 @@ export const Nav = () => {
                 <div className="container flex items-center justify-between h-16">
                     <div className="flex items-center gap-8">
                         <Link to="/" className="flex items-center gap-2 group">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-ember flex items-center justify-center shadow-ember">
-                                <Flame className="w-4 h-4 text-white" />
+                            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center shadow-card">
+                                <Orbit className="w-4 h-4 text-primary" />
                             </div>
                             <span className="font-display font-bold text-lg tracking-tight">
-                                Kiln
+                                Syn<span className="text-primary">Q</span>
                             </span>
                         </Link>
                         <nav className="hidden md:flex items-center gap-1">
@@ -271,18 +269,20 @@ export const Nav = () => {
                                     </Link>
                                 );
                             })}
-                            <Link
-                                to="/settings"
-                                onClick={() => setOpen(false)}
-                                className={cn(
-                                    "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                    location.pathname === "/settings"
-                                        ? "bg-secondary text-foreground"
-                                        : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-                                )}
-                            >
-                                Settings
-                            </Link>
+                            {!links.some((link) => link.to === "/settings") && (
+                                <Link
+                                    to="/settings"
+                                    onClick={() => setOpen(false)}
+                                    className={cn(
+                                        "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        location.pathname === "/settings"
+                                            ? "bg-secondary text-foreground"
+                                            : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                                    )}
+                                >
+                                    Settings
+                                </Link>
+                            )}
                         </div>
                     </nav>
                 )}

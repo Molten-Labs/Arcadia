@@ -7,21 +7,24 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { fmtUSD } from "@/lib/format";
-import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, X, Loader2, ShieldCheck, Activity, WalletCards } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { VaultStatus } from "@/components/StatusBadge";
+import { DataModeToggle } from "@/components/DataModeToggle";
+import { usePositions } from "@/hooks/usePositions";
 
 const statusOptions: VaultStatus[] = ["active", "paper", "cooldown", "frozen"];
 
 const Vaults = () => {
   const { data: vaults, isLoading, error } = useVaults();
+  const { data: positions } = usePositions();
   const [query, setQuery] = useState("");
   const [statuses, setStatuses] = useState<VaultStatus[]>(["active", "paper"]);
   const [minHealth, setMinHealth] = useState([0]);
   const [instantOnly, setInstantOnly] = useState(false);
   const [sort, setSort] = useState<"tvl" | "health" | "recent">("tvl");
 
-  const allVaults = vaults ?? [];
+  const allVaults = useMemo(() => vaults ?? [], [vaults]);
 
   const protocolStats = useMemo(() => ({
     totalVaults: allVaults.length,
@@ -29,6 +32,16 @@ const Vaults = () => {
     graduatedVaults: allVaults.filter(v => v.status !== "paper").length,
     protectedCapital: allVaults.reduce((s, v) => s + v.seniorCapital, 0),
   }), [allVaults]);
+
+  const portfolioStats = useMemo(() => {
+    const allPositions = positions ?? [];
+    const currentValue = allPositions.reduce((sum, position) => sum + position.currentValue, 0);
+    const deposited = allPositions.reduce((sum, position) => sum + position.totalDeposited, 0);
+    const avgHealth = allPositions.length
+      ? Math.round(allPositions.reduce((sum, position) => sum + (position.vault?.juniorHealth ?? 0), 0) / allPositions.length)
+      : 0;
+    return { count: allPositions.length, currentValue, pnl: currentValue - deposited, avgHealth };
+  }, [positions]);
 
   const filtered = useMemo(() => {
     return allVaults
@@ -77,9 +90,13 @@ const Vaults = () => {
   return (
     <Layout>
       <div className="container py-10">
-        <div className="mb-8">
-          <h1 className="font-display font-bold text-4xl">Vault marketplace</h1>
-          <p className="text-muted-foreground mt-2">Discover managed vaults backed by trader skin in the game.</p>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor marketplace</div>
+            <h1 className="font-display font-bold text-4xl">SynQ graduated vaults</h1>
+            <p className="text-muted-foreground mt-2">Discover trader vaults backed by first-loss junior capital.</p>
+          </div>
+          <DataModeToggle compact />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
@@ -102,7 +119,7 @@ const Vaults = () => {
           </aside>
 
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-3 mb-5">
+            <div className="surface mb-5 flex flex-wrap items-center gap-3 rounded-xl p-3">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vaults..." className="pl-9" />
@@ -140,11 +157,14 @@ const Vaults = () => {
               </div>
             ) : error ? (
               <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
-                Connect your wallet or configure the Kiln API to browse vaults.
+                Connect your wallet or configure the SynQ API to browse vaults.
               </div>
             ) : (
               <>
-                <div className="text-xs text-muted-foreground mb-4">{filtered.length} vault{filtered.length !== 1 && "s"}</div>
+                <div className="mb-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <span>{filtered.length} vault{filtered.length !== 1 && "s"} · senior deposits never expose trader execution controls</span>
+                  <span className="hidden font-mono text-primary sm:inline">SENIOR CAPITAL VIEW</span>
+                </div>
                 {filtered.length === 0 ? (
                   <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
                     {allVaults.length === 0
@@ -159,6 +179,53 @@ const Vaults = () => {
               </>
             )}
           </div>
+          <aside className="hidden w-72 shrink-0 space-y-4 xl:block">
+            <div className="surface rounded-xl p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <WalletCards className="h-4 w-4 text-primary" aria-hidden="true" />
+                My portfolio
+              </div>
+              <div className="font-display text-3xl font-bold tabular">{fmtUSD(portfolioStats.currentValue, { compact: true })}</div>
+              <div className={portfolioStats.pnl >= 0 ? "mt-1 font-mono text-xs text-success" : "mt-1 font-mono text-xs text-destructive"}>
+                {portfolioStats.pnl >= 0 ? "+" : ""}{fmtUSD(portfolioStats.pnl, { compact: true })} unrealized
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg border border-border bg-secondary/50 p-3">
+                  <div className="text-muted-foreground">Positions</div>
+                  <div className="mt-1 font-mono text-sm text-foreground">{portfolioStats.count}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-secondary/50 p-3">
+                  <div className="text-muted-foreground">Avg health</div>
+                  <div className="mt-1 font-mono text-sm text-success">{portfolioStats.avgHealth}%</div>
+                </div>
+              </div>
+            </div>
+            <div className="surface rounded-xl p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
+                Trust rails
+              </div>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div>Trader junior capital takes first loss before senior deposits.</div>
+                <div>Instant exits unlock when the junior buffer drops below 20%.</div>
+                <div>Paper vaults cannot accept investor deposits until graduation.</div>
+              </div>
+            </div>
+            <div className="surface rounded-xl p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
+                Live activity
+              </div>
+              <div className="space-y-3 text-xs text-muted-foreground">
+                {allVaults.slice(0, 4).map((vault) => (
+                  <div key={vault.id} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0 last:pb-0">
+                    <span className="truncate">{vault.name}</span>
+                    <span className="font-mono text-foreground">{vault.juniorHealth}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </Layout>

@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Kiln Design System — dark, premium, institutional crypto.
+/* SynQ Design System — dark, premium, institutional crypto.
    All colors HSL. */
 
 @layer base {
@@ -21,11 +21,11 @@
     --popover: 215 22% 15%;
     --popover-foreground: 220 30% 94%;
 
-    /* Brand: ember orange */
-    --primary: 16 87% 55%;
+    /* Brand: SynQ violet */
+    --primary: 246 96% 71%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 22 100% 65%;
-    --primary-deep: 11 81% 43%;
+    --primary-glow: 249 98% 78%;
+    --primary-deep: 246 71% 58%;
 
     --secondary: 215 22% 18%;
     --secondary-foreground: 220 30% 94%;
@@ -49,7 +49,7 @@
     --border: 215 20% 22%;
     --border-strong: 215 18% 30%;
     --input: 215 22% 18%;
-    --ring: 16 87% 55%;
+    --ring: 246 96% 71%;
 
     --radius: 1rem;
 
@@ -65,28 +65,28 @@
     --tier-proven: 200 75% 55%;
     --tier-established: 160 65% 50%;
     --tier-veteran: 270 65% 65%;
-    --tier-elite: 16 87% 55%;
+    --tier-elite: 246 96% 71%;
 
     /* Gradients */
-    --gradient-ember: linear-gradient(135deg, hsl(11 81% 43%) 0%, hsl(16 87% 55%) 50%, hsl(22 100% 65%) 100%);
+    --gradient-ember: linear-gradient(135deg, hsl(246 71% 58%) 0%, hsl(246 96% 71%) 50%, hsl(249 98% 78%) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(215 24% 13%) 0%, hsl(215 24% 10%) 100%);
-    --gradient-radial: radial-gradient(ellipse at top, hsl(16 87% 55% / 0.15), transparent 60%);
-    --gradient-junior: linear-gradient(90deg, hsl(11 81% 43%), hsl(22 100% 65%));
+    --gradient-radial: radial-gradient(ellipse at top, hsl(246 96% 71% / 0.15), transparent 60%);
+    --gradient-junior: linear-gradient(90deg, hsl(246 71% 58%), hsl(249 98% 78%));
     --gradient-senior: linear-gradient(90deg, hsl(217 91% 40%), hsl(200 75% 55%));
 
     /* Shadows */
     --shadow-elegant: 0 10px 40px -10px hsl(213 33% 3% / 0.6);
-    --shadow-ember: 0 0 40px hsl(16 87% 55% / 0.25);
+    --shadow-ember: 0 0 40px hsl(246 96% 71% / 0.25);
     --shadow-card: 0 1px 0 hsl(220 30% 100% / 0.04) inset, 0 8px 24px -8px hsl(213 33% 2% / 0.5);
 
     --sidebar-background: 213 28% 8%;
     --sidebar-foreground: 220 20% 80%;
-    --sidebar-primary: 16 87% 55%;
+    --sidebar-primary: 246 96% 71%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 215 22% 16%;
     --sidebar-accent-foreground: 220 30% 94%;
     --sidebar-border: 215 20% 18%;
-    --sidebar-ring: 16 87% 55%;
+    --sidebar-ring: 246 96% 71%;
   }
 
   .dark {
@@ -105,8 +105,9 @@
     background-image: var(--gradient-radial);
     background-attachment: fixed;
   }
-  h1, h2, h3, h4, h5 { font-family: 'Sora', 'Inter', sans-serif; letter-spacing: -0.02em; }
-  .font-mono, .tabular { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  h1, h2, h3, h4, h5 { font-family: 'Syne', 'Inter', sans-serif; letter-spacing: 0; }
+  .font-display { font-family: 'Syne', 'Inter', sans-serif; }
+  .font-mono, .tabular { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

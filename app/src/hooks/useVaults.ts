@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet";
 import { fetchAllVaults, fetchAllManagers } from "@/lib/solana/accounts";
 import { fetchKilnApi, getKilnApiUrl, type ApiItems } from "@/lib/api";
+import { useDataMode } from "@/hooks/useDataMode";
+import { mockManagerViews, mockVaultViews } from "@/lib/mockViews";
 import type { VaultConfigData, VaultStateData } from "@/lib/solana/accounts";
 import type { PublicKey } from "@solana/web3.js";
 
@@ -119,10 +121,13 @@ export function toVaultView(v: OnChainVault): VaultView | null {
 
 export function useVaults() {
   const { connection } = useWallet();
+  const { mode, isMock } = useDataMode();
 
   return useQuery({
-    queryKey: ["vaults", getKilnApiUrl() || "rpc"],
+    queryKey: ["vaults", mode, getKilnApiUrl() || "rpc"],
     queryFn: async () => {
+      if (isMock) return mockVaultViews();
+
       try {
         const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
         if (api) return api.items.map(normalizeVaultView);
@@ -135,7 +140,7 @@ export function useVaults() {
       const raw = await fetchAllVaults(connection);
       return raw.map(toVaultView).filter((v): v is VaultView => v !== null);
     },
-    enabled: !!connection || !!getKilnApiUrl(),
+    enabled: isMock || !!connection || !!getKilnApiUrl(),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -152,10 +157,13 @@ export interface ManagerView {
 
 export function useManagers() {
   const { connection } = useWallet();
+  const { mode, isMock } = useDataMode();
 
   return useQuery({
-    queryKey: ["managers", getKilnApiUrl() || "rpc"],
+    queryKey: ["managers", mode, getKilnApiUrl() || "rpc"],
     queryFn: async () => {
+      if (isMock) return mockManagerViews();
+
       try {
         const api = await fetchKilnApi<ApiItems<ManagerView>>("/managers");
         if (api) return api.items;
@@ -175,15 +183,15 @@ export function useManagers() {
         createdAt: m.data.createdAt,
       }));
     },
-    enabled: !!connection || !!getKilnApiUrl(),
+    enabled: isMock || !!connection || !!getKilnApiUrl(),
     staleTime: 30_000,
   });
 }
 
 export function useVault(id: string | undefined) {
-  const { data: vaults } = useVaults();
+  const { data: vaults, isLoading: vaultsLoading, isFetching: vaultsFetching } = useVaults();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["vault", id],
     queryFn: () => {
       const vault = vaults?.find((v) => v.id === id);
@@ -192,6 +200,12 @@ export function useVault(id: string | undefined) {
     },
     enabled: !!id && !!vaults,
   });
+
+  return {
+    ...query,
+    isLoading: vaultsLoading || query.isLoading,
+    isFetching: vaultsFetching || query.isFetching,
+  };
 }
 
 export function normalizeVaultView(v: ApiVaultView): VaultView {

@@ -100,7 +100,7 @@ export class AppErrorBoundary extends Component<
                         </div>
 
                         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                            Kiln safety stop
+                            SynQ safety stop
                         </p>
                         <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
                             Something unexpected happened
