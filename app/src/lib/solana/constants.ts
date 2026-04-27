@@ -13,5 +13,14 @@ export const INVESTOR_POSITION_SEED = Buffer.from("investor-position");
 export const RPC_URL =
   import.meta.env.VITE_RPC_URL || "https://api.devnet.solana.com";
 
+export const SOLANA_CLUSTER =
+  import.meta.env.VITE_SOLANA_CLUSTER || (RPC_URL.includes("mainnet") ? "mainnet-beta" : "devnet");
+
+export const KILN_API_BASE_URL =
+  import.meta.env.VITE_KILN_API_BASE_URL || "http://localhost:8787";
+
+export const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112");
+export const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
 export const EXPLORER_BASE =
   import.meta.env.VITE_EXPLORER_BASE_URL || "https://explorer.solana.com";

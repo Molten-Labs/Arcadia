@@ -20,6 +20,30 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+type JupiterRoute = "SolToUsdc" | "UsdcToSol";
+
+interface JupiterAccountMeta {
+  pubkey: PublicKey;
+  isSigner: boolean;
+  isWritable: boolean;
+}
+
+interface ExecuteJupiterSwapParams {
+  route: JupiterRoute;
+  inAmount: bigint;
+  minimumAmountOut: bigint;
+  maxSlippageBps: number;
+  quoteExpiryUnix: bigint;
+  jupiterProgram: PublicKey;
+  tokenProgram: PublicKey;
+  sourceTokenAccount: PublicKey;
+  destinationTokenAccount: PublicKey;
+  solPriceAccount: PublicKey;
+  usdcPriceAccount: PublicKey;
+  jupiterInstructionData: Buffer;
+  jupiterAccounts: JupiterAccountMeta[];
+}
+
 function buildInstruction(
   discriminator: number,
   keys: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[],
@@ -315,6 +339,44 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
+  // Disc 9 extended: fixed Kiln validation accounts followed by Jupiter route accounts.
+  const executeJupiterSwap = useCallback(
+    async (vaultConfigPubkey: PublicKey, params: ExecuteJupiterSwapParams) => {
+      if (!publicKey) throw new Error("Wallet not connected");
+      const [profilePda] = getManagerProfilePDA(publicKey);
+      const [statePda] = getVaultStatePDA(vaultConfigPubkey);
+      const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+
+      const data = Buffer.alloc(32 + params.jupiterInstructionData.length);
+      data.writeUInt8(params.route === "SolToUsdc" ? 1 : 2, 0);
+      data.writeUInt8(0, 1);
+      data.writeUInt16LE(params.maxSlippageBps, 2);
+      data.writeUInt32LE(0, 4);
+      data.writeBigUInt64LE(params.inAmount, 8);
+      data.writeBigUInt64LE(params.minimumAmountOut, 16);
+      data.writeBigInt64LE(BigInt(params.quoteExpiryUnix), 24);
+      params.jupiterInstructionData.copy(data, 32);
+
+      const ix = buildInstruction(9, [
+        { pubkey: publicKey, isSigner: true, isWritable: false },
+        { pubkey: profilePda, isSigner: false, isWritable: false },
+        { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+        { pubkey: statePda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+        { pubkey: params.jupiterProgram, isSigner: false, isWritable: false },
+        { pubkey: params.tokenProgram, isSigner: false, isWritable: false },
+        { pubkey: params.sourceTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: params.destinationTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: params.solPriceAccount, isSigner: false, isWritable: false },
+        { pubkey: params.usdcPriceAccount, isSigner: false, isWritable: false },
+        ...params.jupiterAccounts,
+      ], data);
+      return send(ix, "Execute Jupiter Swap");
+    },
+    [publicKey, send]
+  );
+
   return {
     initManager,
     createVault,
@@ -326,5 +388,6 @@ export function useKilnTransactions() {
     graduateVault,
     claimFees,
     executeSwap,
+    executeJupiterSwap,
   };
 }

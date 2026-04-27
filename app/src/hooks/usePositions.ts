@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet";
 import { PROGRAM_ID } from "@/lib/solana/constants";
 import { decodeInvestorPosition } from "@/lib/solana/accounts";
+import { fetchKilnApi, getKilnApiUrl, type ApiItems } from "@/lib/api";
 import type { InvestorPositionData } from "@/lib/solana/accounts";
-import type { PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
-import { useVaults, type VaultView } from "./useVaults";
+import { normalizeVaultView, useVaults, type VaultView } from "./useVaults";
 
 const INVESTOR_POSITION_DISC = 4;
 
@@ -27,14 +27,40 @@ function lamportsToSol(lamports: bigint): number {
   return Number(lamports) / 1e9;
 }
 
-function estimateCurrentValue(
-  pos: InvestorPositionData,
+export function calculatePositionValue(
+  seniorSharesRaw: bigint,
+  totalDepositedLamports: bigint,
   vault: VaultView | null
 ): number {
-  if (!vault || vault.seniorSharesOutstandingRaw === 0n) return lamportsToSol(pos.totalDeposited);
+  if (!vault || vault.seniorSharesOutstandingRaw === 0n) return lamportsToSol(totalDepositedLamports);
   const valueLamports =
-    (pos.seniorShares * vault.seniorCapitalLamports) / vault.seniorSharesOutstandingRaw;
+    (seniorSharesRaw * vault.seniorCapitalLamports) / vault.seniorSharesOutstandingRaw;
   return lamportsToSol(valueLamports);
+}
+
+function estimateCurrentValue(pos: InvestorPositionData, vault: VaultView | null): number {
+  return calculatePositionValue(pos.seniorShares, pos.totalDeposited, vault);
+}
+
+function normalizeApiPosition(pos: PositionView): PositionView {
+  const vault = pos.vault ? normalizeVaultView(pos.vault) : null;
+  const seniorShares = Number(pos.seniorShares);
+  const totalDeposited = Number(pos.totalDeposited);
+  const seniorSharesRaw = pos.seniorSharesRaw ?? BigInt(Math.round(seniorShares));
+  const totalDepositedLamports =
+    pos.totalDepositedLamports ?? BigInt(Math.round(totalDeposited * 1e9));
+
+  return {
+    ...pos,
+    vault,
+    depositedAt: Number(pos.depositedAt),
+    seniorShares,
+    seniorSharesRaw,
+    totalDeposited,
+    totalDepositedLamports,
+    alertThresholdBps: Number(pos.alertThresholdBps),
+    currentValue: calculatePositionValue(seniorSharesRaw, totalDepositedLamports, vault),
+  };
 }
 
 export function usePositions() {
@@ -42,13 +68,24 @@ export function usePositions() {
   const { data: vaults } = useVaults();
 
   return useQuery({
-    queryKey: ["positions", publicKey?.toBase58()],
+    queryKey: ["positions", publicKey?.toBase58(), getKilnApiUrl() || "rpc"],
     queryFn: async () => {
-      if (!connection || !publicKey) throw new Error("Not connected");
+      if (!publicKey) throw new Error("Not connected");
+      const wallet = publicKey.toBase58();
+
+      try {
+        const api = await fetchKilnApi<ApiItems<PositionView>>(`/positions/${wallet}`);
+        if (api) return api.items.map(normalizeApiPosition);
+      } catch (error) {
+        if (!connection || !vaults) throw error;
+        console.warn("Kiln API unavailable; falling back to direct RPC position reads.", error);
+      }
+
+      if (!connection || !vaults) throw new Error("No connection or Kiln API configured");
       const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
         filters: [
           { memcmp: { offset: 0, bytes: bs58.encode(Buffer.from([INVESTOR_POSITION_DISC])) } },
-          { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
+          { memcmp: { offset: 8, bytes: wallet } },
         ],
       });
 
@@ -72,7 +109,7 @@ export function usePositions() {
         } satisfies PositionView;
       });
     },
-    enabled: !!connection && !!publicKey && !!vaults,
+    enabled: !!publicKey && (!!getKilnApiUrl() || (!!connection && !!vaults)),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

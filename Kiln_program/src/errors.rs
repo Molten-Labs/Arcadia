@@ -32,6 +32,12 @@ pub enum KilnError {
     WithdrawalCooldownActive,
     InvestorMismatch,
     InvalidInvestorPositionPda,
+    InvalidSwapRoute,
+    InvalidJupiterProgram,
+    InvalidTokenProgram,
+    InvalidTokenAccount,
+    InvalidOracleAccount,
+    JupiterCpiFailed,
 }
 
 impl From<KilnError> for ProgramError {

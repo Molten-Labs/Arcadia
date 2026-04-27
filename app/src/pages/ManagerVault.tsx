@@ -17,6 +17,7 @@ import { ArrowLeft, Check, ArrowDownUp, X, Loader2 } from "lucide-react";
 import { PublicKey } from "@solana/web3.js";
 import { toast } from "sonner";
 import { calculateSharesToBurn, parseSolToLamports } from "@/lib/solana/shares";
+import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
 
 const QUICK_AMOUNTS = [25, 50, 75, 100] as const;
 
@@ -57,7 +58,7 @@ const ManagerVault = () => {
     { ok: v.juniorCapitalLamports > 0n, label: "Junior capital posted" },
     {
       ok: v.paperTradeCount >= v.minQualifyingTrades,
-      label: `${v.minQualifyingTrades}+ qualifying trades (${v.paperTradeCount} done)`,
+      label: `${v.minQualifyingTrades}+ qualifying real swaps (${v.paperTradeCount} done)`,
     },
     {
       ok: v.currentNavLamports > v.originalJuniorDepositLamports,
@@ -78,6 +79,7 @@ const ManagerVault = () => {
     { ok: v.tradingEnabled, label: "Trading enabled" },
   ];
   const allOk = checks.every(c => c.ok);
+  const realJupiterEnabled = isRealJupiterEnabled();
 
   const handleDepositJunior = async () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
@@ -134,11 +136,15 @@ const ManagerVault = () => {
 
   const handleGuardedSwap = async () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
+    if (realJupiterEnabled) {
+      toast.error("Use the Jupiter quote flow before submitting a mainnet swap");
+      return;
+    }
     setSending(true);
     try {
       await executeSwap(new PublicKey(v.configPubkey), lamports, 0n);
       setAmount("");
-      toast.success("Guard-only swap check submitted");
+      toast.success("Devnet guard-only swap check submitted");
     } catch (e) {
       toast.error("Swap check failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -250,7 +256,9 @@ const ManagerVault = () => {
               </div>
 
               <div className="mt-5 surface rounded-xl p-4">
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Pre-trade checks</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                  {realJupiterEnabled ? "Jupiter pre-trade checks" : "Devnet guard-only checks"}
+                </div>
                 <ul className="space-y-1.5 text-sm">
                   {checks.map(c => (
                     <li key={c.label} className="flex items-center gap-2">
@@ -276,7 +284,7 @@ const ManagerVault = () => {
                   variant="outline"
                   className="flex-1 h-11"
                 >
-                  Run guard swap
+                  {realJupiterEnabled ? "Jupiter quote required" : "Run guard swap"}
                 </Button>
                 <Button
                   onClick={handleWithdrawJunior}

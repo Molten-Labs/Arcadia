@@ -9,6 +9,7 @@ import {
   listVaults,
   startIndexer,
 } from "./indexer.js";
+import { getJupiterQuote, getJupiterSwapInstructions } from "./jupiter.js";
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true });
@@ -33,6 +34,18 @@ app.get("/managers/:address", async (request, reply) => {
     return { error: "Manager not found" };
   }
   return manager;
+});
+
+app.get("/jupiter/quote", async (request, reply) => {
+  const result = await getJupiterQuote(request.query);
+  reply.code(result.status);
+  return result.body;
+});
+
+app.post("/jupiter/swap-instructions", async (request, reply) => {
+  const result = await getJupiterSwapInstructions(request.body);
+  reply.code(result.status);
+  return result.body;
 });
 
 await startIndexer(app.log);

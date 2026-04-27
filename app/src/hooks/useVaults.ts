@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet";
 import { fetchAllVaults, fetchAllManagers } from "@/lib/solana/accounts";
-import type { VaultConfigData, VaultStateData, ManagerProfileData } from "@/lib/solana/accounts";
-import type { PublicKey, Connection } from "@solana/web3.js";
+import { fetchKilnApi, getKilnApiUrl, type ApiItems } from "@/lib/api";
+import type { VaultConfigData, VaultStateData } from "@/lib/solana/accounts";
+import type { PublicKey } from "@solana/web3.js";
 
 export interface OnChainVault {
   configPubkey: PublicKey;
@@ -46,6 +47,11 @@ export interface VaultView {
   instantExit: boolean;
   vaultIndex: number;
 }
+
+type ApiVaultView = Partial<VaultView> & {
+  configPubkey: string;
+  managerProfilePubkey?: string;
+};
 
 function lamportsToSol(lamports: bigint): number {
   return Number(lamports) / 1e9;
@@ -115,13 +121,21 @@ export function useVaults() {
   const { connection } = useWallet();
 
   return useQuery({
-    queryKey: ["vaults"],
+    queryKey: ["vaults", getKilnApiUrl() || "rpc"],
     queryFn: async () => {
-      if (!connection) throw new Error("No connection");
+      try {
+        const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
+        if (api) return api.items.map(normalizeVaultView);
+      } catch (error) {
+        if (!connection) throw error;
+        console.warn("Kiln API unavailable; falling back to direct RPC vault reads.", error);
+      }
+
+      if (!connection) throw new Error("No connection or Kiln API configured");
       const raw = await fetchAllVaults(connection);
       return raw.map(toVaultView).filter((v): v is VaultView => v !== null);
     },
-    enabled: !!connection,
+    enabled: !!connection || !!getKilnApiUrl(),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -140,9 +154,17 @@ export function useManagers() {
   const { connection } = useWallet();
 
   return useQuery({
-    queryKey: ["managers"],
+    queryKey: ["managers", getKilnApiUrl() || "rpc"],
     queryFn: async () => {
-      if (!connection) throw new Error("No connection");
+      try {
+        const api = await fetchKilnApi<ApiItems<ManagerView>>("/managers");
+        if (api) return api.items;
+      } catch (error) {
+        if (!connection) throw error;
+        console.warn("Kiln API unavailable; falling back to direct RPC manager reads.", error);
+      }
+
+      if (!connection) throw new Error("No connection or Kiln API configured");
       const raw = await fetchAllManagers(connection);
       return raw.map((m) => ({
         pubkey: m.pubkey.toBase58(),
@@ -153,7 +175,7 @@ export function useManagers() {
         createdAt: m.data.createdAt,
       }));
     },
-    enabled: !!connection,
+    enabled: !!connection || !!getKilnApiUrl(),
     staleTime: 30_000,
   });
 }
@@ -170,4 +192,49 @@ export function useVault(id: string | undefined) {
     },
     enabled: !!id && !!vaults,
   });
+}
+
+export function normalizeVaultView(v: ApiVaultView): VaultView {
+  const juniorCapital = Number(v.juniorCapital ?? 0);
+  const seniorCapital = Number(v.seniorCapital ?? 0);
+  const currentNav = Number(v.currentNav ?? juniorCapital + seniorCapital);
+  const juniorSharesOutstanding = Number(v.juniorSharesOutstanding ?? 0);
+  const seniorSharesOutstanding = Number(v.seniorSharesOutstanding ?? 0);
+
+  return {
+    id: v.id || v.configPubkey,
+    name: v.name || `Vault ${v.configPubkey.slice(0, 4)}`,
+    configPubkey: v.configPubkey,
+    statePubkey: v.statePubkey || "",
+    treasuryPubkey: v.treasuryPubkey || "",
+    managerPubkey: v.managerPubkey || "",
+    status: v.status || "paper",
+    tvl: Number(v.tvl ?? juniorCapital + seniorCapital),
+    juniorCapital,
+    seniorCapital,
+    originalJuniorDepositLamports: v.originalJuniorDepositLamports ?? BigInt(Math.round(juniorCapital * 1e9)),
+    juniorCapitalLamports: v.juniorCapitalLamports ?? BigInt(Math.round(juniorCapital * 1e9)),
+    seniorCapitalLamports: v.seniorCapitalLamports ?? BigInt(Math.round(seniorCapital * 1e9)),
+    juniorSharesOutstanding,
+    seniorSharesOutstanding,
+    juniorSharesOutstandingRaw: v.juniorSharesOutstandingRaw ?? BigInt(Math.round(juniorSharesOutstanding)),
+    seniorSharesOutstandingRaw: v.seniorSharesOutstandingRaw ?? BigInt(Math.round(seniorSharesOutstanding)),
+    juniorHealth: Number(v.juniorHealth ?? 0),
+    currentNav,
+    currentNavLamports: v.currentNavLamports ?? BigInt(Math.round(currentNav * 1e9)),
+    highWaterMark: Number(v.highWaterMark ?? 0),
+    highWaterMarkLamports: v.highWaterMarkLamports ?? BigInt(Math.round(Number(v.highWaterMark ?? 0) * 1e9)),
+    feeBps: Number(v.feeBps ?? 0),
+    maxSlippageBps: Number(v.maxSlippageBps ?? 0),
+    createdAt: Number(v.createdAt ?? 0),
+    paperWindowSecs: Number(v.paperWindowSecs ?? 0),
+    graduatedAt: Number(v.graduatedAt ?? 0),
+    paperTradeCount: Number(v.paperTradeCount ?? 0),
+    minQualifyingTrades: Number(v.minQualifyingTrades ?? 0),
+    rolling24hLossBps: Number(v.rolling24hLossBps ?? 0),
+    rolling7dLossBps: Number(v.rolling7dLossBps ?? 0),
+    tradingEnabled: v.tradingEnabled ?? true,
+    instantExit: v.instantExit ?? Number(v.juniorHealth ?? 0) < 20,
+    vaultIndex: Number(v.vaultIndex ?? 0),
+  };
 }

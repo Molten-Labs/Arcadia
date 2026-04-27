@@ -10,6 +10,7 @@ import {
   assertIsInstructionWithAccounts,
   containsBytes,
   getU8Encoder,
+  type AccountMeta,
   type Address,
   type Instruction,
   type InstructionWithData,
@@ -35,6 +36,7 @@ export enum KilnProgramAccount {
   ManagerProfile,
   VaultConfig,
   VaultState,
+  InvestorPosition,
 }
 
 export enum KilnProgramInstruction {
@@ -43,6 +45,11 @@ export enum KilnProgramInstruction {
   DepositJunior,
   UpdateNav,
   GraduateVault,
+  DepositSenior,
+  WithdrawSenior,
+  WithdrawJunior,
+  ClaimFees,
+  ExecuteSwap,
 }
 
 export function identifyKilnProgramInstruction(
@@ -63,6 +70,21 @@ export function identifyKilnProgramInstruction(
   }
   if (containsBytes(data, getU8Encoder().encode(4), 0)) {
     return KilnProgramInstruction.GraduateVault;
+  }
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
+    return KilnProgramInstruction.DepositSenior;
+  }
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
+    return KilnProgramInstruction.WithdrawSenior;
+  }
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
+    return KilnProgramInstruction.WithdrawJunior;
+  }
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
+    return KilnProgramInstruction.ClaimFees;
+  }
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
+    return KilnProgramInstruction.ExecuteSwap;
   }
   throw new Error(
     "The provided instruction could not be identified as a kilnProgram instruction.",
@@ -86,7 +108,18 @@ export type ParsedKilnProgramInstruction<
     } & ParsedUpdateNavInstruction<TProgram>)
   | ({
       instructionType: KilnProgramInstruction.GraduateVault;
-    } & ParsedGraduateVaultInstruction<TProgram>);
+    } & ParsedGraduateVaultInstruction<TProgram>)
+  | {
+      instructionType:
+        | KilnProgramInstruction.DepositSenior
+        | KilnProgramInstruction.WithdrawSenior
+        | KilnProgramInstruction.WithdrawJunior
+        | KilnProgramInstruction.ClaimFees
+        | KilnProgramInstruction.ExecuteSwap;
+      programAddress: Address<TProgram>;
+      accounts: readonly AccountMeta[];
+      data: ReadonlyUint8Array;
+    };
 
 export function parseKilnProgramInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
@@ -126,6 +159,19 @@ export function parseKilnProgramInstruction<TProgram extends string>(
       return {
         instructionType: KilnProgramInstruction.GraduateVault,
         ...parseGraduateVaultInstruction(instruction),
+      };
+    }
+    case KilnProgramInstruction.DepositSenior:
+    case KilnProgramInstruction.WithdrawSenior:
+    case KilnProgramInstruction.WithdrawJunior:
+    case KilnProgramInstruction.ClaimFees:
+    case KilnProgramInstruction.ExecuteSwap: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType,
+        programAddress: instruction.programAddress,
+        accounts: instruction.accounts,
+        data: instruction.data,
       };
     }
     default:

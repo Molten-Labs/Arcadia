@@ -69,19 +69,29 @@ export type UpdateNavInstruction<
     ]
   >;
 
-export type UpdateNavInstructionData = { discriminator: number };
+export type UpdateNavInstructionData = { discriminator: number; reserved: number };
 
-export type UpdateNavInstructionDataArgs = {};
+export type UpdateNavInstructionDataArgs = { reserved?: number };
 
 export function getUpdateNavInstructionDataEncoder(): FixedSizeEncoder<UpdateNavInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([["discriminator", getU8Encoder()]]),
-    (value) => ({ ...value, discriminator: UPDATE_NAV_DISCRIMINATOR }),
+    getStructEncoder([
+      ["discriminator", getU8Encoder()],
+      ["reserved", getU8Encoder()],
+    ]),
+    (value) => ({
+      ...value,
+      discriminator: UPDATE_NAV_DISCRIMINATOR,
+      reserved: value.reserved ?? 0,
+    }),
   );
 }
 
 export function getUpdateNavInstructionDataDecoder(): FixedSizeDecoder<UpdateNavInstructionData> {
-  return getStructDecoder([["discriminator", getU8Decoder()]]);
+  return getStructDecoder([
+    ["discriminator", getU8Decoder()],
+    ["reserved", getU8Decoder()],
+  ]);
 }
 
 export function getUpdateNavInstructionDataCodec(): FixedSizeCodec<
