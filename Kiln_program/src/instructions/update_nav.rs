@@ -11,14 +11,11 @@
 
 use wincode::deserialize_exact;
 
-use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
-    sysvars::clock::Clock,
-    ProgramResult,
-};
 use crate::errors::KilnError;
-use crate::states::{VaultConfig, VaultState, ManagerProfile};
+use crate::states::{ManagerProfile, VaultConfig, VaultState};
+use pinocchio::{
+    account_info::AccountInfo, program_error::ProgramError, sysvars::clock::Clock, ProgramResult,
+};
 
 /// Instruction args for UpdateNav (currently empty - placeholder for future oracle params)
 #[repr(C)]
@@ -38,7 +35,7 @@ pub struct GraduateVaultArgs {
 /// Recompute NAV for a vault, apply waterfall loss logic and update timestamps.
 ///
 /// Expected accounts (in order):
-/// 0: updater (signer) — must be the vault's manager
+/// 0: updater (optional signer)
 /// 1: vault_config (readonly)
 /// 2: vault_state (writable)
 /// 3: treasury (writable)
@@ -48,21 +45,15 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let _args: UpdateNavArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
 
-    let [ updater, vault_config, vault_state, treasury, _pyth_price, clock_sys ] = accounts else {
+    let [_updater, vault_config, vault_state, treasury, _pyth_price, clock_sys] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if !updater.is_signer() {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
     if !vault_state.is_writable() || !treasury.is_writable() {
         return Err(ProgramError::InvalidAccountData);
     }
 
     let config = VaultConfig::load(vault_config)?;
-    if config.manager != *updater.key() {
-        return Err(KilnError::ManagerMismatch.into());
-    }
     let mut state = VaultState::load_mut(vault_state)?;
     if state.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
@@ -75,7 +66,8 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     // Note: VaultConfig stores treasury_rent_lamports as min balance expected.
     let treasury_lamports = treasury.lamports();
     let rent_reserved = config.treasury_rent_lamports;
-    let available = treasury_lamports.checked_sub(rent_reserved)
+    let available = treasury_lamports
+        .checked_sub(rent_reserved)
         .ok_or(KilnError::TreasuryAccountingMismatch)?;
 
     // For this simplified model, NAV is just the available lamports.
@@ -97,17 +89,27 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     // If NAV decreased, apply waterfall loss sequence:
     if new_nav < old_nav {
-        let loss = old_nav.checked_sub(new_nav).ok_or(KilnError::MathOverflow)?;
+        let loss = old_nav
+            .checked_sub(new_nav)
+            .ok_or(KilnError::MathOverflow)?;
         // First apply to junior_capital
         if loss <= state.junior_capital {
             // junior absorbs full loss
-            state.junior_capital = state.junior_capital.checked_sub(loss).ok_or(KilnError::MathOverflow)?;
+            state.junior_capital = state
+                .junior_capital
+                .checked_sub(loss)
+                .ok_or(KilnError::MathOverflow)?;
         } else {
             // junior wiped; remaining loss hits senior
-            let remaining = loss.checked_sub(state.junior_capital).ok_or(KilnError::MathOverflow)?;
+            let remaining = loss
+                .checked_sub(state.junior_capital)
+                .ok_or(KilnError::MathOverflow)?;
             state.junior_capital = 0;
             // senior_capital may underflow; guard with error
-            state.senior_capital = state.senior_capital.checked_sub(remaining).ok_or(KilnError::MathOverflow)?;
+            state.senior_capital = state
+                .senior_capital
+                .checked_sub(remaining)
+                .ok_or(KilnError::MathOverflow)?;
             // Freeze trading if junior is wiped
             state.trading_enabled = 0;
         }
@@ -116,7 +118,9 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     }
 
     // Sanity check: ensure treasury accounting still covers recorded current_nav
-    let available_after = treasury.lamports().checked_sub(config.treasury_rent_lamports)
+    let available_after = treasury
+        .lamports()
+        .checked_sub(config.treasury_rent_lamports)
         .ok_or(KilnError::TreasuryAccountingMismatch)?;
     if available_after < state.current_nav {
         return Err(KilnError::TreasuryAccountingMismatch.into());
@@ -132,28 +136,23 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 /// - junior_capital > 0 and current_nav > original_junior_deposit (positive paper PnL)
 ///
 /// Expected accounts (in order):
-/// 0: caller (signer)
+/// 0: caller (optional signer)
 /// 1: vault_state (writable)
 /// 2: vault_config (readonly)
 /// 3: treasury (readonly)
 /// 4: manager_profile (writable)
 /// 5: clock (readonly)
 pub fn graduate_vault(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
-    let [ caller, vault_state, vault_config, _treasury, manager_profile, clock_sys ] = accounts else {
+    let [_caller, vault_state, vault_config, _treasury, manager_profile, clock_sys] = accounts
+    else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if !caller.is_signer() {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
     if !vault_state.is_writable() || !manager_profile.is_writable() {
         return Err(ProgramError::InvalidAccountData);
     }
 
     let config = VaultConfig::load(vault_config)?;
-    if config.manager != *caller.key() {
-        return Err(KilnError::ManagerMismatch.into());
-    }
     if config.manager_profile != *manager_profile.key() {
         return Err(KilnError::ManagerMismatch.into());
     }
@@ -168,7 +167,9 @@ pub fn graduate_vault(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
 
     // Basic temporal check: created_at + paper_window_secs <= now
     let clock = Clock::from_account_info(clock_sys)?;
-    let elapsed = clock.unix_timestamp.checked_sub(state.created_at)
+    let elapsed = clock
+        .unix_timestamp
+        .checked_sub(state.created_at)
         .ok_or(KilnError::MathOverflow)?;
     if elapsed < config.paper_window_secs {
         return Err(KilnError::InvalidVaultConfiguration.into());
@@ -192,7 +193,10 @@ pub fn graduate_vault(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
 
     // Update manager profile counters
     let mut mgr = ManagerProfile::load_mut(manager_profile)?;
-    mgr.active_vaults = mgr.active_vaults.checked_sub(1).ok_or(KilnError::MathOverflow)?;
+    mgr.active_vaults = mgr
+        .active_vaults
+        .checked_sub(1)
+        .ok_or(KilnError::MathOverflow)?;
 
     Ok(())
 }

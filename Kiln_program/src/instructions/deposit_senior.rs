@@ -67,7 +67,11 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if !investor.is_signer() {
         return Err(ProgramError::MissingRequiredSignature);
     }
-    if !investor.is_writable() || !vault_state.is_writable() || !treasury.is_writable() || !investor_position.is_writable() {
+    if !investor.is_writable()
+        || !vault_state.is_writable()
+        || !treasury.is_writable()
+        || !investor_position.is_writable()
+    {
         return Err(ProgramError::InvalidAccountData);
     }
     if system_program.key() != &pinocchio_system::ID {
@@ -100,7 +104,8 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         }
 
         // Check sliding junior ratio after deposit
-        let new_total = state.junior_capital
+        let new_total = state
+            .junior_capital
             .checked_add(state.senior_capital)
             .ok_or(KilnError::MathOverflow)?
             .checked_add(args.amount_lamports)
@@ -108,7 +113,8 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
         let required_ratio_bps = min_junior_ratio_bps(new_total);
         // junior_ratio_bps = junior_capital * 10000 / new_total
-        let junior_ratio_bps = state.junior_capital
+        let junior_ratio_bps = state
+            .junior_capital
             .checked_mul(10_000)
             .ok_or(KilnError::MathOverflow)?
             .checked_div(new_total)
@@ -121,7 +127,11 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     // Validate investor_position PDA
     let (expected_pos, pos_bump) = find_program_address(
-        &[INVESTOR_POSITION_SEED, investor.key().as_ref(), vault_config.key().as_ref()],
+        &[
+            INVESTOR_POSITION_SEED,
+            investor.key().as_ref(),
+            vault_config.key().as_ref(),
+        ],
         &crate::ID,
     );
     if investor_position.key() != &expected_pos {
@@ -204,7 +214,11 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     Ok(())
 }
 
-fn calculate_senior_shares(amount: u64, capital: u64, outstanding: u64) -> Result<u64, ProgramError> {
+fn calculate_senior_shares(
+    amount: u64,
+    capital: u64,
+    outstanding: u64,
+) -> Result<u64, ProgramError> {
     if capital == 0 || outstanding == 0 {
         return Ok(amount);
     }

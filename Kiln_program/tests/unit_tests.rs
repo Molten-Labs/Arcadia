@@ -1,5 +1,7 @@
 use Kiln_program::{
-    instructions::vault_guard::{apply_post_swap_cooldown, effective_health_bps, max_position_bps, run_guards},
+    instructions::vault_guard::{
+        apply_post_swap_cooldown, effective_health_bps, max_position_bps, run_guards,
+    },
     states::VaultState,
 };
 
@@ -276,7 +278,7 @@ fn waterfall_junior_wiped_senior_hit() {
 #[test]
 fn waterfall_full_junior_wipe_freezes_vault() {
     let mut state = make_state(100_000, 1_000_000, 500_000, 600_000);
-    let loss = 100_000u64;
+    let _loss = 100_000u64;
     state.junior_capital = 0;
     state.trading_enabled = 0;
     assert_eq!(state.junior_capital, 0);

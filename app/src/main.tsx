@@ -1,5 +1,5 @@
 import { Buffer } from "buffer";
-(window as any).Buffer = Buffer;
+(globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";

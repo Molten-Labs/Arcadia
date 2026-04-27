@@ -1,10 +1,7 @@
 use wincode::deserialize_exact;
 
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
-    sysvars::clock::Clock,
-    ProgramResult,
+    account_info::AccountInfo, program_error::ProgramError, sysvars::clock::Clock, ProgramResult,
 };
 use pinocchio_system::instructions::Transfer;
 use wincode::SchemaRead;
@@ -30,7 +27,11 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if !manager.is_signer() {
         return Err(ProgramError::MissingRequiredSignature);
     }
-    if !manager.is_writable() || !manager_profile.is_writable() || !vault_state.is_writable() || !treasury.is_writable() {
+    if !manager.is_writable()
+        || !manager_profile.is_writable()
+        || !vault_state.is_writable()
+        || !treasury.is_writable()
+    {
         return Err(ProgramError::InvalidAccountData);
     }
     if system_program.key() != &pinocchio_system::ID {
@@ -50,7 +51,9 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         let config = VaultConfig::load(vault_config)?;
         let state = VaultState::load(vault_state)?;
 
-        if manager_profile_state.owner != *manager.key() || config.manager_profile != *manager_profile.key() {
+        if manager_profile_state.owner != *manager.key()
+            || config.manager_profile != *manager_profile.key()
+        {
             return Err(KilnError::ManagerMismatch.into());
         }
         if config.manager != *manager.key() {

@@ -1,5 +1,5 @@
 # Kiln — System Architecture Document (v2)
-> Version 2.0 | Devnet-ready Pinocchio architecture | Spot-only MVP
+> Version 2.1 | Devnet-ready Pinocchio architecture | SOL-only MVP
 
 ---
 
@@ -14,10 +14,10 @@
 | Solana CLI | Agave / Solana CLI | `cargo build-sbf`, devnet deployment |
 | Frontend | Next.js 14 + TypeScript + Tailwind | App router |
 | Wallet | Solana Wallet Adapter | Phantom / Backpack |
-| Oracle | Pyth Network | Pull oracle accounts for SOL and JUP pricing |
-| Swap | Jupiter CPI | Spot-only routing, validated CPI |
+| Oracle | Deferred | SOL-only MVP uses treasury lamports for NAV; Pyth is required before adding non-SOL assets |
+| Swap | Deferred | No Jupiter CPI in the SOL-only MVP; paper trades must not count until real CPI lands |
 | RPC | Helius | Devnet RPC |
-| Token Standard | Legacy SPL Token | USDC base vault, no Token-2022 in MVP |
+| Token Standard | Native SOL | SPL USDC is a post-MVP migration, not active on this branch |
 | Indexer | Helius Webhooks | Event ingestion |
 | Backend | Supabase / Postgres | NAV points, status events, delayed trade visibility |
 | Deploy | Devnet | Demo-first deployment target |
@@ -56,7 +56,7 @@ graph TB
     subgraph EXTERNAL["External Protocols"]
         JUP[Jupiter CPI]
         PYTH[Pyth Pull Oracle]
-        SPL[Legacy SPL Token]
+        SOL[Native SOL]
     end
 
     subgraph STORAGE["On-Chain State"]
@@ -64,11 +64,7 @@ graph TB
         VC[VaultConfig PDA]
         VS[VaultState PDA]
         IP[InvestorPosition PDA]
-        JM[Junior Mint]
-        SM[Senior Mint]
-        TU[USDC Treasury ATA]
-        TS[Treasury SOL ATA / WSOL]
-        TJ[Treasury JUP ATA]
+        TP[Native SOL Treasury PDA]
     end
 
     WA --> FRONTEND
@@ -83,8 +79,7 @@ graph TB
     PROGRAM --> STORAGE
     GUARD --> JUP
     ORACLE --> PYTH
-    SWAP --> SPL
-    SWAP --> JUP
+    SWAP --> SOL
 ```
 
 ---
@@ -177,23 +172,12 @@ pub struct VaultConfig {
     pub admin_authority: Pubkey,
     pub pending_admin: Pubkey,
 
-    pub base_mint: Pubkey,         // USDC
-    pub junior_mint: Pubkey,
-    pub senior_mint: Pubkey,
-
-    pub treasury_usdc: Pubkey,
-    pub treasury_wsol: Pubkey,
-    pub treasury_jup: Pubkey,
+    pub treasury: Pubkey,          // native SOL PDA
 
     pub trade_authority_pda: Pubkey,
 
-    pub allowed_mints: [Pubkey; 3],  // USDC, SOL/WSOL, JUP
-    pub pyth_sol_feed: Pubkey,
-    pub pyth_jup_feed: Pubkey,
-
     pub paper_window_secs: i64,
     pub min_qualifying_trades: u16,
-    pub min_active_days: u16,
     pub qualifying_trade_bps: u16,    // e.g. 500 = 5% of original junior deposit
     pub max_slippage_bps: u16,        // e.g. 50 = 0.5%
     pub emergency_exit_ratio_bps: u16,// e.g. 2000 = 20%
@@ -209,7 +193,7 @@ pub struct VaultConfig {
 Notes:
 - `paper_window_secs` is config-driven so devnet can run a shorter window than the production-target rule.
 - `pending_admin` is zeroed when no admin rotation is active.
-- `allowed_mints` is fixed-size to preserve zero-copy safety and predictable CU.
+- SPL mints and allowlists are post-MVP additions.
 
 ### `VaultState`
 
@@ -233,9 +217,6 @@ pub struct VaultState {
     pub high_water_mark: u64,
 
     pub paper_trade_count: u16,
-    pub distinct_trade_day_count: u16,
-    pub last_trade_day_index: u32,
-
     pub created_at: i64,
     pub graduated_at: i64,
     pub cooldown_until: i64,
@@ -248,7 +229,6 @@ pub struct VaultState {
     pub is_paper_mode: u8,
     pub is_graduated: u8,
     pub is_paused: u8,
-    pub is_frozen: u8,
     pub trading_enabled: u8,
     pub _padding: [u8; 3],
 }
@@ -256,8 +236,8 @@ pub struct VaultState {
 
 Notes:
 - `u8` flags are used instead of `bool` to keep layout explicit.
-- `current_nav` is always tracked in USDC-denominated units.
-- `paper_trade_count` only counts qualifying paper trades, not every tiny swap.
+- `current_nav` is tracked in lamports for the SOL-only MVP.
+- `paper_trade_count` only counts qualifying real swaps; while Jupiter CPI is deferred, no-op swap attempts must not increment it.
 
 ### `ManagerProfile`
 
@@ -272,8 +252,8 @@ pub struct ManagerProfile {
     pub vault_pubkey: Pubkey,
 
     pub created_at: i64,
-    pub total_pnl_usdc: i64,
-    pub junior_burned_usdc: u64,
+    pub total_pnl_lamports: i64,
+    pub junior_burned_lamports: u64,
 
     pub paper_vaults_completed: u16,
     pub graduated_vaults_completed: u16,
@@ -308,21 +288,18 @@ pub struct InvestorPosition {
 ```
 
 Notes:
-- Senior share balances still live in SPL token accounts.
-- This account stores cooldown and alert metadata only.
+- Senior shares are tracked in protocol state for the SOL-only MVP.
+- This account stores senior share, deposit, cooldown, and alert metadata.
 
 ---
 
 ## 5. Core Metrics
 
 ### `current_nav`
-Total USDC-denominated marked-to-market value of all vault holdings.
+Total SOL-denominated value of the vault treasury in the current MVP.
 
 ```
-current_nav =
-    usdc_balance
-  + mark_to_usdc(wsol_balance, pyth_sol)
-  + mark_to_usdc(jup_balance, pyth_jup)
+current_nav = treasury_lamports - treasury_rent_reserve
 ```
 
 ### `paper_pnl`
@@ -345,8 +322,8 @@ junior_strength_bps =
 - useful for UI and long-term manager analytics
 
 Example:
-- start with `10,000 USDC`
-- grow to `14,000 USDC`
+- start with `10 SOL`
+- grow to `14 SOL`
 - `junior_strength_bps = 14,000` = `140%`
 
 ### `effective_health_bps`
@@ -380,7 +357,7 @@ minimum_qualifying_notional =
     original_junior_deposit * qualifying_trade_bps / 10_000
 ```
 
-With `qualifying_trade_bps = 500`, a `10,000 USDC` paper vault must trade at least `500 USDC` notionally for the trade to count toward graduation.
+With `qualifying_trade_bps = 500`, a `10 SOL` paper vault must execute at least `0.5 SOL` notionally for the trade to count toward graduation once real swap CPI exists.
 
 ---
 
@@ -457,7 +434,6 @@ If junior capital reaches zero:
 ### Devnet MVP Defaults
 - `paper_window_secs = 3 days`
 - `min_qualifying_trades = 3`
-- `min_active_days = 3`
 - `qualifying_trade_bps = 500` (5%)
 
 This keeps the product honest while still making live demos practical.
@@ -468,9 +444,7 @@ This keeps the product honest while still making live demos practical.
 - current time is past `created_at + paper_window_secs`
 - vault is still in paper mode
 - vault is not paused
-- vault is not frozen
 - `paper_trade_count >= min_qualifying_trades`
-- `distinct_trade_day_count >= min_active_days`
 - `paper_pnl > 0`
 
 ### Why Health Threshold Is Not The Main Graduation Gate
@@ -487,7 +461,7 @@ then:
 Because of that, a separate `85% health` gate is weaker and less meaningful than:
 - positive ending NAV
 - minimum number of real trades
-- minimum number of active days
+- minimum number of real trades
 
 So MVP graduation is based on **profit + activity**, not “survived with a little money left.”
 
@@ -514,11 +488,11 @@ Notes:
 ### 8.2 Sliding Scale Junior Ratio
 
 ```
-total_capital < 50k USDC    -> min_junior_ratio = 20%
-50k - 200k USDC             -> min_junior_ratio = 15%
-200k - 500k USDC            -> min_junior_ratio = 12%
-500k - 1M USDC              -> min_junior_ratio = 10%
-> 1M USDC                   -> min_junior_ratio = 8%
+total_capital < 50k SOL-lamport units    -> min_junior_ratio = 20%
+50k - 200k SOL-lamport units             -> min_junior_ratio = 15%
+200k - 500k SOL-lamport units            -> min_junior_ratio = 12%
+500k - 1M SOL-lamport units              -> min_junior_ratio = 10%
+> 1M SOL-lamport units                   -> min_junior_ratio = 8%
 ```
 
 Applied on:
@@ -537,7 +511,6 @@ else:
     junior_capital = 0
     senior_capital -= remaining_loss
     trading_enabled = false
-    is_frozen = true
 ```
 
 This is the single most important mechanic in Kiln.
@@ -568,7 +541,7 @@ Recommended MVP threshold:
 
 - available only after graduation
 - charged only when `current_nav > high_water_mark`
-- fee minted as junior shares to the manager
+- fee crystallized as additional junior shares to the manager
 - `high_water_mark` updates only upward after successful fee crystallization
 
 ---
@@ -579,13 +552,13 @@ Recommended MVP threshold:
 |---|---|---|
 | `init_manager` | Trader | one profile per owner |
 | `create_vault` | Trader | one vault per manager in MVP |
-| `deposit_junior` | Trader | junior only, valid mint/account ownership |
+| `deposit_junior` | Trader | manager only, native SOL transfer into treasury PDA |
 | `withdraw_junior` | Trader | post-withdraw junior ratio must remain valid if seniors exist |
-| `update_nav` | Anyone | valid Pyth accounts, freshness/confidence checks |
-| `graduate_vault` | Anyone | paper window complete, trade/day minimums, positive paper PnL |
+| `update_nav` | Anyone | recomputes SOL treasury NAV |
+| `graduate_vault` | Anyone | paper window complete, trade minimums, positive paper PnL |
 | `deposit_senior` | Investor | vault graduated, min deposit, sliding ratio satisfied |
 | `withdraw_senior` | Investor | 24h cooldown or instant if junior ratio below threshold |
-| `execute_swap` | Trader | whitelist, base route, Jupiter ID, cooldown, size, slippage |
+| `execute_swap` | Trader | cooldown and size checks; does not count paper trades until real CPI exists |
 | `claim_fees` | Trader | graduated only, above HWM |
 | `set_investor_position` | Investor | only owner may set alert threshold |
 | `pause_vault` | Admin | blocks deposits/swaps only |
@@ -597,8 +570,10 @@ Recommended MVP threshold:
 
 ## 10. Jupiter CPI Notes
 
-### Jupiter Is Used Only For Spot Swaps
-MVP supported pairs:
+Jupiter CPI is post-MVP. Until it is implemented, `execute_swap` must not count no-op calls as qualifying paper trades.
+
+### Future Jupiter Is Used Only For Spot Swaps
+Future supported pairs:
 - `USDC -> SOL`
 - `SOL -> USDC`
 - `USDC -> JUP`
@@ -635,8 +610,10 @@ require!(actual_received >= minimum_amount_out, ErrorCode::SlippageExceeded);
 
 ## 11. Pyth Oracle Notes
 
-### Pyth Usage
-Pyth pull oracle is used for:
+Pyth is post-MVP for non-SOL assets. The current SOL-only branch computes NAV from native treasury lamports only.
+
+### Future Pyth Usage
+Pyth pull oracle will be used for:
 - NAV valuation
 - swap slippage sanity checks
 
@@ -646,16 +623,16 @@ Pyth pull oracle is used for:
 - confidence interval must remain below the configured risk threshold
 
 ### Freshness
-Recommended MVP default:
+Recommended future default:
 - max staleness: `60 seconds`
 
 ### Confidence
-Recommended MVP rule:
+Recommended future rule:
 - reject oracle values where `conf / price` exceeds a conservative threshold
 
 ### NAV Marking
-- USDC is treated as the base accounting unit
-- SOL and JUP balances are converted to USDC value using the corresponding Pyth feeds
+- SOL-only MVP: NAV equals treasury lamports minus rent reserve.
+- Future SPL mode: non-SOL balances are converted to the chosen base unit using configured Pyth feeds.
 
 ---
 
@@ -813,7 +790,7 @@ graph TD
 - Pinocchio project scaffold
 - `VaultConfig`, `VaultState`, `ManagerProfile`, `InvestorPosition`
 - manual validation helpers
-- SPL mint / treasury PDA setup
+- native SOL treasury PDA setup
 - `init_manager`
 - `create_vault`
 - `deposit_junior`
@@ -822,7 +799,7 @@ graph TD
 
 ### Week 2 — NAV + Graduation + Withdrawals
 - NAV math
-- Pyth adapter
+- permissionless SOL treasury NAV updates
 - paper trade counters
 - `graduate_vault`
 - `deposit_senior`
@@ -834,7 +811,7 @@ graph TD
 **Goal:** full paper-to-graduated lifecycle without polished UI.
 
 ### Week 3 — Trading Guard + Indexer
-- Jupiter CPI adapter
+- Jupiter CPI adapter (post-MVP)
 - whitelist and base-route guard
 - dynamic limits and cooldowns
 - webhook ingestion

@@ -11,7 +11,7 @@ use wincode::SchemaRead;
 
 use crate::{
     errors::KilnError,
-    states::{VaultConfig, VaultState, ManagerProfile, TREASURY_SEED},
+    states::{ManagerProfile, VaultConfig, VaultState, TREASURY_SEED},
 };
 
 #[repr(C)]
@@ -50,8 +50,7 @@ fn min_junior_ratio_bps(total_capital: u64) -> u16 {
 /// 4: treasury (writable)
 /// 5: clock (readonly)
 pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] =
-        accounts
+    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -59,7 +58,11 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if !manager.is_signer() {
         return Err(ProgramError::MissingRequiredSignature);
     }
-    if !manager.is_writable() || !manager_profile.is_writable() || !vault_state.is_writable() || !treasury.is_writable() {
+    if !manager.is_writable()
+        || !manager_profile.is_writable()
+        || !vault_state.is_writable()
+        || !treasury.is_writable()
+    {
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -94,7 +97,8 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     }
 
     // Calculate withdrawal amount: pro-rata share of junior capital
-    let withdrawal_amount = args.shares_to_burn
+    let withdrawal_amount = args
+        .shares_to_burn
         .checked_mul(state.junior_capital)
         .ok_or(KilnError::MathOverflow)?
         .checked_div(state.junior_shares_outstanding)
@@ -106,7 +110,8 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     // If vault is graduated and has senior capital, check ratio stays valid
     if state.is_graduated != 0 && state.senior_capital > 0 {
-        let new_junior = state.junior_capital
+        let new_junior = state
+            .junior_capital
             .checked_sub(withdrawal_amount)
             .ok_or(KilnError::MathOverflow)?;
         let new_total = new_junior
@@ -132,7 +137,8 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
 
-    let available = treasury.lamports()
+    let available = treasury
+        .lamports()
         .checked_sub(config.treasury_rent_lamports)
         .ok_or(KilnError::TreasuryAccountingMismatch)?;
     if available < withdrawal_amount {

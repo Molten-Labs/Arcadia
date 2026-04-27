@@ -7,10 +7,7 @@ use pinocchio::{
 };
 use shank::ShankAccount;
 
-use crate::{
-    errors::KilnError,
-    instructions::create_vault::CreateVaultArgs,
-};
+use crate::{errors::KilnError, instructions::create_vault::CreateVaultArgs};
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, ShankAccount)]

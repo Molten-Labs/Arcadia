@@ -1,11 +1,16 @@
-use std::{path::PathBuf, sync::Mutex};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    sync::Mutex,
+    time::SystemTime,
+};
 
 use litesvm::{types::TransactionResult, LiteSVM};
 use solana_instruction::{AccountMeta, Instruction};
 use solana_keypair::Keypair;
 use solana_native_token::LAMPORTS_PER_SOL;
 use solana_pubkey::Pubkey;
-use solana_sdk_ids::{sysvar, system_program};
+use solana_sdk_ids::{system_program, sysvar};
 use solana_signer::Signer;
 use solana_transaction::Transaction;
 fn to_bytes<T: Copy>(val: &T) -> Vec<u8> {
@@ -17,8 +22,7 @@ fn to_bytes<T: Copy>(val: &T) -> Vec<u8> {
 use Kiln_program::{
     instructions::{CreateVaultArgs, DepositJuniorArgs},
     states::{
-        ManagerProfile, VaultConfig, VaultState, MANAGER_PROFILE_SEED, TREASURY_SEED,
-        VAULT_CONFIG_SEED, VAULT_STATE_SEED,
+        VaultState, MANAGER_PROFILE_SEED, TREASURY_SEED, VAULT_CONFIG_SEED, VAULT_STATE_SEED,
     },
 };
 
@@ -35,14 +39,49 @@ fn setup() -> (LiteSVM, Keypair) {
     svm.airdrop(&payer.pubkey(), 50 * LAMPORTS_PER_SOL)
         .expect("airdrop failed");
 
-    let so_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target/deploy/Kiln_program.so");
-    let program_data = std::fs::read(&so_path)
+    let so_path = sbf_path();
+    assert_sbf_is_fresh(&so_path);
+    let program_data = fs::read(&so_path)
         .unwrap_or_else(|_| panic!("missing {:?}; run cargo build-sbf in Kiln_program", so_path));
     svm.add_program(program_id(), &program_data)
         .expect("add_program failed");
 
     (svm, payer)
+}
+
+fn sbf_path() -> PathBuf {
+    env::var_os("KILN_SBF_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/deploy/Kiln_program.so")
+        })
+}
+
+fn assert_sbf_is_fresh(so_path: &Path) {
+    if env::var_os("KILN_SKIP_SBF_FRESHNESS_CHECK").is_some() {
+        return;
+    }
+    let so_mtime = fs::metadata(so_path)
+        .and_then(|m| m.modified())
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+    for source in [
+        "src/entrypoint.rs",
+        "src/instructions/update_nav.rs",
+        "src/instructions/execute_swap.rs",
+        "src/instructions/claim_fees.rs",
+        "src/instructions/vault_guard.rs",
+    ] {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(source);
+        let source_mtime = fs::metadata(&path)
+            .and_then(|m| m.modified())
+            .unwrap_or(SystemTime::UNIX_EPOCH);
+        assert!(
+            so_mtime >= source_mtime,
+            "{:?} is older than {:?}; run cargo build-sbf or set KILN_SBF_PATH to a fresh artifact",
+            so_path,
+            path
+        );
+    }
 }
 
 fn send_tx(
@@ -79,7 +118,11 @@ fn manager_profile_pda(manager: &Pubkey) -> (Pubkey, u8) {
 
 fn vault_config_pda(manager: &Pubkey, vault_index: u16) -> (Pubkey, u8) {
     Pubkey::find_program_address(
-        &[VAULT_CONFIG_SEED, &manager.to_bytes(), &vault_index.to_le_bytes()],
+        &[
+            VAULT_CONFIG_SEED,
+            &manager.to_bytes(),
+            &vault_index.to_le_bytes(),
+        ],
         &program_id(),
     )
 }
@@ -139,9 +182,7 @@ fn deposit_junior_ix(manager: &Keypair, vault_index: u16, amount_lamports: u64) 
     let (treasury, _) = treasury_pda(&vault_config);
 
     let mut data = vec![2];
-    data.extend_from_slice(
-        &to_bytes(&DepositJuniorArgs { amount_lamports }),
-    );
+    data.extend_from_slice(&to_bytes(&DepositJuniorArgs { amount_lamports }));
 
     Instruction {
         program_id: program_id(),
@@ -164,13 +205,14 @@ fn update_nav_ix(caller: &Keypair, manager: &Keypair, vault_index: u16) -> Instr
     // 1: vault_config
     // 2: vault_state (writable)
     // 3: treasury (writable)
-    // 4: clock
+    // 4: pyth placeholder
+    // 5: clock
     let (_mgr_profile, _) = manager_profile_pda(&manager.pubkey());
     let (vault_config, _) = vault_config_pda(&manager.pubkey(), vault_index);
     let (vault_state, _) = vault_state_pda(&vault_config);
     let (treasury, _) = treasury_pda(&vault_config);
 
-    let mut data = vec![3u8, 0u8]; // discriminator 3 + reserved byte for UpdateNavArgs
+    let data = vec![3u8, 0u8]; // discriminator 3 + reserved byte for UpdateNavArgs
 
     Instruction {
         program_id: program_id(),
@@ -179,6 +221,7 @@ fn update_nav_ix(caller: &Keypair, manager: &Keypair, vault_index: u16) -> Instr
             AccountMeta::new_readonly(vault_config, false),
             AccountMeta::new(vault_state, false),
             AccountMeta::new(treasury, false),
+            AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
         ],
         data,
@@ -187,7 +230,7 @@ fn update_nav_ix(caller: &Keypair, manager: &Keypair, vault_index: u16) -> Instr
 
 fn graduate_vault_ix(caller: &Keypair, manager: &Keypair, vault_index: u16) -> Instruction {
     // graduate_vault expects:
-    // 0: caller (signer)
+    // 0: caller (optional signer)
     // 1: vault_state (writable)
     // 2: vault_config
     // 3: treasury
@@ -198,7 +241,7 @@ fn graduate_vault_ix(caller: &Keypair, manager: &Keypair, vault_index: u16) -> I
     let (vault_state, _) = vault_state_pda(&vault_config);
     let (treasury, _) = treasury_pda(&vault_config);
 
-    let mut data = vec![4u8]; // discriminator 4
+    let data = vec![4u8]; // discriminator 4
 
     Instruction {
         program_id: program_id(),
@@ -218,8 +261,14 @@ fn graduate_vault_ix(caller: &Keypair, manager: &Keypair, vault_index: u16) -> I
 fn update_nav_sets_hwm_and_updates_nav() {
     let (mut svm, manager) = setup();
     // init manager
-    send_tx(&mut svm, &manager, &[], init_manager_ix(&manager), "init_manager")
-        .expect("init manager");
+    send_tx(
+        &mut svm,
+        &manager,
+        &[],
+        init_manager_ix(&manager),
+        "init_manager",
+    )
+    .expect("init manager");
 
     // create vault with very short paper window so tests can progress quickly
     let create_args = CreateVaultArgs {
@@ -284,8 +333,14 @@ fn update_nav_sets_hwm_and_updates_nav() {
 #[test]
 fn graduate_vault_fails_before_paper_window_elapsed() {
     let (mut svm, manager) = setup();
-    send_tx(&mut svm, &manager, &[], init_manager_ix(&manager), "init_manager")
-        .expect("init manager");
+    send_tx(
+        &mut svm,
+        &manager,
+        &[],
+        init_manager_ix(&manager),
+        "init_manager",
+    )
+    .expect("init manager");
 
     let create_args = CreateVaultArgs {
         paper_window_secs: 86_400, // 1 day -> intentionally large so graduation will fail
@@ -332,7 +387,10 @@ fn graduate_vault_fails_before_paper_window_elapsed() {
         "graduate_vault",
     );
 
-    assert!(res.is_err(), "graduation should fail if paper window not elapsed");
+    assert!(
+        res.is_err(),
+        "graduation should fail if paper window not elapsed"
+    );
 }
 
 #[test]

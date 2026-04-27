@@ -1,14 +1,10 @@
 use pinocchio::{
-    account_info::AccountInfo,
-    instruction::{Seed, Signer},
-    program_error::ProgramError,
-    sysvars::clock::Clock,
-    ProgramResult,
+    account_info::AccountInfo, program_error::ProgramError, sysvars::clock::Clock, ProgramResult,
 };
 
 use crate::{
     errors::KilnError,
-    states::{ManagerProfile, VaultConfig, VaultState, TREASURY_SEED},
+    states::{ManagerProfile, VaultConfig, VaultState},
 };
 
 const FEE_BPS: u64 = 2000; // 20% performance fee
@@ -23,8 +19,7 @@ const FEE_BPS: u64 = 2000; // 20% performance fee
 /// 4: treasury (writable)
 /// 5: clock (readonly)
 pub fn claim_fees(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
-    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] =
-        accounts
+    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -65,7 +60,8 @@ pub fn claim_fees(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
         return Err(KilnError::InvalidAmount.into());
     }
 
-    let profit = state.current_nav
+    let profit = state
+        .current_nav
         .checked_sub(state.high_water_mark)
         .ok_or(KilnError::MathOverflow)?;
 
@@ -81,47 +77,33 @@ pub fn claim_fees(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
         return Err(KilnError::InvalidAmount.into());
     }
 
-    let available = treasury.lamports()
-        .checked_sub(config.treasury_rent_lamports)
-        .ok_or(KilnError::TreasuryAccountingMismatch)?;
-    if available < fee_lamports {
-        return Err(KilnError::TreasuryAccountingMismatch.into());
+    let junior_capital = state.junior_capital;
+    let junior_shares_outstanding = state.junior_shares_outstanding;
+    if junior_capital == 0 || junior_shares_outstanding == 0 {
+        return Err(KilnError::InsufficientJuniorCapital.into());
     }
-
     drop(state);
 
-    // Transfer fee from treasury to manager
-    let treasury_bump = config.treasury_bump;
-    let treasury_bump_seed = [treasury_bump];
-    let treasury_signer_seeds = [
-        Seed::from(TREASURY_SEED),
-        Seed::from(vault_config.key().as_ref()),
-        Seed::from(&treasury_bump_seed[..]),
-    ];
-    let treasury_signers = [Signer::from(&treasury_signer_seeds[..])];
-
-    pinocchio_system::instructions::Transfer {
-        from: treasury,
-        to: manager,
-        lamports: fee_lamports,
-    }
-    .invoke_signed(&treasury_signers)?;
-
-    // Update HWM and NAV
+    // Crystallize the fee as additional junior shares. Assets stay inside the
+    // vault, preserving the manager's first-loss exposure instead of draining
+    // treasury liquidity.
     let mut state = VaultState::load_mut(vault_state)?;
-    state.high_water_mark = state.current_nav;
-    state.current_nav = state
-        .current_nav
-        .checked_sub(fee_lamports)
+    let fee_shares = fee_lamports
+        .checked_mul(junior_shares_outstanding)
+        .ok_or(KilnError::MathOverflow)?
+        .checked_div(junior_capital)
         .ok_or(KilnError::MathOverflow)?;
+    if fee_shares == 0 {
+        return Err(KilnError::InvalidAmount.into());
+    }
+
+    state.junior_shares_outstanding = state
+        .junior_shares_outstanding
+        .checked_add(fee_shares)
+        .ok_or(KilnError::MathOverflow)?;
+    state.high_water_mark = state.current_nav;
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
-
-    // Fee comes from junior capital (manager's share)
-    state.junior_capital = state
-        .junior_capital
-        .checked_sub(fee_lamports)
-        .ok_or(KilnError::MathOverflow)?;
 
     Ok(())
 }

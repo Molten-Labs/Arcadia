@@ -26,12 +26,22 @@ fn process_instruction(
     match ProgramInstruction::try_from(ix_disc)? {
         ProgramInstruction::InitManager => instructions::init_manager(accounts),
         ProgramInstruction::CreateVault => instructions::create_vault(accounts, instruction_data),
-        ProgramInstruction::DepositJunior => instructions::deposit_junior(accounts, instruction_data),
+        ProgramInstruction::DepositJunior => {
+            instructions::deposit_junior(accounts, instruction_data)
+        }
         ProgramInstruction::UpdateNav => instructions::update_nav(accounts, instruction_data),
-        ProgramInstruction::GraduateVault => instructions::graduate_vault(accounts, instruction_data),
-        ProgramInstruction::DepositSenior => instructions::deposit_senior(accounts, instruction_data),
-        ProgramInstruction::WithdrawSenior => instructions::withdraw_senior(accounts, instruction_data),
-        ProgramInstruction::WithdrawJunior => instructions::withdraw_junior(accounts, instruction_data),
+        ProgramInstruction::GraduateVault => {
+            instructions::graduate_vault(accounts, instruction_data)
+        }
+        ProgramInstruction::DepositSenior => {
+            instructions::deposit_senior(accounts, instruction_data)
+        }
+        ProgramInstruction::WithdrawSenior => {
+            instructions::withdraw_senior(accounts, instruction_data)
+        }
+        ProgramInstruction::WithdrawJunior => {
+            instructions::withdraw_junior(accounts, instruction_data)
+        }
         ProgramInstruction::ClaimFees => instructions::claim_fees(accounts, instruction_data),
         ProgramInstruction::ExecuteSwap => instructions::execute_swap(accounts, instruction_data),
     }

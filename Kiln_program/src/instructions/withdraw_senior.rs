@@ -33,8 +33,7 @@ const INSTANT_EXIT_THRESHOLD_BPS: u64 = 2000; // 20%
 /// 4: investor_position (writable)
 /// 5: clock (readonly)
 pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [investor, vault_config, vault_state, treasury, investor_position, clock_sysvar] =
-        accounts
+    let [investor, vault_config, vault_state, treasury, investor_position, clock_sysvar] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -42,7 +41,11 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if !investor.is_signer() {
         return Err(ProgramError::MissingRequiredSignature);
     }
-    if !investor.is_writable() || !vault_state.is_writable() || !treasury.is_writable() || !investor_position.is_writable() {
+    if !investor.is_writable()
+        || !vault_state.is_writable()
+        || !treasury.is_writable()
+        || !investor_position.is_writable()
+    {
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -76,11 +79,13 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     }
 
     // Cooldown check: 24h unless junior buffer is dangerously low
-    let total_capital = state.junior_capital
+    let total_capital = state
+        .junior_capital
         .checked_add(state.senior_capital)
         .ok_or(KilnError::MathOverflow)?;
     let junior_ratio_bps = if total_capital > 0 {
-        state.junior_capital
+        state
+            .junior_capital
             .checked_mul(10_000)
             .ok_or(KilnError::MathOverflow)?
             .checked_div(total_capital)
@@ -92,7 +97,8 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let instant_exit = junior_ratio_bps < INSTANT_EXIT_THRESHOLD_BPS;
     if !instant_exit {
         let pos_ref = InvestorPosition::load(investor_position)?;
-        let elapsed = clock.unix_timestamp
+        let elapsed = clock
+            .unix_timestamp
             .checked_sub(pos_ref.deposited_at)
             .ok_or(KilnError::MathOverflow)?;
         if elapsed < COOLDOWN_SECS {
@@ -117,7 +123,8 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     }
 
     // Ensure treasury has enough (minus rent)
-    let available = treasury.lamports()
+    let available = treasury
+        .lamports()
         .checked_sub(config.treasury_rent_lamports)
         .ok_or(KilnError::TreasuryAccountingMismatch)?;
     if available < withdrawal_amount {

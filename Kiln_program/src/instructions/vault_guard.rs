@@ -25,7 +25,8 @@ pub fn effective_health_bps(state: &VaultState) -> Result<u64, ProgramError> {
     if state.original_junior_deposit == 0 {
         return Ok(0);
     }
-    let strength = state.junior_capital
+    let strength = state
+        .junior_capital
         .checked_mul(10_000)
         .ok_or(KilnError::MathOverflow)?
         .checked_div(state.original_junior_deposit)
@@ -68,7 +69,8 @@ pub fn run_guards(
     }
 
     if state.current_nav > 0 {
-        let max_amount = state.current_nav
+        let max_amount = state
+            .current_nav
             .checked_mul(max_bps)
             .ok_or(KilnError::MathOverflow)?
             .checked_div(10_000)
@@ -106,8 +108,11 @@ pub fn apply_post_swap_cooldown(
 
     // Single trade loss as bps of old NAV (capped at 10_000)
     let loss_bps = if old_nav > 0 {
-        let raw = loss.checked_mul(10_000).unwrap_or(u64::MAX)
-            .checked_div(old_nav).unwrap_or(0);
+        let raw = loss
+            .checked_mul(10_000)
+            .unwrap_or(u64::MAX)
+            .checked_div(old_nav)
+            .unwrap_or(0);
         core::cmp::min(raw, 10_000) as u16
     } else {
         0

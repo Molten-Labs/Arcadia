@@ -227,6 +227,48 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
+  // Disc 3: [updater, vault_config, vault_state, treasury, pyth_placeholder, clock]
+  const updateNav = useCallback(
+    async (vaultConfigPubkey: PublicKey) => {
+      if (!publicKey) throw new Error("Wallet not connected");
+      const [statePda] = getVaultStatePDA(vaultConfigPubkey);
+      const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const data = Buffer.from([0]);
+
+      const ix = buildInstruction(3, [
+        { pubkey: publicKey, isSigner: true, isWritable: false },
+        { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+        { pubkey: statePda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+      ], data);
+      return send(ix, "Update NAV");
+    },
+    [publicKey, send]
+  );
+
+  // Disc 4: [caller, vault_state, vault_config, treasury, manager_profile, clock]
+  const graduateVault = useCallback(
+    async (vaultConfigPubkey: PublicKey, managerPubkey: PublicKey) => {
+      if (!publicKey) throw new Error("Wallet not connected");
+      const [profilePda] = getManagerProfilePDA(managerPubkey);
+      const [statePda] = getVaultStatePDA(vaultConfigPubkey);
+      const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+
+      const ix = buildInstruction(4, [
+        { pubkey: publicKey, isSigner: true, isWritable: false },
+        { pubkey: statePda, isSigner: false, isWritable: true },
+        { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+        { pubkey: treasuryPda, isSigner: false, isWritable: false },
+        { pubkey: profilePda, isSigner: false, isWritable: true },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+      ]);
+      return send(ix, "Graduate Vault");
+    },
+    [publicKey, send]
+  );
+
   // Disc 8: [manager, manager_profile, vault_config, vault_state, treasury, clock]
   const claimFees = useCallback(
     async (vaultConfigPubkey: PublicKey) => {
@@ -248,6 +290,31 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
+  // Disc 9: [manager, manager_profile, vault_config, vault_state, treasury, clock]
+  const executeSwap = useCallback(
+    async (vaultConfigPubkey: PublicKey, inAmount: bigint, minimumAmountOut: bigint) => {
+      if (!publicKey) throw new Error("Wallet not connected");
+      const [profilePda] = getManagerProfilePDA(publicKey);
+      const [statePda] = getVaultStatePDA(vaultConfigPubkey);
+      const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+
+      const data = Buffer.alloc(16);
+      data.writeBigUInt64LE(inAmount, 0);
+      data.writeBigUInt64LE(minimumAmountOut, 8);
+
+      const ix = buildInstruction(9, [
+        { pubkey: publicKey, isSigner: true, isWritable: false },
+        { pubkey: profilePda, isSigner: false, isWritable: false },
+        { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+        { pubkey: statePda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+      ], data);
+      return send(ix, "Execute Swap");
+    },
+    [publicKey, send]
+  );
+
   return {
     initManager,
     createVault,
@@ -255,6 +322,9 @@ export function useKilnTransactions() {
     depositSenior,
     withdrawSenior,
     withdrawJunior,
+    updateNav,
+    graduateVault,
     claimFees,
+    executeSwap,
   };
 }

@@ -1,10 +1,7 @@
 use wincode::deserialize_exact;
 
 use pinocchio::{
-    account_info::AccountInfo,
-    program_error::ProgramError,
-    sysvars::clock::Clock,
-    ProgramResult,
+    account_info::AccountInfo, program_error::ProgramError, sysvars::clock::Clock, ProgramResult,
 };
 use wincode::SchemaRead;
 
@@ -24,8 +21,8 @@ pub struct ExecuteSwapArgs {
 
 /// Execute a swap from the vault treasury.
 ///
-/// MVP implementation: validates all guard checks, records the swap attempt,
-/// and updates NAV. The actual Jupiter CPI call will be added when
+/// MVP implementation: validates all guard checks and updates NAV from the
+/// treasury balance. The actual Jupiter CPI call will be added when
 /// jupiter-cpi dependency is integrated.
 ///
 /// Expected accounts (in order):
@@ -38,8 +35,7 @@ pub struct ExecuteSwapArgs {
 ///
 /// Future: additional accounts for Jupiter CPI routing
 pub fn execute_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] =
-        accounts
+    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -55,6 +51,9 @@ pub fn execute_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
     if args.in_amount == 0 {
         return Err(KilnError::InvalidAmount.into());
+    }
+    if args.minimum_amount_out != 0 {
+        return Err(KilnError::SlippageExceeded.into());
     }
 
     let config = VaultConfig::load(vault_config)?;
@@ -115,16 +114,21 @@ pub fn execute_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     // Apply waterfall if NAV decreased
     if new_nav < old_nav {
-        let loss = old_nav.checked_sub(new_nav).ok_or(KilnError::MathOverflow)?;
+        let loss = old_nav
+            .checked_sub(new_nav)
+            .ok_or(KilnError::MathOverflow)?;
         if loss <= state.junior_capital {
-            state.junior_capital = state.junior_capital
+            state.junior_capital = state
+                .junior_capital
                 .checked_sub(loss)
                 .ok_or(KilnError::MathOverflow)?;
         } else {
-            let remaining = loss.checked_sub(state.junior_capital)
+            let remaining = loss
+                .checked_sub(state.junior_capital)
                 .ok_or(KilnError::MathOverflow)?;
             state.junior_capital = 0;
-            state.senior_capital = state.senior_capital
+            state.senior_capital = state
+                .senior_capital
                 .checked_sub(remaining)
                 .ok_or(KilnError::MathOverflow)?;
             state.trading_enabled = 0;
@@ -136,13 +140,18 @@ pub fn execute_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         state.high_water_mark = new_nav;
     }
 
+    // Do not count paper-mode trades until real swap execution exists. Counting
+    // a requested notional here would let a no-op instruction satisfy the
+    // graduation activity gate.
+    let qualifying_notional = 0;
+
     // Apply post-swap cooldown logic
     vault_guard::apply_post_swap_cooldown(
         &mut state,
         old_nav,
         new_nav,
         clock.unix_timestamp,
-        args.in_amount,
+        qualifying_notional,
     );
 
     Ok(())
