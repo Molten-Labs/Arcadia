@@ -101,7 +101,7 @@ DB note:
 - `server-rs` runs SQLx migrations from `server-rs/migrations/` at startup. Supabase can be used as the hosted Postgres target.
 - Webhook ingestion stores raw payloads and uses stable event keys to avoid duplicate NAV, trade, and status rows on repeated Helius delivery.
 - Jupiter real swaps are mainnet-only; devnet returns an explicit guard response so demo flows do not pretend a Jupiter route executed.
-- The old `server/` Fastify app is a compatibility shim only; use `pnpm dev:server` or `cargo run --manifest-path server-rs/Cargo.toml`.
+- `server-rs` is the only backend; use `pnpm dev:server` or `cargo run --manifest-path server-rs/Cargo.toml`.
 
 ---
 

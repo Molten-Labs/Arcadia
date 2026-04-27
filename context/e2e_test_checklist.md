@@ -27,8 +27,8 @@ This checklist verifies the SOL-only MVP described in `context/arc_v2.md`.
 
 ## Backend And Indexer
 
-- [x] Retire the Node server from active root scripts; `dev:server` and `build:server` target `server-rs`.
-- [x] Keep the TypeScript backend as a deferred compatibility shim only.
+- [x] Retire the Node server; `dev:server` and `build:server` target `server-rs`.
+- [x] Remove the legacy TypeScript backend so `server-rs` is the only backend.
 - [x] Add SQLx migrations for raw webhook events and materialized product tables.
 - [x] Verify `/health`, `/vaults`, `/vaults/:configAddress`, `/vaults/:configAddress/nav-history`, `/vaults/:configAddress/trades`, `/managers`, `/managers/:address`, and `/positions/:wallet` have concrete `server-rs` handlers.
 - [x] Add fixture tests for webhook materialization and delayed public trade visibility.
