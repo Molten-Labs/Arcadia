@@ -10,7 +10,7 @@ interface Props {
 }
 
 export const StatCard = ({ label, value, hint, trend, className }: Props) => (
-  <div className={cn("surface rounded-xl p-4 shadow-card", className)}>
+  <div className={cn("matte-panel rounded-lg p-4", className)}>
     <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</div>
     <div className="font-display font-semibold text-2xl mt-1.5 tabular">{value}</div>
     {(hint != null || trend != null) && (

@@ -5,32 +5,32 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold ring-offset-background transition-[background-color,color,border-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold ring-offset-background transition-[background-color,color,border-color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
     {
         variants: {
             variant: {
                 default:
-                    "bg-primary text-primary-foreground shadow-sm shadow-primary/15 hover:bg-primary/90 hover:shadow-primary/25",
+                    "border-0 bg-primary text-primary-foreground shadow-ember hover:bg-primary-glow hover:shadow-primary/30",
                 gradient:
                     "border-0 bg-gradient-ember text-white shadow-ember hover:opacity-95 hover:shadow-primary/30",
                 premium:
-                    "border border-primary/30 bg-primary/10 text-primary shadow-sm hover:border-primary/50 hover:bg-primary/15 hover:text-primary-glow",
+                    "border border-primary/20 bg-primary/10 text-primary shadow-card hover:border-primary/35 hover:bg-primary/15 hover:text-primary-glow",
                 destructive:
                     "bg-destructive text-destructive-foreground shadow-sm shadow-destructive/15 hover:bg-destructive/90",
                 dangerOutline:
                     "border border-destructive/35 bg-destructive/10 text-destructive hover:border-destructive/60 hover:bg-destructive/15",
                 outline:
-                    "border border-input bg-background/80 shadow-sm hover:border-border-strong hover:bg-accent hover:text-accent-foreground",
+                    "border border-border/45 bg-card/35 shadow-card backdrop-blur hover:border-primary/30 hover:bg-primary/10 hover:text-primary-glow",
                 secondary:
-                    "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-                glass: "border border-white/10 bg-white/[0.06] text-foreground shadow-card backdrop-blur-xl hover:border-white/20 hover:bg-white/[0.09]",
+                    "bg-secondary/70 text-secondary-foreground shadow-card hover:bg-secondary",
+                glass: "border border-white/[0.07] bg-white/[0.035] text-foreground shadow-card backdrop-blur-xl hover:border-primary/25 hover:bg-primary/[0.08]",
                 terminal:
-                    "border border-border-strong bg-background-secondary text-foreground font-mono shadow-card hover:border-primary/40 hover:bg-secondary",
+                    "border border-border/45 bg-background-secondary/80 text-foreground font-mono shadow-card hover:border-primary/35 hover:bg-secondary/80",
                 tradeBuy:
                     "border-0 bg-success text-success-foreground shadow-sm shadow-success/20 hover:bg-success/90",
                 tradeSell:
                     "border-0 bg-destructive text-destructive-foreground shadow-sm shadow-destructive/20 hover:bg-destructive/90",
-                ghost: "hover:bg-accent hover:text-accent-foreground",
+                ghost: "hover:bg-primary/10 hover:text-primary-glow",
                 link: "text-primary underline-offset-4 hover:text-primary-glow hover:underline",
             },
             size: {

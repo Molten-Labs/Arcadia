@@ -12,7 +12,7 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
   return (
     <Link
       to={`/vault/${vault.id}`}
-      className="group surface rounded-2xl p-5 shadow-card hover:border-border-strong hover:bg-card-elevated transition-colors flex flex-col gap-4"
+      className="group matte-panel rounded-lg p-5 transition-colors hover:border-primary/30 hover:bg-card-elevated/80 flex flex-col gap-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -26,7 +26,7 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
         <StatusBadge status={vault.status} />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 py-3 border-y border-border">
+      <div className="grid grid-cols-3 gap-3 py-3 border-y border-border/45">
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVL</div>
           <div className="tabular font-semibold text-sm mt-0.5">
@@ -48,14 +48,14 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
       <HealthMeter health={vault.juniorHealth} />
 
       <div className="flex flex-wrap gap-1.5">
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
           Fee: {vault.feeBps / 100}%
         </span>
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
           Slippage: {vault.maxSlippageBps / 100}%
         </span>
         {vault.instantExit && (
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary inline-flex items-center gap-1">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/12 text-primary inline-flex items-center gap-1 shadow-[0_0_16px_hsl(var(--primary)/0.12)]">
             <Zap className="w-2.5 h-2.5" /> Instant exit
           </span>
         )}

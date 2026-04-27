@@ -33,10 +33,10 @@ const Landing = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative min-h-[calc(100vh-6.75rem)] overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,hsl(var(--primary)/0.24),transparent_32%),radial-gradient(circle_at_78%_20%,hsl(var(--info)/0.12),transparent_28%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)))]" />
+      <section className="relative min-h-[calc(100vh-6.75rem)] overflow-hidden border-b border-border/35">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)/0.76)_44%,hsl(var(--background)))]" />
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-35 saturate-[0.72]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-30 saturate-[0.68]"
           src={HERO_VIDEO}
           autoPlay
           muted
@@ -45,9 +45,11 @@ const Landing = () => {
           preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.72)_0%,hsl(var(--background)/0.42)_44%,hsl(var(--background))_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.84)_26%,hsl(var(--background)/0.42)_58%,hsl(var(--background)/0.92)_100%)]" />
-        <div className="absolute inset-0 grid-bg opacity-[0.09]" />
+        <div className="absolute inset-0 rax-glow opacity-85" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_66%,hsl(var(--primary-deep)/0.62)_0%,hsl(var(--primary-deep)/0.30)_18%,transparent_42%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.78)_0%,hsl(var(--background)/0.48)_42%,hsl(var(--background))_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.86)_26%,hsl(var(--background)/0.38)_58%,hsl(var(--background)/0.94)_100%)]" />
+        <div className="absolute inset-0 hairline-grid opacity-[0.14]" />
 
         <div className="container relative flex min-h-[calc(100vh-6.75rem)] flex-col justify-center py-16 md:py-24">
           <div className="max-w-5xl">
@@ -57,17 +59,17 @@ const Landing = () => {
               transition={{ duration: 0.6 }}
               className="max-w-4xl"
             >
-              <div className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+              <div className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-primary-glow">
                 SynQ Protocol
               </div>
-              <h1 className="font-hero max-w-4xl text-6xl font-semibold leading-[0.88] tracking-normal text-foreground md:text-8xl lg:text-9xl">
+              <h1 className="font-hero max-w-4xl text-6xl font-semibold leading-[0.88] tracking-normal text-foreground/95 md:text-8xl lg:text-9xl">
                 Capital follows proof.
               </h1>
-              <p className="mt-7 max-w-xl text-sm leading-7 text-foreground/70 md:text-base">
+              <p className="mt-7 max-w-xl text-sm leading-7 text-foreground/78 md:text-base">
                 SynQ is a Solana vault layer where traders earn allocation only after proving performance with first-loss capital.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 border-0 shadow-ember">
+                <Button asChild size="lg">
                   <Link to="/vaults">Open marketplace <ArrowRight className="w-4 h-4 ml-2" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
@@ -76,7 +78,7 @@ const Landing = () => {
               </div>
             </motion.div>
           </div>
-          <div className="mt-16 max-w-xl border-t border-border/70 pt-4 text-xs text-muted-foreground">
+          <div className="mt-16 max-w-xl border-t border-border/45 pt-4 text-xs text-muted-foreground">
             First-loss vaults · public track records · non-custodial Solana rails
           </div>
         </div>
@@ -86,7 +88,7 @@ const Landing = () => {
       <InfiniteSlider />
 
       {/* Stats strip */}
-      <section className="border-b border-border relative overflow-hidden">
+      <section className="border-b border-border/35 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-px animate-shimmer pointer-events-none" />
         <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 relative">
           {[
@@ -134,7 +136,7 @@ const Landing = () => {
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.5, delay: i * 0.12 }}
               whileHover={{ y: -4 }}
-              className="surface rounded-2xl p-6 shadow-card relative overflow-hidden group hover:border-border-strong transition-colors"
+              className="matte-panel rounded-lg p-6 relative overflow-hidden group hover:border-primary/28 transition-colors"
             >
               <div className="text-[80px] font-display font-bold text-primary/5 absolute -top-4 -right-2 leading-none">{s.n}</div>
               <s.icon className="w-6 h-6 text-primary mb-4 relative" />
@@ -162,7 +164,7 @@ const Landing = () => {
             {featured.map(v => <VaultCard key={v.id} vault={v} />)}
           </div>
         ) : (
-          <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
+          <div className="matte-panel rounded-lg p-10 text-center text-muted-foreground">
             No active vaults yet. Connect your wallet and create the first one!
           </div>
         )}
@@ -172,7 +174,7 @@ const Landing = () => {
 
       {/* Trust strip */}
       <section className="container py-20">
-        <div className="surface-elevated rounded-2xl p-8 md:p-12">
+        <div className="surface-elevated rounded-lg p-8 md:p-12">
           <div className="grid md:grid-cols-4 gap-6">
             {[
               { icon: Activity, title: "30-day paper mode", desc: "Every vault must build a public track record before accepting investor capital." },

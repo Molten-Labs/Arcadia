@@ -69,11 +69,11 @@ export const Nav = () => {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
+            <header className="sticky top-0 z-40 border-b border-border/35 bg-background/78 backdrop-blur-xl shadow-[0_1px_0_hsl(var(--foreground)/0.035)]">
                 <div className="container flex items-center justify-between h-16">
                     <div className="flex items-center gap-8">
                         <Link to="/" className="flex items-center gap-2 group">
-                            <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center shadow-card">
+                            <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">
                                 <Orbit className="w-4 h-4 text-primary" />
                             </div>
                             <span className="font-display font-bold text-lg tracking-tight">
@@ -91,10 +91,10 @@ export const Nav = () => {
                                         key={l.to}
                                         to={l.to}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            "relative px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.75)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                             active
-                                                ? "text-foreground bg-secondary"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60",
+                                                ? "text-foreground after:scale-x-100"
+                                                : "text-muted-foreground hover:text-foreground",
                                         )}
                                     >
                                         {l.label}
@@ -106,7 +106,7 @@ export const Nav = () => {
 
                     <div className="flex items-center gap-2">
                         {connected && (
-                            <div className="hidden lg:flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1.5 text-xs shadow-card">
+                            <div className="hidden lg:flex items-center gap-2 rounded-full bg-card/50 px-3 py-1.5 text-xs shadow-card ring-1 ring-border/35">
                                 <span className="inline-flex items-center gap-1.5 capitalize text-muted-foreground">
                                     <Globe2 className="w-3.5 h-3.5 text-primary" />
                                     {network}
@@ -122,7 +122,7 @@ export const Nav = () => {
                             <Link
                                 to="/alerts"
                                 aria-label="Notifications"
-                                className="hidden sm:inline-flex p-2 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className="hidden sm:inline-flex p-2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary-glow relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                                 <Bell className="w-4 h-4" />
                                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
@@ -131,7 +131,7 @@ export const Nav = () => {
                         {!connected ? (
                             <Button
                                 onClick={() => openWalletModal(true)}
-                                className="bg-gradient-ember hover:opacity-90 text-white border-0"
+                                className="bg-primary text-primary-foreground hover:bg-primary-glow border-0"
                             >
                                 <Wallet className="w-4 h-4 mr-2" />
                                 Connect Wallet
@@ -212,7 +212,7 @@ export const Nav = () => {
                                     : "Open navigation menu"
                             }
                             aria-expanded={open}
-                            className="md:hidden p-2 rounded-md hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="md:hidden p-2 rounded-md hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             {open ? (
                                 <X className="w-4 h-4" />
@@ -224,10 +224,10 @@ export const Nav = () => {
                 </div>
 
                 {open && (
-                    <nav className="md:hidden border-t border-border bg-background">
+                    <nav className="md:hidden border-t border-border/35 bg-background/95 backdrop-blur-xl">
                         <div className="container py-3 flex flex-col gap-1">
                             {connected && (
-                                <div className="mb-2 grid grid-cols-2 gap-2 rounded-xl border border-border bg-card/60 p-2 text-xs">
+                                <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-card/55 p-2 text-xs shadow-card ring-1 ring-border/35">
                                     <div>
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                                             Network
@@ -261,8 +261,8 @@ export const Nav = () => {
                                         className={cn(
                                             "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                             active
-                                                ? "bg-secondary text-foreground"
-                                                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                                                ? "bg-primary/10 text-foreground"
+                                                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                         )}
                                     >
                                         {l.label}
@@ -276,8 +276,8 @@ export const Nav = () => {
                                     className={cn(
                                         "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         location.pathname === "/settings"
-                                            ? "bg-secondary text-foreground"
-                                            : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                                            ? "bg-primary/10 text-foreground"
+                                            : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                     )}
                                 >
                                     Settings
