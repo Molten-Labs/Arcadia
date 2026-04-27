@@ -3,7 +3,10 @@ export interface ApiItems<T> {
 }
 
 export function getKilnApiUrl(): string {
-  return (import.meta.env.VITE_KILN_API_URL || "").replace(/\/$/, "");
+  return (import.meta.env.VITE_KILN_API_URL || import.meta.env.VITE_KILN_API_BASE_URL || "").replace(
+    /\/$/,
+    ""
+  );
 }
 
 export async function fetchKilnApi<T>(path: string): Promise<T | null> {

@@ -23,8 +23,11 @@ cp .env.example .env
 Important envs:
 - `VITE_RPC_URL` — RPC URL used by the frontend. Do NOT commit a private RPC key into source control.
 - `HELIUS_API_KEY` — (optional) Helius API key used by the indexer when interacting with Helius endpoints or webhook verification.
+- `HELIUS_WEBHOOK_SECRET` — shared secret accepted in `x-helius-signature` or `x-kiln-webhook-secret` for webhook ingestion.
 - `DATABASE_URL` — Postgres connection string for the indexer, e.g. `postgres://user:pass@localhost:5432/kiln`
 - `PORT` — port for the indexer (default: 8080)
+- `VITE_KILN_API_URL` / `VITE_KILN_API_BASE_URL` — frontend API base URL, defaulting to `http://localhost:8080` for the Rust backend.
+- `JUPITER_API_KEY` — required only for mainnet Jupiter quote/swap-instruction proxying.
 
 Security note: do not commit keys or secrets. Use a secrets manager or CI secret variables for production.
 
@@ -82,6 +85,7 @@ A canonical Axum API/indexer is under `server-rs/`. It exposes:
 - `GET /vaults/:configAddress/nav-history` — NAV chart points
 - `GET /vaults/:configAddress/trades` — public delayed trade history
 - `GET /managers`, `GET /managers/:address`, and `GET /positions/:wallet` — manager and investor reads
+- `GET /jupiter/quote` and `POST /jupiter/swap-instructions` — guarded Jupiter proxy routes used by the frontend swap flow
 
 Run the indexer:
 1. Ensure Postgres is running and `DATABASE_URL` env var is set.
@@ -95,6 +99,8 @@ Run the indexer:
 
 DB note:
 - `server-rs` runs SQLx migrations from `server-rs/migrations/` at startup. Supabase can be used as the hosted Postgres target.
+- Webhook ingestion stores raw payloads and uses stable event keys to avoid duplicate NAV, trade, and status rows on repeated Helius delivery.
+- Jupiter real swaps are mainnet-only; devnet returns an explicit guard response so demo flows do not pretend a Jupiter route executed.
 - The old `server/` Fastify app is a compatibility shim only; use `pnpm dev:server` or `cargo run --manifest-path server-rs/Cargo.toml`.
 
 ---

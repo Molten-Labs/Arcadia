@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     env,
     net::SocketAddr,
     sync::{Arc, Mutex},
@@ -26,6 +26,8 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 struct AppState {
     store: Store,
     webhook_secret: Option<String>,
+    jupiter_api_key: Option<String>,
+    jupiter_swap_base_url: String,
 }
 
 #[derive(Clone)]
@@ -38,6 +40,10 @@ enum Store {
 #[derive(Default)]
 struct MaterializedState {
     raw_events: Vec<Value>,
+    raw_event_keys: HashSet<String>,
+    nav_event_keys: HashSet<String>,
+    trade_event_keys: HashSet<String>,
+    status_event_keys: HashSet<String>,
     managers: HashMap<String, ManagerView>,
     vaults: HashMap<String, VaultView>,
     positions: HashMap<String, PositionView>,
@@ -52,6 +58,26 @@ struct HealthResponse {
     status: &'static str,
     database: &'static str,
     indexer: &'static str,
+    last_ingested_at: Option<i64>,
+    raw_events: i64,
+    vaults: i64,
+    managers: i64,
+    positions: i64,
+    nav_points: i64,
+    trades: i64,
+    status_events: i64,
+}
+
+#[derive(Debug, Default)]
+struct HealthStats {
+    last_ingested_at: Option<i64>,
+    raw_events: i64,
+    vaults: i64,
+    managers: i64,
+    positions: i64,
+    nav_points: i64,
+    trades: i64,
+    status_events: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,20 +189,33 @@ enum AppError {
     Unauthorized,
     #[error("not found")]
     NotFound,
+    #[error("bad request: {0}")]
+    BadRequest(String),
+    #[error("upstream error: {0}")]
+    Upstream(String),
     #[error("state lock poisoned")]
     StatePoisoned,
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
-        let (status, body) = match &self {
+        let (status, body): (StatusCode, String) = match &self {
             AppError::Db(e) => {
                 error!("database error: {:?}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "database error")
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "database error".to_string(),
+                )
             }
-            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized webhook"),
-            AppError::NotFound => (StatusCode::NOT_FOUND, "not found"),
-            AppError::StatePoisoned => (StatusCode::INTERNAL_SERVER_ERROR, "state error"),
+            AppError::Unauthorized => {
+                (StatusCode::UNAUTHORIZED, "unauthorized webhook".to_string())
+            }
+            AppError::NotFound => (StatusCode::NOT_FOUND, "not found".to_string()),
+            AppError::BadRequest(e) => (StatusCode::BAD_REQUEST, e.clone()),
+            AppError::Upstream(e) => (StatusCode::BAD_GATEWAY, e.clone()),
+            AppError::StatePoisoned => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "state error".to_string())
+            }
         };
         (status, body).into_response()
     }
@@ -199,6 +238,11 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|s| s.parse().ok())
         .unwrap_or(8080);
     let webhook_secret = env::var("HELIUS_WEBHOOK_SECRET").ok();
+    let jupiter_api_key = env::var("JUPITER_API_KEY")
+        .ok()
+        .filter(|value| !value.is_empty());
+    let jupiter_swap_base_url = env::var("JUPITER_SWAP_BASE_URL")
+        .unwrap_or_else(|_| "https://api.jup.ag/swap/v1".to_string());
 
     info!(
         "starting server-rs; connecting to database: {}",
@@ -218,6 +262,8 @@ async fn main() -> anyhow::Result<()> {
     let app = build_app(AppState {
         store: Store::Postgres(db),
         webhook_secret,
+        jupiter_api_key,
+        jupiter_swap_base_url,
     });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -246,6 +292,11 @@ fn build_app(state: AppState) -> Router {
         .route("/managers", get(list_managers_handler))
         .route("/managers/:address", get(get_manager_handler))
         .route("/positions/:wallet", get(positions_handler))
+        .route("/jupiter/quote", get(jupiter_quote_handler))
+        .route(
+            "/jupiter/swap-instructions",
+            post(jupiter_swap_instructions_handler),
+        )
         .layer(cors)
         .with_state(Arc::new(state))
 }
@@ -253,11 +304,19 @@ fn build_app(state: AppState) -> Router {
 async fn health_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<HealthResponse>, AppError> {
-    state.check_health().await?;
+    let stats = state.health_stats().await?;
     Ok(Json(HealthResponse {
         status: "ok",
         database: state.store_name(),
         indexer: "materialized",
+        last_ingested_at: stats.last_ingested_at,
+        raw_events: stats.raw_events,
+        vaults: stats.vaults,
+        managers: stats.managers,
+        positions: stats.positions,
+        nav_points: stats.nav_points,
+        trades: stats.trades,
+        status_events: stats.status_events,
     }))
 }
 
@@ -337,6 +396,210 @@ async fn positions_handler(
     }))
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterQuoteQuery {
+    #[serde(default = "default_cluster")]
+    cluster: String,
+    input_mint: String,
+    output_mint: String,
+    amount: String,
+    #[serde(default = "default_slippage_bps")]
+    slippage_bps: u16,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct JupiterSwapInstructionsRequest {
+    #[serde(default = "default_cluster")]
+    cluster: String,
+    user_public_key: String,
+    quote_response: Value,
+    #[serde(default)]
+    wrap_and_unwrap_sol: bool,
+    destination_token_account: Option<String>,
+}
+
+async fn jupiter_quote_handler(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<JupiterQuoteQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    if let Some(response) = jupiter_gate(
+        &state,
+        &query.cluster,
+        &query.input_mint,
+        &query.output_mint,
+        Some(query.slippage_bps),
+    ) {
+        return Ok(response);
+    }
+    query
+        .amount
+        .parse::<u64>()
+        .map_err(|_| AppError::BadRequest("amount must be a positive integer".to_string()))?;
+
+    let slippage_bps = query.slippage_bps.to_string();
+    let params = [
+        ("inputMint", query.input_mint.as_str()),
+        ("outputMint", query.output_mint.as_str()),
+        ("amount", query.amount.as_str()),
+        ("slippageBps", slippage_bps.as_str()),
+        ("swapMode", "ExactIn"),
+        ("onlyDirectRoutes", "false"),
+    ];
+    let client = reqwest::Client::new();
+    let mut request = client
+        .get(format!(
+            "{}/quote",
+            state.jupiter_swap_base_url.trim_end_matches('/')
+        ))
+        .query(&params);
+    if let Some(api_key) = &state.jupiter_api_key {
+        request = request.header("x-api-key", api_key);
+    }
+    let response = request
+        .send()
+        .await
+        .map_err(|e| AppError::Upstream(format!("Jupiter quote request failed: {e}")))?;
+    proxy_json_response(response).await
+}
+
+async fn jupiter_swap_instructions_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<JupiterSwapInstructionsRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let input_mint = payload
+        .quote_response
+        .get("inputMint")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let output_mint = payload
+        .quote_response
+        .get("outputMint")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if let Some(response) = jupiter_gate(&state, &payload.cluster, input_mint, output_mint, None) {
+        return Ok(response);
+    }
+    validate_pubkey_like(&payload.user_public_key, "userPublicKey")?;
+    if let Some(destination) = &payload.destination_token_account {
+        validate_pubkey_like(destination, "destinationTokenAccount")?;
+    }
+
+    let body = serde_json::json!({
+        "userPublicKey": payload.user_public_key,
+        "quoteResponse": payload.quote_response,
+        "wrapAndUnwrapSol": payload.wrap_and_unwrap_sol,
+        "destinationTokenAccount": payload.destination_token_account,
+    });
+    let client = reqwest::Client::new();
+    let mut request = client
+        .post(format!(
+            "{}/swap-instructions",
+            state.jupiter_swap_base_url.trim_end_matches('/')
+        ))
+        .json(&body);
+    if let Some(api_key) = &state.jupiter_api_key {
+        request = request.header("x-api-key", api_key);
+    }
+    let response = request.send().await.map_err(|e| {
+        AppError::Upstream(format!("Jupiter swap-instructions request failed: {e}"))
+    })?;
+    proxy_json_response(response).await
+}
+
+const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
+const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+
+fn default_cluster() -> String {
+    "devnet".to_string()
+}
+
+fn default_slippage_bps() -> u16 {
+    50
+}
+
+fn jupiter_gate(
+    state: &AppState,
+    cluster: &str,
+    input_mint: &str,
+    output_mint: &str,
+    slippage_bps: Option<u16>,
+) -> Option<axum::response::Response> {
+    if cluster != "mainnet-beta" {
+        return Some((
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({
+                "mode": "mock",
+                "reason": "Real Jupiter swaps are mainnet-beta only; devnet swaps remain guard-only."
+            })),
+        ).into_response());
+    }
+    if !is_supported_route(input_mint, output_mint) {
+        return Some(
+            (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Only SOL/USDC exact-in routes are supported in this release."
+                })),
+            )
+                .into_response(),
+        );
+    }
+    if let Some(slippage_bps) = slippage_bps {
+        if !(1..=500).contains(&slippage_bps) {
+            return Some(
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "slippageBps must be between 1 and 500."
+                    })),
+                )
+                    .into_response(),
+            );
+        }
+    }
+    if state.jupiter_api_key.is_none() {
+        return Some(
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "JUPITER_API_KEY is not configured on the server."
+                })),
+            )
+                .into_response(),
+        );
+    }
+    None
+}
+
+fn is_supported_route(input_mint: &str, output_mint: &str) -> bool {
+    (input_mint == SOL_MINT && output_mint == USDC_MINT)
+        || (input_mint == USDC_MINT && output_mint == SOL_MINT)
+}
+
+fn validate_pubkey_like(value: &str, field: &str) -> Result<(), AppError> {
+    if value.len() >= 32 {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "{field} must be a base58 public key"
+        )))
+    }
+}
+
+async fn proxy_json_response(
+    response: reqwest::Response,
+) -> Result<axum::response::Response, AppError> {
+    let status =
+        StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    let body = response
+        .json::<Value>()
+        .await
+        .unwrap_or_else(|_| serde_json::json!({}));
+    Ok((status, Json(body)).into_response())
+}
+
 impl AppState {
     fn store_name(&self) -> &'static str {
         match self.store {
@@ -361,28 +624,73 @@ impl AppState {
         }
     }
 
-    async fn check_health(&self) -> Result<(), AppError> {
-        if let Store::Postgres(pool) = &self.store {
-            sqlx::query("SELECT 1").execute(pool).await?;
+    async fn health_stats(&self) -> Result<HealthStats, AppError> {
+        match &self.store {
+            Store::Postgres(pool) => {
+                sqlx::query("SELECT 1").execute(pool).await?;
+                let row = sqlx::query(
+                    "SELECT
+                       (SELECT EXTRACT(EPOCH FROM max(received_at))::BIGINT FROM raw_events) AS last_ingested_at,
+                       (SELECT count(*) FROM raw_events) AS raw_events,
+                       (SELECT count(*) FROM vaults) AS vaults,
+                       (SELECT count(*) FROM manager_profiles) AS managers,
+                       (SELECT count(*) FROM investor_positions) AS positions,
+                       (SELECT count(*) FROM nav_points) AS nav_points,
+                       (SELECT count(*) FROM trade_events) AS trades,
+                       (SELECT count(*) FROM status_events) AS status_events",
+                )
+                .fetch_one(pool)
+                .await?;
+                Ok(HealthStats {
+                    last_ingested_at: row.get("last_ingested_at"),
+                    raw_events: row.get("raw_events"),
+                    vaults: row.get("vaults"),
+                    managers: row.get("managers"),
+                    positions: row.get("positions"),
+                    nav_points: row.get("nav_points"),
+                    trades: row.get("trades"),
+                    status_events: row.get("status_events"),
+                })
+            }
+            Store::Memory(state) => {
+                let state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                Ok(HealthStats {
+                    last_ingested_at: state.raw_events.last().map(|_| now_ts()),
+                    raw_events: state.raw_events.len() as i64,
+                    vaults: state.vaults.len() as i64,
+                    managers: state.managers.len() as i64,
+                    positions: state.positions.len() as i64,
+                    nav_points: state.nav_points.len() as i64,
+                    trades: state.trades.len() as i64,
+                    status_events: state.status_events.len() as i64,
+                })
+            }
         }
-        Ok(())
     }
 
     async fn record_webhook(&self, kind: Option<String>, payload: Value) -> Result<(), AppError> {
+        let raw_event_key = event_key(&payload, kind.as_deref(), 0);
         let updates = MaterializedUpdate::from_payload(&payload);
         match &self.store {
             Store::Postgres(pool) => {
-                sqlx::query("INSERT INTO raw_events (kind, payload) VALUES ($1, $2)")
-                    .bind(&kind)
-                    .bind(&payload)
-                    .execute(pool)
-                    .await?;
+                sqlx::query(
+                    "INSERT INTO raw_events (event_key, kind, payload) VALUES ($1, $2, $3)
+                     ON CONFLICT (event_key) DO NOTHING",
+                )
+                .bind(&raw_event_key)
+                .bind(&kind)
+                .bind(&payload)
+                .execute(pool)
+                .await?;
                 apply_update_postgres(pool, updates).await?;
             }
             Store::Memory(state) => {
                 let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                if !state.raw_event_keys.insert(raw_event_key) {
+                    return Ok(());
+                }
                 state.raw_events.push(payload);
-                state.apply_update(updates);
+                state.apply_updates(updates);
             }
         }
         Ok(())
@@ -580,6 +888,7 @@ impl AppState {
 
 #[derive(Default)]
 struct MaterializedUpdate {
+    event_key: String,
     manager: Option<ManagerView>,
     vault: Option<VaultView>,
     position: Option<PositionView>,
@@ -589,64 +898,143 @@ struct MaterializedUpdate {
 }
 
 impl MaterializedUpdate {
-    fn from_payload(payload: &Value) -> Self {
-        let data = payload.get("data").unwrap_or(payload);
-        let manager = data
-            .get("manager")
-            .or_else(|| data.get("managerProfile"))
-            .and_then(parse_manager);
-        let vault = data.get("vault").or(Some(data)).and_then(parse_vault);
-        let position = data
-            .get("position")
-            .and_then(|v| parse_position(v, vault.clone()));
-        let nav_point = data
-            .get("navPoint")
-            .and_then(parse_nav_point)
-            .or_else(|| vault.as_ref().map(vault_to_nav_point));
-        let trade = data.get("trade").and_then(parse_trade);
-        let status = data.get("statusEvent").and_then(parse_status_event);
-
-        Self {
-            manager,
-            vault,
-            position,
-            nav_point,
-            trade,
-            status,
+    fn from_payload(payload: &Value) -> Vec<Self> {
+        match payload {
+            Value::Array(items) => items
+                .iter()
+                .enumerate()
+                .flat_map(|(index, item)| Self::from_single_payload(item, index))
+                .collect(),
+            _ => Self::from_single_payload(payload, 0),
         }
+    }
+
+    fn from_single_payload(payload: &Value, payload_index: usize) -> Vec<Self> {
+        let base_key = event_key(payload, event_kind(payload).as_deref(), payload_index);
+        let mut updates = Vec::new();
+        for (index, data) in materialization_nodes(payload).into_iter().enumerate() {
+            let manager = data
+                .get("manager")
+                .or_else(|| data.get("managerProfile"))
+                .and_then(parse_manager);
+            let vault = data.get("vault").or(Some(data)).and_then(parse_vault);
+            let position = data
+                .get("position")
+                .and_then(|v| parse_position(v, vault.clone()));
+            let nav_point = data
+                .get("navPoint")
+                .and_then(parse_nav_point)
+                .or_else(|| vault.as_ref().map(vault_to_nav_point));
+            let trade = data.get("trade").and_then(parse_trade);
+            let status = data.get("statusEvent").and_then(parse_status_event);
+
+            if manager.is_some()
+                || vault.is_some()
+                || position.is_some()
+                || nav_point.is_some()
+                || trade.is_some()
+                || status.is_some()
+            {
+                updates.push(Self {
+                    event_key: format!("{base_key}:{index}"),
+                    manager,
+                    vault,
+                    position,
+                    nav_point,
+                    trade,
+                    status,
+                });
+            }
+        }
+        updates
     }
 }
 
+fn materialization_nodes(payload: &Value) -> Vec<&Value> {
+    let mut nodes = Vec::new();
+    if let Some(data) = payload.get("data") {
+        nodes.push(data);
+    }
+    for key in ["kiln", "kilnEvent", "event"] {
+        if let Some(value) = payload.get(key) {
+            nodes.push(value);
+        }
+    }
+    if let Some(events) = payload.get("events") {
+        match events {
+            Value::Array(values) => nodes.extend(values),
+            Value::Object(map) => nodes.extend(map.values()),
+            _ => {}
+        }
+    }
+    if nodes.is_empty() {
+        nodes.push(payload);
+    }
+    nodes
+}
+
+fn event_key(payload: &Value, kind: Option<&str>, index: usize) -> String {
+    let signature = string(
+        payload,
+        &["signature", "transactionSignature", "txSignature", "id"],
+    )
+    .or_else(|| {
+        payload
+            .get("transaction")
+            .and_then(|transaction| string(transaction, &["signature"]))
+    })
+    .unwrap_or_else(|| payload.to_string());
+    format!("{}:{}:{index}", kind.unwrap_or("webhook"), signature)
+}
+
 impl MaterializedState {
-    fn apply_update(&mut self, update: MaterializedUpdate) {
-        if let Some(manager) = update.manager {
-            self.managers.insert(manager.pubkey.clone(), manager);
-        }
-        if let Some(vault) = update.vault {
-            self.vaults.insert(vault.config_pubkey.clone(), vault);
-        }
-        if let Some(position) = update.position {
-            self.positions.insert(position.pubkey.clone(), position);
-        }
-        if let Some(point) = update.nav_point {
-            self.nav_points.push(point);
-        }
-        if let Some(trade) = update.trade {
-            self.trades.push(trade);
-        }
-        if let Some(status) = update.status {
-            self.status_events.push(status);
+    fn apply_updates(&mut self, updates: Vec<MaterializedUpdate>) {
+        for update in updates {
+            if let Some(manager) = update.manager {
+                self.managers.insert(manager.pubkey.clone(), manager);
+            }
+            if let Some(vault) = update.vault {
+                self.vaults.insert(vault.config_pubkey.clone(), vault);
+            }
+            if let Some(position) = update.position {
+                self.positions.insert(position.pubkey.clone(), position);
+            }
+            if let Some(point) = update.nav_point {
+                if self
+                    .nav_event_keys
+                    .insert(format!("{}:nav", update.event_key))
+                {
+                    self.nav_points.push(point);
+                }
+            }
+            if let Some(trade) = update.trade {
+                if self
+                    .trade_event_keys
+                    .insert(format!("{}:trade", update.event_key))
+                {
+                    self.trades.push(trade);
+                }
+            }
+            if let Some(status) = update.status {
+                if self
+                    .status_event_keys
+                    .insert(format!("{}:status", update.event_key))
+                {
+                    self.status_events.push(status);
+                }
+            }
         }
     }
 }
 
 async fn apply_update_postgres(
     pool: &PgPool,
-    update: MaterializedUpdate,
+    updates: Vec<MaterializedUpdate>,
 ) -> Result<(), sqlx::Error> {
-    if let Some(manager) = update.manager {
-        sqlx::query(
-            "INSERT INTO manager_profiles
+    for update in updates {
+        if let Some(manager) = update.manager {
+            sqlx::query(
+                "INSERT INTO manager_profiles
              (pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at)
              VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (pubkey) DO UPDATE SET
@@ -656,23 +1044,23 @@ async fn apply_update_postgres(
                total_junior_deposited = EXCLUDED.total_junior_deposited,
                created_at = EXCLUDED.created_at,
                updated_at = now()",
-        )
-        .bind(manager.pubkey)
-        .bind(manager.owner)
-        .bind(manager.total_vaults)
-        .bind(manager.active_vaults)
-        .bind(manager.total_junior_deposited)
-        .bind(manager.created_at)
-        .execute(pool)
-        .await?;
-    }
+            )
+            .bind(manager.pubkey)
+            .bind(manager.owner)
+            .bind(manager.total_vaults)
+            .bind(manager.active_vaults)
+            .bind(manager.total_junior_deposited)
+            .bind(manager.created_at)
+            .execute(pool)
+            .await?;
+        }
 
-    if let Some(vault) = update.vault {
-        upsert_vault(pool, &vault).await?;
-    }
-    if let Some(position) = update.position {
-        sqlx::query(
-            "INSERT INTO investor_positions
+        if let Some(vault) = update.vault {
+            upsert_vault(pool, &vault).await?;
+        }
+        if let Some(position) = update.position {
+            sqlx::query(
+                "INSERT INTO investor_positions
              (pubkey, vault_config_pubkey, investor_pubkey, deposited_at, senior_shares,
               total_deposited, alert_threshold_bps, current_value)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -685,23 +1073,25 @@ async fn apply_update_postgres(
                alert_threshold_bps = EXCLUDED.alert_threshold_bps,
                current_value = EXCLUDED.current_value,
                updated_at = now()",
+            )
+            .bind(position.pubkey)
+            .bind(position.vault_config_pubkey)
+            .bind(position.investor_pubkey)
+            .bind(position.deposited_at)
+            .bind(position.senior_shares)
+            .bind(position.total_deposited)
+            .bind(position.alert_threshold_bps)
+            .bind(position.current_value)
+            .execute(pool)
+            .await?;
+        }
+        if let Some(point) = update.nav_point {
+            sqlx::query(
+            "INSERT INTO nav_points (event_key, vault_config_pubkey, recorded_at, nav, junior_capital, senior_capital)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (event_key) DO NOTHING",
         )
-        .bind(position.pubkey)
-        .bind(position.vault_config_pubkey)
-        .bind(position.investor_pubkey)
-        .bind(position.deposited_at)
-        .bind(position.senior_shares)
-        .bind(position.total_deposited)
-        .bind(position.alert_threshold_bps)
-        .bind(position.current_value)
-        .execute(pool)
-        .await?;
-    }
-    if let Some(point) = update.nav_point {
-        sqlx::query(
-            "INSERT INTO nav_points (vault_config_pubkey, recorded_at, nav, junior_capital, senior_capital)
-             VALUES ($1, $2, $3, $4, $5)",
-        )
+        .bind(format!("{}:nav", update.event_key))
         .bind(point.vault_config_pubkey)
         .bind(point.recorded_at)
         .bind(point.nav)
@@ -709,13 +1099,15 @@ async fn apply_update_postgres(
         .bind(point.senior_capital)
         .execute(pool)
         .await?;
-    }
-    if let Some(trade) = update.trade {
-        sqlx::query(
+        }
+        if let Some(trade) = update.trade {
+            sqlx::query(
             "INSERT INTO trade_events
-             (vault_config_pubkey, occurred_at, visibility_after, is_public_visible, side, size, route)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)",
+             (event_key, vault_config_pubkey, occurred_at, visibility_after, is_public_visible, side, size, route)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (event_key) DO NOTHING",
         )
+        .bind(format!("{}:trade", update.event_key))
         .bind(trade.vault_config_pubkey)
         .bind(trade.occurred_at)
         .bind(trade.visibility_after)
@@ -725,18 +1117,21 @@ async fn apply_update_postgres(
         .bind(trade.route)
         .execute(pool)
         .await?;
-    }
-    if let Some(status) = update.status {
-        sqlx::query(
-            "INSERT INTO status_events (vault_config_pubkey, occurred_at, status, reason)
-             VALUES ($1, $2, $3, $4)",
+        }
+        if let Some(status) = update.status {
+            sqlx::query(
+            "INSERT INTO status_events (event_key, vault_config_pubkey, occurred_at, status, reason)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (event_key) DO NOTHING",
         )
+        .bind(format!("{}:status", update.event_key))
         .bind(status.vault_config_pubkey)
         .bind(status.occurred_at)
         .bind(status.status)
         .bind(status.reason)
         .execute(pool)
         .await?;
+        }
     }
     Ok(())
 }
@@ -1099,6 +1494,8 @@ mod tests {
         build_app(AppState {
             store: Store::Memory(Arc::new(Mutex::new(MaterializedState::default()))),
             webhook_secret: secret.map(ToString::to_string),
+            jupiter_api_key: None,
+            jupiter_swap_base_url: "https://api.jup.ag/swap/v1".to_string(),
         })
     }
 
@@ -1289,5 +1686,115 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn duplicate_webhook_signature_is_idempotent() {
+        let app = test_app(None);
+        let payload = json!({
+            "signature": "same-signature",
+            "kind": "trade",
+            "data": {
+                "trade": {
+                    "vaultConfigPubkey": "vault-config-3",
+                    "occurredAt": 120,
+                    "visibilityAfter": 121,
+                    "isPublicVisible": true,
+                    "size": 4
+                }
+            }
+        });
+
+        let (status, _) =
+            json_request(app.clone(), Method::POST, "/webhook", payload.clone()).await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, _) = json_request(app.clone(), Method::POST, "/webhook", payload).await;
+        assert_eq!(status, StatusCode::OK);
+
+        let (status, trades) = json_request(
+            app,
+            Method::GET,
+            "/vaults/vault-config-3/trades",
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(trades["items"].as_array().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn helius_wrapped_events_materialize() {
+        let app = test_app(None);
+        let payload = json!([{
+            "signature": "helius-signature-1",
+            "type": "UNKNOWN",
+            "timestamp": 1700000000,
+            "events": {
+                "kiln": {
+                    "vault": {
+                        "configPubkey": "vault-config-4",
+                        "managerPubkey": "manager-wallet-4",
+                        "managerProfilePubkey": "manager-profile-4",
+                        "juniorCapital": 5,
+                        "seniorCapital": 7,
+                        "currentNav": 12
+                    },
+                    "navPoint": {
+                        "vaultConfigPubkey": "vault-config-4",
+                        "recordedAt": 1700000000,
+                        "nav": 12,
+                        "juniorCapital": 5,
+                        "seniorCapital": 7
+                    }
+                }
+            }
+        }]);
+
+        let (status, _) = json_request(app.clone(), Method::POST, "/webhook", payload).await;
+        assert_eq!(status, StatusCode::OK);
+
+        let (status, vault) =
+            json_request(app, Method::GET, "/vaults/vault-config-4", Value::Null).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(vault["currentNav"], 12.0);
+    }
+
+    #[tokio::test]
+    async fn health_reports_materialized_counts() {
+        let app = test_app(None);
+        let payload = json!({
+            "signature": "health-signature",
+            "data": {
+                "vault": {
+                    "configPubkey": "vault-config-health",
+                    "juniorCapital": 1,
+                    "currentNav": 1
+                }
+            }
+        });
+        let (status, _) = json_request(app.clone(), Method::POST, "/webhook", payload).await;
+        assert_eq!(status, StatusCode::OK);
+
+        let (status, health) = json_request(app, Method::GET, "/health", Value::Null).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(health["database"], "memory");
+        assert_eq!(health["indexer"], "materialized");
+        assert_eq!(health["rawEvents"], 1);
+        assert_eq!(health["vaults"], 1);
+        assert!(health["lastIngestedAt"].as_i64().is_some());
+    }
+
+    #[tokio::test]
+    async fn jupiter_devnet_quote_returns_guard_message() {
+        let app = test_app(None);
+        let (status, body) = json_request(
+            app,
+            Method::GET,
+            "/jupiter/quote?cluster=devnet&inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000&slippageBps=50",
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(body["mode"], "mock");
     }
 }

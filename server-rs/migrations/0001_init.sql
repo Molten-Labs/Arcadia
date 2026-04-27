@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS raw_events (
     id BIGSERIAL PRIMARY KEY,
+    event_key TEXT UNIQUE,
     kind TEXT,
     payload JSONB NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -65,6 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_investor_positions_vault ON investor_positions(va
 
 CREATE TABLE IF NOT EXISTS nav_points (
     id BIGSERIAL PRIMARY KEY,
+    event_key TEXT UNIQUE,
     vault_config_pubkey TEXT NOT NULL,
     recorded_at BIGINT NOT NULL,
     nav DOUBLE PRECISION NOT NULL,
@@ -77,6 +79,7 @@ CREATE INDEX IF NOT EXISTS idx_nav_points_vault_time ON nav_points(vault_config_
 
 CREATE TABLE IF NOT EXISTS trade_events (
     id BIGSERIAL PRIMARY KEY,
+    event_key TEXT UNIQUE,
     vault_config_pubkey TEXT NOT NULL,
     occurred_at BIGINT NOT NULL,
     visibility_after BIGINT NOT NULL,
@@ -91,6 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_trade_events_public ON trade_events(vault_config_
 
 CREATE TABLE IF NOT EXISTS status_events (
     id BIGSERIAL PRIMARY KEY,
+    event_key TEXT UNIQUE,
     vault_config_pubkey TEXT NOT NULL,
     occurred_at BIGINT NOT NULL,
     status TEXT NOT NULL,
