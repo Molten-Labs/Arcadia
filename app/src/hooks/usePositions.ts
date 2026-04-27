@@ -16,7 +16,9 @@ export interface PositionView {
   investorPubkey: string;
   depositedAt: number;
   seniorShares: number;
+  seniorSharesRaw: bigint;
   totalDeposited: number;
+  totalDepositedLamports: bigint;
   alertThresholdBps: number;
   currentValue: number;
 }
@@ -29,8 +31,10 @@ function estimateCurrentValue(
   pos: InvestorPositionData,
   vault: VaultView | null
 ): number {
-  if (!vault || vault.seniorSharesOutstanding === 0) return lamportsToSol(pos.totalDeposited);
-  return (Number(pos.seniorShares) / vault.seniorSharesOutstanding) * vault.seniorCapital;
+  if (!vault || vault.seniorSharesOutstandingRaw === 0n) return lamportsToSol(pos.totalDeposited);
+  const valueLamports =
+    (pos.seniorShares * vault.seniorCapitalLamports) / vault.seniorSharesOutstandingRaw;
+  return lamportsToSol(valueLamports);
 }
 
 export function usePositions() {
@@ -60,7 +64,9 @@ export function usePositions() {
           investorPubkey: data.investor.toBase58(),
           depositedAt: Number(data.depositedAt),
           seniorShares: Number(data.seniorShares),
+          seniorSharesRaw: data.seniorShares,
           totalDeposited: lamportsToSol(data.totalDeposited),
+          totalDepositedLamports: data.totalDeposited,
           alertThresholdBps: data.alertThresholdBps,
           currentValue: estimateCurrentValue(data, vault),
         } satisfies PositionView;

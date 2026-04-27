@@ -205,14 +205,14 @@ export function useKilnTransactions() {
 
   // Disc 7: [manager, manager_profile, vault_config, vault_state, treasury, clock]
   const withdrawJunior = useCallback(
-    async (vaultConfigPubkey: PublicKey, lamports: bigint) => {
+    async (vaultConfigPubkey: PublicKey, sharesToBurn: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [profilePda] = getManagerProfilePDA(publicKey);
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
 
       const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(lamports, 0);
+      data.writeBigUInt64LE(sharesToBurn, 0);
 
       const ix = buildInstruction(7, [
         { pubkey: publicKey, isSigner: true, isWritable: true },

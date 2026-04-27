@@ -4,6 +4,7 @@ import { Layout } from "@/components/Layout";
 import { useVault } from "@/hooks/useVaults";
 import { useBalance } from "@/hooks/useBalance";
 import { useKilnTransactions } from "@/hooks/useTransactions";
+import { usePositions } from "@/hooks/usePositions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CapitalStack } from "@/components/CapitalStack";
 import { HealthMeter } from "@/components/HealthMeter";
@@ -23,7 +24,8 @@ import { OrderBook } from "@/components/OrderBook";
 import { ArrowLeft, Info, Bell, Zap, Loader2 } from "lucide-react";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { toast } from "sonner";
-import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
+import { calculateSharesToBurn, parseSolToLamports } from "@/lib/solana/shares";
 
 const LIVE_VIEW_RANGES = ["1H", "4H", "1D", "1W"] as const;
 type LiveViewRange = (typeof LIVE_VIEW_RANGES)[number];
@@ -33,6 +35,7 @@ const VaultDetail = () => {
     const { data: vault, isLoading, error } = useVault(id);
     const { connected, role } = useWallet();
     const { data: balance } = useBalance();
+    const { data: positions } = usePositions();
     const { depositSenior, withdrawSenior } = useKilnTransactions();
     const [amount, setAmount] = useState("");
     const [liveViewRange, setLiveViewRange] = useState<LiveViewRange>("1D");
@@ -53,12 +56,16 @@ const VaultDetail = () => {
     if (!vault || error) return <Navigate to="/vaults" replace />;
 
     const parsedAmount = Number(amount);
-    const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
-    const lamports = hasValidAmount ? BigInt(Math.floor(parsedAmount * LAMPORTS_PER_SOL)) : 0n;
-    const seniorSharesToBurn =
-        hasValidAmount && vault.seniorCapital > 0 && vault.seniorSharesOutstanding > 0
-            ? (lamports * BigInt(vault.seniorSharesOutstanding)) / BigInt(Math.floor(vault.seniorCapital * LAMPORTS_PER_SOL))
-            : 0n;
+    const parsedLamports = parseSolToLamports(amount);
+    const hasValidAmount = parsedLamports !== null && parsedLamports > 0n;
+    const lamports = parsedLamports ?? 0n;
+    const investorPosition = positions?.find((position) => position.vaultConfigPubkey === vault.configPubkey);
+    const ownedSeniorShares = investorPosition?.seniorSharesRaw ?? 0n;
+    const seniorSharesToBurn = calculateSharesToBurn(
+        lamports,
+        vault.seniorCapitalLamports,
+        vault.seniorSharesOutstandingRaw,
+    );
 
     const handleDeposit = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
@@ -82,7 +89,9 @@ const VaultDetail = () => {
     const handleWithdraw = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
         if (!hasValidAmount) { toast.error("Enter a valid SOL amount"); return; }
+        if (!investorPosition || ownedSeniorShares === 0n) { toast.error("No senior position found for this vault"); return; }
         if (seniorSharesToBurn === 0n) { toast.error("Amount is too small for current share price"); return; }
+        if (seniorSharesToBurn > ownedSeniorShares) { toast.error("Withdrawal exceeds your senior position"); return; }
 
         setSending(true);
         try {
@@ -250,11 +259,12 @@ const VaultDetail = () => {
                                     <div className="space-y-3">
                                         <div>
                                             <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                                                <span>Amount</span>
+                                                <label htmlFor="senior-vault-amount">Amount</label>
                                                 <span>Balance: {solBalance.toFixed(4)} SOL</span>
                                             </div>
                                             <div className="relative">
                                                 <Input
+                                                    id="senior-vault-amount"
                                                     value={amount}
                                                     onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                                                     placeholder="0.00"
@@ -270,7 +280,7 @@ const VaultDetail = () => {
                                                     key={p}
                                                     type="button"
                                                     onClick={() => setAmount(p === "MAX" ? String(solBalance) : String(solBalance * (parseInt(p) / 100)))}
-                                                    className="flex-1 h-10 text-xs py-1.5 rounded-md bg-secondary hover:bg-accent"
+                                                    className="flex-1 h-10 text-xs py-1.5 rounded-md bg-secondary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                 >
                                                     {p}
                                                 </button>
@@ -292,7 +302,7 @@ const VaultDetail = () => {
                                     </Button>
                                     <Button
                                         onClick={handleWithdraw}
-                                        disabled={sending}
+                                        disabled={sending || !hasValidAmount}
                                         variant="outline"
                                         className="w-full mt-2"
                                     >

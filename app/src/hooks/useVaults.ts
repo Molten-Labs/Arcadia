@@ -21,14 +21,22 @@ export interface VaultView {
   tvl: number;
   juniorCapital: number;
   seniorCapital: number;
+  originalJuniorDepositLamports: bigint;
+  juniorCapitalLamports: bigint;
+  seniorCapitalLamports: bigint;
   juniorSharesOutstanding: number;
   seniorSharesOutstanding: number;
+  juniorSharesOutstandingRaw: bigint;
+  seniorSharesOutstandingRaw: bigint;
   juniorHealth: number;
   currentNav: number;
+  currentNavLamports: bigint;
   highWaterMark: number;
+  highWaterMarkLamports: bigint;
   feeBps: number;
   maxSlippageBps: number;
   createdAt: number;
+  paperWindowSecs: number;
   graduatedAt: number;
   paperTradeCount: number;
   minQualifyingTrades: number;
@@ -76,14 +84,22 @@ export function toVaultView(v: OnChainVault): VaultView | null {
     tvl: junior + senior,
     juniorCapital: junior,
     seniorCapital: senior,
+    originalJuniorDepositLamports: s.originalJuniorDeposit,
+    juniorCapitalLamports: s.juniorCapital,
+    seniorCapitalLamports: s.seniorCapital,
     juniorSharesOutstanding: Number(s.juniorSharesOutstanding),
     seniorSharesOutstanding: Number(s.seniorSharesOutstanding),
+    juniorSharesOutstandingRaw: s.juniorSharesOutstanding,
+    seniorSharesOutstandingRaw: s.seniorSharesOutstanding,
     juniorHealth: health,
     currentNav: lamportsToSol(s.currentNav),
+    currentNavLamports: s.currentNav,
     highWaterMark: lamportsToSol(s.highWaterMark),
+    highWaterMarkLamports: s.highWaterMark,
     feeBps: v.config.managerFeeBps,
     maxSlippageBps: v.config.maxSlippageBps,
     createdAt: Number(v.config.createdAt),
+    paperWindowSecs: Number(v.config.paperWindowSecs),
     graduatedAt: Number(s.graduatedAt),
     paperTradeCount: s.paperTradeCount,
     minQualifyingTrades: s.minQualifyingTrades,

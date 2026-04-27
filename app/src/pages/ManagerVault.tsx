@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { fmtUSD } from "@/lib/format";
 import { shortAddr } from "@/lib/wallet";
 import { ArrowLeft, Check, ArrowDownUp, X, Loader2 } from "lucide-react";
-import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { toast } from "sonner";
+import { calculateSharesToBurn, parseSolToLamports } from "@/lib/solana/shares";
 
 const QUICK_AMOUNTS = [25, 50, 75, 100] as const;
 
@@ -42,13 +43,32 @@ const ManagerVault = () => {
   if (!v) return <Navigate to="/manager" replace />;
 
   const parsedAmount = Number(amount);
-  const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
-  const lamports = hasValidAmount ? BigInt(Math.floor(parsedAmount * LAMPORTS_PER_SOL)) : 0n;
+  const parsedLamports = parseSolToLamports(amount);
+  const hasValidAmount = parsedLamports !== null && parsedLamports > 0n;
+  const lamports = parsedLamports ?? 0n;
   const aboveHwm = Math.max(0, v.currentNav - v.highWaterMark);
-  const juniorSharesToBurn =
-    hasValidAmount && v.juniorCapital > 0 && v.juniorSharesOutstanding > 0
-      ? (lamports * BigInt(v.juniorSharesOutstanding)) / BigInt(Math.floor(v.juniorCapital * LAMPORTS_PER_SOL))
-      : 0n;
+  const juniorSharesToBurn = calculateSharesToBurn(
+    lamports,
+    v.juniorCapitalLamports,
+    v.juniorSharesOutstandingRaw,
+  );
+  const nowSecs = Math.floor(Date.now() / 1000);
+  const graduationChecks = [
+    { ok: v.juniorCapitalLamports > 0n, label: "Junior capital posted" },
+    {
+      ok: v.paperTradeCount >= v.minQualifyingTrades,
+      label: `${v.minQualifyingTrades}+ qualifying trades (${v.paperTradeCount} done)`,
+    },
+    {
+      ok: v.currentNavLamports > v.originalJuniorDepositLamports,
+      label: "Positive paper PnL",
+    },
+    {
+      ok: nowSecs >= v.createdAt + v.paperWindowSecs,
+      label: "Paper window complete",
+    },
+  ];
+  const canGraduate = v.status === "paper" && graduationChecks.every((check) => check.ok);
 
   const checks = [
     { ok: true, label: "Whitelisted asset" },
@@ -166,7 +186,7 @@ const ManagerVault = () => {
             <Button variant="outline" size="sm" onClick={handleUpdateNav} disabled={sending}>
               Update NAV
             </Button>
-            <Button variant="outline" size="sm" onClick={handleGraduateVault} disabled={sending || v.status !== "paper"}>
+            <Button variant="outline" size="sm" onClick={handleGraduateVault} disabled={sending || !canGraduate}>
               Graduate
             </Button>
             <Button variant="outline" size="sm" onClick={handleWithdrawJunior} disabled={sending || !hasValidAmount}>
@@ -200,11 +220,12 @@ const ManagerVault = () => {
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <span>Amount (SOL)</span>
+                    <label htmlFor="manager-vault-amount">Junior amount (SOL)</label>
                     <span>Balance: {solBalance.toFixed(4)} SOL</span>
                   </div>
                   <div className="relative">
                     <Input
+                      id="manager-vault-amount"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                       placeholder="0.00"
@@ -220,7 +241,7 @@ const ManagerVault = () => {
                       key={pct}
                       type="button"
                       onClick={() => setAmount(String(solBalance * pct / 100))}
-                      className="h-10 flex-1 rounded-md bg-secondary text-xs font-medium hover:bg-accent"
+                      className="h-10 flex-1 rounded-md bg-secondary text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       {pct}%
                     </button>
@@ -255,7 +276,7 @@ const ManagerVault = () => {
                   variant="outline"
                   className="flex-1 h-11"
                 >
-                  Guard check
+                  Run guard swap
                 </Button>
                 <Button
                   onClick={handleWithdrawJunior}
@@ -278,9 +299,9 @@ const ManagerVault = () => {
               <div className="surface rounded-2xl p-6">
                 <h3 className="font-display font-semibold mb-3">Graduation checklist</h3>
                 <div className="text-sm space-y-2">
-                  <Item ok>Junior capital posted</Item>
-                  <Item ok={v.paperTradeCount >= v.minQualifyingTrades}>{v.minQualifyingTrades}+ qualifying trades ({v.paperTradeCount} done)</Item>
-                  <Item ok={v.currentNav > v.highWaterMark}>Positive PnL</Item>
+                  {graduationChecks.map((check) => (
+                    <Item key={check.label} ok={check.ok}>{check.label}</Item>
+                  ))}
                 </div>
               </div>
             )}
