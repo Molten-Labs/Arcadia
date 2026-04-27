@@ -39,6 +39,9 @@ tower-http = { version = "0.5", features = ["cors"] }
 # Optional: graceful shutdown helpers
 tokio-util = "0.7"
 
+[dev-dependencies]
+tower = "0.5"
+
 [features]
 # Nothing required by default. Consumers can enable DB compile-time checks by setting
 # the `DATABASE_URL` env and running `cargo sqlx prepare` if desired.

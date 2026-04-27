@@ -27,13 +27,15 @@ This checklist verifies the SOL-only MVP described in `context/arc_v2.md`.
 
 ## Backend And Indexer
 
-- [x] Run `pnpm --dir server build`.
-- [x] Verify `/health`, `/vaults`, `/vaults/:configAddress`, and `/managers/:address` have concrete handlers.
-- [x] Verify the TypeScript backend truthfully reports that live RPC/Helius ingestion is deferred instead of silently pretending to index.
-- [x] Run `cargo test` in `server-rs`.
+- [x] Retire the Node server from active root scripts; `dev:server` and `build:server` target `server-rs`.
+- [x] Keep the TypeScript backend as a deferred compatibility shim only.
+- [x] Add SQLx migrations for raw webhook events and materialized product tables.
+- [x] Verify `/health`, `/vaults`, `/vaults/:configAddress`, `/vaults/:configAddress/nav-history`, `/vaults/:configAddress/trades`, `/managers`, `/managers/:address`, and `/positions/:wallet` have concrete `server-rs` handlers.
+- [x] Add fixture tests for webhook materialization and delayed public trade visibility.
+- [x] Run `cargo test --manifest-path server-rs/Cargo.toml`.
 - [x] Run `pnpm --dir clients build`.
 - [x] Run `pnpm --dir clients test -- --run`.
-- [ ] Add fixture tests for Helius webhook/indexer replay once live ingestion is implemented.
+- [ ] Add live Helius replay against devnet once the deployed webhook URL is configured.
 - [ ] Add browser E2E against a local backend plus devnet/local validator once wallet automation is available.
 - [ ] Regenerate the generated TypeScript client/IDL for instructions `5..9`; the app currently uses manual builders for the full ABI.
 
@@ -51,5 +53,5 @@ This checklist verifies the SOL-only MVP described in `context/arc_v2.md`.
 - `cargo build-sbf` post-processing reports unresolved syscall names; the fresh LiteSVM run still executed the built artifact successfully.
 - Frontend lint currently reports 18 pre-existing warnings and 0 errors.
 - Vite build reports browser externalization and chunk-size warnings from dependencies.
-- `server-rs` test reports a future-incompatibility warning from `sqlx-postgres v0.7.4`.
-- The SOL-only MVP still does not have real Jupiter CPI, Pyth pricing, Helius replay, Supabase/Postgres materialized product views, or successful real-trading graduation.
+- `server-rs` test may report a future-incompatibility warning from `sqlx-postgres v0.7.4`.
+- The SOL-only MVP still does not have real Jupiter CPI, Pyth pricing, deployed Helius replay, manager-private trade auth, or successful real-trading graduation.

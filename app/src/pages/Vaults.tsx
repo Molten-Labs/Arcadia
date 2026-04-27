@@ -136,11 +136,11 @@ const Vaults = () => {
 
             {isLoading ? (
               <div className="surface rounded-2xl p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading vaults from chain...
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading vaults...
               </div>
             ) : error ? (
               <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
-                Connect your wallet to browse on-chain vaults.
+                Connect your wallet or configure the Kiln API to browse vaults.
               </div>
             ) : (
               <>

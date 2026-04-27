@@ -75,9 +75,13 @@ Notes:
 
 ## Indexer (Axum) & Postgres
 
-A minimal Axum server scaffold is under `server-rs/`. It exposes:
-- `GET /health` — healthcheck
-- `POST /webhook` — ingest arbitrary webhook JSON and persist to `events` table in Postgres
+A canonical Axum API/indexer is under `server-rs/`. It exposes:
+- `GET /health` — database/API/indexer status
+- `POST /webhook` — ingest Helius webhook JSON, persist raw payloads, and materialize product rows
+- `GET /vaults` and `GET /vaults/:configAddress` — materialized vault reads
+- `GET /vaults/:configAddress/nav-history` — NAV chart points
+- `GET /vaults/:configAddress/trades` — public delayed trade history
+- `GET /managers`, `GET /managers/:address`, and `GET /positions/:wallet` — manager and investor reads
 
 Run the indexer:
 1. Ensure Postgres is running and `DATABASE_URL` env var is set.
@@ -87,10 +91,11 @@ Run the indexer:
    # run (development)
    DATABASE_URL=postgres://postgres:postgres@localhost:5432/kiln cargo run --release
    ```
-3. To receive Helius webhooks, expose the server endpoint and register it in Helius (use `HELIUS_API_KEY` if needed). The server stores incoming JSON into a `events` JSONB column.
+3. To receive Helius webhooks, expose the server endpoint and register it in Helius. Set `HELIUS_WEBHOOK_SECRET` to require signed/secret-bearing webhook requests.
 
 DB note:
-- The server scaffold attempts to create a simple `events` table if it does not exist. For production use, run proper SQL migrations (Flyway, sqlx migrations, or your preferred tool).
+- `server-rs` runs SQLx migrations from `server-rs/migrations/` at startup. Supabase can be used as the hosted Postgres target.
+- The old `server/` Fastify app is a compatibility shim only; use `pnpm dev:server` or `cargo run --manifest-path server-rs/Cargo.toml`.
 
 ---
 

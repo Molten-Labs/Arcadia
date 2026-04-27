@@ -4,9 +4,9 @@
   "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev:app": "pnpm --dir app dev",
-    "dev:server": "pnpm --dir server dev",
+    "dev:server": "cargo run --manifest-path server-rs/Cargo.toml",
     "build:app": "pnpm --dir app build",
-    "build:server": "pnpm --dir server build",
+    "build:server": "cargo build --manifest-path server-rs/Cargo.toml",
     "codegen:shank": "shank idl --crate-root Kiln_program/src/lib.rs --out-dir idl",
     "codegen:codama": "pnpm --dir clients/ts/kiln codama run --all",
     "codegen": "pnpm codegen:shank && pnpm codegen:codama"
