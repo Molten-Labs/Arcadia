@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -101,12 +101,13 @@
   html { color-scheme: dark; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Poppins', system-ui, sans-serif;
     background-image: var(--gradient-radial);
     background-attachment: fixed;
   }
-  h1, h2, h3, h4, h5 { font-family: 'Syne', 'Inter', sans-serif; letter-spacing: 0; }
-  .font-display { font-family: 'Syne', 'Inter', sans-serif; }
+  h1, h2, h3, h4, h5 { font-family: 'Poppins', system-ui, sans-serif; letter-spacing: 0; }
+  .font-display { font-family: 'Poppins', system-ui, sans-serif; }
+  .font-hero { font-family: 'Cormorant Garamond', Georgia, serif; }
   .font-mono, .tabular { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 
   @media (prefers-reduced-motion: reduce) {

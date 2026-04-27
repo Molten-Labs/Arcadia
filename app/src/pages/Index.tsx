@@ -7,12 +7,9 @@ import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
 import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users } from "lucide-react";
 import { motion } from "framer-motion";
-import { GlassCard } from "@/components/GlassCard";
-import { TradingDashboardPreview } from "@/components/TradingDashboardPreview";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
-import { DataModeToggle } from "@/components/DataModeToggle";
 
 const HERO_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260423_161253_c72b1869-400f-45ed-ac0c-52f68c2ed5bd.mp4";
@@ -37,9 +34,9 @@ const Landing = () => {
     <Layout>
       {/* Hero */}
       <section className="relative min-h-[calc(100vh-6.75rem)] overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,hsl(var(--primary)/0.22),transparent_34%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,hsl(var(--primary)/0.24),transparent_32%),radial-gradient(circle_at_78%_20%,hsl(var(--info)/0.12),transparent_28%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)))]" />
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-45 saturate-[0.8]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-35 saturate-[0.72]"
           src={HERO_VIDEO}
           autoPlay
           muted
@@ -48,66 +45,39 @@ const Landing = () => {
           preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.88)_34%,hsl(var(--background)/0.56)_62%,hsl(var(--background)/0.88)_100%)]" />
-        <div className="absolute inset-0 grid-bg opacity-[0.14]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.72)_0%,hsl(var(--background)/0.42)_44%,hsl(var(--background))_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.84)_26%,hsl(var(--background)/0.42)_58%,hsl(var(--background)/0.92)_100%)]" />
+        <div className="absolute inset-0 grid-bg opacity-[0.09]" />
 
-        <div className="container relative pt-16 pb-16 md:pt-24 md:pb-20">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
+        <div className="container relative flex min-h-[calc(100vh-6.75rem)] flex-col justify-center py-16 md:py-24">
+          <div className="max-w-5xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="max-w-3xl"
+              className="max-w-4xl"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-card/60 backdrop-blur text-xs text-muted-foreground mb-6">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
-                Live on Solana devnet · {protocolStats.totalVaults} vaults
+              <div className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-primary">
+                SynQ Protocol
               </div>
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-4">
-                SynQ first-loss vaults
-              </div>
-              <h1 className="font-display font-bold text-5xl md:text-7xl leading-[0.95] tracking-tight">
-                Syn<span className="text-primary">Q</span> traders prove first. Investors follow proof.
+              <h1 className="font-hero max-w-4xl text-6xl font-semibold leading-[0.88] tracking-normal text-foreground md:text-8xl lg:text-9xl">
+                Capital follows proof.
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mt-6 max-w-2xl leading-relaxed">
-                SynQ is a Solana vault marketplace where traders build a public track record with their own capital,
-                then graduate into investor capital protected by an on-chain junior buffer.
+              <p className="mt-7 max-w-xl text-sm leading-7 text-foreground/70 md:text-base">
+                SynQ is a Solana vault layer where traders earn allocation only after proving performance with first-loss capital.
               </p>
-              <div className="flex flex-wrap gap-3 mt-8">
-                <Button asChild size="lg" className="bg-gradient-ember hover:opacity-90 text-white border-0 shadow-ember">
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 border-0 shadow-ember">
                   <Link to="/vaults">Open marketplace <ArrowRight className="w-4 h-4 ml-2" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link to="/manager">Trader console</Link>
                 </Button>
-                <Button asChild size="lg" variant="ghost">
-                  <a href="#calculator">Returns calculator</a>
-                </Button>
               </div>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <DataModeToggle />
-                <span className="text-xs text-muted-foreground">
-                  Switch between deterministic SynQ demo data and configured server/RPC data.
-                </span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
-              className="hidden lg:block"
-            >
-              <GlassCard
-                tag="DEVNET · LIVE DEMO"
-                title={<>Built for <span className="italic font-display text-primary">capital</span> that needs receipts.</>}
-                subtitle="Paper mode, on-chain reputation, dynamic risk limits, and instant exits when buffers run thin."
-              />
             </motion.div>
           </div>
-
-          <div className="mt-14 max-w-5xl">
-            <TradingDashboardPreview />
+          <div className="mt-16 max-w-xl border-t border-border/70 pt-4 text-xs text-muted-foreground">
+            First-loss vaults · public track records · non-custodial Solana rails
           </div>
         </div>
       </section>
