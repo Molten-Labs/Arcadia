@@ -178,7 +178,7 @@ export const ConnectModal = ({
                             <motion.div key="role" {...fade}>
                                 <DialogHeader>
                                     <DialogTitle className="font-display text-2xl">
-                                        How will you use Kiln?
+                                        How will you use SynQ?
                                     </DialogTitle>
                                     <DialogDescription>
                                         Pick the experience that fits you. You
@@ -333,7 +333,7 @@ export const ConnectModal = ({
                                     </SecondaryButton>
                                 </div>
                                 <InfoNote>
-                                    Kiln never custodies funds. This build uses
+                                    SynQ never custodies funds. This build uses
                                     transparent demo wallet sessions until a
                                     production Solana wallet adapter is
                                     connected.

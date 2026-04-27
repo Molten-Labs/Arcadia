@@ -18,6 +18,7 @@ import { PublicKey } from "@solana/web3.js";
 import { toast } from "sonner";
 import { calculateSharesToBurn, parseSolToLamports } from "@/lib/solana/shares";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
+import { DataModeToggle } from "@/components/DataModeToggle";
 
 const QUICK_AMOUNTS = [25, 50, 75, 100] as const;
 
@@ -171,11 +172,12 @@ const ManagerVault = () => {
           to="/manager"
           className="inline-flex h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Manager dashboard
+            <ArrowLeft className="w-3.5 h-3.5" /> SynQ manager
         </Link>
 
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div>
+            <div className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">Trader-only vault operations</div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="font-display font-bold text-3xl">{v.name}</h1>
               <StatusBadge status={v.status} />
@@ -183,6 +185,7 @@ const ManagerVault = () => {
             <p className="text-sm text-muted-foreground">Manager view · {shortAddr(v.managerPubkey)}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <DataModeToggle compact />
             <Button variant="outline" size="sm" onClick={handleDepositJunior} disabled={sending || !hasValidAmount}>
               Deposit junior
             </Button>

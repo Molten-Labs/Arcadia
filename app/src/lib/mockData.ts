@@ -1,4 +1,4 @@
-// Mock data for Kiln MVP — vaults, traders, performance, alerts
+// Mock data for SynQ MVP — vaults, traders, performance, alerts
 export type VaultStatus = "paper" | "active" | "cooldown" | "frozen" | "closed";
 export type TraderTier = "novice" | "proven" | "established" | "veteran" | "elite";
 

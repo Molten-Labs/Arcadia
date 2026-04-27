@@ -39,7 +39,7 @@ export const ProtectedRoute = ({
         icon={<Wallet className="h-6 w-6" aria-hidden="true" />}
         eyebrow="Wallet required"
         title="Connect your wallet to continue"
-        description="This area is tied to your Kiln account, vault permissions, and transaction history. Connect from the top navigation, then return to this flow."
+        description="This area is tied to your SynQ account, vault permissions, and transaction history. Connect from the top navigation, then return to this flow."
         primaryHref="/"
         primaryLabel="Go to home"
         secondaryHref="/vaults"

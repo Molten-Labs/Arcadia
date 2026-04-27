@@ -3,6 +3,8 @@ import { useWallet } from "@/lib/wallet";
 import { PROGRAM_ID } from "@/lib/solana/constants";
 import { decodeInvestorPosition } from "@/lib/solana/accounts";
 import { fetchKilnApi, getKilnApiUrl, type ApiItems } from "@/lib/api";
+import { useDataMode } from "@/hooks/useDataMode";
+import { mockPositionViews } from "@/lib/mockViews";
 import type { InvestorPositionData } from "@/lib/solana/accounts";
 import bs58 from "bs58";
 import { normalizeVaultView, useVaults, type VaultView } from "./useVaults";
@@ -66,10 +68,13 @@ function normalizeApiPosition(pos: PositionView): PositionView {
 export function usePositions() {
   const { connection, publicKey } = useWallet();
   const { data: vaults } = useVaults();
+  const { mode, isMock } = useDataMode();
 
   return useQuery({
-    queryKey: ["positions", publicKey?.toBase58(), getKilnApiUrl() || "rpc"],
+    queryKey: ["positions", mode, publicKey?.toBase58() || "mock", getKilnApiUrl() || "rpc"],
     queryFn: async () => {
+      if (isMock) return mockPositionViews(vaults);
+
       if (!publicKey) throw new Error("Not connected");
       const wallet = publicKey.toBase58();
 
@@ -109,7 +114,7 @@ export function usePositions() {
         } satisfies PositionView;
       });
     },
-    enabled: !!publicKey && (!!getKilnApiUrl() || (!!connection && !!vaults)),
+    enabled: isMock || (!!publicKey && (!!getKilnApiUrl() || (!!connection && !!vaults))),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

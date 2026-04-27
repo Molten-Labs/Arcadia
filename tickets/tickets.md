@@ -3,6 +3,24 @@
 
 ---
 
+## PHASE 4 — Synq UI Upgrade
+> Branch: `codex/synq-ui-upgrade` | Goal: premium SynQ MVP UI with role-separated investor/trader flows
+
+- [x] **UI-001** — Create implementation branch `codex/synq-ui-upgrade`
+- [x] **UI-002** — Add landing video hero with fallback overlay and role CTAs
+- [x] **UI-003** — Add persisted `Mock data` / `Real server data` mode toggle
+- [x] **UI-004** — Wire data hooks to respect data mode without breaking API/RPC fallback
+- [x] **UI-005** — Redesign investor marketplace and portfolio surfaces from `synq-marketplace.html`
+- [x] **UI-006** — Redesign trader manager dashboard and vault operations from `synq-dashboard (1).html`
+- [x] **UI-007** — Update navigation to enforce public/investor/trader information boundaries
+- [x] **UI-008** — Add or update tests for data mode and role-gated routes
+- [x] **UI-009** — Run build/test/lint checks and fix failures
+- [x] **UI-010** — Run in-app browser end-to-end checks and clear console errors
+
+Browser note: DOM/route/console checks passed with zero console errors. In-app browser screenshot capture timed out, so viewport screenshots were not attachable from this run.
+
+---
+
 ## Status Legend
 | Symbol | Meaning |
 |---|---|

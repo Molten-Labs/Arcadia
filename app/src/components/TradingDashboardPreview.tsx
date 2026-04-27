@@ -43,7 +43,7 @@ export const TradingDashboardPreview = () => {
           </div>
           <div className="flex-1 mx-3">
             <div className="bg-background rounded-md px-3 py-1 text-[11px] font-mono text-muted-foreground inline-flex items-center gap-1">
-              <span className="text-success">●</span> kiln.fi/vault/ember-macro-i
+              <span className="text-success">●</span> synq.fi/vault/ember-macro-i
             </div>
           </div>
         </div>

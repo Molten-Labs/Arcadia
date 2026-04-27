@@ -45,13 +45,29 @@ describe("backend-backed read hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("VITE_KILN_API_URL", "http://kiln-api.test");
+    localStorage.setItem("kiln:data-mode", "real");
     mocks.publicKey = key(1);
     mocks.connection = null;
   });
 
   afterEach(() => {
+    localStorage.clear();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+  });
+
+  it("loads deterministic mock vaults without API, wallet, or RPC when mock mode is selected", async () => {
+    vi.unstubAllEnvs();
+    localStorage.setItem("kiln:data-mode", "mock");
+    mocks.publicKey = undefined;
+    mocks.connection = null;
+
+    const { result } = renderHook(() => useVaults(), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[0].name).toBe("Ember Macro I");
+    expect(result.current.data?.length).toBeGreaterThan(1);
+    expect(mocks.fetchAllVaults).not.toHaveBeenCalled();
   });
 
   it("loads vaults from the backend API without requiring an RPC connection", async () => {

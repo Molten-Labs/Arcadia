@@ -15,7 +15,7 @@ export async function fetchKilnApi<T>(path: string): Promise<T | null> {
 
   const response = await fetch(`${baseUrl}${path}`);
   if (!response.ok) {
-    throw new Error(`Kiln API request failed: ${response.status}`);
+    throw new Error(`SynQ API request failed: ${response.status}`);
   }
   return response.json() as Promise<T>;
 }

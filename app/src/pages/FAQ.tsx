@@ -6,7 +6,7 @@ const items = [
   { q: "What happens if a vault freezes?", a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's reputation is reduced significantly." },
   { q: "When can I withdraw?", a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant." },
   { q: "How are performance fees calculated?", a: "Traders earn 15-20% only on gains above the previous high-water mark. No fees during drawdowns or sideways performance." },
-  { q: "Is Kiln custodial?", a: "No. Kiln is a non-custodial protocol on Solana. You sign every transaction yourself." },
+  { q: "Is SynQ custodial?", a: "No. SynQ is a non-custodial protocol on Solana. You sign every transaction yourself." },
   { q: "Why does paper mode exist?", a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits." },
 ];
 

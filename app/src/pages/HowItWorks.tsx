@@ -6,9 +6,9 @@ import { ArrowRight, Layers, Activity, Shield, AlertTriangle, TrendingDown, Awar
 const HowItWorks = () => (
   <Layout>
     <div className="container py-16 max-w-4xl">
-      <h1 className="font-display font-bold text-5xl tracking-tight">How Kiln works</h1>
+      <h1 className="font-display font-bold text-5xl tracking-tight">How SynQ works</h1>
       <p className="text-lg text-muted-foreground mt-4 max-w-2xl">
-        Kiln is a managed-vault protocol where every trader posts their own first-loss capital before they can manage investor funds.
+        SynQ is a managed-vault protocol where every trader posts their own first-loss capital before they can manage investor funds.
       </p>
 
       <div className="space-y-8 mt-12">
@@ -37,7 +37,7 @@ const HowItWorks = () => (
         <h2 className="font-display font-bold text-2xl">Ready to explore?</h2>
         <p className="text-muted-foreground mt-2">Browse graduated vaults or explore traders by track record.</p>
         <div className="flex justify-center gap-3 mt-5">
-          <Button asChild className="bg-gradient-ember text-white border-0"><Link to="/vaults">Browse vaults <ArrowRight className="w-4 h-4 ml-2" /></Link></Button>
+          <Button asChild className="bg-gradient-ember text-white border-0"><Link to="/vaults">Open marketplace <ArrowRight className="w-4 h-4 ml-2" /></Link></Button>
           <Button asChild variant="outline"><Link to="/traders">Explore traders</Link></Button>
         </div>
       </div>

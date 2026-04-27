@@ -11,12 +11,15 @@ import { GlassCard } from "@/components/GlassCard";
 import { TradingDashboardPreview } from "@/components/TradingDashboardPreview";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
-import { EmberBackground } from "@/components/EmberBackground";
 import { PriceTicker } from "@/components/PriceTicker";
+import { DataModeToggle } from "@/components/DataModeToggle";
+
+const HERO_VIDEO =
+  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260423_161253_c72b1869-400f-45ed-ac0c-52f68c2ed5bd.mp4";
 
 const Landing = () => {
   const { data: vaults } = useVaults();
-  const allVaults = vaults ?? [];
+  const allVaults = useMemo(() => vaults ?? [], [vaults]);
 
   const featured = useMemo(
     () => allVaults.filter(v => v.status === "active").slice(0, 3),
@@ -33,11 +36,23 @@ const Landing = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <EmberBackground />
+      <section className="relative min-h-[calc(100vh-6.75rem)] overflow-hidden border-b border-border">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,hsl(var(--primary)/0.22),transparent_34%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)))]" />
+        <video
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-45 saturate-[0.8]"
+          src={HERO_VIDEO}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.88)_34%,hsl(var(--background)/0.56)_62%,hsl(var(--background)/0.88)_100%)]" />
+        <div className="absolute inset-0 grid-bg opacity-[0.14]" />
 
-        <div className="container relative pt-20 pb-20 md:pt-28 md:pb-24">
-          <div className="grid lg:grid-cols-[1fr_auto] gap-10 items-start">
+        <div className="container relative pt-16 pb-16 md:pt-24 md:pb-20">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -49,25 +64,31 @@ const Landing = () => {
                 Live on Solana devnet · {protocolStats.totalVaults} vaults
               </div>
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-4">
-                On-chain managed vaults
+                SynQ first-loss vaults
               </div>
               <h1 className="font-display font-bold text-5xl md:text-7xl leading-[0.95] tracking-tight">
-                Trade with conviction. <span className="text-gradient-ember">Invest with proof.</span>
+                Syn<span className="text-primary">Q</span> traders prove first. Investors follow proof.
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground mt-6 max-w-2xl leading-relaxed">
-                Kiln is a full trading and investment platform. Traders prove themselves with their own capital first,
-                then manage investor funds with first-loss protection enforced on-chain.
+                SynQ is a Solana vault marketplace where traders build a public track record with their own capital,
+                then graduate into investor capital protected by an on-chain junior buffer.
               </p>
               <div className="flex flex-wrap gap-3 mt-8">
                 <Button asChild size="lg" className="bg-gradient-ember hover:opacity-90 text-white border-0 shadow-ember">
-                  <Link to="/vaults">Browse vaults <ArrowRight className="w-4 h-4 ml-2" /></Link>
+                  <Link to="/vaults">Open marketplace <ArrowRight className="w-4 h-4 ml-2" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <Link to="/traders">Explore traders</Link>
+                  <Link to="/manager">Trader console</Link>
                 </Button>
                 <Button asChild size="lg" variant="ghost">
                   <a href="#calculator">Returns calculator</a>
                 </Button>
+              </div>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <DataModeToggle />
+                <span className="text-xs text-muted-foreground">
+                  Switch between deterministic SynQ demo data and configured server/RPC data.
+                </span>
               </div>
             </motion.div>
 
@@ -75,17 +96,17 @@ const Landing = () => {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
-              className="hidden lg:block self-center -translate-y-6 animate-float"
+              className="hidden lg:block"
             >
               <GlassCard
-                tag="2025 · Audited"
-                title={<>Built for <span className="italic font-display text-primary">institutional</span> trust.</>}
-                subtitle="30-day paper mode, on-chain reputation, dynamic risk limits, and instant exits when buffers run thin."
+                tag="DEVNET · LIVE DEMO"
+                title={<>Built for <span className="italic font-display text-primary">capital</span> that needs receipts.</>}
+                subtitle="Paper mode, on-chain reputation, dynamic risk limits, and instant exits when buffers run thin."
               />
             </motion.div>
           </div>
 
-          <div className="mt-14 max-w-5xl mx-auto">
+          <div className="mt-14 max-w-5xl">
             <TradingDashboardPreview />
           </div>
         </div>
@@ -127,7 +148,7 @@ const Landing = () => {
           transition={{ duration: 0.5 }}
           className="text-center max-w-2xl mx-auto mb-12"
         >
-          <h2 className="font-display font-bold text-4xl">How Kiln works</h2>
+          <h2 className="font-display font-bold text-4xl">How SynQ works</h2>
           <p className="text-muted-foreground mt-3">Three steps. Aligned incentives. On-chain proof.</p>
         </motion.div>
         <div className="grid md:grid-cols-3 gap-5">

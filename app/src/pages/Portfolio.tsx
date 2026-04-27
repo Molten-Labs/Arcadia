@@ -9,13 +9,16 @@ import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { fmtUSD } from "@/lib/format";
 import { useWallet, shortAddr } from "@/lib/wallet";
+import { useDataMode } from "@/hooks/useDataMode";
 import { Wallet, ArrowRight, Loader2 } from "lucide-react";
+import { DataModeToggle } from "@/components/DataModeToggle";
 
 const Portfolio = () => {
   const { connected } = useWallet();
   const { data: positions, isLoading } = usePositions();
+  const { isMock } = useDataMode();
 
-  if (!connected) {
+  if (!connected && !isMock) {
     return (
       <Layout>
         <div className="container py-20">
@@ -38,10 +41,14 @@ const Portfolio = () => {
       <div className="container py-10">
         <div className="mb-8 flex flex-wrap justify-between gap-4 items-end">
           <div>
-            <h1 className="font-display font-bold text-4xl">Portfolio</h1>
-            <p className="text-muted-foreground mt-2">Your active positions across Kiln vaults.</p>
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor capital</div>
+            <h1 className="font-display font-bold text-4xl">SynQ portfolio</h1>
+            <p className="text-muted-foreground mt-2">Investor positions, senior shares, and first-loss buffer exposure.</p>
           </div>
-          <Button asChild variant="outline"><Link to="/vaults">Browse vaults</Link></Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DataModeToggle compact />
+            <Button asChild variant="outline"><Link to="/vaults">Browse vaults</Link></Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
@@ -64,9 +71,9 @@ const Portfolio = () => {
           />
         ) : (
           <div className="space-y-4">
-            <h2 className="font-display font-semibold text-lg">Your positions</h2>
+            <h2 className="font-display font-semibold text-lg">Senior positions</h2>
             {allPositions.map(p => (
-              <div key={p.pubkey} className="surface rounded-2xl p-5">
+              <div key={p.pubkey} className="surface rounded-xl p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -102,6 +109,9 @@ const Portfolio = () => {
                   </div>
                 </div>
                 {p.vault && <HealthMeter health={p.vault.juniorHealth} />}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  This investor view shows risk, value, shares, and exit terms only. Trader execution controls stay in the manager console.
+                </p>
               </div>
             ))}
           </div>
