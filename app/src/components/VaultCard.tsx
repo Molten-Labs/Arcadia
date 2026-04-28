@@ -21,7 +21,7 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
     >
       <Link
         to={`/vault/${vault.id}`}
-        className="vault-card-wrapper"
+        className="vault-card-wrapper group"
         style={{
           background: "rgba(20,25,40,0.4)",
           backdropFilter: "blur(16px)",

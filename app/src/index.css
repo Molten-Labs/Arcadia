@@ -257,7 +257,7 @@
   @apply flex flex-col gap-4;
   @apply border border-white/10;
   @apply transition-all duration-300 ease-out;
-  @apply group overflow-hidden;
+  @apply overflow-hidden;
 }
 
 .vault-card-border-accent {

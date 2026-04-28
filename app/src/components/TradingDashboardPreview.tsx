@@ -1,3 +1,4 @@
+import React from "react";
 import { CandlestickChart } from "./CandlestickChart";
 import { OrderBook } from "./OrderBook";
 import { StatusBadge } from "./StatusBadge";
@@ -22,13 +23,32 @@ export const TradingDashboardPreview = () => {
   const v = previewVault;
   const trader = previewTrader;
 
+  // Simulate dynamic data updates
+  const [displayMetrics, setDisplayMetrics] = React.useState({
+    return30d: v.return30d,
+    juniorHealth: v.juniorHealth,
+    timestamp: new Date(),
+  });
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate small fluctuations in metrics
+      setDisplayMetrics((prev) => ({
+        return30d: prev.return30d + (Math.random() - 0.5) * 0.3,
+        juniorHealth: Math.min(100, Math.max(0, prev.juniorHealth + (Math.random() - 0.5) * 2)),
+        timestamp: new Date(),
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.7 }}
-      className="relative"
+      transition={{ duration: 0.7, type: "spring", damping: 20 }}
+      className="relative mt-8"
     >
       {/* glow */}
       <div className="absolute -inset-x-20 -top-20 h-64 bg-primary/15 blur-3xl rounded-full pointer-events-none" />
@@ -63,9 +83,15 @@ export const TradingDashboardPreview = () => {
               </div>
               <div className="text-right">
                 <div className="font-display font-bold text-2xl tabular">${fmtUSD(v.tvl)}</div>
-                <div className="text-xs text-success tabular flex items-center gap-1 justify-end">
-                  <TrendingUp className="w-3 h-3" /> {fmtPct(v.return30d)} 30d
-                </div>
+                <motion.div
+                  key={displayMetrics.timestamp.getTime()}
+                  initial={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-xs text-success tabular flex items-center gap-1 justify-end"
+                >
+                  <TrendingUp className="w-3 h-3" /> {fmtPct(displayMetrics.return30d)} 30d
+                </motion.div>
               </div>
             </div>
 
@@ -79,19 +105,19 @@ export const TradingDashboardPreview = () => {
             <CandlestickChart count={56} height={220} />
 
             <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
-              <Stat label="Junior health" value={`${v.juniorHealth}%`} />
+              <Stat label="Junior health" value={`${Math.round(displayMetrics.juniorHealth)}%`} />
               <Stat label="Max position" value={`${v.maxPositionPct}%`} />
               <Stat label="Senior protected" value={`$${fmtUSD(v.seniorCapital, { compact: true })}`} />
             </div>
             <div className="mt-3">
-              <HealthMeter health={v.juniorHealth} showLabel={false} size="sm" />
+              <HealthMeter health={displayMetrics.juniorHealth} showLabel={false} size="sm" />
             </div>
           </div>
 
           {/* Side: order book + recent fills */}
           <div className="p-4 space-y-4 bg-background/40">
             <OrderBook />
-            <div className="surface rounded-xl p-3 font-mono text-[11px]">
+            <motion.div className="surface rounded-xl p-3 font-mono text-[11px]">
               <h4 className="font-display font-semibold text-sm mb-2 font-sans">Recent trades</h4>
               {[
                 { side: "buy", pair: "SOL", a: 1200, p: 184.20, t: "2s ago" },
@@ -99,7 +125,13 @@ export const TradingDashboardPreview = () => {
                 { side: "buy", pair: "SOL", a: 800, p: 184.16, t: "1m" },
                 { side: "buy", pair: "BTC", a: 0.4, p: 67220, t: "3m" },
               ].map((t, i) => (
-                <div key={i} className="flex justify-between items-center py-0.5">
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.08 }}
+                  className="flex justify-between items-center py-0.5"
+                >
                   <span className={`flex items-center gap-1 ${t.side === "buy" ? "text-success" : "text-destructive"}`}>
                     {t.side === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
                     {t.pair}
@@ -107,9 +139,9 @@ export const TradingDashboardPreview = () => {
                   <span className="tabular">{t.a}</span>
                   <span className="tabular text-muted-foreground">${t.p.toLocaleString()}</span>
                   <span className="text-[10px] text-muted-foreground">{t.t}</span>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
