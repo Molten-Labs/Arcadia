@@ -68,80 +68,103 @@ export const TradingDashboardPreview = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_280px] gap-0">
-          {/* Main */}
-          <div className="p-5 border-r border-border">
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="grid lg:grid-cols-[1fr_310px] gap-0">
+          {/* Main - Synq chart section */}
+          <div className="chart-sec">
+            <div className="chart-hdr">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-display font-bold text-lg">{v.name}</h3>
-                  <StatusBadge status={v.status} />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  by {trader.name} <TierBadge tier={trader.tier} showIcon={false} className="scale-90" />
+                <div className="ch-label">VAULT NAV · SOL</div>
+                <div className="ch-nav">${fmtUSD(v.tvl, { compact: true })}</div>
+                <div className="ch-row">
+                  <motion.span
+                    key={displayMetrics.timestamp.getTime()}
+                    initial={{ opacity: 0.5 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="ch-pct up-b"
+                  >
+                    {fmtPct(displayMetrics.return30d)}
+                  </motion.span>
+                  <span className="ch-abs">+{fmtUSD(displayMetrics.return30d * v.tvl / 100, { compact: true })} since inception</span>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-display font-bold text-2xl tabular">${fmtUSD(v.tvl)}</div>
-                <motion.div
-                  key={displayMetrics.timestamp.getTime()}
-                  initial={{ opacity: 0.5 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-xs text-success tabular flex items-center gap-1 justify-end"
-                >
-                  <TrendingUp className="w-3 h-3" /> {fmtPct(displayMetrics.return30d)} 30d
-                </motion.div>
+              <div className="time-row">
+                {["1H", "4H", "1D", "1W", "1M"].map((t, i) => (
+                  <button key={t} className={`tbtn ${i === 2 ? "active" : ""}`}>{t}</button>
+                ))}
               </div>
             </div>
-
-            {/* tab buttons */}
-            <div className="flex gap-1 mb-3 text-[11px]">
-              {["1H", "4H", "1D", "1W", "1M"].map((t, i) => (
-                <button key={t} className={`px-2 py-1 rounded ${i === 2 ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary"}`}>{t}</button>
-              ))}
-            </div>
-
-            <CandlestickChart count={56} height={220} />
-
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
-              <Stat label="Junior health" value={`${Math.round(displayMetrics.juniorHealth)}%`} />
-              <Stat label="Max position" value={`${v.maxPositionPct}%`} />
-              <Stat label="Senior protected" value={`$${fmtUSD(v.seniorCapital, { compact: true })}`} />
-            </div>
-            <div className="mt-3">
-              <HealthMeter health={displayMetrics.juniorHealth} showLabel={false} size="sm" />
+            <div className="chart-wrap">
+              <CandlestickChart count={56} height={220} />
             </div>
           </div>
 
-          {/* Side: order book + recent fills */}
-          <div className="p-4 space-y-4 bg-background/40">
-            <OrderBook />
-            <motion.div className="surface rounded-xl p-3 font-mono text-[11px]">
-              <h4 className="font-display font-semibold text-sm mb-2 font-sans">Recent trades</h4>
-              {[
-                { side: "buy", pair: "SOL", a: 1200, p: 184.20, t: "2s ago" },
-                { side: "sell", pair: "ETH", a: 18, p: 3340, t: "47s" },
-                { side: "buy", pair: "SOL", a: 800, p: 184.16, t: "1m" },
-                { side: "buy", pair: "BTC", a: 0.4, p: 67220, t: "3m" },
-              ].map((t, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className="flex justify-between items-center py-0.5"
-                >
-                  <span className={`flex items-center gap-1 ${t.side === "buy" ? "text-success" : "text-destructive"}`}>
-                    {t.side === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
-                    {t.pair}
-                  </span>
-                  <span className="tabular">{t.a}</span>
-                  <span className="tabular text-muted-foreground">${t.p.toLocaleString()}</span>
-                  <span className="text-[10px] text-muted-foreground">{t.t}</span>
-                </motion.div>
-              ))}
-            </motion.div>
+          {/* Side: Synq-style right panel */}
+          <div className="p-4 space-y-3 bg-background/40 overflow-y-auto flex flex-col">
+            {/* Vault hero */}
+            <div className="surface rounded-lg p-3 text-sm border border-border/50">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-display font-semibold">{v.name}</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary">PAPER</span>
+              </div>
+              <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
+                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: "40%" }} />
+              </div>
+              <div className="text-[10px] text-muted-foreground flex justify-between">
+                <span>Day 12 / 30</span>
+                <span>18 days left</span>
+              </div>
+            </div>
+
+            {/* Position limits */}
+            <div className="surface rounded-lg p-3 text-sm border border-border/50">
+              <h4 className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Limits</h4>
+              <div className="space-y-1.5 text-[10px]">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Max position</span>
+                  <span className="font-mono text-foreground">{v.maxPositionPct}% of NAV</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Max trade</span>
+                  <span className="font-mono text-foreground">{fmtUSD(v.tvl * (v.maxPositionPct / 100), { compact: true })} SOL</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Cooldown</span>
+                  <span className="font-mono text-success">None</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Trade feed - Synq style */}
+            <div className="surface rounded-lg border border-border/50 flex-1 flex flex-col overflow-hidden">
+              <div className="p-3 border-b border-border/30 flex items-center justify-between flex-shrink-0">
+                <h4 className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">Trade feed</h4>
+                <span className="text-[9px] text-muted-foreground">5</span>
+              </div>
+              <div className="overflow-y-auto flex-1 p-2">
+                {[
+                  { pair: "AUDD → SOL", a: 800, pnl: 24.3, t: "14:32:11" },
+                  { pair: "SOL → AUDD", a: 600, pnl: 11.8, t: "12:15:44" },
+                  { pair: "AUDD → JUP", a: 300, pnl: -8.9, t: "11:03:22" },
+                  { pair: "AUDD → SOL", a: 500, pnl: 31.2, t: "09:47:05" },
+                  { pair: "JUP → AUDD", a: 200, pnl: 4.1, t: "08:22:33" },
+                ].map((t, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex justify-between items-center py-1.5 px-1 border-b border-border/20 last:border-b-0 text-[10px] font-mono"
+                  >
+                    <span className="text-muted-foreground flex-1 truncate">{t.pair}</span>
+                    <span className={t.pnl >= 0 ? "text-success" : "text-destructive"}>
+                      {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(1)}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/60 ml-1.5 flex-shrink-0">{t.t}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
