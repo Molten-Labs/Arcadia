@@ -246,3 +246,46 @@
     animation: none !important;
   }
 }
+
+/* Vault Card — glossy dark modern design */
+.vault-card-group {
+  @apply relative;
+}
+
+.vault-card-wrapper {
+  @apply relative block rounded-3xl p-6 no-underline;
+  @apply flex flex-col gap-4;
+  @apply border border-white/10;
+  @apply transition-all duration-300 ease-out;
+  @apply group overflow-hidden;
+}
+
+.vault-card-border-accent {
+  @apply rounded-3xl;
+}
+
+.vault-card-title {
+  @apply font-display font-semibold text-lg leading-tight;
+  @apply text-foreground/95;
+  @apply truncate;
+}
+
+.vault-metric-box {
+  @apply rounded-xl p-3;
+  @apply border border-white/8;
+  @apply bg-gradient-to-br from-white/5 to-white/2;
+  @apply backdrop-blur-sm;
+  @apply transition-all duration-300;
+}
+
+.vault-metric-box:hover {
+  @apply border-white/15 bg-gradient-to-br from-white/8 to-white/4;
+}
+
+.vault-badge-tag {
+  @apply transition-all duration-300;
+}
+
+.vault-badge-feature {
+  @apply transition-all duration-300;
+}
