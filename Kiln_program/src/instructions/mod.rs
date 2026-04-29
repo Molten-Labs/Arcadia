@@ -185,12 +185,12 @@ pub struct DepositSeniorArgsIdl {
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub struct WithdrawSeniorArgsIdl {
-    pub shares_to_burn: u64,
+    pub amount_usdc: u64,
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub struct WithdrawJuniorArgsIdl {
-    pub shares_to_burn: u64,
+    pub amount_usdc: u64,
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]

@@ -150,7 +150,7 @@ describe("backend-backed read hooks", () => {
     expect(mocks.fetchAllVaults).toHaveBeenCalledOnce();
   });
 
-  it("computes backend position value from senior share accounting", async () => {
+  it("computes backend position value from senior principal accounting", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
@@ -164,7 +164,7 @@ describe("backend-backed read hooks", () => {
                   vaultConfigPubkey: "vault-config-1",
                   investorPubkey: mocks.publicKey?.toBase58(),
                   depositedAt: 100,
-                  seniorShares: 100,
+                  seniorPrincipalRemaining: 100,
                   totalDeposited: 10,
                   alertThresholdBps: 2000,
                   vault: {
@@ -191,7 +191,7 @@ describe("backend-backed read hooks", () => {
     expect(result.current.data?.[0].currentValue).toBe(10);
   });
 
-  it("exposes share-accounting calculation for raw on-chain values", () => {
+  it("exposes principal-ledger calculation for raw on-chain values", () => {
     const value = calculatePositionValue(
       100_000_000n,
       10_000_000n,

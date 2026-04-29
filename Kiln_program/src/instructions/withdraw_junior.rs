@@ -17,7 +17,7 @@ use crate::{
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, SchemaRead)]
 pub struct WithdrawJuniorArgs {
-    pub shares_to_burn: u64,
+    pub amount_usdc: u64,
 }
 
 /// Returns the minimum junior ratio in basis points for a given total capital.
@@ -72,7 +72,7 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     let args: WithdrawJuniorArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
-    if args.shares_to_burn == 0 {
+    if args.amount_usdc == 0 {
         return Err(KilnError::InvalidAmount.into());
     }
 
@@ -96,21 +96,19 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if config.treasury != *treasury.key() {
         return Err(KilnError::TreasuryMismatch.into());
     }
-    if state.junior_shares_outstanding < args.shares_to_burn {
+    if state.junior_shares_outstanding == 0 {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
 
-    // Calculate withdrawal amount: pro-rata share of junior capital
-    let withdrawal_amount = args
-        .shares_to_burn
-        .checked_mul(state.junior_capital)
-        .ok_or(KilnError::MathOverflow)?
-        .checked_div(state.junior_shares_outstanding)
-        .ok_or(KilnError::MathOverflow)?;
-
-    if withdrawal_amount == 0 {
-        return Err(KilnError::InvalidAmount.into());
+    let withdrawal_amount = args.amount_usdc;
+    if withdrawal_amount > state.junior_capital {
+        return Err(KilnError::InsufficientJuniorCapital.into());
     }
+    let principal_to_reduce = principal_for_claim(
+        withdrawal_amount,
+        state.junior_capital,
+        state.junior_shares_outstanding,
+    )?;
 
     // If vault is graduated and has senior capital, check ratio stays valid
     if state.is_graduated != 0 && state.senior_capital > 0 {
@@ -176,7 +174,7 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
-        .checked_sub(args.shares_to_burn)
+        .checked_sub(principal_to_reduce)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -230,7 +228,7 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 
     let args: WithdrawJuniorArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
-    if args.shares_to_burn == 0 {
+    if args.amount_usdc == 0 {
         return Err(KilnError::InvalidAmount.into());
     }
 
@@ -261,19 +259,19 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     if state.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
     }
-    if state.junior_shares_outstanding < args.shares_to_burn {
+    if state.junior_shares_outstanding == 0 {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
 
-    let withdrawal_amount = args
-        .shares_to_burn
-        .checked_mul(state.junior_capital)
-        .ok_or(KilnError::MathOverflow)?
-        .checked_div(state.junior_shares_outstanding)
-        .ok_or(KilnError::MathOverflow)?;
-    if withdrawal_amount == 0 {
-        return Err(KilnError::InvalidAmount.into());
+    let withdrawal_amount = args.amount_usdc;
+    if withdrawal_amount > state.junior_capital {
+        return Err(KilnError::InsufficientJuniorCapital.into());
     }
+    let principal_to_reduce = principal_for_claim(
+        withdrawal_amount,
+        state.junior_capital,
+        state.junior_shares_outstanding,
+    )?;
     if vault_usdc_snapshot.amount < withdrawal_amount {
         return Err(KilnError::InsufficientLiquidity.into());
     }
@@ -322,7 +320,7 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         .ok_or(KilnError::MathOverflow)?;
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
-        .checked_sub(args.shares_to_burn)
+        .checked_sub(principal_to_reduce)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -332,4 +330,28 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     state.last_nav_update_at = clock.unix_timestamp;
 
     Ok(())
+}
+
+fn principal_for_claim(
+    claim_amount: u64,
+    pool_capital: u64,
+    total_principal: u64,
+) -> Result<u64, ProgramError> {
+    if claim_amount == 0 || pool_capital == 0 || total_principal == 0 {
+        return Err(KilnError::InvalidAmount.into());
+    }
+    let numerator = (claim_amount as u128)
+        .checked_mul(total_principal as u128)
+        .ok_or(KilnError::MathOverflow)?;
+    let denominator = pool_capital as u128;
+    let principal = numerator
+        .checked_add(denominator.checked_sub(1).ok_or(KilnError::MathOverflow)?)
+        .ok_or(KilnError::MathOverflow)?
+        .checked_div(denominator)
+        .ok_or(KilnError::MathOverflow)?;
+    let principal = core::cmp::min(principal, total_principal as u128);
+    if principal == 0 || principal > u64::MAX as u128 {
+        return Err(KilnError::MathOverflow.into());
+    }
+    Ok(principal as u64)
 }

@@ -130,12 +130,13 @@ describe("VaultDetail investor withdrawal", () => {
     mocks.positions = [
       {
         vaultConfigPubkey: configPubkey,
-        seniorSharesRaw: 600_000n,
+        seniorPrincipalRemainingRaw: 600_000n,
+        currentValueRaw: 1_200_000n,
       },
     ];
   });
 
-  it("withdraws senior capital by computed shares", async () => {
+  it("withdraws senior capital by requested USDC amount", async () => {
     renderPage();
 
     fireEvent.change(screen.getByLabelText(/^amount$/i), {
@@ -144,9 +145,9 @@ describe("VaultDetail investor withdrawal", () => {
     fireEvent.click(screen.getByRole("button", { name: /withdraw usdc/i }));
 
     await waitFor(() => expect(mocks.withdrawSenior).toHaveBeenCalled());
-    const [vaultConfig, sharesToBurn] = mocks.withdrawSenior.mock.calls[0];
+    const [vaultConfig, amountUsdc] = mocks.withdrawSenior.mock.calls[0];
     expect(vaultConfig.toBase58()).toBe(configPubkey);
-    expect(sharesToBurn).toBe(500_000n);
+    expect(amountUsdc).toBe(1_000_000n);
   });
 
   it("rejects withdrawals above the connected investor position", async () => {
@@ -158,7 +159,7 @@ describe("VaultDetail investor withdrawal", () => {
     fireEvent.click(screen.getByRole("button", { name: /withdraw usdc/i }));
 
     await waitFor(() =>
-      expect(mocks.toastError).toHaveBeenCalledWith("Withdrawal exceeds your senior position"),
+      expect(mocks.toastError).toHaveBeenCalledWith("Withdrawal exceeds your current claim"),
     );
     expect(mocks.withdrawSenior).not.toHaveBeenCalled();
   });

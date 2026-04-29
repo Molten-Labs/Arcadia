@@ -129,7 +129,7 @@ describe("ManagerVault transaction flows", () => {
     };
   });
 
-  it("withdraws junior capital by computed shares, not requested lamports", async () => {
+  it("withdraws junior capital by requested USDC amount", async () => {
     renderPage();
 
     fireEvent.change(screen.getByLabelText(/junior amount/i), {
@@ -138,9 +138,9 @@ describe("ManagerVault transaction flows", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /withdraw junior/i })[0]);
 
     await waitFor(() => expect(mocks.withdrawJunior).toHaveBeenCalled());
-    const [vaultConfig, sharesToBurn] = mocks.withdrawJunior.mock.calls[0];
+    const [vaultConfig, amountUsdc] = mocks.withdrawJunior.mock.calls[0];
     expect(vaultConfig.toBase58()).toBe(configPubkey);
-    expect(sharesToBurn).toBe(500_000n);
+    expect(amountUsdc).toBe(1_000_000n);
   });
 
   it("wires manager nav, graduation, and guard-swap actions", async () => {

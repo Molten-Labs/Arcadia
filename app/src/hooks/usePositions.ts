@@ -17,12 +17,15 @@ export interface PositionView {
   vault: VaultView | null;
   investorPubkey: string;
   depositedAt: number;
-  seniorShares: number;
-  seniorSharesRaw: bigint;
+  seniorPrincipalRemaining: number;
+  seniorPrincipalRemainingRaw: bigint;
+  seniorShares?: number;
+  seniorSharesRaw?: bigint;
   totalDeposited: number;
   totalDepositedLamports: bigint;
   alertThresholdBps: number;
   currentValue: number;
+  currentValueRaw: bigint;
 }
 
 const USDC_DECIMALS = 1e6;
@@ -32,14 +35,21 @@ function tokenUnitsToUsdc(units: bigint): number {
 }
 
 export function calculatePositionValue(
-  seniorSharesRaw: bigint,
+  seniorPrincipalRemainingRaw: bigint,
   totalDepositedLamports: bigint,
   vault: VaultView | null
 ): number {
   if (!vault || vault.seniorSharesOutstandingRaw === 0n) return tokenUnitsToUsdc(totalDepositedLamports);
-  const valueLamports =
-    (seniorSharesRaw * vault.seniorCapitalLamports) / vault.seniorSharesOutstandingRaw;
-  return tokenUnitsToUsdc(valueLamports);
+  return tokenUnitsToUsdc(calculatePositionValueRaw(seniorPrincipalRemainingRaw, totalDepositedLamports, vault));
+}
+
+export function calculatePositionValueRaw(
+  seniorPrincipalRemainingRaw: bigint,
+  totalDepositedLamports: bigint,
+  vault: VaultView | null
+): bigint {
+  if (!vault || vault.seniorSharesOutstandingRaw === 0n) return totalDepositedLamports;
+  return (seniorPrincipalRemainingRaw * vault.seniorCapitalLamports) / vault.seniorSharesOutstandingRaw;
 }
 
 function estimateCurrentValue(pos: InvestorPositionData, vault: VaultView | null): number {
@@ -48,22 +58,31 @@ function estimateCurrentValue(pos: InvestorPositionData, vault: VaultView | null
 
 function normalizeApiPosition(pos: PositionView): PositionView {
   const vault = pos.vault ? normalizeVaultView(pos.vault) : null;
-  const seniorShares = Number(pos.seniorShares);
+  const seniorPrincipalRemaining = Number(pos.seniorPrincipalRemaining ?? pos.seniorShares ?? 0);
   const totalDeposited = Number(pos.totalDeposited);
-  const seniorSharesRaw = pos.seniorSharesRaw ?? BigInt(Math.round(seniorShares));
+  const seniorPrincipalRemainingRaw =
+    pos.seniorPrincipalRemainingRaw ??
+    pos.seniorSharesRaw ??
+    (pos.seniorShares !== undefined
+      ? BigInt(Math.round(pos.seniorShares))
+      : BigInt(Math.round(seniorPrincipalRemaining * USDC_DECIMALS)));
   const totalDepositedLamports =
     pos.totalDepositedLamports ?? BigInt(Math.round(totalDeposited * USDC_DECIMALS));
+  const currentValueRaw = calculatePositionValueRaw(seniorPrincipalRemainingRaw, totalDepositedLamports, vault);
 
   return {
     ...pos,
     vault,
     depositedAt: Number(pos.depositedAt),
-    seniorShares,
-    seniorSharesRaw,
+    seniorPrincipalRemaining,
+    seniorPrincipalRemainingRaw,
+    seniorShares: seniorPrincipalRemaining,
+    seniorSharesRaw: seniorPrincipalRemainingRaw,
     totalDeposited,
     totalDepositedLamports,
     alertThresholdBps: Number(pos.alertThresholdBps),
-    currentValue: calculatePositionValue(seniorSharesRaw, totalDepositedLamports, vault),
+    currentValue: tokenUnitsToUsdc(currentValueRaw),
+    currentValueRaw,
   };
 }
 
@@ -107,12 +126,15 @@ export function usePositions() {
           vault,
           investorPubkey: data.investor.toBase58(),
           depositedAt: Number(data.depositedAt),
-          seniorShares: Number(data.seniorShares),
+          seniorPrincipalRemaining: tokenUnitsToUsdc(data.seniorShares),
+          seniorPrincipalRemainingRaw: data.seniorShares,
+          seniorShares: tokenUnitsToUsdc(data.seniorShares),
           seniorSharesRaw: data.seniorShares,
           totalDeposited: tokenUnitsToUsdc(data.totalDeposited),
           totalDepositedLamports: data.totalDeposited,
           alertThresholdBps: data.alertThresholdBps,
           currentValue: estimateCurrentValue(data, vault),
+          currentValueRaw: calculatePositionValueRaw(data.seniorShares, data.totalDeposited, vault),
         } satisfies PositionView;
       });
     },

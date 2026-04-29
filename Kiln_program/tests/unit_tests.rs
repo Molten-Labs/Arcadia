@@ -292,36 +292,27 @@ fn waterfall_full_junior_wipe_freezes_vault() {
     assert_eq!(state.trading_enabled, 0);
 }
 
-// ======================== Share calculation ========================
+// ======================== Principal ledger accounting ========================
 
-fn calculate_shares(amount: u64, capital: u64, outstanding: u64) -> u64 {
-    if capital == 0 || outstanding == 0 {
-        return amount;
-    }
-    amount * outstanding / capital
+#[test]
+fn principal_deposit_adds_exact_amount() {
+    let mut state = make_state(1_000_000, 1_000_000, 4_000_000, 5_000_000);
+    let deposit = 500_000u64;
+    state.senior_capital += deposit;
+    state.senior_shares_outstanding += deposit;
+
+    assert_eq!(state.senior_capital, 4_500_000);
+    assert_eq!(state.senior_shares_outstanding, 4_500_000);
 }
 
 #[test]
-fn shares_first_deposit_1_to_1() {
-    assert_eq!(calculate_shares(1_000_000, 0, 0), 1_000_000);
-}
+fn principal_claim_scales_after_loss() {
+    let investor_principal = 1_000_000u64;
+    let senior_capital = 800_000u64;
+    let total_principal = 1_000_000u64;
+    let max_claim = investor_principal * senior_capital / total_principal;
 
-#[test]
-fn shares_proportional_second_deposit() {
-    // 1M capital, 1M shares. Deposit 500k → 500k shares
-    assert_eq!(calculate_shares(500_000, 1_000_000, 1_000_000), 500_000);
-}
-
-#[test]
-fn shares_after_profit() {
-    // 1M capital grew to 2M, still 1M shares. Deposit 1M → 500k shares (each share worth 2)
-    assert_eq!(calculate_shares(1_000_000, 2_000_000, 1_000_000), 500_000);
-}
-
-#[test]
-fn shares_after_loss() {
-    // 1M capital dropped to 500k, 1M shares. Deposit 500k → 1M shares (each share worth 0.5)
-    assert_eq!(calculate_shares(500_000, 500_000, 1_000_000), 1_000_000);
+    assert_eq!(max_claim, 800_000);
 }
 
 // ======================== Performance fee (HWM) ========================

@@ -19,7 +19,7 @@ use crate::{
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, SchemaRead)]
 pub struct WithdrawSeniorArgs {
-    pub shares_to_burn: u64,
+    pub amount_usdc: u64,
 }
 
 const COOLDOWN_SECS: i64 = 86_400; // 24 hours
@@ -57,7 +57,7 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     let args: WithdrawSeniorArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
-    if args.shares_to_burn == 0 {
+    if args.amount_usdc == 0 {
         return Err(KilnError::InvalidAmount.into());
     }
 
@@ -71,9 +71,10 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if pos.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
     }
-    if pos.senior_shares < args.shares_to_burn {
+    if pos.senior_shares == 0 {
         return Err(KilnError::InsufficientSeniorCapital.into());
     }
+    let investor_principal_remaining = pos.senior_shares;
     drop(pos);
 
     let state = VaultState::load(vault_state)?;
@@ -113,20 +114,26 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         drop(pos_ref);
     }
 
-    // Calculate withdrawal amount: pro-rata share of senior capital
-    let withdrawal_amount = if state.senior_shares_outstanding > 0 {
-        args.shares_to_burn
+    let total_senior_principal = state.senior_shares_outstanding;
+    let withdrawal_amount = args.amount_usdc;
+    let max_claim = if total_senior_principal > 0 {
+        investor_principal_remaining
             .checked_mul(state.senior_capital)
             .ok_or(KilnError::MathOverflow)?
-            .checked_div(state.senior_shares_outstanding)
+            .checked_div(total_senior_principal)
             .ok_or(KilnError::MathOverflow)?
     } else {
         return Err(KilnError::InsufficientSeniorCapital.into());
     };
-
-    if withdrawal_amount == 0 {
-        return Err(KilnError::InvalidAmount.into());
+    if withdrawal_amount > max_claim {
+        return Err(KilnError::InsufficientSeniorCapital.into());
     }
+    let principal_to_reduce = principal_for_claim(
+        withdrawal_amount,
+        state.senior_capital,
+        total_senior_principal,
+        investor_principal_remaining,
+    )?;
 
     // Ensure treasury has enough (minus rent)
     let available = treasury
@@ -164,7 +171,7 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
     state.senior_shares_outstanding = state
         .senior_shares_outstanding
-        .checked_sub(args.shares_to_burn)
+        .checked_sub(principal_to_reduce)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -178,7 +185,7 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let mut pos = InvestorPosition::load_mut(investor_position)?;
     pos.senior_shares = pos
         .senior_shares
-        .checked_sub(args.shares_to_burn)
+        .checked_sub(principal_to_reduce)
         .ok_or(KilnError::MathOverflow)?;
 
     Ok(())
@@ -203,7 +210,7 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 /// 13..: Jupiter CPI accounts in exact Jupiter instruction order
 ///
 /// Data layout:
-/// bytes 0..8: shares_to_burn
+/// bytes 0..8: amount_usdc
 /// bytes 8..16: optional minimum_unwind_usdc
 /// bytes 16..24: optional quote expiry unix timestamp
 /// bytes 24..: optional Jupiter instruction data for WSOL -> USDC.
@@ -230,12 +237,12 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     if data.len() < 8 {
         return Err(ProgramError::InvalidInstructionData);
     }
-    let shares_to_burn = u64::from_le_bytes(
+    let requested_amount = u64::from_le_bytes(
         data[0..8]
             .try_into()
             .map_err(|_| ProgramError::InvalidInstructionData)?,
     );
-    if shares_to_burn == 0 {
+    if requested_amount == 0 {
         return Err(KilnError::InvalidAmount.into());
     }
 
@@ -290,9 +297,10 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     if pos.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
     }
-    if pos.senior_shares < shares_to_burn {
+    if pos.senior_shares == 0 {
         return Err(KilnError::InsufficientSeniorCapital.into());
     }
+    let investor_principal_remaining = pos.senior_shares;
     drop(pos);
 
     let state = VaultState::load(vault_state)?;
@@ -327,21 +335,29 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         drop(pos_ref);
     }
 
-    let withdrawal_amount = if state.senior_shares_outstanding > 0 {
-        shares_to_burn
+    let total_senior_principal = state.senior_shares_outstanding;
+    let withdrawal_amount = requested_amount;
+    let max_claim = if total_senior_principal > 0 {
+        investor_principal_remaining
             .checked_mul(state.senior_capital)
             .ok_or(KilnError::MathOverflow)?
-            .checked_div(state.senior_shares_outstanding)
+            .checked_div(total_senior_principal)
             .ok_or(KilnError::MathOverflow)?
     } else {
         return Err(KilnError::InsufficientSeniorCapital.into());
     };
-    if withdrawal_amount == 0 {
-        return Err(KilnError::InvalidAmount.into());
+    if withdrawal_amount > max_claim {
+        return Err(KilnError::InsufficientSeniorCapital.into());
     }
     if withdrawal_amount > fresh_nav {
         return Err(KilnError::InsufficientLiquidity.into());
     }
+    let principal_to_reduce = principal_for_claim(
+        withdrawal_amount,
+        state.senior_capital,
+        total_senior_principal,
+        investor_principal_remaining,
+    )?;
     drop(state);
 
     let liquid_usdc = super::custody::read_token_amount(vault_usdc)?;
@@ -439,7 +455,7 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         .ok_or(KilnError::MathOverflow)?;
     state.senior_shares_outstanding = state
         .senior_shares_outstanding
-        .checked_sub(shares_to_burn)
+        .checked_sub(principal_to_reduce)
         .ok_or(KilnError::MathOverflow)?;
     state.last_nav = fresh_nav;
     state.current_nav = post_withdraw_nav;
@@ -449,8 +465,33 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     let mut pos = InvestorPosition::load_mut(investor_position)?;
     pos.senior_shares = pos
         .senior_shares
-        .checked_sub(shares_to_burn)
+        .checked_sub(principal_to_reduce)
         .ok_or(KilnError::MathOverflow)?;
 
     Ok(())
+}
+
+fn principal_for_claim(
+    claim_amount: u64,
+    pool_capital: u64,
+    total_principal: u64,
+    investor_principal: u64,
+) -> Result<u64, ProgramError> {
+    if claim_amount == 0 || pool_capital == 0 || total_principal == 0 {
+        return Err(KilnError::InvalidAmount.into());
+    }
+    let numerator = (claim_amount as u128)
+        .checked_mul(total_principal as u128)
+        .ok_or(KilnError::MathOverflow)?;
+    let denominator = pool_capital as u128;
+    let principal = numerator
+        .checked_add(denominator.checked_sub(1).ok_or(KilnError::MathOverflow)?)
+        .ok_or(KilnError::MathOverflow)?
+        .checked_div(denominator)
+        .ok_or(KilnError::MathOverflow)?;
+    let principal = core::cmp::min(principal, investor_principal as u128);
+    if principal == 0 || principal > u64::MAX as u128 {
+        return Err(KilnError::MathOverflow.into());
+    }
+    Ok(principal as u64)
 }

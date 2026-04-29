@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { PublicKey } from "@solana/web3.js";
 import { useWallet } from "@/lib/wallet";
 import { getVaultConfigPDA, getManagerProfilePDA } from "@/lib/solana/pdas";
-import { parseUsdcToUnits } from "@/lib/solana/shares";
+import { parseUsdcToUnits } from "@/lib/solana/amounts";
 
 
 const steps = ["Identity", "Risk setup", "Junior capital", "Paper mode", "Review"];

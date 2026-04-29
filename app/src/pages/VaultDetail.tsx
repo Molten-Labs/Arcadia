@@ -24,7 +24,7 @@ import { ArrowLeft, Info, Bell, Zap, Loader2 } from "lucide-react";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { toast } from "sonner";
 import { PublicKey } from "@solana/web3.js";
-import { calculateSharesToBurn, parseUsdcToUnits } from "@/lib/solana/shares";
+import { parseUsdcToUnits } from "@/lib/solana/amounts";
 
 const LIVE_VIEW_RANGES = ["1H", "4H", "1D", "1W"] as const;
 type LiveViewRange = (typeof LIVE_VIEW_RANGES)[number];
@@ -56,12 +56,7 @@ const VaultDetail = () => {
     const hasValidAmount = parsedUsdcUnits !== null && parsedUsdcUnits > 0n;
     const usdcUnits = parsedUsdcUnits ?? 0n;
     const investorPosition = positions?.find((position) => position.vaultConfigPubkey === vault.configPubkey);
-    const ownedSeniorShares = investorPosition?.seniorSharesRaw ?? 0n;
-    const seniorSharesToBurn = calculateSharesToBurn(
-        usdcUnits,
-        vault.seniorCapitalLamports,
-        vault.seniorSharesOutstandingRaw,
-    );
+    const withdrawableUsdc = investorPosition?.currentValueRaw ?? 0n;
 
     const handleDeposit = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
@@ -84,13 +79,12 @@ const VaultDetail = () => {
     const handleWithdraw = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
         if (!hasValidAmount) { toast.error("Enter a valid USDC amount"); return; }
-        if (!investorPosition || ownedSeniorShares === 0n) { toast.error("No senior position found for this vault"); return; }
-        if (seniorSharesToBurn === 0n) { toast.error("Amount is too small for current share price"); return; }
-        if (seniorSharesToBurn > ownedSeniorShares) { toast.error("Withdrawal exceeds your senior position"); return; }
+        if (!investorPosition || withdrawableUsdc === 0n) { toast.error("No senior position found for this vault"); return; }
+        if (usdcUnits > withdrawableUsdc) { toast.error("Withdrawal exceeds your current claim"); return; }
 
         setSending(true);
         try {
-            await withdrawSenior(new PublicKey(vault.configPubkey), seniorSharesToBurn);
+            await withdrawSenior(new PublicKey(vault.configPubkey), usdcUnits);
             setAmount("");
         } catch (e) {
             toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });

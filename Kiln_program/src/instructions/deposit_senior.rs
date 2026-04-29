@@ -182,19 +182,13 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     // Update vault state
     let mut state = VaultState::load_mut(vault_state)?;
 
-    let new_shares = calculate_senior_shares(
-        args.amount_lamports,
-        state.senior_capital,
-        state.senior_shares_outstanding,
-    )?;
-
     state.senior_capital = state
         .senior_capital
         .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     state.senior_shares_outstanding = state
         .senior_shares_outstanding
-        .checked_add(new_shares)
+        .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -207,7 +201,7 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let mut pos = InvestorPosition::load_mut(investor_position)?;
     pos.senior_shares = pos
         .senior_shares
-        .checked_add(new_shares)
+        .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     pos.total_deposited = pos
         .total_deposited
@@ -354,11 +348,6 @@ fn deposit_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     )?;
 
     let mut state = VaultState::load_mut(vault_state)?;
-    let new_shares = calculate_senior_shares(
-        args.amount_lamports,
-        state.senior_capital,
-        state.senior_shares_outstanding,
-    )?;
 
     state.senior_capital = state
         .senior_capital
@@ -366,7 +355,7 @@ fn deposit_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
     state.senior_shares_outstanding = state
         .senior_shares_outstanding
-        .checked_add(new_shares)
+        .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -378,7 +367,7 @@ fn deposit_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let mut pos = InvestorPosition::load_mut(investor_position)?;
     pos.senior_shares = pos
         .senior_shares
-        .checked_add(new_shares)
+        .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     pos.total_deposited = pos
         .total_deposited
@@ -387,19 +376,4 @@ fn deposit_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     pos.deposited_at = clock.unix_timestamp;
 
     Ok(())
-}
-
-fn calculate_senior_shares(
-    amount: u64,
-    capital: u64,
-    outstanding: u64,
-) -> Result<u64, ProgramError> {
-    if capital == 0 || outstanding == 0 {
-        return Ok(amount);
-    }
-    amount
-        .checked_mul(outstanding)
-        .ok_or(KilnError::MathOverflow)?
-        .checked_div(capital)
-        .ok_or(KilnError::MathOverflow.into())
 }

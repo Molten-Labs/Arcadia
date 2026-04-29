@@ -22,15 +22,3 @@ export function parseUsdcToUnits(value: string): bigint | null {
 
   return wholeUnits + fractionalUnits;
 }
-
-export function calculateSharesToBurn(
-  amountLamports: bigint,
-  capitalLamports: bigint,
-  sharesOutstanding: bigint,
-): bigint {
-  if (amountLamports <= 0n || capitalLamports <= 0n || sharesOutstanding <= 0n) {
-    return 0n;
-  }
-
-  return (amountLamports * sharesOutstanding) / capitalLamports;
-}

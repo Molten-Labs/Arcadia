@@ -85,12 +85,6 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let mut state = VaultState::load_mut(vault_state)?;
     let mut manager_profile = ManagerProfile::load_mut(manager_profile)?;
 
-    let new_shares = calculate_shares(
-        args.amount_lamports,
-        state.junior_capital,
-        state.junior_shares_outstanding,
-    )?;
-
     state.original_junior_deposit = state
         .original_junior_deposit
         .checked_add(args.amount_lamports)
@@ -102,7 +96,7 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
-        .checked_add(new_shares)
+        .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -210,11 +204,6 @@ fn deposit_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     let mut state = VaultState::load_mut(vault_state)?;
     let mut manager_profile = ManagerProfile::load_mut(manager_profile)?;
-    let new_shares = calculate_shares(
-        args.amount_lamports,
-        state.junior_capital,
-        state.junior_shares_outstanding,
-    )?;
 
     state.original_junior_deposit = state
         .original_junior_deposit
@@ -226,7 +215,7 @@ fn deposit_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
-        .checked_add(new_shares)
+        .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
     state.current_nav = state
         .current_nav
@@ -244,16 +233,4 @@ fn deposit_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
 
     Ok(())
-}
-
-fn calculate_shares(amount: u64, capital: u64, outstanding: u64) -> Result<u64, ProgramError> {
-    if capital == 0 || outstanding == 0 {
-        return Ok(amount);
-    }
-
-    amount
-        .checked_mul(outstanding)
-        .ok_or(KilnError::MathOverflow)?
-        .checked_div(capital)
-        .ok_or(KilnError::MathOverflow.into())
 }

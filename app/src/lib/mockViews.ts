@@ -2,7 +2,7 @@ import { investorPositions, traders, vaults } from "./mockData";
 import type { PositionView } from "@/hooks/usePositions";
 import type { ManagerView, VaultView } from "@/hooks/useVaults";
 
-const toLamports = (value: number) => BigInt(Math.round(value * 1e9));
+const toLamports = (value: number) => BigInt(Math.round(value * 1e6));
 const toUnix = (date: string | undefined) => date ? Math.floor(new Date(date).getTime() / 1000) : 0;
 
 export function mockVaultViews(): VaultView[] {
@@ -66,7 +66,7 @@ export function mockPositionViews(vaultViews = mockVaultViews()): PositionView[]
   return investorPositions.map((position, index) => {
     const vault = vaultViews.find((item) => item.id === position.vaultId) ?? null;
     const totalDepositedLamports = toLamports(position.deposited);
-    const seniorSharesRaw = toLamports(position.shares);
+    const seniorPrincipalRemainingRaw = toLamports(position.deposited);
 
     return {
       pubkey: `mock-position-${index + 1}`,
@@ -74,12 +74,13 @@ export function mockPositionViews(vaultViews = mockVaultViews()): PositionView[]
       vault,
       investorPubkey: "mock-investor",
       depositedAt: toUnix(position.depositedAt),
-      seniorShares: position.shares,
-      seniorSharesRaw,
+      seniorPrincipalRemaining: position.deposited,
+      seniorPrincipalRemainingRaw,
       totalDeposited: position.deposited,
       totalDepositedLamports,
       alertThresholdBps: position.alertThreshold * 100,
       currentValue: position.currentValue,
+      currentValueRaw: toLamports(position.currentValue),
     };
   });
 }

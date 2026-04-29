@@ -15,7 +15,7 @@ import { shortAddr } from "@/lib/wallet";
 import { ArrowLeft, Check, ArrowDownUp, X, Loader2 } from "lucide-react";
 import { PublicKey } from "@solana/web3.js";
 import { toast } from "sonner";
-import { calculateSharesToBurn, parseUsdcToUnits } from "@/lib/solana/shares";
+import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
 import { DataModeToggle } from "@/components/DataModeToggle";
 
@@ -44,11 +44,6 @@ const ManagerVault = () => {
   const hasValidAmount = parsedUsdcUnits !== null && parsedUsdcUnits > 0n;
   const usdcUnits = parsedUsdcUnits ?? 0n;
   const aboveHwm = Math.max(0, v.currentNav - v.highWaterMark);
-  const juniorSharesToBurn = calculateSharesToBurn(
-    usdcUnits,
-    v.juniorCapitalLamports,
-    v.juniorSharesOutstandingRaw,
-  );
   const nowSecs = Math.floor(Date.now() / 1000);
   const graduationChecks = [
     { ok: v.juniorCapitalLamports > 0n, label: "Junior capital posted" },
@@ -93,10 +88,10 @@ const ManagerVault = () => {
 
   const handleWithdrawJunior = async () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
-    if (juniorSharesToBurn === 0n) { toast.error("Amount is too small for current share price"); return; }
+    if (usdcUnits > v.juniorCapitalLamports) { toast.error("Withdrawal exceeds junior capital"); return; }
     setSending(true);
     try {
-      await withdrawJunior(new PublicKey(v.configPubkey), juniorSharesToBurn);
+      await withdrawJunior(new PublicKey(v.configPubkey), usdcUnits);
       setAmount("");
       toast.success("Junior capital withdrawn");
     } catch (e) {
