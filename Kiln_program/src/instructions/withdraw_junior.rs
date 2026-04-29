@@ -50,6 +50,10 @@ fn min_junior_ratio_bps(total_capital: u64) -> u16 {
 /// 4: treasury (writable)
 /// 5: clock (readonly)
 pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    if accounts.len() >= 9 {
+        return withdraw_junior_usdc(accounts, data);
+    }
+
     let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] = accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
@@ -165,6 +169,152 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     .invoke_signed(&treasury_signers)?;
 
     // Update vault state
+    let mut state = VaultState::load_mut(vault_state)?;
+    state.junior_capital = state
+        .junior_capital
+        .checked_sub(withdrawal_amount)
+        .ok_or(KilnError::MathOverflow)?;
+    state.junior_shares_outstanding = state
+        .junior_shares_outstanding
+        .checked_sub(args.shares_to_burn)
+        .ok_or(KilnError::MathOverflow)?;
+    state.current_nav = state
+        .current_nav
+        .checked_sub(withdrawal_amount)
+        .ok_or(KilnError::MathOverflow)?;
+    state.last_nav = state.current_nav;
+    state.last_nav_update_at = clock.unix_timestamp;
+
+    Ok(())
+}
+
+/// USDC junior withdrawal path.
+///
+/// Expected accounts (in order):
+/// 0: manager (signer)
+/// 1: manager_profile (writable)
+/// 2: vault_config (readonly)
+/// 3: vault_state (writable)
+/// 4: treasury PDA (readonly authority)
+/// 5: vault_usdc_token_account (writable)
+/// 6: manager_usdc_token_account (writable)
+/// 7: token_program
+/// 8: clock
+fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    let [
+        manager,
+        manager_profile,
+        vault_config,
+        vault_state,
+        treasury,
+        vault_usdc,
+        manager_usdc,
+        token_program,
+        clock_sysvar,
+        ..
+    ] = accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    if !manager.is_signer() {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+    if !manager_profile.is_writable()
+        || !vault_state.is_writable()
+        || !vault_usdc.is_writable()
+        || !manager_usdc.is_writable()
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let args: WithdrawJuniorArgs =
+        deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
+    if args.shares_to_burn == 0 {
+        return Err(KilnError::InvalidAmount.into());
+    }
+
+    let config = VaultConfig::load(vault_config)?;
+    if config.manager != *manager.key() {
+        return Err(KilnError::ManagerMismatch.into());
+    }
+    if config.treasury != *treasury.key() {
+        return Err(KilnError::TreasuryMismatch.into());
+    }
+    let clock = Clock::from_account_info(clock_sysvar)?;
+
+    {
+        let mgr = ManagerProfile::load(manager_profile)?;
+        if mgr.owner != *manager.key() {
+            return Err(KilnError::ManagerMismatch.into());
+        }
+    }
+
+    let manager_token = super::custody::read_token_account(manager_usdc)?;
+    if manager_token.owner != *manager.key() || manager_token.mint != super::custody::USDC_MINT {
+        return Err(KilnError::InvalidTokenAccount.into());
+    }
+    let vault_usdc_snapshot =
+        super::custody::validate_custody_account(vault_usdc, treasury, &super::custody::USDC_MINT)?;
+
+    let state = VaultState::load(vault_state)?;
+    if state.vault_config != *vault_config.key() {
+        return Err(KilnError::VaultStateMismatch.into());
+    }
+    if state.junior_shares_outstanding < args.shares_to_burn {
+        return Err(KilnError::InsufficientJuniorCapital.into());
+    }
+
+    let withdrawal_amount = args
+        .shares_to_burn
+        .checked_mul(state.junior_capital)
+        .ok_or(KilnError::MathOverflow)?
+        .checked_div(state.junior_shares_outstanding)
+        .ok_or(KilnError::MathOverflow)?;
+    if withdrawal_amount == 0 {
+        return Err(KilnError::InvalidAmount.into());
+    }
+    if vault_usdc_snapshot.amount < withdrawal_amount {
+        return Err(KilnError::InsufficientLiquidity.into());
+    }
+
+    if state.is_graduated != 0 && state.senior_capital > 0 {
+        let new_junior = state
+            .junior_capital
+            .checked_sub(withdrawal_amount)
+            .ok_or(KilnError::MathOverflow)?;
+        let new_total = new_junior
+            .checked_add(state.senior_capital)
+            .ok_or(KilnError::MathOverflow)?;
+
+        if new_total > 0 {
+            let new_ratio_bps = new_junior
+                .checked_mul(10_000)
+                .ok_or(KilnError::MathOverflow)?
+                .checked_div(new_total)
+                .ok_or(KilnError::MathOverflow)? as u16;
+            let required = min_junior_ratio_bps(new_total);
+            if new_ratio_bps < required {
+                return Err(KilnError::JuniorRatioViolation.into());
+            }
+        }
+    }
+
+    if state.is_paper_mode != 0 && withdrawal_amount >= state.junior_capital {
+        return Err(KilnError::InsufficientJuniorCapital.into());
+    }
+    drop(state);
+
+    super::custody::transfer_token_from_treasury(
+        token_program,
+        vault_usdc,
+        manager_usdc,
+        treasury,
+        vault_config.key(),
+        config.treasury_bump,
+        withdrawal_amount,
+    )?;
+
     let mut state = VaultState::load_mut(vault_state)?;
     state.junior_capital = state
         .junior_capital

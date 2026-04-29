@@ -30,13 +30,13 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVL</div>
           <div className="tabular font-semibold text-sm mt-0.5">
-            {vault.tvl > 0 ? `${fmtUSD(vault.tvl, { compact: true })} SOL` : "—"}
+            {vault.tvl > 0 ? `${fmtUSD(vault.tvl, { compact: true })} USDC` : "—"}
           </div>
         </div>
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">NAV</div>
           <div className="tabular font-semibold text-sm mt-0.5">
-            {vault.currentNav > 0 ? `${fmtUSD(vault.currentNav, { compact: true })} SOL` : "—"}
+            {vault.currentNav > 0 ? `${fmtUSD(vault.currentNav, { compact: true })} USDC` : "—"}
           </div>
         </div>
         <div>

@@ -4,6 +4,7 @@ use shank::ShankInstruction;
 
 pub mod claim_fees;
 pub mod create_vault;
+pub mod custody;
 pub mod deposit_junior;
 pub mod deposit_senior;
 pub mod execute_swap;

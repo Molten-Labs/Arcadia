@@ -92,10 +92,10 @@ const Landing = () => {
         <div className="absolute inset-x-0 top-0 h-px animate-shimmer pointer-events-none" />
         <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 relative">
           {[
-            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} SOL` },
+            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} USDC` },
             { l: "Live vaults", v: protocolStats.totalVaults },
             { l: "Graduated", v: protocolStats.graduatedVaults },
-            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} SOL` },
+            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} USDC` },
           ].map((s, i) => (
             <motion.div
               key={s.l}

@@ -62,8 +62,8 @@ const ManagerDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <StatCard label="Active vaults" value={myVaults.filter(v => v.status === "active").length} />
           <StatCard label="Paper vaults" value={myVaults.filter(v => v.status === "paper").length} />
-          <StatCard label="Total AUM" value={`${fmtUSD(aum, { compact: true })} SOL`} />
-          <StatCard label="Junior deployed" value={`${fmtUSD(junior, { compact: true })} SOL`} />
+          <StatCard label="Total AUM" value={`${fmtUSD(aum, { compact: true })} USDC`} />
+          <StatCard label="Junior deployed" value={`${fmtUSD(junior, { compact: true })} USDC`} />
         </div>
 
         {isLoading ? (
@@ -91,15 +91,15 @@ const ManagerDashboard = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm border-y border-border py-3 mb-3">
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">TVL</div>
-                      <div className="tabular font-semibold">{fmtUSD(v.tvl, { compact: true })} SOL</div>
+                      <div className="tabular font-semibold">{fmtUSD(v.tvl, { compact: true })} USDC</div>
                     </div>
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">Junior</div>
-                      <div className="tabular font-semibold">{fmtUSD(v.juniorCapital, { compact: true })} SOL</div>
+                      <div className="tabular font-semibold">{fmtUSD(v.juniorCapital, { compact: true })} USDC</div>
                     </div>
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">Senior</div>
-                      <div className="tabular font-semibold">{fmtUSD(v.seniorCapital, { compact: true })} SOL</div>
+                      <div className="tabular font-semibold">{fmtUSD(v.seniorCapital, { compact: true })} USDC</div>
                     </div>
                     <div>
                       <div className="text-xs uppercase text-muted-foreground">Fee</div>

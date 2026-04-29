@@ -55,8 +55,10 @@ type ApiVaultView = Partial<VaultView> & {
   managerProfilePubkey?: string;
 };
 
-function lamportsToSol(lamports: bigint): number {
-  return Number(lamports) / 1e9;
+const USDC_DECIMALS = 1e6;
+
+function tokenUnitsToUsdc(units: bigint): number {
+  return Number(units) / USDC_DECIMALS;
 }
 
 function deriveStatus(state: VaultStateData): VaultView["status"] {
@@ -76,8 +78,8 @@ function deriveHealth(state: VaultStateData): number {
 export function toVaultView(v: OnChainVault): VaultView | null {
   if (!v.state) return null;
   const s = v.state;
-  const junior = lamportsToSol(s.juniorCapital);
-  const senior = lamportsToSol(s.seniorCapital);
+  const junior = tokenUnitsToUsdc(s.juniorCapital);
+  const senior = tokenUnitsToUsdc(s.seniorCapital);
   const status = deriveStatus(s);
   const health = deriveHealth(s);
 
@@ -100,9 +102,9 @@ export function toVaultView(v: OnChainVault): VaultView | null {
     juniorSharesOutstandingRaw: s.juniorSharesOutstanding,
     seniorSharesOutstandingRaw: s.seniorSharesOutstanding,
     juniorHealth: health,
-    currentNav: lamportsToSol(s.currentNav),
+    currentNav: tokenUnitsToUsdc(s.currentNav),
     currentNavLamports: s.currentNav,
-    highWaterMark: lamportsToSol(s.highWaterMark),
+    highWaterMark: tokenUnitsToUsdc(s.highWaterMark),
     highWaterMarkLamports: s.highWaterMark,
     feeBps: v.config.managerFeeBps,
     maxSlippageBps: v.config.maxSlippageBps,
@@ -179,7 +181,7 @@ export function useManagers() {
         owner: m.data.owner.toBase58(),
         totalVaults: m.data.totalVaults,
         activeVaults: m.data.activeVaults,
-        totalJuniorDeposited: lamportsToSol(m.data.totalJuniorDeposited),
+        totalJuniorDeposited: tokenUnitsToUsdc(m.data.totalJuniorDeposited),
         createdAt: m.data.createdAt,
       }));
     },
@@ -226,18 +228,18 @@ export function normalizeVaultView(v: ApiVaultView): VaultView {
     tvl: Number(v.tvl ?? juniorCapital + seniorCapital),
     juniorCapital,
     seniorCapital,
-    originalJuniorDepositLamports: v.originalJuniorDepositLamports ?? BigInt(Math.round(juniorCapital * 1e9)),
-    juniorCapitalLamports: v.juniorCapitalLamports ?? BigInt(Math.round(juniorCapital * 1e9)),
-    seniorCapitalLamports: v.seniorCapitalLamports ?? BigInt(Math.round(seniorCapital * 1e9)),
+    originalJuniorDepositLamports: v.originalJuniorDepositLamports ?? BigInt(Math.round(juniorCapital * USDC_DECIMALS)),
+    juniorCapitalLamports: v.juniorCapitalLamports ?? BigInt(Math.round(juniorCapital * USDC_DECIMALS)),
+    seniorCapitalLamports: v.seniorCapitalLamports ?? BigInt(Math.round(seniorCapital * USDC_DECIMALS)),
     juniorSharesOutstanding,
     seniorSharesOutstanding,
     juniorSharesOutstandingRaw: v.juniorSharesOutstandingRaw ?? BigInt(Math.round(juniorSharesOutstanding)),
     seniorSharesOutstandingRaw: v.seniorSharesOutstandingRaw ?? BigInt(Math.round(seniorSharesOutstanding)),
     juniorHealth: Number(v.juniorHealth ?? 0),
     currentNav,
-    currentNavLamports: v.currentNavLamports ?? BigInt(Math.round(currentNav * 1e9)),
+    currentNavLamports: v.currentNavLamports ?? BigInt(Math.round(currentNav * USDC_DECIMALS)),
     highWaterMark: Number(v.highWaterMark ?? 0),
-    highWaterMarkLamports: v.highWaterMarkLamports ?? BigInt(Math.round(Number(v.highWaterMark ?? 0) * 1e9)),
+    highWaterMarkLamports: v.highWaterMarkLamports ?? BigInt(Math.round(Number(v.highWaterMark ?? 0) * USDC_DECIMALS)),
     feeBps: Number(v.feeBps ?? 0),
     maxSlippageBps: Number(v.maxSlippageBps ?? 0),
     createdAt: Number(v.createdAt ?? 0),

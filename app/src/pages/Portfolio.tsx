@@ -52,9 +52,9 @@ const Portfolio = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-          <StatCard label="Total invested" value={`${fmtUSD(totalDeposited, { decimals: 2 })} SOL`} />
-          <StatCard label="Current value" value={`${fmtUSD(totalValue, { decimals: 2 })} SOL`} />
-          <StatCard label="Unrealized PnL" value={`${pnl >= 0 ? "+" : ""}${fmtUSD(pnl, { decimals: 2 })} SOL`} trend={totalDeposited > 0 ? (pnl / totalDeposited) * 100 : 0} />
+          <StatCard label="Total invested" value={`${fmtUSD(totalDeposited, { decimals: 2 })} USDC`} />
+          <StatCard label="Current value" value={`${fmtUSD(totalValue, { decimals: 2 })} USDC`} />
+          <StatCard label="Unrealized PnL" value={`${pnl >= 0 ? "+" : ""}${fmtUSD(pnl, { decimals: 2 })} USDC`} trend={totalDeposited > 0 ? (pnl / totalDeposited) * 100 : 0} />
           <StatCard label="Active vaults" value={allPositions.length} />
           <StatCard label="Avg junior health" value={`${avgHealth}%`} />
         </div>
@@ -93,11 +93,11 @@ const Portfolio = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-y border-border py-3 mb-3">
                   <div>
                     <div className="text-[10px] uppercase text-muted-foreground">Deposited</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.totalDeposited, { decimals: 2 })} SOL</div>
+                    <div className="tabular font-semibold">{fmtUSD(p.totalDeposited, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-muted-foreground">Value</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.currentValue, { decimals: 2 })} SOL</div>
+                    <div className="tabular font-semibold">{fmtUSD(p.currentValue, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-muted-foreground">Shares</div>

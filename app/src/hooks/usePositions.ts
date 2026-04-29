@@ -25,8 +25,10 @@ export interface PositionView {
   currentValue: number;
 }
 
-function lamportsToSol(lamports: bigint): number {
-  return Number(lamports) / 1e9;
+const USDC_DECIMALS = 1e6;
+
+function tokenUnitsToUsdc(units: bigint): number {
+  return Number(units) / USDC_DECIMALS;
 }
 
 export function calculatePositionValue(
@@ -34,10 +36,10 @@ export function calculatePositionValue(
   totalDepositedLamports: bigint,
   vault: VaultView | null
 ): number {
-  if (!vault || vault.seniorSharesOutstandingRaw === 0n) return lamportsToSol(totalDepositedLamports);
+  if (!vault || vault.seniorSharesOutstandingRaw === 0n) return tokenUnitsToUsdc(totalDepositedLamports);
   const valueLamports =
     (seniorSharesRaw * vault.seniorCapitalLamports) / vault.seniorSharesOutstandingRaw;
-  return lamportsToSol(valueLamports);
+  return tokenUnitsToUsdc(valueLamports);
 }
 
 function estimateCurrentValue(pos: InvestorPositionData, vault: VaultView | null): number {
@@ -50,7 +52,7 @@ function normalizeApiPosition(pos: PositionView): PositionView {
   const totalDeposited = Number(pos.totalDeposited);
   const seniorSharesRaw = pos.seniorSharesRaw ?? BigInt(Math.round(seniorShares));
   const totalDepositedLamports =
-    pos.totalDepositedLamports ?? BigInt(Math.round(totalDeposited * 1e9));
+    pos.totalDepositedLamports ?? BigInt(Math.round(totalDeposited * USDC_DECIMALS));
 
   return {
     ...pos,
@@ -107,7 +109,7 @@ export function usePositions() {
           depositedAt: Number(data.depositedAt),
           seniorShares: Number(data.seniorShares),
           seniorSharesRaw: data.seniorShares,
-          totalDeposited: lamportsToSol(data.totalDeposited),
+          totalDeposited: tokenUnitsToUsdc(data.totalDeposited),
           totalDepositedLamports: data.totalDeposited,
           alertThresholdBps: data.alertThresholdBps,
           currentValue: estimateCurrentValue(data, vault),

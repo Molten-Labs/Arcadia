@@ -102,18 +102,18 @@ describe("ManagerVault transaction flows", () => {
       tvl: 4,
       juniorCapital: 4,
       seniorCapital: 0,
-      originalJuniorDepositLamports: 1_000_000_000n,
-      juniorCapitalLamports: 4_000_000_000n,
+      originalJuniorDepositLamports: 1_000_000n,
+      juniorCapitalLamports: 4_000_000n,
       seniorCapitalLamports: 0n,
-      juniorSharesOutstanding: 2_000_000_000,
+      juniorSharesOutstanding: 2_000_000,
       seniorSharesOutstanding: 0,
-      juniorSharesOutstandingRaw: 2_000_000_000n,
+      juniorSharesOutstandingRaw: 2_000_000n,
       seniorSharesOutstandingRaw: 0n,
       juniorHealth: 100,
       currentNav: 4,
-      currentNavLamports: 4_000_000_000n,
+      currentNavLamports: 4_000_000n,
       highWaterMark: 1,
-      highWaterMarkLamports: 1_000_000_000n,
+      highWaterMarkLamports: 1_000_000n,
       feeBps: 2_000,
       maxSlippageBps: 100,
       createdAt: 1,
@@ -140,7 +140,7 @@ describe("ManagerVault transaction flows", () => {
     await waitFor(() => expect(mocks.withdrawJunior).toHaveBeenCalled());
     const [vaultConfig, sharesToBurn] = mocks.withdrawJunior.mock.calls[0];
     expect(vaultConfig.toBase58()).toBe(configPubkey);
-    expect(sharesToBurn).toBe(500_000_000n);
+    expect(sharesToBurn).toBe(500_000n);
   });
 
   it("wires manager nav, graduation, and guard-swap actions", async () => {
@@ -160,7 +160,7 @@ describe("ManagerVault transaction flows", () => {
     expect(mocks.graduateVault.mock.calls[0][0].toBase58()).toBe(configPubkey);
     expect(mocks.graduateVault.mock.calls[0][1].toBase58()).toBe(managerPubkey);
     expect(mocks.executeSwap.mock.calls[0][0].toBase58()).toBe(configPubkey);
-    expect(mocks.executeSwap.mock.calls[0][1]).toBe(500_000_000n);
+    expect(mocks.executeSwap.mock.calls[0][1]).toBe(500_000n);
     expect(mocks.executeSwap.mock.calls[0][2]).toBe(0n);
   });
 });

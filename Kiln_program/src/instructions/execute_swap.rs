@@ -23,20 +23,10 @@ use super::vault_guard;
 pub const ROUTE_SOL_TO_USDC: u8 = 1;
 pub const ROUTE_USDC_TO_SOL: u8 = 2;
 const EXTENDED_SWAP_ARGS_LEN: usize = 32;
-const TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
-const TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
-const TOKEN_ACCOUNT_AMOUNT_OFFSET: usize = 64;
-const TOKEN_ACCOUNT_MIN_LEN: usize = 72;
 const MAX_JUPITER_CPI_ACCOUNTS: usize = 48;
 
-const JUPITER_PROGRAM_ID: Pubkey =
+pub(crate) const JUPITER_PROGRAM_ID: Pubkey =
     pinocchio_pubkey::pubkey!("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
-const TOKEN_PROGRAM_ID: Pubkey =
-    pinocchio_pubkey::pubkey!("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-const WSOL_MINT: Pubkey =
-    pinocchio_pubkey::pubkey!("So11111111111111111111111111111111111111112");
-const USDC_MINT: Pubkey =
-    pinocchio_pubkey::pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, SchemaRead)]
@@ -240,7 +230,7 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     if jupiter_program.key() != &JUPITER_PROGRAM_ID {
         return Err(KilnError::InvalidJupiterProgram.into());
     }
-    if token_program.key() != &TOKEN_PROGRAM_ID {
+    if token_program.key() != &super::custody::TOKEN_PROGRAM_ID {
         return Err(KilnError::InvalidTokenProgram.into());
     }
     if sol_price_account.key() == usdc_price_account.key()
@@ -277,19 +267,19 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         return Err(KilnError::TreasuryMismatch.into());
     }
 
-    let source = read_token_account(source_token_account)?;
-    let destination = read_token_account(destination_token_account)?;
+    let source = super::custody::read_token_account(source_token_account)?;
+    let destination = super::custody::read_token_account(destination_token_account)?;
     if source.owner != *treasury.key() || destination.owner != *treasury.key() {
         return Err(KilnError::InvalidTokenAccount.into());
     }
     match args.route {
         ROUTE_SOL_TO_USDC => {
-            if source.mint != WSOL_MINT || destination.mint != USDC_MINT {
+            if source.mint != super::custody::WSOL_MINT || destination.mint != super::custody::USDC_MINT {
                 return Err(KilnError::InvalidSwapRoute.into());
             }
         }
         ROUTE_USDC_TO_SOL => {
-            if source.mint != USDC_MINT || destination.mint != WSOL_MINT {
+            if source.mint != super::custody::USDC_MINT || destination.mint != super::custody::WSOL_MINT {
                 return Err(KilnError::InvalidSwapRoute.into());
             }
         }
@@ -303,7 +293,22 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     if state.vault_config != *vault_config.key() {
         return Err(KilnError::VaultStateMismatch.into());
     }
-    vault_guard::run_guards(&state, args.in_amount, clock.unix_timestamp)?;
+    let sol_price = super::custody::read_price(
+        sol_price_account,
+        super::custody::PRICE_FEED_SOL_USD,
+        clock.unix_timestamp,
+    )?;
+    let usdc_price = super::custody::read_price(
+        usdc_price_account,
+        super::custody::PRICE_FEED_USDC_USD,
+        clock.unix_timestamp,
+    )?;
+    let swap_notional_usdc = if args.route == ROUTE_USDC_TO_SOL {
+        args.in_amount
+    } else {
+        super::custody::wsol_value_usdc(args.in_amount, sol_price.price, usdc_price.price)?
+    };
+    vault_guard::run_guards_with_notional(&state, swap_notional_usdc, clock.unix_timestamp)?;
     let old_nav = state.current_nav;
     drop(state);
 
@@ -320,7 +325,7 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         config.treasury_bump,
     )?;
 
-    let destination_after = read_token_amount(destination_token_account)?;
+    let destination_after = super::custody::read_token_amount(destination_token_account)?;
     let received = destination_after
         .checked_sub(destination_before)
         .ok_or(KilnError::SlippageExceeded)?;
@@ -328,10 +333,22 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         return Err(KilnError::SlippageExceeded.into());
     }
 
-    let treasury_lamports = treasury.lamports();
-    let new_nav = treasury_lamports
-        .checked_sub(config.treasury_rent_lamports)
-        .ok_or(KilnError::TreasuryAccountingMismatch)?;
+    let source_after = super::custody::read_token_account(source_token_account)?;
+    let destination_after_snapshot = super::custody::read_token_account(destination_token_account)?;
+    let (usdc_after, wsol_after) = if args.route == ROUTE_USDC_TO_SOL {
+        (source_after.amount, destination_after_snapshot.amount)
+    } else {
+        (destination_after_snapshot.amount, source_after.amount)
+    };
+    let new_nav = super::custody::nav_usdc(
+        usdc_after,
+        wsol_after,
+        sol_price.price,
+        usdc_price.price,
+    )?;
+    if args.route == ROUTE_USDC_TO_SOL {
+        vault_guard::enforce_usdc_reserve_after_swap(usdc_after, new_nav)?;
+    }
 
     let mut state = VaultState::load_mut(vault_state)?;
     state.last_nav = state.current_nav;
@@ -412,41 +429,7 @@ fn parse_jupiter_swap_args(data: &[u8]) -> Result<JupiterSwapArgs<'_>, ProgramEr
     })
 }
 
-#[derive(Clone, Copy)]
-struct TokenAccountSnapshot {
-    mint: Pubkey,
-    owner: Pubkey,
-    amount: u64,
-}
-
-fn read_token_account(account: &AccountInfo) -> Result<TokenAccountSnapshot, ProgramError> {
-    if !account.is_owned_by(&TOKEN_PROGRAM_ID) || account.data_len() < TOKEN_ACCOUNT_MIN_LEN {
-        return Err(KilnError::InvalidTokenAccount.into());
-    }
-    let data = account.try_borrow_data()?;
-    let mint: Pubkey = data[TOKEN_ACCOUNT_MINT_OFFSET..TOKEN_ACCOUNT_MINT_OFFSET + 32]
-        .try_into()
-        .map_err(|_| KilnError::InvalidTokenAccount)?;
-    let owner: Pubkey = data[TOKEN_ACCOUNT_OWNER_OFFSET..TOKEN_ACCOUNT_OWNER_OFFSET + 32]
-        .try_into()
-        .map_err(|_| KilnError::InvalidTokenAccount)?;
-    let amount = u64::from_le_bytes(
-        data[TOKEN_ACCOUNT_AMOUNT_OFFSET..TOKEN_ACCOUNT_AMOUNT_OFFSET + 8]
-            .try_into()
-            .map_err(|_| KilnError::InvalidTokenAccount)?,
-    );
-    Ok(TokenAccountSnapshot {
-        mint,
-        owner,
-        amount,
-    })
-}
-
-fn read_token_amount(account: &AccountInfo) -> Result<u64, ProgramError> {
-    Ok(read_token_account(account)?.amount)
-}
-
-fn invoke_jupiter(
+pub(crate) fn invoke_jupiter(
     jupiter_accounts: &[AccountInfo],
     instruction_data: &[u8],
     treasury: &AccountInfo,

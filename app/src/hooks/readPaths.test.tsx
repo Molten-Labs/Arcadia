@@ -101,7 +101,7 @@ describe("backend-backed read hooks", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data?.[0].name).toBe("Backend Vault");
-    expect(result.current.data?.[0].seniorCapitalLamports).toBe(40_000_000_000n);
+    expect(result.current.data?.[0].seniorCapitalLamports).toBe(40_000_000n);
     expect(mocks.fetchAllVaults).not.toHaveBeenCalled();
   });
 
@@ -193,11 +193,11 @@ describe("backend-backed read hooks", () => {
 
   it("exposes share-accounting calculation for raw on-chain values", () => {
     const value = calculatePositionValue(
-      100_000_000_000n,
-      10_000_000_000n,
+      100_000_000n,
+      10_000_000n,
       {
-        seniorCapitalLamports: 40_000_000_000n,
-        seniorSharesOutstandingRaw: 400_000_000_000n,
+        seniorCapitalLamports: 40_000_000n,
+        seniorSharesOutstandingRaw: 400_000_000n,
       } as never
     );
 

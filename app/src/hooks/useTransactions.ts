@@ -11,6 +11,14 @@ import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWallet } from "@/lib/wallet";
 import { PROGRAM_ID } from "@/lib/solana/constants";
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  PYTH_SOL_USD_ACCOUNT,
+  PYTH_USDC_USD_ACCOUNT,
+  SOL_MINT,
+  TOKEN_PROGRAM_ID,
+  USDC_MINT,
+} from "@/lib/solana/constants";
+import {
   getManagerProfilePDA,
   getVaultConfigPDA,
   getVaultStatePDA,
@@ -59,15 +67,40 @@ function buildInstruction(
   });
 }
 
+function getAssociatedTokenAddress(owner: PublicKey, mint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  )[0];
+}
+
+function getCustodyTokenAccounts(treasury: PublicKey) {
+  return {
+    vaultUsdc: getAssociatedTokenAddress(treasury, USDC_MINT),
+    vaultWsol: getAssociatedTokenAddress(treasury, SOL_MINT),
+  };
+}
+
+function requirePythAccounts() {
+  if (!PYTH_SOL_USD_ACCOUNT || !PYTH_USDC_USD_ACCOUNT) {
+    throw new Error("Pyth SOL/USD and USDC/USD accounts are not configured");
+  }
+  return {
+    solPrice: PYTH_SOL_USD_ACCOUNT,
+    usdcPrice: PYTH_USDC_USD_ACCOUNT,
+  };
+}
+
 export function useKilnTransactions() {
   const { connection } = useWallet();
   const { publicKey, sendTransaction } = useSolanaWallet();
   const queryClient = useQueryClient();
 
   const send = useCallback(
-    async (ix: TransactionInstruction, label: string) => {
+    async (ixOrIxs: TransactionInstruction | TransactionInstruction[], label: string) => {
       if (!connection || !publicKey) throw new Error("Wallet not connected");
-      const tx = new Transaction().add(ix);
+      const instructions = Array.isArray(ixOrIxs) ? ixOrIxs : [ixOrIxs];
+      const tx = new Transaction().add(...instructions);
       tx.feePayer = publicKey;
       tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
@@ -152,23 +185,28 @@ export function useKilnTransactions() {
     [publicKey, connection, send]
   );
 
-  // Disc 2: [manager, profile, vault_config, vault_state, treasury, clock, system_program]
+  // Disc 2 USDC: [manager, profile, vault_config, vault_state, treasury, manager_usdc, vault_usdc, token_program, clock, system_program]
   const depositJunior = useCallback(
-    async (vaultConfigPubkey: PublicKey, lamports: bigint) => {
+    async (vaultConfigPubkey: PublicKey, usdcUnits: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [profilePda] = getManagerProfilePDA(publicKey);
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
+      const managerUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
 
       const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(lamports, 0);
+      data.writeBigUInt64LE(usdcUnits, 0);
 
       const ix = buildInstruction(2, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
         { pubkey: profilePda, isSigner: false, isWritable: true },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
-        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: false },
+        { pubkey: managerUsdc, isSigner: false, isWritable: true },
+        { pubkey: vaultUsdc, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ], data);
@@ -177,23 +215,28 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
-  // Disc 5: [investor, vault_config, vault_state, treasury, investor_position, rent, clock, system_program]
+  // Disc 5 USDC: [investor, vault_config, vault_state, treasury, investor_position, investor_usdc, vault_usdc, token_program, rent, clock, system_program]
   const depositSenior = useCallback(
-    async (vaultConfigPubkey: PublicKey, lamports: bigint) => {
+    async (vaultConfigPubkey: PublicKey, usdcUnits: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
       const [positionPda] = getInvestorPositionPDA(publicKey, vaultConfigPubkey);
+      const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
+      const investorUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
 
       const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(lamports, 0);
+      data.writeBigUInt64LE(usdcUnits, 0);
 
       const ix = buildInstruction(5, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
-        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: false },
         { pubkey: positionPda, isSigner: false, isWritable: true },
+        { pubkey: investorUsdc, isSigner: false, isWritable: true },
+        { pubkey: vaultUsdc, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -203,13 +246,16 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
-  // Disc 6: [investor, vault_config, vault_state, treasury, investor_position, clock]
+  // Disc 6 USDC: [investor, vault_config, vault_state, treasury, investor_position, vault_usdc, vault_wsol, investor_usdc, sol_price, usdc_price, token_program, clock]
   const withdrawSenior = useCallback(
     async (vaultConfigPubkey: PublicKey, sharesToBurn: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
       const [positionPda] = getInvestorPositionPDA(publicKey, vaultConfigPubkey);
+      const { vaultUsdc, vaultWsol } = getCustodyTokenAccounts(treasuryPda);
+      const investorUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
+      const { solPrice, usdcPrice } = requirePythAccounts();
 
       const data = Buffer.alloc(8);
       data.writeBigUInt64LE(sharesToBurn, 0);
@@ -218,8 +264,14 @@ export function useKilnTransactions() {
         { pubkey: publicKey, isSigner: true, isWritable: true },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
-        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: false },
         { pubkey: positionPda, isSigner: false, isWritable: true },
+        { pubkey: vaultUsdc, isSigner: false, isWritable: true },
+        { pubkey: vaultWsol, isSigner: false, isWritable: true },
+        { pubkey: investorUsdc, isSigner: false, isWritable: true },
+        { pubkey: solPrice, isSigner: false, isWritable: false },
+        { pubkey: usdcPrice, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Withdraw Senior");
@@ -227,13 +279,15 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
-  // Disc 7: [manager, manager_profile, vault_config, vault_state, treasury, clock]
+  // Disc 7 USDC: [manager, manager_profile, vault_config, vault_state, treasury, vault_usdc, manager_usdc, token_program, clock]
   const withdrawJunior = useCallback(
     async (vaultConfigPubkey: PublicKey, sharesToBurn: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [profilePda] = getManagerProfilePDA(publicKey);
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
+      const managerUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
 
       const data = Buffer.alloc(8);
       data.writeBigUInt64LE(sharesToBurn, 0);
@@ -243,7 +297,10 @@ export function useKilnTransactions() {
         { pubkey: profilePda, isSigner: false, isWritable: true },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
-        { pubkey: treasuryPda, isSigner: false, isWritable: true },
+        { pubkey: treasuryPda, isSigner: false, isWritable: false },
+        { pubkey: vaultUsdc, isSigner: false, isWritable: true },
+        { pubkey: managerUsdc, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
       return send(ix, "Withdraw Junior");

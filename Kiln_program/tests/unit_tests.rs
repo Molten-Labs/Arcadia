@@ -1,9 +1,16 @@
 use Kiln_program::{
+    errors::KilnError,
+    instructions::custody::{
+        enforce_liquid_reserve, min_liquid_usdc, nav_usdc, wsol_needed_for_usdc,
+        wsol_value_usdc, PRICE_SCALE, USDC_DECIMALS, WSOL_DECIMALS,
+    },
     instructions::vault_guard::{
         apply_post_swap_cooldown, effective_health_bps, max_position_bps, run_guards,
+        run_guards_with_notional,
     },
     states::VaultState,
 };
+use pinocchio::program_error::ProgramError;
 
 fn make_state(junior: u64, original_junior: u64, senior: u64, nav: u64) -> VaultState {
     VaultState {
@@ -340,4 +347,70 @@ fn fee_zero_below_hwm() {
     let nav = 800_000u64;
     let hwm = 1_000_000u64;
     assert!(nav <= hwm); // no fee on recovery
+}
+
+// ======================== USDC/WSOL custody valuation ========================
+
+#[test]
+fn nav_counts_usdc_plus_wsol_value() {
+    let ten_thousand_usdc = 10_000 * USDC_DECIMALS;
+    let two_sol = 2 * WSOL_DECIMALS;
+    let sol_usd = 150 * PRICE_SCALE;
+    let usdc_usd = PRICE_SCALE;
+
+    assert_eq!(
+        nav_usdc(ten_thousand_usdc, two_sol, sol_usd, usdc_usd).unwrap(),
+        10_300 * USDC_DECIMALS
+    );
+}
+
+#[test]
+fn zero_wsol_is_valid_nav() {
+    assert_eq!(
+        nav_usdc(42_000 * USDC_DECIMALS, 0, 180 * PRICE_SCALE, PRICE_SCALE).unwrap(),
+        42_000 * USDC_DECIMALS
+    );
+}
+
+#[test]
+fn wsol_value_uses_usdc_usd_denominator() {
+    let one_sol = WSOL_DECIMALS;
+    let sol_usd = 200 * PRICE_SCALE;
+    let usdc_usd = PRICE_SCALE + 10_000; // USDC at $1.01
+
+    assert_eq!(
+        wsol_value_usdc(one_sol, sol_usd, usdc_usd).unwrap(),
+        198_019_801
+    );
+}
+
+#[test]
+fn wsol_needed_rounds_up_to_cover_shortfall() {
+    let shortfall = 100 * USDC_DECIMALS;
+    let sol_usd = 150 * PRICE_SCALE;
+    let usdc_usd = PRICE_SCALE;
+
+    assert_eq!(
+        wsol_needed_for_usdc(shortfall, sol_usd, usdc_usd).unwrap(),
+        666_666_667
+    );
+}
+
+#[test]
+fn reserve_requires_ten_percent_liquid_usdc() {
+    let nav = 1_000 * USDC_DECIMALS;
+    assert_eq!(min_liquid_usdc(nav).unwrap(), 100 * USDC_DECIMALS);
+    assert!(enforce_liquid_reserve(100 * USDC_DECIMALS, nav).is_ok());
+    let err = enforce_liquid_reserve(99 * USDC_DECIMALS, nav).unwrap_err();
+    assert_eq!(
+        err,
+        ProgramError::Custom(KilnError::LiquidReserveViolation as u32)
+    );
+}
+
+#[test]
+fn guards_use_usdc_notional_for_position_limit() {
+    let state = make_state(1_000_000, 1_000_000, 4_000_000, 5_000_000);
+    assert!(run_guards_with_notional(&state, 500_000, 2000).is_ok());
+    assert!(run_guards_with_notional(&state, 500_001, 2000).is_err());
 }

@@ -38,6 +38,11 @@ pub enum KilnError {
     InvalidTokenAccount,
     InvalidOracleAccount,
     JupiterCpiFailed,
+    InsufficientLiquidity,
+    StaleOraclePrice,
+    InvalidPriceFeed,
+    LiquidReserveViolation,
+    InvalidCustodyAccount,
 }
 
 impl From<KilnError> for ProgramError {

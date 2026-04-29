@@ -2,7 +2,6 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useParams, Navigate, Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { useVault } from "@/hooks/useVaults";
-import { useBalance } from "@/hooks/useBalance";
 import { useKilnTransactions } from "@/hooks/useTransactions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { HealthMeter } from "@/components/HealthMeter";
@@ -16,21 +15,18 @@ import { shortAddr } from "@/lib/wallet";
 import { ArrowLeft, Check, ArrowDownUp, X, Loader2 } from "lucide-react";
 import { PublicKey } from "@solana/web3.js";
 import { toast } from "sonner";
-import { calculateSharesToBurn, parseSolToLamports } from "@/lib/solana/shares";
+import { calculateSharesToBurn, parseUsdcToUnits } from "@/lib/solana/shares";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
 import { DataModeToggle } from "@/components/DataModeToggle";
 
-const QUICK_AMOUNTS = [25, 50, 75, 100] as const;
+const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
 
 const ManagerVault = () => {
   const { id } = useParams();
   const { data: v, isLoading } = useVault(id);
-  const { data: balance } = useBalance();
   const { depositJunior, withdrawJunior, updateNav, graduateVault, executeSwap, claimFees } = useKilnTransactions();
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
-
-  const solBalance = balance ?? 0;
 
   if (isLoading) {
     return (
@@ -44,13 +40,12 @@ const ManagerVault = () => {
 
   if (!v) return <Navigate to="/manager" replace />;
 
-  const parsedAmount = Number(amount);
-  const parsedLamports = parseSolToLamports(amount);
-  const hasValidAmount = parsedLamports !== null && parsedLamports > 0n;
-  const lamports = parsedLamports ?? 0n;
+  const parsedUsdcUnits = parseUsdcToUnits(amount);
+  const hasValidAmount = parsedUsdcUnits !== null && parsedUsdcUnits > 0n;
+  const usdcUnits = parsedUsdcUnits ?? 0n;
   const aboveHwm = Math.max(0, v.currentNav - v.highWaterMark);
   const juniorSharesToBurn = calculateSharesToBurn(
-    lamports,
+    usdcUnits,
     v.juniorCapitalLamports,
     v.juniorSharesOutstandingRaw,
   );
@@ -86,7 +81,7 @@ const ManagerVault = () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
     setSending(true);
     try {
-      await depositJunior(new PublicKey(v.configPubkey), lamports);
+      await depositJunior(new PublicKey(v.configPubkey), usdcUnits);
       setAmount("");
       toast.success("Junior capital deposited");
     } catch (e) {
@@ -143,7 +138,7 @@ const ManagerVault = () => {
     }
     setSending(true);
     try {
-      await executeSwap(new PublicKey(v.configPubkey), lamports, 0n);
+      await executeSwap(new PublicKey(v.configPubkey), usdcUnits, 0n);
       setAmount("");
       toast.success("Devnet guard-only swap check submitted");
     } catch (e) {
@@ -212,11 +207,11 @@ const ManagerVault = () => {
         {v.status === "cooldown" && <Banner variant="warning" title="Cooldown active">Trading paused. Position limits will tighten on resume.</Banner>}
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 my-6">
-          <StatCard label="NAV" value={`${fmtUSD(v.currentNav, { decimals: 2 })} SOL`} />
+          <StatCard label="NAV" value={`${fmtUSD(v.currentNav, { decimals: 2 })} USDC`} />
           <StatCard label="Junior health" value={`${v.juniorHealth}%`} />
           <StatCard label="Fee" value={`${v.feeBps / 100}%`} />
           <StatCard label="24h loss" value={`${v.rolling24hLossBps / 100}%`} />
-          <StatCard label="Senior" value={`${fmtUSD(v.seniorCapital, { decimals: 2 })} SOL`} />
+          <StatCard label="Senior" value={`${fmtUSD(v.seniorCapital, { decimals: 2 })} USDC`} />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -229,8 +224,8 @@ const ManagerVault = () => {
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <label htmlFor="manager-vault-amount">Junior amount (SOL)</label>
-                    <span>Balance: {solBalance.toFixed(4)} SOL</span>
+                    <label htmlFor="manager-vault-amount">Junior amount (USDC)</label>
+                    <span>Base asset: USDC</span>
                   </div>
                   <div className="relative">
                     <Input
@@ -241,18 +236,18 @@ const ManagerVault = () => {
                       inputMode="decimal"
                       className="text-lg tabular h-12 pr-14"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">SOL</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">USDC</span>
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  {QUICK_AMOUNTS.map(pct => (
+                  {QUICK_USDC_AMOUNTS.map(preset => (
                     <button
-                      key={pct}
+                      key={preset}
                       type="button"
-                      onClick={() => setAmount(String(solBalance * pct / 100))}
+                      onClick={() => setAmount(String(preset))}
                       className="h-10 flex-1 rounded-md bg-secondary text-xs font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      {pct}%
+                      {fmtUSD(preset, { compact: true })}
                     </button>
                   ))}
                 </div>
@@ -326,8 +321,8 @@ const ManagerVault = () => {
             <div className="surface rounded-2xl p-6">
               <h3 className="font-display font-semibold mb-2">Fees</h3>
               <div className="text-sm space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">HWM</span><span className="tabular">{fmtUSD(v.highWaterMark, { decimals: 2 })} SOL</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Above HWM</span><span className="tabular">{fmtUSD(aboveHwm, { decimals: 2 })} SOL</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">HWM</span><span className="tabular">{fmtUSD(v.highWaterMark, { decimals: 2 })} USDC</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Above HWM</span><span className="tabular">{fmtUSD(aboveHwm, { decimals: 2 })} USDC</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Fee rate</span><span className="tabular">{v.feeBps / 100}%</span></div>
               </div>
               <Button

@@ -102,18 +102,18 @@ describe("VaultDetail investor withdrawal", () => {
       tvl: 5,
       juniorCapital: 1,
       seniorCapital: 4,
-      originalJuniorDepositLamports: 1_000_000_000n,
-      juniorCapitalLamports: 1_000_000_000n,
-      seniorCapitalLamports: 4_000_000_000n,
-      juniorSharesOutstanding: 1_000_000_000,
-      seniorSharesOutstanding: 2_000_000_000,
-      juniorSharesOutstandingRaw: 1_000_000_000n,
-      seniorSharesOutstandingRaw: 2_000_000_000n,
+      originalJuniorDepositLamports: 1_000_000n,
+      juniorCapitalLamports: 1_000_000n,
+      seniorCapitalLamports: 4_000_000n,
+      juniorSharesOutstanding: 1_000_000,
+      seniorSharesOutstanding: 2_000_000,
+      juniorSharesOutstandingRaw: 1_000_000n,
+      seniorSharesOutstandingRaw: 2_000_000n,
       juniorHealth: 100,
       currentNav: 5,
-      currentNavLamports: 5_000_000_000n,
+      currentNavLamports: 5_000_000n,
       highWaterMark: 5,
-      highWaterMarkLamports: 5_000_000_000n,
+      highWaterMarkLamports: 5_000_000n,
       feeBps: 2_000,
       maxSlippageBps: 100,
       createdAt: 1,
@@ -130,7 +130,7 @@ describe("VaultDetail investor withdrawal", () => {
     mocks.positions = [
       {
         vaultConfigPubkey: configPubkey,
-        seniorSharesRaw: 600_000_000n,
+        seniorSharesRaw: 600_000n,
       },
     ];
   });
@@ -141,12 +141,12 @@ describe("VaultDetail investor withdrawal", () => {
     fireEvent.change(screen.getByLabelText(/^amount$/i), {
       target: { value: "1" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /withdraw sol/i }));
+    fireEvent.click(screen.getByRole("button", { name: /withdraw usdc/i }));
 
     await waitFor(() => expect(mocks.withdrawSenior).toHaveBeenCalled());
     const [vaultConfig, sharesToBurn] = mocks.withdrawSenior.mock.calls[0];
     expect(vaultConfig.toBase58()).toBe(configPubkey);
-    expect(sharesToBurn).toBe(500_000_000n);
+    expect(sharesToBurn).toBe(500_000n);
   });
 
   it("rejects withdrawals above the connected investor position", async () => {
@@ -155,7 +155,7 @@ describe("VaultDetail investor withdrawal", () => {
     fireEvent.change(screen.getByLabelText(/^amount$/i), {
       target: { value: "2" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /withdraw sol/i }));
+    fireEvent.click(screen.getByRole("button", { name: /withdraw usdc/i }));
 
     await waitFor(() =>
       expect(mocks.toastError).toHaveBeenCalledWith("Withdrawal exceeds your senior position"),
