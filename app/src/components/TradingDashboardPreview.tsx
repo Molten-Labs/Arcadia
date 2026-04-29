@@ -99,68 +99,86 @@ export const TradingDashboardPreview = () => {
             </div>
           </div>
 
-          {/* Side: Synq-style right panel */}
-          <div className="p-4 space-y-3 bg-background/40 overflow-y-auto flex flex-col">
-            {/* Vault hero */}
-            <div className="surface rounded-lg p-3 text-sm border border-border/50">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-display font-semibold">{v.name}</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary">PAPER</span>
+          {/* Side: Synq-style right panel - vault hero, limits, feed */}
+          <div className="rp">
+            {/* Vault hero section */}
+            <div className="vh">
+              <div className="vh-top">
+                <div className="vh-name">{v.name}</div>
+                <div className="vh-badge">PAPER MODE</div>
               </div>
-              <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: "40%" }} />
+              <div className="prog-track">
+                <div className="prog-fill" style={{ width: "40%" }} />
               </div>
-              <div className="text-[10px] text-muted-foreground flex justify-between">
+              <div className="prog-labels">
                 <span>Day 12 / 30</span>
                 <span>18 days left</span>
               </div>
+              <div className="vh-bot">
+                <div className="vhb-l">JUNIOR HEALTH</div>
+                <motion.div
+                  key={displayMetrics.timestamp.getTime()}
+                  initial={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="vhb-v up"
+                >
+                  {Math.round(displayMetrics.juniorHealth)}%
+                </motion.div>
+              </div>
             </div>
 
-            {/* Position limits */}
-            <div className="surface rounded-lg p-3 text-sm border border-border/50">
-              <h4 className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold mb-2">Limits</h4>
-              <div className="space-y-1.5 text-[10px]">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Max position</span>
-                  <span className="font-mono text-foreground">{v.maxPositionPct}% of NAV</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Max trade</span>
-                  <span className="font-mono text-foreground">{fmtUSD(v.tvl * (v.maxPositionPct / 100), { compact: true })} SOL</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Cooldown</span>
-                  <span className="font-mono text-success">None</span>
-                </div>
+            {/* Limits section */}
+            <div className="lim-sec">
+              <div className="sec-title">POSITION LIMITS</div>
+              <div className="gauge-t">
+                <div className="gauge-f" style={{ width: "100%", background: "hsl(142, 71%, 45%)" }} />
+              </div>
+              <div className="lrow">
+                <span className="lk">Max position</span>
+                <span className="lv up">{v.maxPositionPct}% of NAV</span>
+              </div>
+              <div className="lrow">
+                <span className="lk">Max trade</span>
+                <span className="lv">{fmtUSD(v.tvl * (v.maxPositionPct / 100), { compact: true })} SOL</span>
+              </div>
+              <div className="lrow">
+                <span className="lk">Cooldown</span>
+                <span className="lv up">None active</span>
+              </div>
+              <div className="lrow">
+                <span className="lk">Instant exit</span>
+                <span className="lv nu">Locked</span>
               </div>
             </div>
 
             {/* Trade feed - Synq style */}
-            <div className="surface rounded-lg border border-border/50 flex-1 flex flex-col overflow-hidden">
-              <div className="p-3 border-b border-border/30 flex items-center justify-between flex-shrink-0">
-                <h4 className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">Trade feed</h4>
-                <span className="text-[9px] text-muted-foreground">5</span>
+            <div className="feed-sec">
+              <div className="feed-hdr">
+                <div className="feed-title">TRADE FEED</div>
+                <div className="feed-cnt">5</div>
               </div>
-              <div className="overflow-y-auto flex-1 p-2">
+              <div className="feed-list">
                 {[
-                  { pair: "AUDD → SOL", a: 800, pnl: 24.3, t: "14:32:11" },
-                  { pair: "SOL → AUDD", a: 600, pnl: 11.8, t: "12:15:44" },
-                  { pair: "AUDD → JUP", a: 300, pnl: -8.9, t: "11:03:22" },
-                  { pair: "AUDD → SOL", a: 500, pnl: 31.2, t: "09:47:05" },
-                  { pair: "JUP → AUDD", a: 200, pnl: 4.1, t: "08:22:33" },
+                  { pair: "AUDD → SOL", pnl: 24.3, t: "14:32:11" },
+                  { pair: "SOL → AUDD", pnl: 11.8, t: "12:15:44" },
+                  { pair: "AUDD → JUP", pnl: -8.9, t: "11:03:22" },
+                  { pair: "AUDD → SOL", pnl: 31.2, t: "09:47:05" },
+                  { pair: "JUP → AUDD", pnl: 4.1, t: "08:22:33" },
                 ].map((t, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -10 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="flex justify-between items-center py-1.5 px-1 border-b border-border/20 last:border-b-0 text-[10px] font-mono"
+                    className="fi"
                   >
-                    <span className="text-muted-foreground flex-1 truncate">{t.pair}</span>
-                    <span className={t.pnl >= 0 ? "text-success" : "text-destructive"}>
+                    <div className="fi-pair">{t.pair}</div>
+                    <div className={`fi-pnl ${t.pnl >= 0 ? "up" : "dn"}`}>
                       {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(1)}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground/60 ml-1.5 flex-shrink-0">{t.t}</span>
+                    </div>
+                    <div className="fi-meta">800 SOL in</div>
+                    <div className="fi-time">{t.t}</div>
                   </motion.div>
                 ))}
               </div>
