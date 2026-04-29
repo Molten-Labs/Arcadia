@@ -1,0 +1,4 @@
+# Mise configuration for SynQ
+# Disable automatic tool installation
+[env]
+# Skip mise tool management - use system binaries
