@@ -20,16 +20,15 @@ export const Footer = () => (
       <FooterCol
         title="Product"
         links={[
-          { to: "/vaults", label: "Marketplace" },
           { to: "/traders", label: "Traders" },
-          { to: "/how-it-works", label: "How it works" },
+          { to: "/?section=how-it-works", label: "How it works" },
         ]}
       />
       <FooterCol
         title="Resources"
         links={[
           { to: "/docs", label: "Docs" },
-          { to: "/faq", label: "FAQ" },
+          { to: "/?section=faq", label: "FAQ" },
         ]}
       />
       <FooterCol

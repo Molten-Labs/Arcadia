@@ -40,25 +40,21 @@ export const Nav = () => {
     const location = useLocation();
 
     const publicLinks = [
-        { to: "/vaults", label: "Marketplace" },
+        { to: "/vaults", label: "Discovery" },
         { to: "/traders", label: "Traders" },
-        { to: "/how-it-works", label: "How it works" },
         { to: "/docs", label: "Docs" },
     ];
 
     const investorLinks = [
-        { to: "/vaults", label: "Marketplace" },
+        { to: "/vaults", label: "Discovery" },
         { to: "/portfolio", label: "Portfolio" },
-        { to: "/alerts", label: "Activity" },
         { to: "/settings", label: "Settings" },
     ];
 
     const traderLinks = [
         { to: "/manager", label: "Manager" },
         { to: "/trade", label: "Trade" },
-        { to: "/manager/create", label: "Vault config" },
-        { to: "/traders", label: "Investors" },
-        { to: "/alerts", label: "Alerts" },
+        { to: "/settings", label: "Settings" },
     ];
 
     const links = !connected
@@ -69,40 +65,39 @@ export const Nav = () => {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border/35 bg-background/78 backdrop-blur-xl shadow-[0_1px_0_hsl(var(--foreground)/0.035)]">
+            <header className="sticky top-0 z-40 border-b border-border/20 bg-background/40 backdrop-blur-sm shadow-sm shadow-primary/5 rounded-b-2xl">
                 <div className="container flex items-center justify-between h-16">
-                    <div className="flex items-center gap-8">
-                        <Link to="/" className="flex items-center gap-2 group">
-                            <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">
-                                <Orbit className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="font-display font-bold text-lg tracking-tight">
-                                Syn<span className="text-primary">Q</span>
-                            </span>
-                        </Link>
-                        <nav className="hidden md:flex items-center gap-1">
-                            {links.map((l) => {
-                                const active =
-                                    location.pathname === l.to ||
-                                    (l.to !== "/" &&
-                                        location.pathname.startsWith(l.to));
-                                return (
-                                    <Link
-                                        key={l.to}
-                                        to={l.to}
-                                        className={cn(
-                                            "relative px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.75)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                            active
-                                                ? "text-foreground after:scale-x-100"
-                                                : "text-muted-foreground hover:text-foreground",
-                                        )}
-                                    >
-                                        {l.label}
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-                    </div>
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">
+                            <Orbit className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="font-display font-bold text-lg tracking-tight">
+                            Syn<span className="text-primary">Q</span>
+                        </span>
+                    </Link>
+
+                    <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+                        {links.map((l) => {
+                            const active =
+                                location.pathname === l.to ||
+                                (l.to !== "/" &&
+                                    location.pathname.startsWith(l.to));
+                            return (
+                                <Link
+                                    key={l.to}
+                                    to={l.to}
+                                    className={cn(
+                                        "relative px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.75)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        active
+                                            ? "text-foreground after:scale-x-100"
+                                            : "text-muted-foreground hover:text-foreground",
+                                    )}
+                                >
+                                    {l.label}
+                                </Link>
+                            );
+                        })}
+                    </nav>
 
                     <div className="flex items-center gap-2">
                         {connected && (
@@ -119,14 +114,13 @@ export const Nav = () => {
                             </div>
                         )}
                         {connected && (
-                            <Link
-                                to="/alerts"
+                            <button
                                 aria-label="Notifications"
                                 className="hidden sm:inline-flex p-2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary-glow relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                                 <Bell className="w-4 h-4" />
                                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
-                            </Link>
+                            </button>
                         )}
                         {!connected ? (
                             <Button
@@ -254,34 +248,38 @@ export const Nav = () => {
                                     (l.to !== "/" &&
                                         location.pathname.startsWith(l.to));
                                 return (
-                                    <Link
+                                    <button
                                         key={l.to}
-                                        to={l.to}
-                                        onClick={() => setOpen(false)}
+                                        onClick={() => {
+                                            setOpen(false);
+                                            window.location.href = l.to;
+                                        }}
                                         className={cn(
-                                            "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            "w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                             active
                                                 ? "bg-primary/10 text-foreground"
                                                 : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                         )}
                                     >
                                         {l.label}
-                                    </Link>
+                                    </button>
                                 );
                             })}
                             {!links.some((link) => link.to === "/settings") && (
-                                <Link
-                                    to="/settings"
-                                    onClick={() => setOpen(false)}
+                                <button
+                                    onClick={() => {
+                                        setOpen(false);
+                                        window.location.href = "/settings";
+                                    }}
                                     className={cn(
-                                        "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        "w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         location.pathname === "/settings"
                                             ? "bg-primary/10 text-foreground"
                                             : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                     )}
                                 >
                                     Settings
-                                </Link>
+                                </button>
                             )}
                         </div>
                     </nav>

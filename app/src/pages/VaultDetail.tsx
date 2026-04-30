@@ -17,6 +17,11 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import { fmtUSD } from "@/lib/format";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { OrderBook } from "@/components/OrderBook";
@@ -118,6 +123,33 @@ const VaultDetail = () => {
                                 <span className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/10 border border-primary/30 px-2.5 py-1 rounded-full">
                                     <Zap className="w-3 h-3" /> Instant exit
                                 </span>
+                            )}
+                            {connected && role === "investor" && (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="inline-flex items-center justify-center w-9 h-9 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" aria-label="Alert preferences">
+                                            <Bell className="w-4 h-4" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56">
+                                        <div className="space-y-3">
+                                            <div>
+                                                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                                    <Bell className="w-4 h-4" /> Alert Preferences
+                                                </h4>
+                                                <p className="text-xs text-muted-foreground mb-3">Get notified when:</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {["Junior health drops below threshold", "Vault enters cooldown", "Vault frozen", "Performance fee claimed"].map(a => (
+                                                    <label key={a} className="flex items-start gap-2 text-xs cursor-pointer">
+                                                        <input type="checkbox" defaultChecked className="mt-0.5 accent-primary" />
+                                                        <span className="text-foreground/80">{a}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             )}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -301,22 +333,6 @@ const VaultDetail = () => {
                             )}
                         </div>
 
-                        {/* Alerts */}
-                        {connected && role === "investor" && (
-                            <div className="surface rounded-2xl p-6">
-                                <h3 className="font-display font-semibold flex items-center gap-2 mb-3">
-                                    <Bell className="w-4 h-4" /> Alerts
-                                </h3>
-                                <div className="space-y-2 text-sm">
-                                    {["Junior health drops below threshold", "Vault enters cooldown", "Vault frozen", "Performance fee claimed"].map(a => (
-                                        <label key={a} className="flex items-start gap-2 text-xs cursor-pointer">
-                                            <input type="checkbox" defaultChecked className="mt-0.5 accent-primary" />
-                                            <span className="text-foreground/80">{a}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
