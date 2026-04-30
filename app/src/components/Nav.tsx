@@ -65,7 +65,7 @@ export const Nav = () => {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border/50 bg-background/95 backdrop-blur-xl shadow-lg shadow-primary/5 rounded-b-lg">
+            <header className="sticky top-0 z-40 border-b border-border/20 bg-background/40 backdrop-blur-sm shadow-sm shadow-primary/5 rounded-b-2xl">
                 <div className="container flex items-center justify-between h-16">
                     <Link to="/" className="flex items-center gap-2 group">
                         <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">

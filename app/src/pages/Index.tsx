@@ -162,14 +162,10 @@ const Landing = () => {
             </Button>
           </div>
           {featured.length > 0 ? (
-            <div className="overflow-x-auto pb-4 -mx-4 px-4">
-              <div className="flex gap-5 w-max">
-                {featured.map(v => (
-                  <div key={v.id} className="flex-shrink-0 w-80">
-                    <VaultCard vault={v} />
-                  </div>
-                ))}
-              </div>
+            <div className="grid md:grid-cols-3 gap-5">
+              {featured.map(v => (
+                <VaultCard key={v.id} vault={v} />
+              ))}
             </div>
           ) : (
             <div className="matte-panel rounded-lg p-10 text-center text-muted-foreground">
