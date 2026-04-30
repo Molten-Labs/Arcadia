@@ -4,6 +4,7 @@ import { useWallet, shortAddr } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import {
     Wallet,
+    Bell,
     Menu,
     X,
     Orbit,
@@ -112,6 +113,15 @@ export const Nav = () => {
                                     {role}
                                 </span>
                             </div>
+                        )}
+                        {connected && (
+                            <button
+                                aria-label="Notifications"
+                                className="hidden sm:inline-flex p-2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary-glow relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                                <Bell className="w-4 h-4" />
+                                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                            </button>
                         )}
                         {!connected ? (
                             <Button
