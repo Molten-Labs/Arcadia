@@ -67,38 +67,37 @@ export const Nav = () => {
         <>
             <header className="sticky top-0 z-40 border-b border-border/50 bg-background/95 backdrop-blur-xl shadow-lg shadow-primary/5 rounded-b-lg">
                 <div className="container flex items-center justify-between h-16">
-                    <div className="flex items-center gap-8">
-                        <Link to="/" className="flex items-center gap-2 group">
-                            <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">
-                                <Orbit className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="font-display font-bold text-lg tracking-tight">
-                                Syn<span className="text-primary">Q</span>
-                            </span>
-                        </Link>
-                        <nav className="hidden md:flex items-center gap-1">
-                            {links.map((l) => {
-                                const active =
-                                    location.pathname === l.to ||
-                                    (l.to !== "/" &&
-                                        location.pathname.startsWith(l.to));
-                                return (
-                                    <Link
-                                        key={l.to}
-                                        to={l.to}
-                                        className={cn(
-                                            "relative px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.75)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                            active
-                                                ? "text-foreground after:scale-x-100"
-                                                : "text-muted-foreground hover:text-foreground",
-                                        )}
-                                    >
-                                        {l.label}
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-                    </div>
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">
+                            <Orbit className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="font-display font-bold text-lg tracking-tight">
+                            Syn<span className="text-primary">Q</span>
+                        </span>
+                    </Link>
+
+                    <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+                        {links.map((l) => {
+                            const active =
+                                location.pathname === l.to ||
+                                (l.to !== "/" &&
+                                    location.pathname.startsWith(l.to));
+                            return (
+                                <Link
+                                    key={l.to}
+                                    to={l.to}
+                                    className={cn(
+                                        "relative px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.75)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        active
+                                            ? "text-foreground after:scale-x-100"
+                                            : "text-muted-foreground hover:text-foreground",
+                                    )}
+                                >
+                                    {l.label}
+                                </Link>
+                            );
+                        })}
+                    </nav>
 
                     <div className="flex items-center gap-2">
                         {connected && (

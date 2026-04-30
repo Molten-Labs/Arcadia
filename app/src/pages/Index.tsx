@@ -150,25 +150,33 @@ const Landing = () => {
       </section>
 
       {/* Featured vaults */}
-      <section className="container py-12">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="font-display font-bold text-3xl">Featured vaults</h2>
-            <p className="text-muted-foreground mt-1">Top-performing graduated vaults open for deposits.</p>
+      <section className="border-t border-border/35 py-12">
+        <div className="container">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="font-display font-bold text-3xl">Featured vaults</h2>
+              <p className="text-muted-foreground mt-1">Top-performing graduated vaults open for deposits.</p>
+            </div>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/vaults">View all <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
+            </Button>
           </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/vaults">View all <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
-          </Button>
+          {featured.length > 0 ? (
+            <div className="overflow-x-auto pb-4 -mx-4 px-4">
+              <div className="flex gap-5 w-max">
+                {featured.map(v => (
+                  <div key={v.id} className="flex-shrink-0 w-80">
+                    <VaultCard vault={v} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="matte-panel rounded-lg p-10 text-center text-muted-foreground">
+              No active vaults yet. Connect your wallet and create the first one!
+            </div>
+          )}
         </div>
-        {featured.length > 0 ? (
-          <div className="grid md:grid-cols-3 gap-5">
-            {featured.map(v => <VaultCard key={v.id} vault={v} />)}
-          </div>
-        ) : (
-          <div className="matte-panel rounded-lg p-10 text-center text-muted-foreground">
-            No active vaults yet. Connect your wallet and create the first one!
-          </div>
-        )}
       </section>
 
       <VaultCalculator />
