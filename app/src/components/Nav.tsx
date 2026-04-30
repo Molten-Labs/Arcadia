@@ -4,7 +4,6 @@ import { useWallet, shortAddr } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import {
     Wallet,
-    Bell,
     Menu,
     X,
     Orbit,
@@ -40,25 +39,21 @@ export const Nav = () => {
     const location = useLocation();
 
     const publicLinks = [
-        { to: "/vaults", label: "Marketplace" },
+        { to: "/vaults", label: "Discovery" },
         { to: "/traders", label: "Traders" },
-        { to: "/how-it-works", label: "How it works" },
         { to: "/docs", label: "Docs" },
     ];
 
     const investorLinks = [
-        { to: "/vaults", label: "Marketplace" },
+        { to: "/vaults", label: "Discovery" },
         { to: "/portfolio", label: "Portfolio" },
-        { to: "/alerts", label: "Activity" },
         { to: "/settings", label: "Settings" },
     ];
 
     const traderLinks = [
         { to: "/manager", label: "Manager" },
         { to: "/trade", label: "Trade" },
-        { to: "/manager/create", label: "Vault config" },
-        { to: "/traders", label: "Investors" },
-        { to: "/alerts", label: "Alerts" },
+        { to: "/settings", label: "Settings" },
     ];
 
     const links = !connected
@@ -69,7 +64,7 @@ export const Nav = () => {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border/35 bg-background/78 backdrop-blur-xl shadow-[0_1px_0_hsl(var(--foreground)/0.035)]">
+            <header className="sticky top-0 z-40 border-b border-border/50 bg-background/95 backdrop-blur-xl shadow-lg shadow-primary/5 rounded-b-lg">
                 <div className="container flex items-center justify-between h-16">
                     <div className="flex items-center gap-8">
                         <Link to="/" className="flex items-center gap-2 group">
@@ -117,16 +112,6 @@ export const Nav = () => {
                                     {role}
                                 </span>
                             </div>
-                        )}
-                        {connected && (
-                            <Link
-                                to="/alerts"
-                                aria-label="Notifications"
-                                className="hidden sm:inline-flex p-2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary-glow relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                                <Bell className="w-4 h-4" />
-                                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
-                            </Link>
                         )}
                         {!connected ? (
                             <Button
@@ -254,34 +239,38 @@ export const Nav = () => {
                                     (l.to !== "/" &&
                                         location.pathname.startsWith(l.to));
                                 return (
-                                    <Link
+                                    <button
                                         key={l.to}
-                                        to={l.to}
-                                        onClick={() => setOpen(false)}
+                                        onClick={() => {
+                                            setOpen(false);
+                                            window.location.href = l.to;
+                                        }}
                                         className={cn(
-                                            "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            "w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                             active
                                                 ? "bg-primary/10 text-foreground"
                                                 : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                         )}
                                     >
                                         {l.label}
-                                    </Link>
+                                    </button>
                                 );
                             })}
                             {!links.some((link) => link.to === "/settings") && (
-                                <Link
-                                    to="/settings"
-                                    onClick={() => setOpen(false)}
+                                <button
+                                    onClick={() => {
+                                        setOpen(false);
+                                        window.location.href = "/settings";
+                                    }}
                                     className={cn(
-                                        "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        "w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         location.pathname === "/settings"
                                             ? "bg-primary/10 text-foreground"
                                             : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                     )}
                                 >
                                     Settings
-                                </Link>
+                                </button>
                             )}
                         </div>
                     </nav>
