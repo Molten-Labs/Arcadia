@@ -8,7 +8,6 @@ import { fmtUSD } from "@/lib/format";
 import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { GlassCard } from "@/components/GlassCard";
-import { TradingDashboardPreview } from "@/components/TradingDashboardPreview";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
@@ -104,10 +103,6 @@ const Landing = () => {
                 subtitle="Paper mode, on-chain reputation, dynamic risk limits, and instant exits when buffers run thin."
               />
             </motion.div>
-          </div>
-
-          <div className="mt-14 max-w-5xl">
-            <TradingDashboardPreview />
           </div>
         </div>
       </section>
