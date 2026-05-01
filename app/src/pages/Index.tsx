@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
@@ -17,7 +17,20 @@ const HERO_VIDEO =
 
 const Landing = () => {
   const { data: vaults } = useVaults();
+  const [searchParams] = useSearchParams();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
+
+  useEffect(() => {
+    const section = searchParams.get('section');
+    if (section) {
+      const element = document.getElementById(section);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [searchParams]);
 
   const featured = useMemo(
     () => allVaults.filter(v => v.status === "active").slice(0, 3),
@@ -64,10 +77,14 @@ const Landing = () => {
                 SynQ Protocol
               </div>
               <h1 className="font-hero max-w-4xl text-6xl font-semibold leading-[0.88] tracking-normal text-foreground/95 md:text-8xl lg:text-9xl">
-                Capital follows proof.
+                Serious traders.
+                <br />
+                Protected investors.
+                <br />
+                One protocol.
               </h1>
               <p className="mt-7 max-w-xl text-sm leading-7 text-foreground/78 md:text-base">
-                SynQ is a Solana vault layer where traders earn allocation only after proving performance with first-loss capital.
+                A Proof-of-Performance capital protocol where traders unlock investor capital through verified performance.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Button asChild size="lg">
@@ -113,7 +130,7 @@ const Landing = () => {
       </section>
 
       {/* How it works */}
-      <section className="container py-20">
+      <section id="how-it-works" className="container py-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -198,7 +215,7 @@ const Landing = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="border-t border-border/35 py-20">
+      <section id="faq" className="border-t border-border/35 py-20">
         <div className="container">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
