@@ -1,0 +1,19 @@
+#!/bin/bash
+# Quick setup - assume pnpm is available globally
+echo "Verifying pnpm..."
+if ! command -v pnpm &> /dev/null; then
+  echo "ERROR: pnpm not found in PATH"
+  exit 1
+fi
+
+echo "Using pnpm: $(pnpm --version)"
+echo "Installing dependencies..."
+pnpm install
+
+if [ $? -eq 0 ]; then
+  echo "✓ Dependencies installed successfully"
+  exit 0
+else
+  echo "✗ Installation failed"
+  exit 1
+fi

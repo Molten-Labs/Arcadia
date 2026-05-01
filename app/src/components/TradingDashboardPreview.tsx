@@ -1,3 +1,4 @@
+import React from "react";
 import { CandlestickChart } from "./CandlestickChart";
 import { OrderBook } from "./OrderBook";
 import { StatusBadge } from "./StatusBadge";
@@ -22,13 +23,32 @@ export const TradingDashboardPreview = () => {
   const v = previewVault;
   const trader = previewTrader;
 
+  // Simulate dynamic data updates
+  const [displayMetrics, setDisplayMetrics] = React.useState({
+    return30d: v.return30d,
+    juniorHealth: v.juniorHealth,
+    timestamp: new Date(),
+  });
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate small fluctuations in metrics
+      setDisplayMetrics((prev) => ({
+        return30d: prev.return30d + (Math.random() - 0.5) * 0.3,
+        juniorHealth: Math.min(100, Math.max(0, prev.juniorHealth + (Math.random() - 0.5) * 2)),
+        timestamp: new Date(),
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
-      transition={{ duration: 0.7 }}
-      className="relative"
+      transition={{ duration: 0.7, type: "spring", damping: 20 }}
+      className="relative mt-8"
     >
       {/* glow */}
       <div className="absolute -inset-x-20 -top-20 h-64 bg-primary/15 blur-3xl rounded-full pointer-events-none" />
@@ -48,67 +68,120 @@ export const TradingDashboardPreview = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_280px] gap-0">
-          {/* Main */}
-          <div className="p-5 border-r border-border">
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="grid lg:grid-cols-[1fr_310px] gap-0">
+          {/* Main - Synq chart section */}
+          <div className="chart-sec">
+            <div className="chart-hdr">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-display font-bold text-lg">{v.name}</h3>
-                  <StatusBadge status={v.status} />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  by {trader.name} <TierBadge tier={trader.tier} showIcon={false} className="scale-90" />
+                <div className="ch-label">VAULT NAV · SOL</div>
+                <div className="ch-nav">${fmtUSD(v.tvl, { compact: true })}</div>
+                <div className="ch-row">
+                  <motion.span
+                    key={displayMetrics.timestamp.getTime()}
+                    initial={{ opacity: 0.5 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="ch-pct up-b"
+                  >
+                    {fmtPct(displayMetrics.return30d)}
+                  </motion.span>
+                  <span className="ch-abs">+{fmtUSD(displayMetrics.return30d * v.tvl / 100, { compact: true })} since inception</span>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-display font-bold text-2xl tabular">${fmtUSD(v.tvl)}</div>
-                <div className="text-xs text-success tabular flex items-center gap-1 justify-end">
-                  <TrendingUp className="w-3 h-3" /> {fmtPct(v.return30d)} 30d
-                </div>
+              <div className="time-row">
+                {["1H", "4H", "1D", "1W", "1M"].map((t, i) => (
+                  <button key={t} className={`tbtn ${i === 2 ? "active" : ""}`}>{t}</button>
+                ))}
               </div>
             </div>
-
-            {/* tab buttons */}
-            <div className="flex gap-1 mb-3 text-[11px]">
-              {["1H", "4H", "1D", "1W", "1M"].map((t, i) => (
-                <button key={t} className={`px-2 py-1 rounded ${i === 2 ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-secondary"}`}>{t}</button>
-              ))}
-            </div>
-
-            <CandlestickChart count={56} height={220} />
-
-            <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border">
-              <Stat label="Junior health" value={`${v.juniorHealth}%`} />
-              <Stat label="Max position" value={`${v.maxPositionPct}%`} />
-              <Stat label="Senior protected" value={`$${fmtUSD(v.seniorCapital, { compact: true })}`} />
-            </div>
-            <div className="mt-3">
-              <HealthMeter health={v.juniorHealth} showLabel={false} size="sm" />
+            <div className="chart-wrap">
+              <CandlestickChart count={56} height={220} />
             </div>
           </div>
 
-          {/* Side: order book + recent fills */}
-          <div className="p-4 space-y-4 bg-background/40">
-            <OrderBook />
-            <div className="surface rounded-xl p-3 font-mono text-[11px]">
-              <h4 className="font-display font-semibold text-sm mb-2 font-sans">Recent trades</h4>
-              {[
-                { side: "buy", pair: "SOL", a: 1200, p: 184.20, t: "2s ago" },
-                { side: "sell", pair: "ETH", a: 18, p: 3340, t: "47s" },
-                { side: "buy", pair: "SOL", a: 800, p: 184.16, t: "1m" },
-                { side: "buy", pair: "BTC", a: 0.4, p: 67220, t: "3m" },
-              ].map((t, i) => (
-                <div key={i} className="flex justify-between items-center py-0.5">
-                  <span className={`flex items-center gap-1 ${t.side === "buy" ? "text-success" : "text-destructive"}`}>
-                    {t.side === "buy" ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
-                    {t.pair}
-                  </span>
-                  <span className="tabular">{t.a}</span>
-                  <span className="tabular text-muted-foreground">${t.p.toLocaleString()}</span>
-                  <span className="text-[10px] text-muted-foreground">{t.t}</span>
-                </div>
-              ))}
+          {/* Side: Synq-style right panel - vault hero, limits, feed */}
+          <div className="rp">
+            {/* Vault hero section */}
+            <div className="vh">
+              <div className="vh-top">
+                <div className="vh-name">{v.name}</div>
+                <div className="vh-badge">PAPER MODE</div>
+              </div>
+              <div className="prog-track">
+                <div className="prog-fill" style={{ width: "40%" }} />
+              </div>
+              <div className="prog-labels">
+                <span>Day 12 / 30</span>
+                <span>18 days left</span>
+              </div>
+              <div className="vh-bot">
+                <div className="vhb-l">JUNIOR HEALTH</div>
+                <motion.div
+                  key={displayMetrics.timestamp.getTime()}
+                  initial={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="vhb-v up"
+                >
+                  {Math.round(displayMetrics.juniorHealth)}%
+                </motion.div>
+              </div>
+            </div>
+
+            {/* Limits section */}
+            <div className="lim-sec">
+              <div className="sec-title">POSITION LIMITS</div>
+              <div className="gauge-t">
+                <div className="gauge-f" style={{ width: "100%", background: "hsl(142, 71%, 45%)" }} />
+              </div>
+              <div className="lrow">
+                <span className="lk">Max position</span>
+                <span className="lv up">{v.maxPositionPct}% of NAV</span>
+              </div>
+              <div className="lrow">
+                <span className="lk">Max trade</span>
+                <span className="lv">{fmtUSD(v.tvl * (v.maxPositionPct / 100), { compact: true })} SOL</span>
+              </div>
+              <div className="lrow">
+                <span className="lk">Cooldown</span>
+                <span className="lv up">None active</span>
+              </div>
+              <div className="lrow">
+                <span className="lk">Instant exit</span>
+                <span className="lv nu">Locked</span>
+              </div>
+            </div>
+
+            {/* Trade feed - Synq style */}
+            <div className="feed-sec">
+              <div className="feed-hdr">
+                <div className="feed-title">TRADE FEED</div>
+                <div className="feed-cnt">5</div>
+              </div>
+              <div className="feed-list">
+                {[
+                  { pair: "AUDD → SOL", pnl: 24.3, t: "14:32:11" },
+                  { pair: "SOL → AUDD", pnl: 11.8, t: "12:15:44" },
+                  { pair: "AUDD → JUP", pnl: -8.9, t: "11:03:22" },
+                  { pair: "AUDD → SOL", pnl: 31.2, t: "09:47:05" },
+                  { pair: "JUP → AUDD", pnl: 4.1, t: "08:22:33" },
+                ].map((t, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="fi"
+                  >
+                    <div className="fi-pair">{t.pair}</div>
+                    <div className={`fi-pnl ${t.pnl >= 0 ? "up" : "dn"}`}>
+                      {t.pnl >= 0 ? "+" : ""}{t.pnl.toFixed(1)}
+                    </div>
+                    <div className="fi-meta">800 SOL in</div>
+                    <div className="fi-time">{t.t}</div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
