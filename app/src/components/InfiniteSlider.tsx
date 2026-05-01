@@ -30,7 +30,7 @@ export const InfiniteSlider = () => {
               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
             >
               {[...logos, ...logos].map((l, i) => (
-                <div key={i} className="font-display font-semibold text-xl text-muted-foreground/60 hover:text-foreground transition-colors shrink-0">
+                <div key={i} className="font-display type-h3 font-semibold text-muted-foreground/60 hover:text-foreground transition-colors shrink-0">
                   {l.name}
                 </div>
               ))}

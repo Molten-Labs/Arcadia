@@ -162,14 +162,14 @@ const ManagerVault = () => {
           to="/manager"
           className="inline-flex h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground hover:text-foreground mb-6"
         >
-            <ArrowLeft className="w-3.5 h-3.5" /> SynQ manager
+            <ArrowLeft className="w-3.5 h-3.5" /> Arcadia manager
         </Link>
 
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div>
             <div className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-primary">Trader-only vault operations</div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="font-display font-bold text-3xl">{v.name}</h1>
+              <h1 className="font-display type-h2 font-semibold">{v.name}</h1>
               <StatusBadge status={v.status} />
             </div>
             <p className="text-sm text-muted-foreground">Manager view · {shortAddr(v.managerPubkey)}</p>
@@ -212,7 +212,7 @@ const ManagerVault = () => {
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {/* Amount input for junior operations */}
-            <div className="surface-elevated rounded-2xl p-6">
+            <div className="surface-elevated rounded-lg p-6">
               <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
                 <ArrowDownUp className="w-4 h-4" /> Junior capital operations
               </h3>
@@ -248,7 +248,7 @@ const ManagerVault = () => {
                 </div>
               </div>
 
-              <div className="mt-5 surface rounded-xl p-4">
+              <div className="mt-5 surface rounded-lg p-4">
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
                   {realJupiterEnabled ? "Jupiter pre-trade checks" : "Devnet guard-only checks"}
                 </div>
@@ -266,7 +266,7 @@ const ManagerVault = () => {
                 <Button
                   onClick={handleDepositJunior}
                   disabled={sending || !hasValidAmount}
-                  className="flex-1 h-11 bg-gradient-ember text-white border-0"
+                  className="flex-1 h-11 bg-gradient-signal text-primary-foreground border-0"
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                   Deposit junior
@@ -290,14 +290,14 @@ const ManagerVault = () => {
               </div>
             </div>
 
-            <div className="surface rounded-2xl p-6">
+            <div className="surface rounded-lg p-6">
               <CapitalStack junior={v.juniorCapital} senior={v.seniorCapital} health={v.juniorHealth} />
             </div>
           </div>
 
           <div className="space-y-6">
             {v.status === "paper" && (
-              <div className="surface rounded-2xl p-6">
+              <div className="surface rounded-lg p-6">
                 <h3 className="font-display font-semibold mb-3">Graduation checklist</h3>
                 <div className="text-sm space-y-2">
                   {graduationChecks.map((check) => (
@@ -307,13 +307,13 @@ const ManagerVault = () => {
               </div>
             )}
 
-            <div className="surface rounded-2xl p-6">
+            <div className="surface rounded-lg p-6">
               <h3 className="font-display font-semibold mb-4">Junior buffer</h3>
               <div className="text-3xl font-display font-bold tabular mb-3">{v.juniorHealth}%</div>
               <HealthMeter health={v.juniorHealth} size="lg" showLabel={false} />
             </div>
 
-            <div className="surface rounded-2xl p-6">
+            <div className="surface rounded-lg p-6">
               <h3 className="font-display font-semibold mb-2">Fees</h3>
               <div className="text-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">HWM</span><span className="tabular">{fmtUSD(v.highWaterMark, { decimals: 2 })} USDC</span></div>
@@ -330,7 +330,7 @@ const ManagerVault = () => {
                 {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Claim fees
               </Button>
-              <p className="text-[11px] text-muted-foreground mt-3">Fees only accrue on gains above the previous HWM.</p>
+              <p className="text-xs text-muted-foreground mt-3">Fees only accrue on gains above the previous HWM.</p>
             </div>
           </div>
         </div>

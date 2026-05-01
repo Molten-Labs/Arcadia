@@ -42,7 +42,7 @@ const Portfolio = () => {
         <div className="mb-8 flex flex-wrap justify-between gap-4 items-end">
           <div>
             <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor capital</div>
-            <h1 className="font-display font-bold text-4xl">SynQ portfolio</h1>
+            <h1 className="font-display type-h1 font-semibold">Arcadia portfolio</h1>
             <p className="text-muted-foreground mt-2">Investor principal, current claim value, and first-loss buffer exposure.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -60,7 +60,7 @@ const Portfolio = () => {
         </div>
 
         {isLoading ? (
-          <div className="surface rounded-2xl p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
+          <div className="surface rounded-lg p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading positions...
           </div>
         ) : allPositions.length === 0 ? (
@@ -73,7 +73,7 @@ const Portfolio = () => {
           <div className="space-y-4">
             <h2 className="font-display font-semibold text-lg">Senior positions</h2>
             {allPositions.map(p => (
-              <div key={p.pubkey} className="surface rounded-xl p-5">
+              <div key={p.pubkey} className="surface rounded-lg p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -92,19 +92,19 @@ const Portfolio = () => {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-y border-border py-3 mb-3">
                   <div>
-                    <div className="text-[10px] uppercase text-muted-foreground">Deposited</div>
+                    <div className="text-xs uppercase text-muted-foreground">Deposited</div>
                     <div className="tabular font-semibold">{fmtUSD(p.totalDeposited, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-muted-foreground">Current claim</div>
+                    <div className="text-xs uppercase text-muted-foreground">Current claim</div>
                     <div className="tabular font-semibold">{fmtUSD(p.currentValue, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-muted-foreground">Principal left</div>
+                    <div className="text-xs uppercase text-muted-foreground">Principal left</div>
                     <div className="tabular font-semibold">{fmtUSD(p.seniorPrincipalRemaining, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-muted-foreground">Withdrawal</div>
+                    <div className="text-xs uppercase text-muted-foreground">Withdrawal</div>
                     <div className="tabular text-xs">{p.vault?.instantExit ? "Instant" : "24h cooldown"}</div>
                   </div>
                 </div>

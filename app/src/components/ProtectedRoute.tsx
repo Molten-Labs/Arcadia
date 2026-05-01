@@ -39,7 +39,7 @@ export const ProtectedRoute = ({
         icon={<Wallet className="h-6 w-6" aria-hidden="true" />}
         eyebrow="Wallet required"
         title="Connect your wallet to continue"
-        description="This area is tied to your SynQ account, vault permissions, and transaction history. Connect from the top navigation, then return to this flow."
+        description="This area is tied to your Arcadia account, vault permissions, and transaction history. Connect from the top navigation, then return to this flow."
         primaryHref="/"
         primaryLabel="Go to home"
         secondaryHref="/vaults"
@@ -95,11 +95,11 @@ const AccessScreen = ({
   secondaryLabel?: string;
 }) => {
   const primary = primaryHref ? (
-    <Button asChild className="bg-gradient-ember text-white border-0">
+    <Button asChild className="bg-gradient-signal text-primary-foreground border-0">
       <Link to={primaryHref}>{primaryLabel}</Link>
     </Button>
   ) : (
-    <Button onClick={onPrimaryClick} className="bg-gradient-ember text-white border-0">
+    <Button onClick={onPrimaryClick} className="bg-gradient-signal text-primary-foreground border-0">
       <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
       {primaryLabel}
     </Button>
@@ -108,9 +108,9 @@ const AccessScreen = ({
   return (
     <Layout>
       <main className="container flex min-h-[calc(100vh-12rem)] items-center justify-center py-16">
-        <section className="surface-elevated relative w-full max-w-xl overflow-hidden rounded-3xl p-8 text-center shadow-card">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-ember" />
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
+        <section className="surface-elevated relative w-full max-w-xl overflow-hidden rounded-lg p-8 text-center shadow-card">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-signal" />
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
             {icon}
           </div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-primary">{eyebrow}</p>

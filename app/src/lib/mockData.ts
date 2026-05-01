@@ -1,4 +1,4 @@
-// Mock data for SynQ MVP — vaults, traders, performance, alerts
+// Mock data for Arcadia MVP — vaults, traders, performance, alerts
 export type VaultStatus = "paper" | "active" | "cooldown" | "frozen" | "closed";
 export type TraderTier = "novice" | "proven" | "established" | "veteran" | "elite";
 
@@ -239,7 +239,7 @@ export const traders: Trader[] = [
 export const vaults: Vault[] = [
   {
     id: "vlt-001",
-    name: "Ember Macro I",
+    name: "Signal Macro I",
     traderWallet: traders[0].wallet,
     status: "active",
     tvl: 1_240_000,
@@ -274,7 +274,7 @@ export const vaults: Vault[] = [
   },
   {
     id: "vlt-002",
-    name: "Ember Momentum II",
+    name: "Signal Momentum II",
     traderWallet: traders[0].wallet,
     status: "active",
     tvl: 2_100_000,
@@ -486,7 +486,7 @@ export const alerts: Alert[] = [
   { id: "al1", time: "2025-04-22T08:00:00Z", vaultId: "vlt-003", kind: "cooldown", title: "Reversion Alpha entered cooldown", description: "Junior health crossed 50%. Trading paused for 48h.", read: false },
   { id: "al2", time: "2025-04-22T07:00:00Z", vaultId: "vlt-005", kind: "instant_exit", title: "Instant exit available — Alt Range Pro", description: "Junior buffer below 20%. Withdrawals are instant.", read: false },
   { id: "al3", time: "2025-04-15T00:00:00Z", vaultId: "vlt-008", kind: "freeze", title: "Frozen Legacy frozen", description: "Vault frozen. Withdraw available liquidity.", read: true },
-  { id: "al4", time: "2025-04-15T11:00:00Z", vaultId: "vlt-001", kind: "fee", title: "Performance fee claimed", description: "Ember Macro I: 8,400 USDC fee claim affected NAV.", read: true },
+  { id: "al4", time: "2025-04-15T11:00:00Z", vaultId: "vlt-001", kind: "fee", title: "Performance fee claimed", description: "Signal Macro I: 8,400 USDC fee claim affected NAV.", read: true },
 ];
 
 export const protocolStats = {

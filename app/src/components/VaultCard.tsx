@@ -28,19 +28,19 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
 
       <div className="grid grid-cols-3 gap-3 py-3 border-y border-border/45">
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVL</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">TVL</div>
           <div className="tabular font-semibold text-sm mt-0.5">
             {vault.tvl > 0 ? `${fmtUSD(vault.tvl, { compact: true })} USDC` : "—"}
           </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">NAV</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">NAV</div>
           <div className="tabular font-semibold text-sm mt-0.5">
             {vault.currentNav > 0 ? `${fmtUSD(vault.currentNav, { compact: true })} USDC` : "—"}
           </div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Junior</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Junior</div>
           <div className="tabular font-semibold text-sm mt-0.5">{juniorPct}%</div>
         </div>
       </div>
@@ -48,14 +48,14 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
       <HealthMeter health={vault.juniorHealth} />
 
       <div className="flex flex-wrap gap-1.5">
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
           Fee: {vault.feeBps / 100}%
         </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
           Slippage: {vault.maxSlippageBps / 100}%
         </span>
         {vault.instantExit && (
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/12 text-primary inline-flex items-center gap-1 shadow-[0_0_16px_hsl(var(--primary)/0.12)]">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/12 text-primary inline-flex items-center gap-1 shadow-[0_0_16px_hsl(var(--primary)/0.12)]">
             <Zap className="w-2.5 h-2.5" /> Instant exit
           </span>
         )}

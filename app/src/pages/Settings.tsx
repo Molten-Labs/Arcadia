@@ -11,7 +11,7 @@ const Settings = () => {
   return (
     <Layout>
       <div className="container py-10 max-w-2xl">
-        <h1 className="font-display font-bold text-4xl mb-8">Settings</h1>
+        <h1 className="font-display type-h1 font-semibold mb-8">Settings</h1>
         <div className="space-y-6">
           <Section title="Wallet">
             <Row label="Connected address" value={<span className="font-mono text-sm">{shortAddr(address) || "Not connected"}</span>} />
@@ -45,7 +45,7 @@ const Settings = () => {
 };
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div className="surface rounded-2xl p-6">
+  <div className="surface rounded-lg p-6">
     <h2 className="font-display font-semibold mb-4">{title}</h2>{children}
   </div>
 );

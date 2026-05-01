@@ -7,7 +7,6 @@ import {
     Bell,
     Menu,
     X,
-    Orbit,
     ChevronDown,
     LogOut,
     ArrowLeftRight,
@@ -24,6 +23,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { ArcadiaLogo } from "@/components/ArcadiaLogo";
 
 export const Nav = () => {
     const {
@@ -40,21 +40,25 @@ export const Nav = () => {
     const location = useLocation();
 
     const publicLinks = [
-        { to: "/vaults", label: "Discovery" },
+        { to: "/vaults", label: "Marketplace" },
         { to: "/traders", label: "Traders" },
+        { to: "/how-it-works", label: "How it works" },
         { to: "/docs", label: "Docs" },
     ];
 
     const investorLinks = [
-        { to: "/vaults", label: "Discovery" },
+        { to: "/vaults", label: "Marketplace" },
         { to: "/portfolio", label: "Portfolio" },
+        { to: "/alerts", label: "Activity" },
         { to: "/settings", label: "Settings" },
     ];
 
     const traderLinks = [
         { to: "/manager", label: "Manager" },
         { to: "/trade", label: "Trade" },
-        { to: "/settings", label: "Settings" },
+        { to: "/manager/create", label: "Vault config" },
+        { to: "/traders", label: "Investors" },
+        { to: "/alerts", label: "Alerts" },
     ];
 
     const links = !connected
@@ -65,39 +69,40 @@ export const Nav = () => {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border/20 bg-background/40 backdrop-blur-sm shadow-sm shadow-primary/5 rounded-b-2xl">
+            <header className="sticky top-0 z-40 border-b border-border/35 bg-background/78 backdrop-blur-xl shadow-[0_1px_0_hsl(var(--foreground)/0.035)]">
                 <div className="container flex items-center justify-between h-16">
-                    <Link to="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-md bg-primary/12 flex items-center justify-center shadow-[0_0_24px_hsl(var(--primary)/0.20)] ring-1 ring-primary/18">
-                            <Orbit className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="font-display font-bold text-lg tracking-tight">
-                            Syn<span className="text-primary">Q</span>
-                        </span>
-                    </Link>
-
-                    <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
-                        {links.map((l) => {
-                            const active =
-                                location.pathname === l.to ||
-                                (l.to !== "/" &&
-                                    location.pathname.startsWith(l.to));
-                            return (
-                                <Link
-                                    key={l.to}
-                                    to={l.to}
-                                    className={cn(
-                                        "relative px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.75)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                        active
-                                            ? "text-foreground after:scale-x-100"
-                                            : "text-muted-foreground hover:text-foreground",
-                                    )}
-                                >
-                                    {l.label}
-                                </Link>
-                            );
-                        })}
-                    </nav>
+                    <div className="flex items-center gap-8">
+                        <Link to="/" className="flex items-center gap-2.5 group">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary shadow-signal ring-1 ring-primary/25">
+                                <ArcadiaLogo className="h-6 w-6" />
+                            </div>
+                            <span className="font-display font-bold text-lg tracking-tight">
+                                Arcadia
+                            </span>
+                        </Link>
+                        <nav className="hidden md:flex items-center gap-1">
+                            {links.map((l) => {
+                                const active =
+                                    location.pathname === l.to ||
+                                    (l.to !== "/" &&
+                                        location.pathname.startsWith(l.to));
+                                return (
+                                    <Link
+                                        key={l.to}
+                                        to={l.to}
+                                        className={cn(
+                                            "relative px-3 py-2 text-sm font-medium transition-[color] after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.65)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            active
+                                                ? "text-foreground after:scale-x-100"
+                                                : "text-muted-foreground hover:text-foreground",
+                                        )}
+                                    >
+                                        {l.label}
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+                    </div>
 
                     <div className="flex items-center gap-2">
                         {connected && (
@@ -114,18 +119,19 @@ export const Nav = () => {
                             </div>
                         )}
                         {connected && (
-                            <button
+                            <Link
+                                to="/alerts"
                                 aria-label="Notifications"
-                                className="hidden sm:inline-flex p-2 rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary-glow relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className="relative hidden min-h-10 min-w-10 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color] hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:inline-flex"
                             >
                                 <Bell className="w-4 h-4" />
                                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
-                            </button>
+                            </Link>
                         )}
                         {!connected ? (
                             <Button
                                 onClick={() => openWalletModal(true)}
-                                className="bg-primary text-primary-foreground hover:bg-primary-glow border-0"
+                                className="border-0 bg-primary text-primary-foreground hover:bg-primary-glow"
                             >
                                 <Wallet className="w-4 h-4 mr-2" />
                                 Connect Wallet
@@ -151,7 +157,7 @@ export const Nav = () => {
                                         <div className="font-mono text-xs">
                                             {address?.slice(0, 16)}...
                                         </div>
-                                        <div className="flex items-center gap-2 text-[11px] font-normal text-muted-foreground">
+                                        <div className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
                                             <span>
                                                 {walletName ?? "Demo wallet"}
                                             </span>
@@ -223,7 +229,7 @@ export const Nav = () => {
                             {connected && (
                                 <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-card/55 p-2 text-xs shadow-card ring-1 ring-border/35">
                                     <div>
-                                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                        <div className="text-xs uppercase tracking-wider text-muted-foreground">
                                             Network
                                         </div>
                                         <div className="mt-0.5 flex items-center gap-1.5 capitalize text-foreground">
@@ -232,7 +238,7 @@ export const Nav = () => {
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                        <div className="text-xs uppercase tracking-wider text-muted-foreground">
                                             Role
                                         </div>
                                         <div className="mt-0.5 flex items-center gap-1.5 capitalize text-foreground">
@@ -248,38 +254,34 @@ export const Nav = () => {
                                     (l.to !== "/" &&
                                         location.pathname.startsWith(l.to));
                                 return (
-                                    <button
+                                    <Link
                                         key={l.to}
-                                        onClick={() => {
-                                            setOpen(false);
-                                            window.location.href = l.to;
-                                        }}
+                                        to={l.to}
+                                        onClick={() => setOpen(false)}
                                         className={cn(
-                                            "w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                             active
                                                 ? "bg-primary/10 text-foreground"
                                                 : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                         )}
                                     >
                                         {l.label}
-                                    </button>
+                                    </Link>
                                 );
                             })}
                             {!links.some((link) => link.to === "/settings") && (
-                                <button
-                                    onClick={() => {
-                                        setOpen(false);
-                                        window.location.href = "/settings";
-                                    }}
+                                <Link
+                                    to="/settings"
+                                    onClick={() => setOpen(false)}
                                     className={cn(
-                                        "w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         location.pathname === "/settings"
                                             ? "bg-primary/10 text-foreground"
                                             : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
                                     )}
                                 >
                                     Settings
-                                </button>
+                                </Link>
                             )}
                         </div>
                     </nav>

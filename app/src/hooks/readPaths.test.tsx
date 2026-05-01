@@ -65,7 +65,7 @@ describe("backend-backed read hooks", () => {
     const { result } = renderHook(() => useVaults(), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.[0].name).toBe("Ember Macro I");
+    expect(result.current.data?.[0].name).toBe("Signal Macro I");
     expect(result.current.data?.length).toBeGreaterThan(1);
     expect(mocks.fetchAllVaults).not.toHaveBeenCalled();
   });

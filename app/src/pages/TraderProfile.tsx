@@ -49,14 +49,14 @@ const TraderProfile = () => {
         </Link>
 
         {/* Hero */}
-        <div className="surface-elevated rounded-2xl p-6 md:p-8 mb-6">
+        <div className="surface-elevated rounded-lg p-6 md:p-8 mb-6">
           <div className="flex flex-wrap gap-6 items-start">
-            <div className="w-20 h-20 rounded-full bg-gradient-ember flex items-center justify-center text-white font-display font-bold text-2xl shadow-ember shrink-0">
+            <div className="w-20 h-20 rounded-full bg-gradient-signal flex items-center justify-center text-primary-foreground font-display type-h3 font-semibold shadow-signal shrink-0">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="font-display font-bold text-3xl font-mono">{shortAddr(manager.owner)}</h1>
+                <h1 className="font-display type-h2 font-semibold font-mono">{shortAddr(manager.owner)}</h1>
                 <span className="inline-flex items-center gap-1 text-xs text-success">
                   <BadgeCheck className="w-3.5 h-3.5" /> On-chain manager
                 </span>
@@ -79,7 +79,7 @@ const TraderProfile = () => {
 
         <div className="space-y-6">
           {activeVaults.length > 0 && (
-            <div className="surface rounded-2xl p-6">
+            <div className="surface rounded-lg p-6">
               <h3 className="font-display font-semibold mb-1">Active vaults</h3>
               <p className="text-xs text-muted-foreground mb-4">{activeVaults.length} live</p>
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -89,7 +89,7 @@ const TraderProfile = () => {
           )}
 
           {pastVaults.length > 0 && (
-            <div className="surface rounded-2xl p-6">
+            <div className="surface rounded-lg p-6">
               <h3 className="font-display font-semibold mb-4">Past vaults</h3>
               <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {pastVaults.map(v => <VaultCard key={v.id} vault={v} />)}
@@ -98,7 +98,7 @@ const TraderProfile = () => {
           )}
 
           {myVaults.length === 0 && (
-            <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
+            <div className="surface rounded-lg p-10 text-center text-muted-foreground">
               This manager has no vaults yet.
             </div>
           )}

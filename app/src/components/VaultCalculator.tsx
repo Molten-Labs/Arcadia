@@ -33,14 +33,20 @@ export const VaultCalculator = () => {
 
   const { conservative, expected, optimistic, label, subtitle } = tierApy[tier];
 
-  const project = (apy: number) => {
+  const conservativeOut = useMemo(() => {
     const years = horizon / 365;
-    return deposit * Math.pow(1 + apy / 100, years);
-  };
+    return deposit * Math.pow(1 + conservative / 100, years);
+  }, [deposit, horizon, conservative]);
 
-  const conservativeOut = useMemo(() => project(conservative), [deposit, horizon, conservative]);
-  const expectedOut = useMemo(() => project(expected), [deposit, horizon, expected]);
-  const optimisticOut = useMemo(() => project(optimistic), [deposit, horizon, optimistic]);
+  const expectedOut = useMemo(() => {
+    const years = horizon / 365;
+    return deposit * Math.pow(1 + expected / 100, years);
+  }, [deposit, horizon, expected]);
+
+  const optimisticOut = useMemo(() => {
+    const years = horizon / 365;
+    return deposit * Math.pow(1 + optimistic / 100, years);
+  }, [deposit, horizon, optimistic]);
 
   return (
     <section id="calculator" className="container py-20 scroll-mt-20">
@@ -48,15 +54,15 @@ export const VaultCalculator = () => {
         <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
           Returns calculator
         </div>
-        <h2 className="font-display font-bold text-4xl md:text-5xl">
-          Project your <span className="text-gradient-ember">expected returns</span>
+        <h2 className="font-display type-h2 font-semibold">
+          Project your <span className="text-gradient-signal">expected returns</span>
         </h2>
         <p className="text-muted-foreground mt-3">
           Risk-adjusted projections based on historical performance by trader tier.
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-2 rounded-2xl overflow-hidden border border-border">
+      <div className="grid lg:grid-cols-2 rounded-lg overflow-hidden border border-border">
         {/* LEFT - inputs */}
         <div className="bg-card p-8 lg:p-10 space-y-8 divide-y divide-border">
           {/* Deposit */}
@@ -65,10 +71,10 @@ export const VaultCalculator = () => {
               <h3 className="font-display font-semibold flex items-center gap-2">
                 <Calculator className="w-4 h-4 text-primary" /> Deposit amount
               </h3>
-              <span className="font-display font-bold text-2xl text-primary tabular">${fmtUSD(deposit)}</span>
+              <span className="font-display type-h3 font-semibold text-primary tabular">${fmtUSD(deposit)}</span>
             </div>
             <Slider value={[deposit]} onValueChange={([v]) => setDeposit(v)} min={500} max={250_000} step={500} />
-            <div className="flex justify-between text-[11px] text-muted-foreground mt-2 tabular">
+            <div className="flex justify-between text-xs text-muted-foreground mt-2 tabular">
               <span>$500</span><span>$250k</span>
             </div>
             <div className="flex gap-2 mt-3">
@@ -94,7 +100,7 @@ export const VaultCalculator = () => {
                 <button
                   key={h}
                   onClick={() => setHorizon(h)}
-                  className={`py-3 rounded-xl border text-sm transition-colors ${
+                  className={`py-3 rounded-lg border text-sm transition-colors ${
                     horizon === h ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary hover:bg-accent"
                   }`}
                 >
@@ -114,7 +120,7 @@ export const VaultCalculator = () => {
                   <button
                     key={t}
                     onClick={() => setTier(t)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-colors ${
+                    className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-colors ${
                       tier === t ? "border-primary bg-primary/5" : "border-border hover:bg-secondary"
                     }`}
                   >
@@ -143,31 +149,31 @@ export const VaultCalculator = () => {
           </p>
 
           {/* Conservative */}
-          <div className="surface rounded-2xl p-6 space-y-2">
+          <div className="surface rounded-lg p-6 space-y-2">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Conservative case</div>
-            <div className="font-display font-bold text-3xl tabular">${fmtUSD(conservativeOut, { decimals: 0 })}</div>
+            <div className="font-display type-h2 font-semibold tabular">${fmtUSD(conservativeOut, { decimals: 0 })}</div>
             <div className="text-xs text-muted-foreground">+ ${fmtUSD(conservativeOut - deposit, { decimals: 0 })} at {conservative}% APY</div>
           </div>
 
           {/* Expected */}
-          <div className="rounded-2xl p-6 space-y-2 bg-gradient-ember text-white shadow-ember relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-            <div className="text-xs uppercase tracking-wider text-white/80 relative">Expected case</div>
-            <div className="font-display font-bold text-5xl tabular relative">${fmtUSD(expectedOut, { decimals: 0 })}</div>
-            <div className="text-sm text-white/90 relative">+ ${fmtUSD(expectedOut - deposit, { decimals: 0 })} at {expected}% APY</div>
+          <div className="rounded-lg p-6 space-y-2 bg-gradient-signal text-primary-foreground shadow-signal relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
+            <div className="text-xs uppercase tracking-wider text-primary-foreground/80 relative">Expected case</div>
+            <div className="font-display type-h1 font-semibold tabular relative">${fmtUSD(expectedOut, { decimals: 0 })}</div>
+            <div className="text-sm text-primary-foreground/90 relative">+ ${fmtUSD(expectedOut - deposit, { decimals: 0 })} at {expected}% APY</div>
           </div>
 
           {/* Optimistic */}
-          <div className="surface rounded-2xl p-6 space-y-2">
+          <div className="surface rounded-lg p-6 space-y-2">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Optimistic case</div>
-            <div className="font-display font-bold text-3xl tabular">${fmtUSD(optimisticOut, { decimals: 0 })}</div>
+            <div className="font-display type-h2 font-semibold tabular">${fmtUSD(optimisticOut, { decimals: 0 })}</div>
             <div className="text-xs text-muted-foreground">+ ${fmtUSD(optimisticOut - deposit, { decimals: 0 })} at {optimistic}% APY</div>
           </div>
 
-          <Button asChild size="lg" className="w-full bg-gradient-ember text-white border-0 mt-4">
+          <Button asChild size="lg" className="w-full bg-gradient-signal text-primary-foreground border-0 mt-4">
             <Link to="/vaults">Browse {label.split(" ")[0].toLowerCase()} vaults <ArrowRight className="w-4 h-4 ml-2" /></Link>
           </Button>
-          <p className="text-[11px] text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground text-center">
             Returns are net of performance fees (15–20% above HWM). Junior buffer absorbs losses before any senior capital.
           </p>
         </div>

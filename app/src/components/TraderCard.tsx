@@ -10,10 +10,10 @@ export const TraderCard = ({ manager }: { manager: ManagerView }) => {
   return (
     <Link
       to={`/trader/${manager.owner}`}
-      className="group surface rounded-2xl p-5 shadow-card hover:border-border-strong hover:bg-card-elevated transition-colors flex flex-col gap-4"
+      className="group surface rounded-lg p-5 shadow-card hover:border-border-strong hover:bg-card-elevated transition-colors flex flex-col gap-4"
     >
       <div className="flex items-start gap-3">
-        <div className="w-12 h-12 rounded-full bg-gradient-ember flex items-center justify-center text-white font-display font-bold text-lg shrink-0 shadow-ember">
+        <div className="w-12 h-12 rounded-full bg-gradient-signal flex items-center justify-center text-primary-foreground font-display font-bold text-lg shrink-0 shadow-signal">
           {initials}
         </div>
         <div className="min-w-0 flex-1">
@@ -28,15 +28,15 @@ export const TraderCard = ({ manager }: { manager: ManagerView }) => {
 
       <div className="grid grid-cols-3 gap-3 py-3 border-y border-border">
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Vaults</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Vaults</div>
           <div className="tabular font-semibold text-sm mt-0.5">{manager.totalVaults}</div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Active</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Active</div>
           <div className="tabular font-semibold text-sm mt-0.5">{manager.activeVaults}</div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Junior</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Junior</div>
           <div className="tabular font-semibold text-sm mt-0.5">{fmtUSD(manager.totalJuniorDeposited, { compact: true })} USDC</div>
         </div>
       </div>

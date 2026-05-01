@@ -178,7 +178,7 @@ describe("useKilnTransactions", () => {
 
     ix = await invoke(() =>
       result.current.createVault({
-        name: "Kiln Test",
+        name: "Arcadia Test",
         feeBps: 2_000,
         maxSlippageBps: 50,
         paperWindowSecs: 86_400,

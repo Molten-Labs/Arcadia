@@ -104,10 +104,10 @@ export function usePositions() {
         if (api) return api.items.map(normalizeApiPosition);
       } catch (error) {
         if (!connection || !vaults) throw error;
-        console.warn("Kiln API unavailable; falling back to direct RPC position reads.", error);
+        console.warn("Arcadia API unavailable; falling back to direct RPC position reads.", error);
       }
 
-      if (!connection || !vaults) throw new Error("No connection or Kiln API configured");
+      if (!connection || !vaults) throw new Error("No connection or Arcadia API configured");
       const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
         filters: [
           { memcmp: { offset: 0, bytes: bs58.encode(Buffer.from([INVESTOR_POSITION_DISC])) } },

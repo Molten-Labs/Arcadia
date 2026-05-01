@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Orbit } from "lucide-react";
+import { ArcadiaLogo } from "@/components/ArcadiaLogo";
 
 type FooterLink = { to: string; label: string };
 
@@ -8,10 +8,10 @@ export const Footer = () => (
     <div className="container py-12 grid grid-cols-2 md:grid-cols-5 gap-8">
       <div className="col-span-2">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-lg bg-gradient-ember flex items-center justify-center">
-            <Orbit className="w-3.5 h-3.5 text-white" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary ring-1 ring-primary/25">
+            <ArcadiaLogo className="h-5 w-5" />
           </div>
-          <span className="font-display font-bold">SynQ</span>
+          <span className="font-display font-bold">Arcadia</span>
         </div>
         <p className="text-sm text-muted-foreground max-w-sm">
           Managed vaults with real skin in the game. Traders prove themselves on-chain before they touch your capital.
@@ -42,7 +42,7 @@ export const Footer = () => (
     </div>
     <div className="border-t border-border">
       <div className="container py-6 flex flex-col md:flex-row gap-3 justify-between text-xs text-muted-foreground">
-        <span>© 2025 SynQ Labs. Non-custodial. Use at your own risk.</span>
+        <span>© 2025 Arcadia Labs. Non-custodial. Use at your own risk.</span>
         <span>All performance figures are historical and do not guarantee future results.</span>
       </div>
     </div>

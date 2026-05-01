@@ -10,7 +10,7 @@ const Alerts = () => {
     <Layout>
       <div className="container py-10">
         <div className="mb-8">
-          <h1 className="font-display font-bold text-4xl">Alerts</h1>
+          <h1 className="font-display type-h1 font-semibold">Alerts</h1>
           <p className="text-muted-foreground mt-2">
             Real-time notifications for your vault positions.
           </p>

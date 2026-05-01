@@ -1,15 +1,10 @@
 import React from "react";
 import { CandlestickChart } from "./CandlestickChart";
-import { OrderBook } from "./OrderBook";
-import { StatusBadge } from "./StatusBadge";
-import { TierBadge } from "./TierBadge";
-import { HealthMeter } from "./HealthMeter";
 import { fmtUSD, fmtPct } from "@/lib/format";
 import { motion } from "framer-motion";
-import { TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 const previewVault = {
-  name: "Ember Macro I",
+  name: "Signal Macro I",
   status: "active" as const,
   tvl: 1_240_000,
   return30d: 6.2,
@@ -53,7 +48,7 @@ export const TradingDashboardPreview = () => {
       {/* glow */}
       <div className="absolute -inset-x-20 -top-20 h-64 bg-primary/15 blur-3xl rounded-full pointer-events-none" />
 
-      <div className="surface-elevated rounded-2xl shadow-card overflow-hidden relative">
+      <div className="surface-elevated rounded-lg shadow-card overflow-hidden relative">
         {/* fake browser chrome */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-background-secondary/60">
           <div className="flex gap-1.5">
@@ -62,14 +57,14 @@ export const TradingDashboardPreview = () => {
             <span className="w-2.5 h-2.5 rounded-full bg-success/70" />
           </div>
           <div className="flex-1 mx-3">
-            <div className="bg-background rounded-md px-3 py-1 text-[11px] font-mono text-muted-foreground inline-flex items-center gap-1">
-              <span className="text-success">●</span> synq.fi/vault/ember-macro-i
+            <div className="bg-background rounded-md px-3 py-1 text-xs font-mono text-muted-foreground inline-flex items-center gap-1">
+              <span className="text-success">●</span> arcadia.fi/vault/signal-macro-i
             </div>
           </div>
         </div>
 
         <div className="grid lg:grid-cols-[1fr_310px] gap-0">
-          {/* Main - Synq chart section */}
+          {/* Main - Arcadia chart section */}
           <div className="chart-sec">
             <div className="chart-hdr">
               <div>
@@ -99,7 +94,7 @@ export const TradingDashboardPreview = () => {
             </div>
           </div>
 
-          {/* Side: Synq-style right panel - vault hero, limits, feed */}
+          {/* Side: Arcadia-style right panel - vault hero, limits, feed */}
           <div className="rp">
             {/* Vault hero section */}
             <div className="vh">
@@ -132,7 +127,7 @@ export const TradingDashboardPreview = () => {
             <div className="lim-sec">
               <div className="sec-title">POSITION LIMITS</div>
               <div className="gauge-t">
-                <div className="gauge-f" style={{ width: "100%", background: "hsl(142, 71%, 45%)" }} />
+                <div className="gauge-f" style={{ width: "100%", background: "hsl(var(--success))" }} />
               </div>
               <div className="lrow">
                 <span className="lk">Max position</span>
@@ -152,7 +147,7 @@ export const TradingDashboardPreview = () => {
               </div>
             </div>
 
-            {/* Trade feed - Synq style */}
+            {/* Trade feed - Arcadia style */}
             <div className="feed-sec">
               <div className="feed-hdr">
                 <div className="feed-title">TRADE FEED</div>
@@ -160,11 +155,11 @@ export const TradingDashboardPreview = () => {
               </div>
               <div className="feed-list">
                 {[
-                  { pair: "AUDD → SOL", pnl: 24.3, t: "14:32:11" },
-                  { pair: "SOL → AUDD", pnl: 11.8, t: "12:15:44" },
-                  { pair: "AUDD → JUP", pnl: -8.9, t: "11:03:22" },
-                  { pair: "AUDD → SOL", pnl: 31.2, t: "09:47:05" },
-                  { pair: "JUP → AUDD", pnl: 4.1, t: "08:22:33" },
+                  { pair: "USDC → SOL", pnl: 24.3, t: "14:32:11" },
+                  { pair: "SOL → USDC", pnl: 11.8, t: "12:15:44" },
+                  { pair: "USDC → SOL", pnl: -8.9, t: "11:03:22" },
+                  { pair: "USDC → SOL", pnl: 31.2, t: "09:47:05" },
+                  { pair: "SOL → USDC", pnl: 4.1, t: "08:22:33" },
                 ].map((t, i) => (
                   <motion.div
                     key={i}
@@ -192,7 +187,7 @@ export const TradingDashboardPreview = () => {
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+    <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
     <div className="font-display font-semibold text-sm mt-0.5 tabular">{value}</div>
   </div>
 );

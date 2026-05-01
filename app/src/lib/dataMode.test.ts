@@ -23,7 +23,7 @@ describe("data mode", () => {
   });
 
   it("defaults to real mode when an API URL is configured", () => {
-    vi.stubEnv("VITE_KILN_API_URL", "https://api.synq.test");
+    vi.stubEnv("VITE_KILN_API_URL", "https://api.arcadia.test");
 
     expect(getDefaultDataMode()).toBe("real");
   });

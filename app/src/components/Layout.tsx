@@ -13,7 +13,7 @@ export const Layout = ({
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/30 selection:text-foreground">
         <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
             <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)/0.58)_48%,hsl(var(--background)))]" />
-            <div className="absolute inset-0 rax-glow opacity-70" />
+            <div className="absolute inset-0 arcadia-glow opacity-70" />
             <div className="absolute inset-0 hairline-grid opacity-[0.16]" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
         </div>
@@ -37,7 +37,7 @@ const DemoDisclosure = () => (
                         Frontend preview:
                     </strong>{" "}
                     wallet sessions, market data, vault actions, and
-                    transactions are deterministic SynQ demo flows until production
+                    transactions are deterministic Arcadia demo flows until production
                     Solana adapters are connected.
                 </span>
             </div>

@@ -21,12 +21,12 @@ export const OrderBook = ({ mid = 184.2 }: { mid?: number }) => {
   const maxTotal = Math.max(...bids.map(b => b.total), ...asks.map(a => a.total));
 
   return (
-    <div className="surface rounded-xl p-4 font-mono text-[11px]">
+    <div className="surface rounded-lg p-4 font-mono text-xs">
       <div className="flex items-center justify-between mb-2">
         <h3 className="font-display font-semibold text-sm">Order book</h3>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">SOL/USDC</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">SOL/USDC</span>
       </div>
-      <div className="grid grid-cols-3 text-[10px] text-muted-foreground uppercase tracking-wider pb-1.5 border-b border-border">
+      <div className="grid grid-cols-3 text-xs text-muted-foreground uppercase tracking-wider pb-1.5 border-b border-border">
         <div>Price</div>
         <div className="text-right">Size</div>
         <div className="text-right">Total</div>
@@ -40,7 +40,7 @@ export const OrderBook = ({ mid = 184.2 }: { mid?: number }) => {
       {/* Mid price */}
       <div className="text-center py-2 border-y border-border tabular">
         <span className="text-success text-base font-semibold">${mid.toFixed(2)}</span>
-        <span className="text-[10px] text-muted-foreground ml-2">↑ 0.42%</span>
+        <span className="text-xs text-muted-foreground ml-2">↑ 0.42%</span>
       </div>
       {/* Bids */}
       <div className="py-1">

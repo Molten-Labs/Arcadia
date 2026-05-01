@@ -10,9 +10,9 @@ const buttonVariants = cva(
         variants: {
             variant: {
                 default:
-                    "border-0 bg-primary text-primary-foreground shadow-ember hover:bg-primary-glow hover:shadow-primary/30",
+                    "border-0 bg-primary text-primary-foreground shadow-signal hover:bg-primary-glow hover:shadow-primary/30",
                 gradient:
-                    "border-0 bg-gradient-ember text-white shadow-ember hover:opacity-95 hover:shadow-primary/30",
+                    "border-0 bg-gradient-signal text-primary-foreground shadow-signal hover:opacity-95 hover:shadow-primary/30",
                 premium:
                     "border border-primary/20 bg-primary/10 text-primary shadow-card hover:border-primary/35 hover:bg-primary/15 hover:text-primary-glow",
                 destructive:
@@ -23,7 +23,7 @@ const buttonVariants = cva(
                     "border border-border/45 bg-card/35 shadow-card backdrop-blur hover:border-primary/30 hover:bg-primary/10 hover:text-primary-glow",
                 secondary:
                     "bg-secondary/70 text-secondary-foreground shadow-card hover:bg-secondary",
-                glass: "border border-white/[0.07] bg-white/[0.035] text-foreground shadow-card backdrop-blur-xl hover:border-primary/25 hover:bg-primary/[0.08]",
+                glass: "border border-border/55 bg-card/35 text-foreground shadow-card backdrop-blur-xl hover:border-primary/25 hover:bg-primary/[0.08]",
                 terminal:
                     "border border-border/45 bg-background-secondary/80 text-foreground font-mono shadow-card hover:border-primary/35 hover:bg-secondary/80",
                 tradeBuy:

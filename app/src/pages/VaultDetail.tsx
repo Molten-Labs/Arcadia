@@ -17,11 +17,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import { fmtUSD } from "@/lib/format";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { OrderBook } from "@/components/OrderBook";
@@ -117,39 +112,12 @@ const VaultDetail = () => {
                 <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3 mb-2">
-                            <h1 className="font-display font-bold text-3xl md:text-4xl">{vault.name}</h1>
+                            <h1 className="font-display type-h1 font-semibold">{vault.name}</h1>
                             <StatusBadge status={vault.status} />
                             {vault.instantExit && (
                                 <span className="inline-flex items-center gap-1.5 text-xs text-primary bg-primary/10 border border-primary/30 px-2.5 py-1 rounded-full">
                                     <Zap className="w-3 h-3" /> Instant exit
                                 </span>
-                            )}
-                            {connected && role === "investor" && (
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <button className="inline-flex items-center justify-center w-9 h-9 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" aria-label="Alert preferences">
-                                            <Bell className="w-4 h-4" />
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-56">
-                                        <div className="space-y-3">
-                                            <div>
-                                                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                                                    <Bell className="w-4 h-4" /> Alert Preferences
-                                                </h4>
-                                                <p className="text-xs text-muted-foreground mb-3">Get notified when:</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {["Junior health drops below threshold", "Vault enters cooldown", "Vault frozen", "Performance fee claimed"].map(a => (
-                                                    <label key={a} className="flex items-start gap-2 text-xs cursor-pointer">
-                                                        <input type="checkbox" defaultChecked className="mt-0.5 accent-primary" />
-                                                        <span className="text-foreground/80">{a}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
                             )}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -188,18 +156,18 @@ const VaultDetail = () => {
                     {/* Left column */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Capital stack */}
-                        <div className="surface rounded-2xl p-6">
+                        <div className="surface rounded-lg p-6">
                             <CapitalStack junior={vault.juniorCapital} senior={vault.seniorCapital} health={vault.juniorHealth} />
                         </div>
 
                         {/* Live trading view */}
-                        <div className="surface rounded-2xl p-6">
+                        <div className="surface rounded-lg p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <h3 className="font-display font-semibold">Live trading view</h3>
                                     <p className="text-xs text-muted-foreground mt-0.5">SOL/USDC</p>
                                 </div>
-                                <div className="flex gap-1 text-[11px]">
+                                <div className="flex gap-1 text-xs">
                                     {LIVE_VIEW_RANGES.map(r => (
                                         <button
                                             key={r}
@@ -219,7 +187,7 @@ const VaultDetail = () => {
                         </div>
 
                         {/* Risk & rules */}
-                        <div className="surface rounded-2xl p-6">
+                        <div className="surface rounded-lg p-6">
                             <h3 className="font-display font-semibold mb-4">Risk & rules</h3>
                             <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                                 <Row label="Paper mode" value={vault.status === "paper" ? "In progress" : "Completed"} />
@@ -237,7 +205,7 @@ const VaultDetail = () => {
                     {/* Right column — sticky */}
                     <div className="space-y-6 lg:sticky lg:top-24 self-start">
                         {/* Health card */}
-                        <div className="surface rounded-2xl p-6">
+                        <div className="surface rounded-lg p-6">
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="font-display font-semibold">Junior health</h3>
                                 <TooltipProvider>
@@ -255,7 +223,7 @@ const VaultDetail = () => {
                             </div>
                             <div className="text-4xl font-display font-bold tabular mb-3">{vault.juniorHealth}%</div>
                             <HealthMeter health={vault.juniorHealth} size="lg" showLabel={false} />
-                            <div className="grid grid-cols-3 gap-2 mt-4 text-[10px] text-muted-foreground">
+                            <div className="grid grid-cols-3 gap-2 mt-4 text-xs text-muted-foreground">
                                 <div><div className="w-full h-0.5 bg-status-frozen mb-1" />Critical &lt;20%</div>
                                 <div><div className="w-full h-0.5 bg-status-cooldown mb-1" />Caution &lt;50%</div>
                                 <div><div className="w-full h-0.5 bg-status-active mb-1" />Healthy</div>
@@ -263,7 +231,7 @@ const VaultDetail = () => {
                         </div>
 
                         {/* Deposit / Withdraw */}
-                        <div className="surface-elevated rounded-2xl p-6">
+                        <div className="surface-elevated rounded-lg p-6">
                             <h3 className="font-display font-semibold mb-1">Deposit USDC</h3>
                             <p className="text-xs text-muted-foreground mb-4">24h withdrawal cooldown · instant if junior &lt; 20%</p>
 
@@ -316,7 +284,7 @@ const VaultDetail = () => {
                                     <Button
                                         onClick={handleDeposit}
                                         disabled={sending || !hasValidAmount}
-                                        className="w-full mt-4 bg-gradient-ember text-white border-0 h-11"
+                                        className="w-full mt-4 bg-gradient-signal text-primary-foreground border-0 h-11"
                                     >
                                         {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                                         Deposit USDC
@@ -333,6 +301,22 @@ const VaultDetail = () => {
                             )}
                         </div>
 
+                        {/* Alerts */}
+                        {connected && role === "investor" && (
+                            <div className="surface rounded-lg p-6">
+                                <h3 className="font-display font-semibold flex items-center gap-2 mb-3">
+                                    <Bell className="w-4 h-4" /> Alerts
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    {["Junior health drops below threshold", "Vault enters cooldown", "Vault frozen", "Performance fee claimed"].map(a => (
+                                        <label key={a} className="flex items-start gap-2 text-xs cursor-pointer">
+                                            <input type="checkbox" defaultChecked className="mt-0.5 accent-primary" />
+                                            <span className="text-foreground/80">{a}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

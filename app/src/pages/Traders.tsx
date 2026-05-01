@@ -26,7 +26,7 @@ const Traders = () => {
     <Layout>
       <div className="container py-10">
         <div className="mb-8">
-          <h1 className="font-display font-bold text-4xl">SynQ traders</h1>
+          <h1 className="font-display type-h1 font-semibold">Arcadia traders</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">Discover managers who earned investor trust on-chain. Compare track records and vault performance.</p>
         </div>
 
@@ -48,11 +48,11 @@ const Traders = () => {
           </div>
 
           {isLoading ? (
-            <div className="surface rounded-2xl p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <div className="surface rounded-lg p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Loading managers...
             </div>
           ) : filtered.length === 0 ? (
-            <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
+            <div className="surface rounded-lg p-10 text-center text-muted-foreground">
               {allManagers.length === 0
                 ? "No managers found on-chain yet."
                 : "No managers match your search."}

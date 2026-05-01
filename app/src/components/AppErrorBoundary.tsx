@@ -55,7 +55,7 @@ export class AppErrorBoundary extends Component<
         this.props.onError?.(error, errorInfo, errorId);
 
         if (import.meta.env.DEV) {
-            console.groupCollapsed(`[Kiln ErrorBoundary] ${errorId}`);
+            console.groupCollapsed(`[Arcadia ErrorBoundary] ${errorId}`);
             console.error(error);
             console.error(errorInfo.componentStack);
             console.groupEnd();
@@ -89,10 +89,10 @@ export class AppErrorBoundary extends Component<
                     <section
                         role="alert"
                         aria-live="assertive"
-                        className="surface-elevated relative w-full max-w-xl overflow-hidden rounded-3xl p-8 text-center shadow-card"
+                        className="surface-elevated relative w-full max-w-xl overflow-hidden rounded-lg p-8 text-center shadow-card"
                     >
-                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-ember" />
-                        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-destructive/30 bg-destructive/10">
+                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-signal" />
+                        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/10">
                             <AlertTriangle
                                 className="h-8 w-8 text-destructive"
                                 aria-hidden="true"
@@ -100,7 +100,7 @@ export class AppErrorBoundary extends Component<
                         </div>
 
                         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                            SynQ safety stop
+                            Arcadia safety stop
                         </p>
                         <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
                             Something unexpected happened
@@ -111,7 +111,7 @@ export class AppErrorBoundary extends Component<
                             are not affected.
                         </p>
 
-                        <div className="mt-6 rounded-2xl border border-border bg-background-secondary/60 p-4 text-left">
+                        <div className="mt-6 rounded-lg border border-border bg-background-secondary/60 p-4 text-left">
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
                                     Error reference
@@ -131,7 +131,7 @@ export class AppErrorBoundary extends Component<
                         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
                             <Button
                                 onClick={this.reset}
-                                className="bg-gradient-ember text-white border-0"
+                                className="bg-gradient-signal text-primary-foreground border-0"
                             >
                                 <RefreshCcw
                                     className="h-4 w-4"

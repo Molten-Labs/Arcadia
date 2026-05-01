@@ -30,7 +30,7 @@ const queryClient = new QueryClient();
 const RouteFallback = () => (
     <div className="min-h-screen bg-background">
         <div className="container py-16">
-            <div className="surface rounded-2xl p-8 text-center text-sm text-muted-foreground">
+            <div className="surface rounded-lg p-8 text-center text-sm text-muted-foreground">
                 Loading route…
             </div>
         </div>

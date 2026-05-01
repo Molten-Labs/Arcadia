@@ -1,15 +1,30 @@
-# Brand — Kiln
+# Brand — Arcadia
 
-_Status: deferred_
+_Status: active_
 
-The user chose to defer brand setup. This project is currently using shadcn's default neutral palette and no custom typography. The `frontend-design-guidelines` skill will quietly use defaults and will not prompt again.
+Arcadia is a dark institutional-fintech interface for proof-gated Solana vaults. Traders earn allocation only after proving performance with first-loss capital; investors see risk buffers before depositing.
 
-To set up a real brand palette, typography, and voice at any time, run:
+## Palette
 
-    /brand-design
+- Background primary: `#050816`
+- Background secondary: `#0B1120`
+- Surface: `#111827`
+- Surface elevated: `#17171D`
+- Signal primary: `#00FFB2`
+- Signal hover: `#5FFFC0`
+- Signal deep: `#16C784`
+- Text primary: `#F5F7FA`
+- Text secondary: `#B0B0B0`
+- Text muted: `#7C7C84`
+- Danger: `#FF4D6D`
+- Warning: `#C8A75B`
 
-or say: "pick brand colors"
+## Typography
 
-When `brand-design` runs, it will detect this deferred state, skip the "confirm overwrite" step, and proceed directly to the full brand setup. The resulting palette will be applied to `app/globals.css` and this file will be replaced with the real brand documentation.
+- Display and hero: `Outfit`
+- UI/body: `Poppins`
+- Numbers and operational labels: `IBM Plex Mono`
 
-_Deferred at: 2026-04-24T00:00:00Z_
+## Voice
+
+Precise, calm, and risk-aware. Prefer concrete language about proof, allocation, vaults, buffers, and non-custodial control. Avoid hype.

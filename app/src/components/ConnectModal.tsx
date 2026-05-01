@@ -37,25 +37,25 @@ type Step = "role" | "network" | "wallet" | "connecting" | "success" | "error";
 const wallets = [
     {
         name: "Phantom",
-        color: "from-purple-500 to-purple-700",
+        tone: "bg-primary/12 text-primary ring-1 ring-primary/25",
         detected: true,
         recommended: true,
     },
     {
         name: "Solflare",
-        color: "from-orange-500 to-yellow-600",
+        tone: "bg-warning/12 text-warning ring-1 ring-warning/25",
         detected: true,
         recommended: false,
     },
     {
         name: "Backpack",
-        color: "from-red-500 to-pink-600",
+        tone: "bg-destructive/12 text-destructive ring-1 ring-destructive/25",
         detected: false,
         recommended: false,
     },
     {
         name: "Demo Wallet",
-        color: "from-primary to-primary-glow",
+        tone: "bg-primary/12 text-primary ring-1 ring-primary/25",
         detected: true,
         recommended: false,
         demo: true,
@@ -178,7 +178,7 @@ export const ConnectModal = ({
                             <motion.div key="role" {...fade}>
                                 <DialogHeader>
                                     <DialogTitle className="font-display text-2xl">
-                                        How will you use SynQ?
+                                        How will you use Arcadia?
                                     </DialogTitle>
                                     <DialogDescription>
                                         Pick the experience that fits you. You
@@ -291,23 +291,23 @@ export const ConnectModal = ({
                                             onClick={() =>
                                                 handleConnect(w.name)
                                             }
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left group"
+                                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left group"
                                         >
                                             <div
-                                                className={`w-10 h-10 rounded-lg bg-gradient-to-br ${w.color} flex items-center justify-center shrink-0`}
+                                                className={`w-10 h-10 rounded-lg ${w.tone} flex items-center justify-center shrink-0`}
                                             >
-                                                <Wallet className="w-5 h-5 text-white" />
+                                                <Wallet className="w-5 h-5" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="font-medium flex items-center gap-2">
                                                     {w.name}
                                                     {w.recommended && (
-                                                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                                                        <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
                                                             Recommended
                                                         </span>
                                                     )}
                                                     {w.demo && (
-                                                        <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-info/15 text-info">
+                                                        <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-info/15 text-info">
                                                             Demo
                                                         </span>
                                                     )}
@@ -333,7 +333,7 @@ export const ConnectModal = ({
                                     </SecondaryButton>
                                 </div>
                                 <InfoNote>
-                                    SynQ never custodies funds. This build uses
+                                    Arcadia never custodies funds. This build uses
                                     transparent demo wallet sessions until a
                                     production Solana wallet adapter is
                                     connected.
@@ -349,8 +349,8 @@ export const ConnectModal = ({
                             >
                                 <div className="relative w-16 h-16 mx-auto mb-5">
                                     <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse-glow" />
-                                    <div className="absolute inset-2 rounded-full bg-gradient-ember flex items-center justify-center">
-                                        <Loader2 className="w-7 h-7 text-white animate-spin" />
+                                    <div className="absolute inset-2 rounded-full bg-gradient-signal flex items-center justify-center">
+                                        <Loader2 className="w-7 h-7 text-primary-foreground animate-spin" />
                                     </div>
                                 </div>
                                 <DialogTitle className="font-display text-xl">
@@ -423,7 +423,7 @@ export const ConnectModal = ({
                                     </DialogDescription>
                                 </div>
 
-                                <div className="mt-5 surface rounded-xl p-4 space-y-3">
+                                <div className="mt-5 surface rounded-lg p-4 space-y-3">
                                     <Detail label="Address">
                                         <div className="flex items-center gap-1.5 font-mono text-sm">
                                             {shortAddr(address)}
@@ -532,7 +532,7 @@ const StepBar = ({ current }: { current: Step }) => {
                     <div
                         className={cn(
                             "h-full transition-[width] duration-500",
-                            i <= idx ? "bg-gradient-ember w-full" : "w-0",
+                            i <= idx ? "bg-gradient-signal w-full" : "w-0",
                         )}
                     />
                 </div>
@@ -549,7 +549,7 @@ const PrimaryButton = ({
     <button
         {...rest}
         className={cn(
-            "flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-gradient-ember text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed",
+            "flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gradient-signal text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed",
             className,
         )}
     >
@@ -565,7 +565,7 @@ const SecondaryButton = ({
     <button
         {...rest}
         className={cn(
-            "inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-border bg-secondary/40 text-foreground font-medium hover:border-border-strong hover:bg-secondary transition-colors",
+            "inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border border-border bg-secondary/40 text-foreground font-medium hover:border-border-strong hover:bg-secondary transition-colors",
             className,
         )}
     >
@@ -626,27 +626,27 @@ const RoleCard = ({
     <button
         onClick={onClick}
         className={cn(
-            "text-left p-4 rounded-xl border transition-colors relative overflow-hidden",
+            "text-left p-4 rounded-lg border transition-colors relative overflow-hidden",
             selected
-                ? "border-primary bg-primary/5 shadow-ember"
+                ? "border-primary bg-primary/5 shadow-signal"
                 : "border-border hover:border-border-strong bg-card/50",
         )}
     >
         {selected && (
             <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" />
+                <Check className="w-3 h-3 text-primary-foreground" />
             </div>
         )}
         <div
             className={cn(
                 "w-9 h-9 rounded-lg flex items-center justify-center mb-3",
-                selected ? "bg-gradient-ember" : "bg-secondary",
+                selected ? "bg-gradient-signal" : "bg-secondary",
             )}
         >
             <Icon
                 className={cn(
                     "w-4 h-4",
-                    selected ? "text-white" : "text-primary",
+                    selected ? "text-primary-foreground" : "text-primary",
                 )}
             />
         </div>
@@ -656,7 +656,7 @@ const RoleCard = ({
             {bullets.map((b) => (
                 <li
                     key={b}
-                    className="text-[11px] text-muted-foreground flex items-start gap-1.5"
+                    className="text-xs text-muted-foreground flex items-start gap-1.5"
                 >
                     <span className="w-1 h-1 rounded-full bg-primary mt-1.5" />{" "}
                     {b}
@@ -684,34 +684,34 @@ const NetworkCard = ({
     <button
         onClick={onClick}
         className={cn(
-            "text-left p-4 rounded-xl border transition-colors relative",
+            "text-left p-4 rounded-lg border transition-colors relative",
             selected
-                ? "border-primary bg-primary/5 shadow-ember"
+                ? "border-primary bg-primary/5 shadow-signal"
                 : "border-border hover:border-border-strong bg-card/50",
         )}
     >
         {selected && (
             <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                <Check className="w-3 h-3 text-white" />
+                <Check className="w-3 h-3 text-primary-foreground" />
             </div>
         )}
         <div className="flex items-center gap-2 mb-2">
             <div
                 className={cn(
                     "w-9 h-9 rounded-lg flex items-center justify-center",
-                    selected ? "bg-gradient-ember" : "bg-secondary",
+                    selected ? "bg-gradient-signal" : "bg-secondary",
                 )}
             >
                 <Globe
                     className={cn(
                         "w-4 h-4",
-                        selected ? "text-white" : "text-primary",
+                        selected ? "text-primary-foreground" : "text-primary",
                     )}
                 />
             </div>
             <span
                 className={cn(
-                    "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded",
+                    "text-xs uppercase tracking-wider px-1.5 py-0.5 rounded",
                     badgeTone === "success"
                         ? "bg-success/15 text-success"
                         : "bg-info/15 text-info",

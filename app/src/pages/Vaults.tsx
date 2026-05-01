@@ -89,20 +89,15 @@ const Vaults = () => {
 
   return (
     <Layout>
-      <div className="bg-gradient-to-b from-primary/5 via-transparent to-transparent">
-        <div className="container py-16">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor marketplace</div>
-              <h1 className="font-display font-bold text-4xl">SynQ graduated vaults</h1>
-              <p className="text-muted-foreground mt-2">Discover trader vaults backed by first-loss junior capital.</p>
-            </div>
-            <DataModeToggle compact />
-          </div>
-        </div>
-      </div>
-
       <div className="container py-10">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor marketplace</div>
+            <h1 className="font-display type-h1 font-semibold">Arcadia graduated vaults</h1>
+            <p className="text-muted-foreground mt-2">Discover trader vaults backed by first-loss junior capital.</p>
+          </div>
+          <DataModeToggle compact />
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
@@ -111,23 +106,20 @@ const Vaults = () => {
             { l: "Graduated", v: protocolStats.graduatedVaults },
             { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} USDC` },
           ].map(k => (
-            <div key={k.l} className="surface rounded-2xl p-5 border border-border/50 hover:border-primary/30 transition-colors">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{k.l}</div>
-              <div className="font-display font-semibold text-2xl mt-2 tabular">{k.v}</div>
+            <div key={k.l} className="surface rounded-lg p-4">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">{k.l}</div>
+              <div className="font-display type-h3 font-semibold mt-1 tabular">{k.v}</div>
             </div>
           ))}
         </div>
 
         <div className="flex gap-8">
-          <aside className="hidden lg:block w-64 shrink-0 surface rounded-2xl p-6 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-auto scrollbar-thin border border-border/50">
-            <div className="text-xs font-bold uppercase tracking-[0.16em] text-foreground mb-6 flex items-center gap-2">
-              <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
-            </div>
+          <aside className="hidden lg:block w-64 shrink-0 surface rounded-lg p-5 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-auto scrollbar-thin">
             {Filters}
           </aside>
 
           <div className="flex-1 min-w-0">
-            <div className="surface mb-5 flex flex-wrap items-center gap-3 rounded-xl p-3">
+            <div className="surface mb-5 flex flex-wrap items-center gap-3 rounded-lg p-3">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vaults..." className="pl-9" />
@@ -160,12 +152,12 @@ const Vaults = () => {
             </div>
 
             {isLoading ? (
-              <div className="surface rounded-2xl p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
+              <div className="surface rounded-lg p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" /> Loading vaults...
               </div>
             ) : error ? (
-              <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
-                Connect your wallet or configure the SynQ API to browse vaults.
+              <div className="surface rounded-lg p-10 text-center text-muted-foreground">
+                Connect your wallet or configure the Arcadia API to browse vaults.
               </div>
             ) : (
               <>
@@ -174,22 +166,22 @@ const Vaults = () => {
                   <span className="hidden font-mono text-primary sm:inline">SENIOR CAPITAL VIEW</span>
                 </div>
                 {filtered.length === 0 ? (
-                  <div className="surface rounded-2xl p-10 text-center text-muted-foreground border border-border/50">
+                  <div className="surface rounded-lg p-10 text-center text-muted-foreground">
                     {allVaults.length === 0
                       ? "No vaults created yet. Be the first to create a vault!"
                       : "No vaults match your filters."}
                   </div>
                 ) : (
-                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {filtered.map(v => <VaultCard key={v.id} vault={v} />)}
                   </div>
                 )}
               </>
             )}
           </div>
-          <aside className="hidden w-72 shrink-0 space-y-5 xl:block">
-            <div className="surface rounded-2xl p-6 border border-border/50">
-              <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
+          <aside className="hidden w-72 shrink-0 space-y-4 xl:block">
+            <div className="surface rounded-lg p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <WalletCards className="h-4 w-4 text-primary" aria-hidden="true" />
                 My portfolio
               </div>
@@ -197,38 +189,38 @@ const Vaults = () => {
               <div className={portfolioStats.pnl >= 0 ? "mt-1 font-mono text-xs text-success" : "mt-1 font-mono text-xs text-destructive"}>
                 {portfolioStats.pnl >= 0 ? "+" : ""}{fmtUSD(portfolioStats.pnl, { compact: true })} unrealized
               </div>
-              <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg border border-border/50 bg-secondary/30 p-3">
-                  <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Positions</div>
-                  <div className="mt-1.5 font-mono text-sm font-semibold text-foreground">{portfolioStats.count}</div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg border border-border bg-secondary/50 p-3">
+                  <div className="text-muted-foreground">Positions</div>
+                  <div className="mt-1 font-mono text-sm text-foreground">{portfolioStats.count}</div>
                 </div>
-                <div className="rounded-lg border border-border/50 bg-secondary/30 p-3">
-                  <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Avg health</div>
-                  <div className="mt-1.5 font-mono text-sm font-semibold text-success">{portfolioStats.avgHealth}%</div>
+                <div className="rounded-lg border border-border bg-secondary/50 p-3">
+                  <div className="text-muted-foreground">Avg health</div>
+                  <div className="mt-1 font-mono text-sm text-success">{portfolioStats.avgHealth}%</div>
                 </div>
               </div>
             </div>
-            <div className="surface rounded-2xl p-6 border border-border/50">
-              <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
+            <div className="surface rounded-lg p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
                 Trust rails
               </div>
-              <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+              <div className="space-y-3 text-sm text-muted-foreground">
                 <div>Trader junior capital takes first loss before senior deposits.</div>
                 <div>Instant exits unlock when the junior buffer drops below 20%.</div>
                 <div>Paper vaults cannot accept investor deposits until graduation.</div>
               </div>
             </div>
-            <div className="surface rounded-2xl p-6 border border-border/50">
-              <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
+            <div className="surface rounded-lg p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
                 Live activity
               </div>
-              <div className="space-y-2 text-xs">
+              <div className="space-y-3 text-xs text-muted-foreground">
                 {allVaults.slice(0, 4).map((vault) => (
-                  <div key={vault.id} className="flex items-center justify-between gap-3 rounded-lg p-2.5 hover:bg-primary/5 transition-colors border border-border/30">
-                    <span className="truncate text-muted-foreground">{vault.name}</span>
-                    <span className="font-mono text-foreground font-semibold">{vault.juniorHealth}%</span>
+                  <div key={vault.id} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0 last:pb-0">
+                    <span className="truncate">{vault.name}</span>
+                    <span className="font-mono text-foreground">{vault.juniorHealth}%</span>
                   </div>
                 ))}
               </div>

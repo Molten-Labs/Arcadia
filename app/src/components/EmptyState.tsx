@@ -9,7 +9,7 @@ export const EmptyState = ({ icon, title, description, action, className }: {
   action?: ReactNode;
   className?: string;
 }) => (
-  <div className={cn("surface rounded-2xl p-10 text-center flex flex-col items-center gap-3", className)}>
+  <div className={cn("surface rounded-lg p-10 text-center flex flex-col items-center gap-3", className)}>
     <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
       {icon ?? <Inbox className="w-5 h-5" />}
     </div>

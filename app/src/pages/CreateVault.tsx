@@ -79,7 +79,7 @@ const CreateVault = () => {
   return (
     <Layout>
       <div className="container py-10 max-w-3xl">
-        <h1 className="font-display font-bold text-4xl mb-2">Create vault</h1>
+        <h1 className="font-display type-h1 font-semibold mb-2">Create vault</h1>
         <p className="text-muted-foreground mb-8">Launch a new managed vault. Starts in paper mode.</p>
 
         {/* Stepper */}
@@ -97,25 +97,25 @@ const CreateVault = () => {
           ))}
         </div>
 
-        <div className="surface rounded-2xl p-6 md:p-8 min-h-[360px]">
+        <div className="surface rounded-lg p-6 md:p-8 min-h-[360px]">
           {step === 0 && (
             <div className="space-y-4">
-              <h2 className="font-display font-semibold text-xl">Vault identity</h2>
+              <h2 className="font-display type-h3 font-semibold">Vault identity</h2>
               <div>
                 <label className="text-sm font-medium">Name (max 32 chars)</label>
-                <Input className="mt-1.5" value={name} onChange={e => setName(e.target.value.slice(0, 32))} placeholder="e.g. Ember Macro III" />
+                <Input className="mt-1.5" value={name} onChange={e => setName(e.target.value.slice(0, 32))} placeholder="e.g. Signal Macro III" />
               </div>
             </div>
           )}
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="font-display font-semibold text-xl">Risk setup</h2>
+              <h2 className="font-display type-h3 font-semibold">Risk setup</h2>
               <p className="text-sm text-muted-foreground">Defines fee and slippage parameters.</p>
               <div>
                 <label className="text-sm font-medium mb-2 block">Risk profile</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(["conservative", "balanced", "aggressive"] as const).map(r => (
-                    <button key={r} onClick={() => setRisk(r)} className={cn("p-4 rounded-xl border text-left", risk === r ? "border-primary bg-primary/5" : "border-border hover:bg-secondary")}>
+                    <button key={r} onClick={() => setRisk(r)} className={cn("p-4 rounded-lg border text-left", risk === r ? "border-primary bg-primary/5" : "border-border hover:bg-secondary")}>
                       <div className="font-semibold capitalize">{r}</div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {r === "conservative" && "15% fee, 1% slippage"}
@@ -130,7 +130,7 @@ const CreateVault = () => {
           )}
           {step === 2 && (
             <div className="space-y-4">
-              <h2 className="font-display font-semibold text-xl">Junior capital</h2>
+              <h2 className="font-display type-h3 font-semibold">Junior capital</h2>
               <p className="text-sm text-muted-foreground">Your first-loss USDC. Required to back the vault.</p>
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
@@ -146,13 +146,13 @@ const CreateVault = () => {
           )}
           {step === 3 && (
             <div className="space-y-4">
-              <h2 className="font-display font-semibold text-xl">Paper mode</h2>
+              <h2 className="font-display type-h3 font-semibold">Paper mode</h2>
               <ul className="space-y-3 text-sm">
                 {["30-day paper-mode trading required", "Investor deposits disabled until graduation", "All trades publicly recorded on-chain", "Performance affects future investor trust"].map(t => (
                   <li key={t} className="flex items-start gap-2"><Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />{t}</li>
                 ))}
               </ul>
-              <label className="flex items-start gap-2 mt-6 p-4 rounded-xl border border-border cursor-pointer">
+              <label className="flex items-start gap-2 mt-6 p-4 rounded-lg border border-border cursor-pointer">
                 <input type="checkbox" checked={accept} onChange={e => setAccept(e.target.checked)} className="mt-1 accent-primary" />
                 <span className="text-sm">I understand this vault starts in paper mode and cannot accept investor deposits until graduation.</span>
               </label>
@@ -160,8 +160,8 @@ const CreateVault = () => {
           )}
           {step === 4 && (
             <div className="space-y-4">
-              <h2 className="font-display font-semibold text-xl">Review</h2>
-              <dl className="text-sm space-y-2 surface-elevated rounded-xl p-4">
+              <h2 className="font-display type-h3 font-semibold">Review</h2>
+              <dl className="text-sm space-y-2 surface-elevated rounded-lg p-4">
                 <Row label="Name" value={name || "—"} />
                 <Row label="Risk profile" value={<span className="capitalize">{risk}</span>} />
                 <Row label="Fee" value={`${RISK_PROFILES[risk].feeBps / 100}% above HWM`} />
@@ -176,12 +176,12 @@ const CreateVault = () => {
           <div className="flex justify-between mt-8 pt-6 border-t border-border">
             <Button variant="outline" onClick={back} disabled={step === 0}>Back</Button>
             {step < steps.length - 1 ? (
-              <Button onClick={next} className="bg-gradient-ember text-white border-0" disabled={(step === 0 && !name) || (step === 3 && !accept)}>Continue</Button>
+              <Button onClick={next} className="bg-gradient-signal text-primary-foreground border-0" disabled={(step === 0 && !name) || (step === 3 && !accept)}>Continue</Button>
             ) : (
               <Button
                 onClick={handleCreate}
                 disabled={sending}
-                className="bg-gradient-ember text-white border-0"
+                className="bg-gradient-signal text-primary-foreground border-0"
               >
                 {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Create & fund vault

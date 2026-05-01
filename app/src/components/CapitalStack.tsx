@@ -112,7 +112,7 @@ export const CapitalStack = ({ junior, senior, health }: Props) => {
           </div>
         </div>
 
-        <p className="text-[11px] text-muted-foreground pt-2 border-t border-border">
+        <p className="text-xs text-muted-foreground pt-2 border-t border-border">
           Losses hit the junior layer first. Trader capital absorbs drawdowns before any investor funds are touched.
         </p>
       </div>

@@ -135,10 +135,10 @@ export function useVaults() {
         if (api) return api.items.map(normalizeVaultView);
       } catch (error) {
         if (!connection) throw error;
-        console.warn("Kiln API unavailable; falling back to direct RPC vault reads.", error);
+        console.warn("Arcadia API unavailable; falling back to direct RPC vault reads.", error);
       }
 
-      if (!connection) throw new Error("No connection or Kiln API configured");
+      if (!connection) throw new Error("No connection or Arcadia API configured");
       const raw = await fetchAllVaults(connection);
       return raw.map(toVaultView).filter((v): v is VaultView => v !== null);
     },
@@ -171,10 +171,10 @@ export function useManagers() {
         if (api) return api.items;
       } catch (error) {
         if (!connection) throw error;
-        console.warn("Kiln API unavailable; falling back to direct RPC manager reads.", error);
+        console.warn("Arcadia API unavailable; falling back to direct RPC manager reads.", error);
       }
 
-      if (!connection) throw new Error("No connection or Kiln API configured");
+      if (!connection) throw new Error("No connection or Arcadia API configured");
       const raw = await fetchAllManagers(connection);
       return raw.map((m) => ({
         pubkey: m.pubkey.toBase58(),

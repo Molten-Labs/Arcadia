@@ -396,7 +396,7 @@ export function useKilnTransactions() {
     [publicKey, send]
   );
 
-  // Disc 9 extended: fixed Kiln validation accounts followed by Jupiter route accounts.
+  // Disc 9 extended: fixed Arcadia validation accounts followed by Jupiter route accounts.
   const executeJupiterSwap = useCallback(
     async (vaultConfigPubkey: PublicKey, params: ExecuteJupiterSwapParams) => {
       if (!publicKey) throw new Error("Wallet not connected");

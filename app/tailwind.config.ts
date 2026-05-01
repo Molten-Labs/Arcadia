@@ -14,7 +14,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Poppins', 'system-ui', 'sans-serif'],
-        display: ['Poppins', 'system-ui', 'sans-serif'],
+        display: ['Outfit', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
       },
       colors: {
@@ -44,7 +44,7 @@ export default {
           foreground: "hsl(var(--success-foreground))",
         },
         warning: {
-          DEFAULT: "hsl(var(--warning))",
+          DEFAULT: "hsl(var(--warning-hsl))",
           foreground: "hsl(var(--warning-foreground))",
         },
         info: {

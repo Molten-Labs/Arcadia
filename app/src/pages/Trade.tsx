@@ -378,14 +378,14 @@ const Trade = () => {
             <div className="border-b border-border bg-card/40 backdrop-blur sticky top-16 z-30">
                 <div className="container py-3 flex items-center gap-6 overflow-x-auto">
                     <div className="flex items-center gap-3 shrink-0">
-                        <div className="w-9 h-9 rounded-full bg-gradient-ember flex items-center justify-center text-white font-bold text-xs">
+                        <div className="w-9 h-9 rounded-full bg-gradient-signal flex items-center justify-center text-primary-foreground font-bold text-xs">
                             {market.base.slice(0, 3)}
                         </div>
                         <div>
                             <div className="font-display font-semibold text-sm">
                                 {market.pair}
                             </div>
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider">
                                 Solana · Spot
                             </div>
                         </div>
@@ -418,8 +418,8 @@ const Trade = () => {
             <div className="container py-4">
                 <div className="grid grid-cols-12 gap-3">
                     {/* Markets list */}
-                    <aside className="col-span-12 lg:col-span-2 surface rounded-xl p-3 max-h-[640px] overflow-auto">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-2">
+                    <aside className="col-span-12 lg:col-span-2 surface rounded-lg p-3 max-h-[640px] overflow-auto">
+                        <div className="text-xs uppercase tracking-wider text-muted-foreground px-1 pb-2">
                             Markets
                         </div>
                         <div className="space-y-0.5">
@@ -440,7 +440,7 @@ const Trade = () => {
                                             <Star className="w-3 h-3 text-muted-foreground" />
                                             {m.pair}
                                         </div>
-                                        <div className="text-[10px] text-muted-foreground tabular">
+                                        <div className="text-xs text-muted-foreground tabular">
                                             $
                                             {m.price.toLocaleString(undefined, {
                                                 maximumFractionDigits: 6,
@@ -449,7 +449,7 @@ const Trade = () => {
                                     </div>
                                     <div
                                         className={cn(
-                                            "text-[11px] tabular self-center",
+                                            "text-xs tabular self-center",
                                             m.change24h >= 0
                                                 ? "text-success"
                                                 : "text-destructive",
@@ -465,7 +465,7 @@ const Trade = () => {
 
                     {/* Chart + bottom panels */}
                     <main className="col-span-12 lg:col-span-7 space-y-3">
-                        <div className="surface rounded-xl p-4">
+                        <div className="surface rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-1">
                                     {["1m", "5m", "15m", "1h", "4h", "1D"].map(
@@ -475,7 +475,7 @@ const Trade = () => {
                                                 type="button"
                                                 onClick={() => setTimeframe(tf)}
                                                 className={cn(
-                                                    "h-10 px-2.5 rounded-md text-[11px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                                    "h-10 px-2.5 rounded-md text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                                     timeframe === tf
                                                         ? "bg-secondary text-foreground"
                                                         : "text-muted-foreground hover:text-foreground",
@@ -486,7 +486,7 @@ const Trade = () => {
                                         ),
                                     )}
                                 </div>
-                                <div className="text-[11px] text-muted-foreground font-mono">
+                                <div className="text-xs text-muted-foreground font-mono">
                                     O{" "}
                                     <span className="text-foreground">
                                         181.40
@@ -507,7 +507,7 @@ const Trade = () => {
                         </div>
 
                         {/* Bottom tabs: positions / orders / history */}
-                        <div className="surface rounded-xl">
+                        <div className="surface rounded-lg">
                             <div className="flex items-center border-b border-border px-3">
                                 {(
                                     ["positions", "orders", "history"] as const
@@ -540,7 +540,7 @@ const Trade = () => {
                                         </div>
                                     ) : (
                                         <table className="w-full text-xs">
-                                            <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                            <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                                                 <tr>
                                                     <th className="text-left py-1.5">
                                                         Pair
@@ -603,7 +603,7 @@ const Trade = () => {
                                                         >
                                                             {p.pnl >= 0 ? "+" : ""}$
                                                             {p.pnl.toLocaleString()}{" "}
-                                                            <span className="text-[10px] opacity-70">
+                                                            <span className="text-xs opacity-70">
                                                                 (
                                                                 {p.pnlPct >= 0
                                                                     ? "+"
@@ -618,7 +618,7 @@ const Trade = () => {
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="h-8 text-[11px]"
+                                                                className="h-8 text-xs"
                                                                 onClick={() =>
                                                                     closePosition(
                                                                         p.pair,
@@ -642,7 +642,7 @@ const Trade = () => {
                                         </div>
                                     ) : (
                                         <table className="w-full text-xs">
-                                            <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                            <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                                                 <tr>
                                                     <th className="text-left py-1.5">
                                                         Time
@@ -707,7 +707,7 @@ const Trade = () => {
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="h-8 text-[11px] text-destructive"
+                                                                className="h-8 text-xs text-destructive"
                                                                 onClick={() =>
                                                                     cancelOrder(
                                                                         o.id,
@@ -731,7 +731,7 @@ const Trade = () => {
                                         </div>
                                     ) : (
                                         <table className="w-full text-xs">
-                                            <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                            <thead className="text-xs uppercase tracking-wider text-muted-foreground">
                                                 <tr>
                                                     <th className="text-left py-1.5">
                                                         Time
@@ -801,7 +801,7 @@ const Trade = () => {
                         />
 
                         {/* Order ticket */}
-                        <div className="surface rounded-xl p-4">
+                        <div className="surface rounded-lg p-4">
                             {/* Side toggle */}
                             <div className="grid grid-cols-2 p-1 rounded-lg bg-secondary/60 mb-3">
                                 <button
@@ -810,7 +810,7 @@ const Trade = () => {
                                     className={cn(
                                         "h-10 py-2 rounded-md text-xs font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         side === "buy"
-                                            ? "bg-success text-white shadow-sm"
+                                            ? "bg-success text-primary-foreground shadow-sm"
                                             : "text-muted-foreground",
                                     )}
                                 >
@@ -823,7 +823,7 @@ const Trade = () => {
                                     className={cn(
                                         "h-10 py-2 rounded-md text-xs font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                         side === "sell"
-                                            ? "bg-destructive text-white shadow-sm"
+                                            ? "bg-destructive text-primary-foreground shadow-sm"
                                             : "text-muted-foreground",
                                     )}
                                 >
@@ -840,7 +840,7 @@ const Trade = () => {
                                         type="button"
                                         onClick={() => setOrderType(t)}
                                         className={cn(
-                                            "h-10 px-3 py-1.5 rounded-md text-[11px] font-medium uppercase tracking-wider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            "h-10 px-3 py-1.5 rounded-md text-xs font-medium uppercase tracking-wider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                             orderType === t
                                                 ? "bg-secondary text-foreground"
                                                 : "text-muted-foreground hover:text-foreground",
@@ -855,7 +855,7 @@ const Trade = () => {
                             <div className="space-y-2">
                                 {orderType === "limit" && (
                                     <div>
-                                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                        <label className="text-xs uppercase tracking-wider text-muted-foreground">
                                             Price (USDC)
                                         </label>
                                         <Input
@@ -871,7 +871,7 @@ const Trade = () => {
                                     </div>
                                 )}
                                 <div>
-                                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                                    <label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center justify-between">
                                         Amount ({market.base})
                                         <button
                                             type="button"
@@ -910,7 +910,7 @@ const Trade = () => {
                                             type="button"
                                             onClick={() => applyPct(p)}
                                             className={cn(
-                                                "flex-1 h-10 py-1.5 rounded-md text-[10px] font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                                "flex-1 h-10 py-1.5 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                                 pctSlider === p
                                                     ? "border-primary bg-primary/10 text-primary"
                                                     : "border-border text-muted-foreground hover:text-foreground hover:border-border-strong",
@@ -961,7 +961,7 @@ const Trade = () => {
                                     ].map((c) => (
                                         <div
                                             key={c}
-                                            className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                                            className="flex items-center gap-1.5 text-xs text-muted-foreground"
                                         >
                                             <Check className="w-3 h-3 text-success" />{" "}
                                             {c}
@@ -973,7 +973,7 @@ const Trade = () => {
                                     onClick={handleSubmit}
                                     disabled={role === "investor" && connected}
                                     className={cn(
-                                        "w-full h-11 mt-2 text-white border-0 font-semibold uppercase text-xs tracking-wider",
+                                        "w-full h-11 mt-2 text-primary-foreground border-0 font-semibold uppercase text-xs tracking-wider",
                                         side === "buy"
                                             ? "bg-success hover:bg-success/90"
                                             : "bg-destructive hover:bg-destructive/90",
@@ -984,7 +984,7 @@ const Trade = () => {
                                     {market.base}
                                 </Button>
 
-                                <div className="text-[10px] text-muted-foreground text-center pt-1">
+                                <div className="text-xs text-muted-foreground text-center pt-1">
                                     Demo order blotter · Jupiter/Pyth routing deferred
                                 </div>
                             </div>
@@ -1006,7 +1006,7 @@ const Stat = ({
     highlight?: "up" | "down";
 }) => (
     <div className="shrink-0">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">
             {label}
         </div>
         <div
