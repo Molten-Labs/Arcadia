@@ -41,6 +41,14 @@ pub fn run_guards(
     swap_amount: u64,
     current_time: i64,
 ) -> Result<(), ProgramError> {
+    run_guards_with_notional(state, swap_amount, current_time)
+}
+
+pub fn run_guards_with_notional(
+    state: &VaultState,
+    swap_notional_usdc: u64,
+    current_time: i64,
+) -> Result<(), ProgramError> {
     // 1. Trading must be enabled
     if state.trading_enabled == 0 {
         return Err(KilnError::TradingDisabled.into());
@@ -75,12 +83,16 @@ pub fn run_guards(
             .ok_or(KilnError::MathOverflow)?
             .checked_div(10_000)
             .ok_or(KilnError::MathOverflow)?;
-        if swap_amount > max_amount {
+        if swap_notional_usdc > max_amount {
             return Err(KilnError::PositionTooLarge.into());
         }
     }
 
     Ok(())
+}
+
+pub fn enforce_usdc_reserve_after_swap(usdc_after: u64, nav_after: u64) -> Result<(), ProgramError> {
+    super::custody::enforce_liquid_reserve(usdc_after, nav_after)
 }
 
 /// Apply post-swap cooldown logic based on NAV loss.

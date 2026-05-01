@@ -1,4 +1,5 @@
 export const LAMPORTS_PER_SOL_BIGINT = 1_000_000_000n;
+export const USDC_DECIMALS_BIGINT = 1_000_000n;
 
 export function parseSolToLamports(value: string): bigint | null {
   const trimmed = value.trim();
@@ -11,14 +12,13 @@ export function parseSolToLamports(value: string): bigint | null {
   return wholeLamports + fractionalLamports;
 }
 
-export function calculateSharesToBurn(
-  amountLamports: bigint,
-  capitalLamports: bigint,
-  sharesOutstanding: bigint,
-): bigint {
-  if (amountLamports <= 0n || capitalLamports <= 0n || sharesOutstanding <= 0n) {
-    return 0n;
-  }
+export function parseUsdcToUnits(value: string): bigint | null {
+  const trimmed = value.trim();
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed)) return null;
 
-  return (amountLamports * sharesOutstanding) / capitalLamports;
+  const [wholeRaw, fractionalRaw = ""] = trimmed.split(".");
+  const wholeUnits = BigInt(wholeRaw || "0") * USDC_DECIMALS_BIGINT;
+  const fractionalUnits = BigInt(fractionalRaw.padEnd(6, "0").slice(0, 6) || "0");
+
+  return wholeUnits + fractionalUnits;
 }

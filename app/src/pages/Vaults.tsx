@@ -102,9 +102,9 @@ const Vaults = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { l: "Live vaults", v: protocolStats.totalVaults },
-            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} SOL` },
+            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} USDC` },
             { l: "Graduated", v: protocolStats.graduatedVaults },
-            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} SOL` },
+            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} USDC` },
           ].map(k => (
             <div key={k.l} className="surface rounded-xl p-4">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.l}</div>

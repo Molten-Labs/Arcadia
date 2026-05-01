@@ -10,8 +10,21 @@ import {
 } from "@solana/web3.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.hoisted(() => {
+  process.env.VITE_PYTH_SOL_USD_ACCOUNT = "So11111111111111111111111111111111111111112";
+  process.env.VITE_PYTH_USDC_USD_ACCOUNT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+});
+
 import { useKilnTransactions } from "./useTransactions";
-import { PROGRAM_ID } from "@/lib/solana/constants";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  PROGRAM_ID,
+  PYTH_SOL_USD_ACCOUNT,
+  PYTH_USDC_USD_ACCOUNT,
+  SOL_MINT,
+  TOKEN_PROGRAM_ID,
+  USDC_MINT,
+} from "@/lib/solana/constants";
 
 const mocks = vi.hoisted(() => ({
   publicKey: undefined as unknown,
@@ -101,6 +114,13 @@ function expectKey(
   expect(ix.keys[index].isWritable).toBe(isWritable);
 }
 
+function ata(owner: PublicKey, mint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  )[0];
+}
+
 describe("useKilnTransactions", () => {
   const manager = key(1);
   const investor = key(2);
@@ -114,6 +134,16 @@ describe("useKilnTransactions", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(PublicKey, "findProgramAddressSync").mockImplementation((seeds) => {
+      const bytes = new Uint8Array(32);
+      for (let i = 0; i < seeds.length; i += 1) {
+        const seed = seeds[i];
+        for (let j = 0; j < seed.length; j += 1) {
+          bytes[j % 32] ^= seed[j] ^ i;
+        }
+      }
+      return [new PublicKey(bytes), 255];
+    });
     mocks.publicKey = manager;
     mocks.profilePdasByOwner = {
       [manager.toBase58()]: managerProfilePda,
@@ -176,9 +206,12 @@ describe("useKilnTransactions", () => {
     expectKey(ix, 1, managerProfilePda, false, true);
     expectKey(ix, 2, vaultConfigPda, false, false);
     expectKey(ix, 3, vaultStatePda, false, true);
-    expectKey(ix, 4, treasuryPda, false, true);
-    expectKey(ix, 5, SYSVAR_CLOCK_PUBKEY, false, false);
-    expectKey(ix, 6, SystemProgram.programId, false, false);
+    expectKey(ix, 4, treasuryPda, false, false);
+    expectKey(ix, 5, ata(manager, USDC_MINT), false, true);
+    expectKey(ix, 6, ata(treasuryPda, USDC_MINT), false, true);
+    expectKey(ix, 7, TOKEN_PROGRAM_ID, false, false);
+    expectKey(ix, 8, SYSVAR_CLOCK_PUBKEY, false, false);
+    expectKey(ix, 9, SystemProgram.programId, false, false);
 
     ix = await invoke(() => result.current.withdrawJunior(vaultConfigPda, 1_000_000_000n));
     expect(ix.data[0]).toBe(7);
@@ -187,8 +220,11 @@ describe("useKilnTransactions", () => {
     expectKey(ix, 1, managerProfilePda, false, true);
     expectKey(ix, 2, vaultConfigPda, false, false);
     expectKey(ix, 3, vaultStatePda, false, true);
-    expectKey(ix, 4, treasuryPda, false, true);
-    expectKey(ix, 5, SYSVAR_CLOCK_PUBKEY, false, false);
+    expectKey(ix, 4, treasuryPda, false, false);
+    expectKey(ix, 5, ata(treasuryPda, USDC_MINT), false, true);
+    expectKey(ix, 6, ata(manager, USDC_MINT), false, true);
+    expectKey(ix, 7, TOKEN_PROGRAM_ID, false, false);
+    expectKey(ix, 8, SYSVAR_CLOCK_PUBKEY, false, false);
   });
 
   it("builds permissionless nav, graduation, fee, and swap instructions", async () => {
@@ -244,11 +280,14 @@ describe("useKilnTransactions", () => {
     expectKey(ix, 0, investor, true, true);
     expectKey(ix, 1, vaultConfigPda, false, false);
     expectKey(ix, 2, vaultStatePda, false, true);
-    expectKey(ix, 3, treasuryPda, false, true);
+    expectKey(ix, 3, treasuryPda, false, false);
     expectKey(ix, 4, investorPositionPda, false, true);
-    expectKey(ix, 5, SYSVAR_RENT_PUBKEY, false, false);
-    expectKey(ix, 6, SYSVAR_CLOCK_PUBKEY, false, false);
-    expectKey(ix, 7, SystemProgram.programId, false, false);
+    expectKey(ix, 5, ata(investor, USDC_MINT), false, true);
+    expectKey(ix, 6, ata(treasuryPda, USDC_MINT), false, true);
+    expectKey(ix, 7, TOKEN_PROGRAM_ID, false, false);
+    expectKey(ix, 8, SYSVAR_RENT_PUBKEY, false, false);
+    expectKey(ix, 9, SYSVAR_CLOCK_PUBKEY, false, false);
+    expectKey(ix, 10, SystemProgram.programId, false, false);
 
     ix = await invoke(() => result.current.withdrawSenior(vaultConfigPda, 1_000_000_000n));
     expect(ix.data[0]).toBe(6);
@@ -256,8 +295,14 @@ describe("useKilnTransactions", () => {
     expectKey(ix, 0, investor, true, true);
     expectKey(ix, 1, vaultConfigPda, false, false);
     expectKey(ix, 2, vaultStatePda, false, true);
-    expectKey(ix, 3, treasuryPda, false, true);
+    expectKey(ix, 3, treasuryPda, false, false);
     expectKey(ix, 4, investorPositionPda, false, true);
-    expectKey(ix, 5, SYSVAR_CLOCK_PUBKEY, false, false);
+    expectKey(ix, 5, ata(treasuryPda, USDC_MINT), false, true);
+    expectKey(ix, 6, ata(treasuryPda, SOL_MINT), false, true);
+    expectKey(ix, 7, ata(investor, USDC_MINT), false, true);
+    expectKey(ix, 8, PYTH_SOL_USD_ACCOUNT!, false, false);
+    expectKey(ix, 9, PYTH_USDC_USD_ACCOUNT!, false, false);
+    expectKey(ix, 10, TOKEN_PROGRAM_ID, false, false);
+    expectKey(ix, 11, SYSVAR_CLOCK_PUBKEY, false, false);
   });
 });

@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { useVault } from "@/hooks/useVaults";
-import { useBalance } from "@/hooks/useBalance";
 import { useKilnTransactions } from "@/hooks/useTransactions";
 import { usePositions } from "@/hooks/usePositions";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -18,6 +17,11 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import { fmtUSD } from "@/lib/format";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { OrderBook } from "@/components/OrderBook";
@@ -25,23 +29,21 @@ import { ArrowLeft, Info, Bell, Zap, Loader2 } from "lucide-react";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { toast } from "sonner";
 import { PublicKey } from "@solana/web3.js";
-import { calculateSharesToBurn, parseSolToLamports } from "@/lib/solana/shares";
+import { parseUsdcToUnits } from "@/lib/solana/amounts";
 
 const LIVE_VIEW_RANGES = ["1H", "4H", "1D", "1W"] as const;
 type LiveViewRange = (typeof LIVE_VIEW_RANGES)[number];
+const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
 
 const VaultDetail = () => {
     const { id } = useParams();
     const { data: vault, isLoading, error } = useVault(id);
     const { connected, role } = useWallet();
-    const { data: balance } = useBalance();
     const { data: positions } = usePositions();
     const { depositSenior, withdrawSenior } = useKilnTransactions();
     const [amount, setAmount] = useState("");
     const [liveViewRange, setLiveViewRange] = useState<LiveViewRange>("1D");
     const [sending, setSending] = useState(false);
-
-    const solBalance = balance ?? 0;
 
     if (isLoading) {
         return (
@@ -55,29 +57,22 @@ const VaultDetail = () => {
 
     if (!vault || error) return <Navigate to="/vaults" replace />;
 
-    const parsedAmount = Number(amount);
-    const parsedLamports = parseSolToLamports(amount);
-    const hasValidAmount = parsedLamports !== null && parsedLamports > 0n;
-    const lamports = parsedLamports ?? 0n;
+    const parsedUsdcUnits = parseUsdcToUnits(amount);
+    const hasValidAmount = parsedUsdcUnits !== null && parsedUsdcUnits > 0n;
+    const usdcUnits = parsedUsdcUnits ?? 0n;
     const investorPosition = positions?.find((position) => position.vaultConfigPubkey === vault.configPubkey);
-    const ownedSeniorShares = investorPosition?.seniorSharesRaw ?? 0n;
-    const seniorSharesToBurn = calculateSharesToBurn(
-        lamports,
-        vault.seniorCapitalLamports,
-        vault.seniorSharesOutstandingRaw,
-    );
+    const withdrawableUsdc = investorPosition?.currentValueRaw ?? 0n;
 
     const handleDeposit = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
         if (role !== "investor") { toast.error("Switch to investor mode to deposit"); return; }
         if (vault.status === "paper") { toast.error("Deposits open after graduation"); return; }
         if (vault.status === "frozen") { toast.error("Deposits are closed"); return; }
-        if (!hasValidAmount) { toast.error("Enter a valid SOL amount"); return; }
-        if (parsedAmount > solBalance) { toast.error("Insufficient SOL balance"); return; }
+        if (!hasValidAmount) { toast.error("Enter a valid USDC amount"); return; }
 
         setSending(true);
         try {
-            await depositSenior(new PublicKey(vault.configPubkey), lamports);
+            await depositSenior(new PublicKey(vault.configPubkey), usdcUnits);
             setAmount("");
         } catch (e) {
             toast.error("Deposit failed", { description: e instanceof Error ? e.message : "Unknown error" });
@@ -88,14 +83,13 @@ const VaultDetail = () => {
 
     const handleWithdraw = async () => {
         if (!connected) { toast.error("Connect a wallet first"); return; }
-        if (!hasValidAmount) { toast.error("Enter a valid SOL amount"); return; }
-        if (!investorPosition || ownedSeniorShares === 0n) { toast.error("No senior position found for this vault"); return; }
-        if (seniorSharesToBurn === 0n) { toast.error("Amount is too small for current share price"); return; }
-        if (seniorSharesToBurn > ownedSeniorShares) { toast.error("Withdrawal exceeds your senior position"); return; }
+        if (!hasValidAmount) { toast.error("Enter a valid USDC amount"); return; }
+        if (!investorPosition || withdrawableUsdc === 0n) { toast.error("No senior position found for this vault"); return; }
+        if (usdcUnits > withdrawableUsdc) { toast.error("Withdrawal exceeds your current claim"); return; }
 
         setSending(true);
         try {
-            await withdrawSenior(new PublicKey(vault.configPubkey), seniorSharesToBurn);
+            await withdrawSenior(new PublicKey(vault.configPubkey), usdcUnits);
             setAmount("");
         } catch (e) {
             toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });
@@ -130,6 +124,33 @@ const VaultDetail = () => {
                                     <Zap className="w-3 h-3" /> Instant exit
                                 </span>
                             )}
+                            {connected && role === "investor" && (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="inline-flex items-center justify-center w-9 h-9 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" aria-label="Alert preferences">
+                                            <Bell className="w-4 h-4" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56">
+                                        <div className="space-y-3">
+                                            <div>
+                                                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                                    <Bell className="w-4 h-4" /> Alert Preferences
+                                                </h4>
+                                                <p className="text-xs text-muted-foreground mb-3">Get notified when:</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {["Junior health drops below threshold", "Vault enters cooldown", "Vault frozen", "Performance fee claimed"].map(a => (
+                                                    <label key={a} className="flex items-start gap-2 text-xs cursor-pointer">
+                                                        <input type="checkbox" defaultChecked className="mt-0.5 accent-primary" />
+                                                        <span className="text-foreground/80">{a}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
                         <div className="text-sm text-muted-foreground">
                             Manager: <span className="font-mono">{shortAddr(vault.managerPubkey)}</span>
@@ -156,11 +177,11 @@ const VaultDetail = () => {
 
                 {/* Stats row */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 my-6">
-                    <StatCard label="TVL" value={`${fmtUSD(vault.tvl, { decimals: 2 })} SOL`} />
-                    <StatCard label="Junior" value={`${fmtUSD(vault.juniorCapital, { decimals: 2 })} SOL`} hint={`${juniorPct}% of TVL`} />
-                    <StatCard label="Senior" value={`${fmtUSD(vault.seniorCapital, { decimals: 2 })} SOL`} hint="protected" />
-                    <StatCard label="NAV" value={`${fmtUSD(vault.currentNav, { decimals: 2 })} SOL`} />
-                    <StatCard label="HWM" value={`${fmtUSD(vault.highWaterMark, { decimals: 2 })} SOL`} />
+                    <StatCard label="TVL" value={`${fmtUSD(vault.tvl, { decimals: 2 })} USDC`} />
+                    <StatCard label="Junior" value={`${fmtUSD(vault.juniorCapital, { decimals: 2 })} USDC`} hint={`${juniorPct}% of TVL`} />
+                    <StatCard label="Senior" value={`${fmtUSD(vault.seniorCapital, { decimals: 2 })} USDC`} hint="protected" />
+                    <StatCard label="NAV" value={`${fmtUSD(vault.currentNav, { decimals: 2 })} USDC`} />
+                    <StatCard label="HWM" value={`${fmtUSD(vault.highWaterMark, { decimals: 2 })} USDC`} />
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-6">
@@ -243,7 +264,7 @@ const VaultDetail = () => {
 
                         {/* Deposit / Withdraw */}
                         <div className="surface-elevated rounded-2xl p-6">
-                            <h3 className="font-display font-semibold mb-1">Deposit SOL</h3>
+                            <h3 className="font-display font-semibold mb-1">Deposit USDC</h3>
                             <p className="text-xs text-muted-foreground mb-4">24h withdrawal cooldown · instant if junior &lt; 20%</p>
 
                             {vault.status === "paper" ? (
@@ -260,7 +281,7 @@ const VaultDetail = () => {
                                         <div>
                                             <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                                                 <label htmlFor="senior-vault-amount">Amount</label>
-                                                <span>Balance: {solBalance.toFixed(4)} SOL</span>
+                                                <span>Base asset: USDC</span>
                                             </div>
                                             <div className="relative">
                                                 <Input
@@ -271,18 +292,18 @@ const VaultDetail = () => {
                                                     className="pr-14 text-lg tabular h-12"
                                                     inputMode="decimal"
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">SOL</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">USDC</span>
                                             </div>
                                         </div>
                                         <div className="flex gap-1.5">
-                                            {["25%", "50%", "75%", "MAX"].map(p => (
+                                            {QUICK_USDC_AMOUNTS.map(p => (
                                                 <button
                                                     key={p}
                                                     type="button"
-                                                    onClick={() => setAmount(p === "MAX" ? String(solBalance) : String(solBalance * (parseInt(p) / 100)))}
+                                                    onClick={() => setAmount(String(p))}
                                                     className="flex-1 h-10 text-xs py-1.5 rounded-md bg-secondary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                 >
-                                                    {p}
+                                                    {fmtUSD(p, { compact: true })}
                                                 </button>
                                             ))}
                                         </div>
@@ -298,7 +319,7 @@ const VaultDetail = () => {
                                         className="w-full mt-4 bg-gradient-ember text-white border-0 h-11"
                                     >
                                         {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                                        Deposit SOL
+                                        Deposit USDC
                                     </Button>
                                     <Button
                                         onClick={handleWithdraw}
@@ -306,28 +327,12 @@ const VaultDetail = () => {
                                         variant="outline"
                                         className="w-full mt-2"
                                     >
-                                        Withdraw SOL
+                                        Withdraw USDC
                                     </Button>
                                 </>
                             )}
                         </div>
 
-                        {/* Alerts */}
-                        {connected && role === "investor" && (
-                            <div className="surface rounded-2xl p-6">
-                                <h3 className="font-display font-semibold flex items-center gap-2 mb-3">
-                                    <Bell className="w-4 h-4" /> Alerts
-                                </h3>
-                                <div className="space-y-2 text-sm">
-                                    {["Junior health drops below threshold", "Vault enters cooldown", "Vault frozen", "Performance fee claimed"].map(a => (
-                                        <label key={a} className="flex items-start gap-2 text-xs cursor-pointer">
-                                            <input type="checkbox" defaultChecked className="mt-0.5 accent-primary" />
-                                            <span className="text-foreground/80">{a}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

@@ -77,29 +77,26 @@ pub fn claim_fees(accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
         return Err(KilnError::InvalidAmount.into());
     }
 
-    let junior_capital = state.junior_capital;
-    let junior_shares_outstanding = state.junior_shares_outstanding;
-    if junior_capital == 0 || junior_shares_outstanding == 0 {
+    if state.junior_capital == 0 || state.junior_shares_outstanding == 0 {
+        return Err(KilnError::InsufficientJuniorCapital.into());
+    }
+    if fee_lamports > state.junior_capital {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
     drop(state);
 
-    // Crystallize the fee as additional junior shares. Assets stay inside the
-    // vault, preserving the manager's first-loss exposure instead of draining
-    // treasury liquidity.
+    // Crystallize the fee by reducing the manager's junior principal ledger.
+    // Assets stay inside the vault, increasing senior protection without
+    // minting or burning any ownership units.
     let mut state = VaultState::load_mut(vault_state)?;
-    let fee_shares = fee_lamports
-        .checked_mul(junior_shares_outstanding)
-        .ok_or(KilnError::MathOverflow)?
-        .checked_div(junior_capital)
+    state.junior_capital = state
+        .junior_capital
+        .checked_sub(fee_lamports)
         .ok_or(KilnError::MathOverflow)?;
-    if fee_shares == 0 {
-        return Err(KilnError::InvalidAmount.into());
-    }
-
+    let principal_reduction = core::cmp::min(fee_lamports, state.junior_shares_outstanding);
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
-        .checked_add(fee_shares)
+        .checked_sub(principal_reduction)
         .ok_or(KilnError::MathOverflow)?;
     state.high_water_mark = state.current_nav;
     state.last_nav = state.current_nav;

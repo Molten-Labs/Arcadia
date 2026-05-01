@@ -37,7 +37,7 @@ export const TraderCard = ({ manager }: { manager: ManagerView }) => {
         </div>
         <div>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Junior</div>
-          <div className="tabular font-semibold text-sm mt-0.5">{fmtUSD(manager.totalJuniorDeposited, { compact: true })} SOL</div>
+          <div className="tabular font-semibold text-sm mt-0.5">{fmtUSD(manager.totalJuniorDeposited, { compact: true })} USDC</div>
         </div>
       </div>
 

@@ -23,6 +23,22 @@ export const KILN_API_BASE_URL =
 
 export const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112");
 export const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+export const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+
+const env = import.meta.env as Record<string, string | undefined>;
+const processEnv =
+  typeof process !== "undefined"
+    ? (process.env as Record<string, string | undefined>)
+    : {};
+
+export const PYTH_SOL_USD_ACCOUNT = (env.VITE_PYTH_SOL_USD_ACCOUNT || processEnv.VITE_PYTH_SOL_USD_ACCOUNT)
+  ? new PublicKey(env.VITE_PYTH_SOL_USD_ACCOUNT || processEnv.VITE_PYTH_SOL_USD_ACCOUNT!)
+  : null;
+
+export const PYTH_USDC_USD_ACCOUNT = (env.VITE_PYTH_USDC_USD_ACCOUNT || processEnv.VITE_PYTH_USDC_USD_ACCOUNT)
+  ? new PublicKey(env.VITE_PYTH_USDC_USD_ACCOUNT || processEnv.VITE_PYTH_USDC_USD_ACCOUNT!)
+  : null;
 
 export const EXPLORER_BASE =
   import.meta.env.VITE_EXPLORER_BASE_URL || "https://explorer.solana.com";

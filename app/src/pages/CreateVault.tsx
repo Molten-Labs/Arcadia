@@ -7,11 +7,11 @@ import { Check, ChevronRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useKilnTransactions } from "@/hooks/useTransactions";
-import { useBalance } from "@/hooks/useBalance";
 import { cn } from "@/lib/utils";
-import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { useWallet } from "@/lib/wallet";
 import { getVaultConfigPDA, getManagerProfilePDA } from "@/lib/solana/pdas";
+import { parseUsdcToUnits } from "@/lib/solana/amounts";
 
 
 const steps = ["Identity", "Risk setup", "Junior capital", "Paper mode", "Review"];
@@ -31,17 +31,15 @@ const CreateVault = () => {
   const [sending, setSending] = useState(false);
   const navigate = useNavigate();
   const { initManager, createVault, depositJunior } = useKilnTransactions();
-  const { data: balance } = useBalance();
   const { publicKey, connection } = useWallet();
-  const solBalance = balance ?? 0;
 
   const next = () => setStep(s => Math.min(steps.length - 1, s + 1));
   const back = () => setStep(s => Math.max(0, s - 1));
 
   const handleCreate = async () => {
-    const juniorSol = parseFloat(junior || "0");
-    if (!Number.isFinite(juniorSol) || juniorSol <= 0) { toast.error("Enter a valid junior deposit amount"); return; }
-    if (juniorSol > solBalance) { toast.error("Insufficient SOL balance"); return; }
+    const juniorUsdcUnits = parseUsdcToUnits(junior);
+    const juniorUsdc = parseFloat(junior || "0");
+    if (!Number.isFinite(juniorUsdc) || !juniorUsdcUnits || juniorUsdcUnits <= 0n) { toast.error("Enter a valid junior deposit amount"); return; }
     if (!publicKey || !connection) { toast.error("Wallet not connected"); return; }
 
     setSending(true);
@@ -67,8 +65,7 @@ const CreateVault = () => {
         : 0;
       const [configPda] = getVaultConfigPDA(publicKey, vaultIndex);
 
-      const lamports = BigInt(Math.floor(juniorSol * LAMPORTS_PER_SOL));
-      await depositJunior(configPda, lamports);
+      await depositJunior(configPda, juniorUsdcUnits);
 
       toast.success("Vault created & funded!");
       navigate("/manager");
@@ -134,16 +131,16 @@ const CreateVault = () => {
           {step === 2 && (
             <div className="space-y-4">
               <h2 className="font-display font-semibold text-xl">Junior capital</h2>
-              <p className="text-sm text-muted-foreground">Your first-loss SOL. Required to back the vault.</p>
+              <p className="text-sm text-muted-foreground">Your first-loss USDC. Required to back the vault.</p>
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                  <label className="text-sm font-medium">Junior deposit (SOL)</label>
-                  <span>Balance: {solBalance.toFixed(4)} SOL</span>
+                  <label className="text-sm font-medium">Junior deposit (USDC)</label>
+                  <span>Base asset: USDC</span>
                 </div>
                 <Input className="mt-1.5 text-lg tabular h-12" value={junior} onChange={e => setJunior(e.target.value)} type="number" step="0.01" min="0" />
               </div>
               <Banner variant="info" title="Capacity preview">
-                With {parseFloat(junior || "0").toFixed(2)} SOL junior, your vault can support up to {(parseFloat(junior || "0") * 4).toFixed(2)} SOL TVL.
+                With {parseFloat(junior || "0").toFixed(2)} USDC junior, your vault can support up to {(parseFloat(junior || "0") * 4).toFixed(2)} USDC TVL.
               </Banner>
             </div>
           )}
@@ -169,7 +166,7 @@ const CreateVault = () => {
                 <Row label="Risk profile" value={<span className="capitalize">{risk}</span>} />
                 <Row label="Fee" value={`${RISK_PROFILES[risk].feeBps / 100}% above HWM`} />
                 <Row label="Max slippage" value={`${RISK_PROFILES[risk].maxSlippageBps / 100}%`} />
-                <Row label="Junior deposit" value={`${parseFloat(junior || "0").toFixed(4)} SOL`} />
+                <Row label="Junior deposit" value={`${parseFloat(junior || "0").toFixed(4)} USDC`} />
                 <Row label="Paper window" value="30 days" />
                 <Row label="Estimated gas" value="~0.003 SOL" />
               </dl>

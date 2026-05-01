@@ -43,7 +43,7 @@ const Portfolio = () => {
           <div>
             <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor capital</div>
             <h1 className="font-display font-bold text-4xl">SynQ portfolio</h1>
-            <p className="text-muted-foreground mt-2">Investor positions, senior shares, and first-loss buffer exposure.</p>
+            <p className="text-muted-foreground mt-2">Investor principal, current claim value, and first-loss buffer exposure.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <DataModeToggle compact />
@@ -52,9 +52,9 @@ const Portfolio = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-          <StatCard label="Total invested" value={`${fmtUSD(totalDeposited, { decimals: 2 })} SOL`} />
-          <StatCard label="Current value" value={`${fmtUSD(totalValue, { decimals: 2 })} SOL`} />
-          <StatCard label="Unrealized PnL" value={`${pnl >= 0 ? "+" : ""}${fmtUSD(pnl, { decimals: 2 })} SOL`} trend={totalDeposited > 0 ? (pnl / totalDeposited) * 100 : 0} />
+          <StatCard label="Total invested" value={`${fmtUSD(totalDeposited, { decimals: 2 })} USDC`} />
+          <StatCard label="Current value" value={`${fmtUSD(totalValue, { decimals: 2 })} USDC`} />
+          <StatCard label="Unrealized PnL" value={`${pnl >= 0 ? "+" : ""}${fmtUSD(pnl, { decimals: 2 })} USDC`} trend={totalDeposited > 0 ? (pnl / totalDeposited) * 100 : 0} />
           <StatCard label="Active vaults" value={allPositions.length} />
           <StatCard label="Avg junior health" value={`${avgHealth}%`} />
         </div>
@@ -93,15 +93,15 @@ const Portfolio = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-y border-border py-3 mb-3">
                   <div>
                     <div className="text-[10px] uppercase text-muted-foreground">Deposited</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.totalDeposited, { decimals: 2 })} SOL</div>
+                    <div className="tabular font-semibold">{fmtUSD(p.totalDeposited, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-muted-foreground">Value</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.currentValue, { decimals: 2 })} SOL</div>
+                    <div className="text-[10px] uppercase text-muted-foreground">Current claim</div>
+                    <div className="tabular font-semibold">{fmtUSD(p.currentValue, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
-                    <div className="text-[10px] uppercase text-muted-foreground">Shares</div>
-                    <div className="tabular font-semibold">{p.seniorShares}</div>
+                    <div className="text-[10px] uppercase text-muted-foreground">Principal left</div>
+                    <div className="tabular font-semibold">{fmtUSD(p.seniorPrincipalRemaining, { decimals: 2 })} USDC</div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase text-muted-foreground">Withdrawal</div>
@@ -110,7 +110,7 @@ const Portfolio = () => {
                 </div>
                 {p.vault && <HealthMeter health={p.vault.juniorHealth} />}
                 <p className="mt-3 text-xs text-muted-foreground">
-                  This investor view shows risk, value, shares, and exit terms only. Trader execution controls stay in the manager console.
+                  This investor view shows risk, principal, claim value, and exit terms only. Trader execution controls stay in the manager console.
                 </p>
               </div>
             ))}

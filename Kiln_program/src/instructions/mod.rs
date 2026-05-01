@@ -4,6 +4,7 @@ use shank::ShankInstruction;
 
 pub mod claim_fees;
 pub mod create_vault;
+pub mod custody;
 pub mod deposit_junior;
 pub mod deposit_senior;
 pub mod execute_swap;
@@ -184,12 +185,12 @@ pub struct DepositSeniorArgsIdl {
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub struct WithdrawSeniorArgsIdl {
-    pub shares_to_burn: u64,
+    pub amount_usdc: u64,
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
 pub struct WithdrawJuniorArgsIdl {
-    pub shares_to_burn: u64,
+    pub amount_usdc: u64,
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]

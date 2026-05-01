@@ -31,7 +31,7 @@ describe("vault account views", () => {
     expect(decoded.seniorSharesOutstanding).toBe(2_500_000_000n);
   });
 
-  it("surfaces exact bigint values alongside display SOL values", () => {
+  it("surfaces exact bigint values alongside display USDC values", () => {
     const manager = key(2);
     const managerProfile = key(3);
     const configPubkey = key(4);
@@ -63,14 +63,14 @@ describe("vault account views", () => {
       isPaused: false,
       tradingEnabled: true,
       vaultConfig: configPubkey,
-      originalJuniorDeposit: 1_000_000_000n,
-      juniorCapital: 3_000_000_000n,
-      seniorCapital: 4_000_000_000n,
-      juniorSharesOutstanding: 1_500_000_000n,
-      seniorSharesOutstanding: 2_500_000_000n,
-      currentNav: 7_000_000_000n,
-      lastNav: 6_500_000_000n,
-      highWaterMark: 6_000_000_000n,
+      originalJuniorDeposit: 1_000_000n,
+      juniorCapital: 3_000_000n,
+      seniorCapital: 4_000_000n,
+      juniorSharesOutstanding: 1_500_000n,
+      seniorSharesOutstanding: 2_500_000n,
+      currentNav: 7_000_000n,
+      lastNav: 6_500_000n,
+      highWaterMark: 6_000_000n,
       createdAt: 1_700_000_000n,
       lastNavUpdateAt: 1_700_000_100n,
       graduatedAt: 0n,
@@ -84,10 +84,10 @@ describe("vault account views", () => {
     const view = toVaultView({ configPubkey, config, state });
 
     expect(view?.juniorCapital).toBe(3);
-    expect(view?.juniorCapitalLamports).toBe(3_000_000_000n);
-    expect(view?.seniorSharesOutstanding).toBe(2_500_000_000);
-    expect(view?.seniorSharesOutstandingRaw).toBe(2_500_000_000n);
-    expect(view?.originalJuniorDepositLamports).toBe(1_000_000_000n);
+    expect(view?.juniorCapitalLamports).toBe(3_000_000n);
+    expect(view?.seniorSharesOutstanding).toBe(2_500_000);
+    expect(view?.seniorSharesOutstandingRaw).toBe(2_500_000n);
+    expect(view?.originalJuniorDepositLamports).toBe(1_000_000n);
     expect(view?.paperWindowSecs).toBe(2_592_000);
   });
 });

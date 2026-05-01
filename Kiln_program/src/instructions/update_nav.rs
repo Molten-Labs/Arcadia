@@ -45,6 +45,10 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let _args: UpdateNavArgs =
         deserialize_exact(data).map_err(|_| ProgramError::InvalidInstructionData)?;
 
+    if accounts.len() >= 9 {
+        return update_nav_usdc_wsol(accounts);
+    }
+
     let [_updater, vault_config, vault_state, treasury, _pyth_price, clock_sys] = accounts else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -124,6 +128,97 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::TreasuryAccountingMismatch)?;
     if available_after < state.current_nav {
         return Err(KilnError::TreasuryAccountingMismatch.into());
+    }
+
+    Ok(())
+}
+
+fn update_nav_usdc_wsol(accounts: &[AccountInfo]) -> ProgramResult {
+    let [
+        _updater,
+        vault_config,
+        vault_state,
+        treasury,
+        vault_usdc_token,
+        vault_wsol_token,
+        sol_price_account,
+        usdc_price_account,
+        clock_sys,
+        ..,
+    ] = accounts
+    else {
+        return Err(ProgramError::NotEnoughAccountKeys);
+    };
+
+    if !vault_state.is_writable() || !vault_usdc_token.is_writable() || !vault_wsol_token.is_writable() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let config = VaultConfig::load(vault_config)?;
+    let mut state = VaultState::load_mut(vault_state)?;
+    if state.vault_config != *vault_config.key() {
+        return Err(KilnError::VaultStateMismatch.into());
+    }
+    if config.treasury != *treasury.key() {
+        return Err(KilnError::TreasuryMismatch.into());
+    }
+
+    let clock = Clock::from_account_info(clock_sys)?;
+    let usdc = super::custody::validate_custody_account(
+        vault_usdc_token,
+        treasury,
+        &super::custody::USDC_MINT,
+    )?;
+    let wsol = super::custody::validate_custody_account(
+        vault_wsol_token,
+        treasury,
+        &super::custody::WSOL_MINT,
+    )?;
+    let sol_price = super::custody::read_price(
+        sol_price_account,
+        super::custody::PRICE_FEED_SOL_USD,
+        clock.unix_timestamp,
+    )?;
+    let usdc_price = super::custody::read_price(
+        usdc_price_account,
+        super::custody::PRICE_FEED_USDC_USD,
+        clock.unix_timestamp,
+    )?;
+    let new_nav = super::custody::nav_usdc(
+        usdc.amount,
+        wsol.amount,
+        sol_price.price,
+        usdc_price.price,
+    )?;
+
+    let old_nav = state.current_nav;
+    state.last_nav = old_nav;
+    state.current_nav = new_nav;
+    state.last_nav_update_at = clock.unix_timestamp;
+    if state.high_water_mark == 0 || new_nav > state.high_water_mark {
+        state.high_water_mark = new_nav;
+    }
+
+    if new_nav < old_nav {
+        let loss = old_nav
+            .checked_sub(new_nav)
+            .ok_or(KilnError::MathOverflow)?;
+        if loss <= state.junior_capital {
+            state.junior_capital = state
+                .junior_capital
+                .checked_sub(loss)
+                .ok_or(KilnError::MathOverflow)?;
+        } else {
+            let remaining = loss
+                .checked_sub(state.junior_capital)
+                .ok_or(KilnError::MathOverflow)?;
+            state.junior_capital = 0;
+            state.senior_capital = state
+                .senior_capital
+                .checked_sub(remaining)
+                .ok_or(KilnError::MathOverflow)?;
+            state.trading_enabled = 0;
+        }
     }
 
     Ok(())

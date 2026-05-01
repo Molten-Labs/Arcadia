@@ -1,17 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
-import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
-import { GlassCard } from "@/components/GlassCard";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
-import { DataModeToggle } from "@/components/DataModeToggle";
+import { cn } from "@/lib/utils";
 
 const HERO_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260423_161253_c72b1869-400f-45ed-ac0c-52f68c2ed5bd.mp4";
@@ -35,10 +34,10 @@ const Landing = () => {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative min-h-[calc(100vh-6.75rem)] overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,hsl(var(--primary)/0.22),transparent_34%),linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)))]" />
+      <section className="relative min-h-[calc(100vh-6.75rem)] overflow-hidden border-b border-border/35">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)/0.76)_44%,hsl(var(--background)))]" />
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-45 saturate-[0.8]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-30 saturate-[0.68]"
           src={HERO_VIDEO}
           autoPlay
           muted
@@ -47,62 +46,41 @@ const Landing = () => {
           preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.88)_34%,hsl(var(--background)/0.56)_62%,hsl(var(--background)/0.88)_100%)]" />
-        <div className="absolute inset-0 grid-bg opacity-[0.14]" />
+        <div className="absolute inset-0 rax-glow opacity-85" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_66%,hsl(var(--primary-deep)/0.62)_0%,hsl(var(--primary-deep)/0.30)_18%,transparent_42%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.78)_0%,hsl(var(--background)/0.48)_42%,hsl(var(--background))_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.86)_26%,hsl(var(--background)/0.38)_58%,hsl(var(--background)/0.94)_100%)]" />
+        <div className="absolute inset-0 hairline-grid opacity-[0.14]" />
 
-        <div className="container relative pt-16 pb-16 md:pt-24 md:pb-20">
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-center">
+        <div className="container relative flex min-h-[calc(100vh-6.75rem)] flex-col justify-center py-16 md:py-24">
+          <div className="max-w-5xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="max-w-3xl"
+              className="max-w-4xl"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border bg-card/60 backdrop-blur text-xs text-muted-foreground mb-6">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
-                Live on Solana devnet · {protocolStats.totalVaults} vaults
+              <div className="mb-6 text-xs font-semibold uppercase tracking-[0.28em] text-primary-glow">
+                SynQ Protocol
               </div>
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-primary mb-4">
-                SynQ first-loss vaults
-              </div>
-              <h1 className="font-display font-bold text-5xl md:text-7xl leading-[0.95] tracking-tight">
-                Syn<span className="text-primary">Q</span> traders prove first. Investors follow proof.
+              <h1 className="font-hero max-w-4xl text-6xl font-semibold leading-[0.88] tracking-normal text-foreground/95 md:text-8xl lg:text-9xl">
+                Capital follows proof.
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mt-6 max-w-2xl leading-relaxed">
-                SynQ is a Solana vault marketplace where traders build a public track record with their own capital,
-                then graduate into investor capital protected by an on-chain junior buffer.
+              <p className="mt-7 max-w-xl text-sm leading-7 text-foreground/78 md:text-base">
+                SynQ is a Solana vault layer where traders earn allocation only after proving performance with first-loss capital.
               </p>
-              <div className="flex flex-wrap gap-3 mt-8">
-                <Button asChild size="lg" className="bg-gradient-ember hover:opacity-90 text-white border-0 shadow-ember">
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Button asChild size="lg">
                   <Link to="/vaults">Open marketplace <ArrowRight className="w-4 h-4 ml-2" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link to="/manager">Trader console</Link>
                 </Button>
-                <Button asChild size="lg" variant="ghost">
-                  <a href="#calculator">Returns calculator</a>
-                </Button>
-              </div>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <DataModeToggle />
-                <span className="text-xs text-muted-foreground">
-                  Switch between deterministic SynQ demo data and configured server/RPC data.
-                </span>
               </div>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
-              className="hidden lg:block"
-            >
-              <GlassCard
-                tag="DEVNET · LIVE DEMO"
-                title={<>Built for <span className="italic font-display text-primary">capital</span> that needs receipts.</>}
-                subtitle="Paper mode, on-chain reputation, dynamic risk limits, and instant exits when buffers run thin."
-              />
-            </motion.div>
+          </div>
+          <div className="mt-16 max-w-xl border-t border-border/45 pt-4 text-xs text-muted-foreground">
+            First-loss vaults · public track records · non-custodial Solana rails
           </div>
         </div>
       </section>
@@ -111,14 +89,14 @@ const Landing = () => {
       <InfiniteSlider />
 
       {/* Stats strip */}
-      <section className="border-b border-border relative overflow-hidden">
+      <section className="border-b border-border/35 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-px animate-shimmer pointer-events-none" />
         <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 relative">
           {[
-            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} SOL` },
+            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} USDC` },
             { l: "Live vaults", v: protocolStats.totalVaults },
             { l: "Graduated", v: protocolStats.graduatedVaults },
-            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} SOL` },
+            { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} USDC` },
           ].map((s, i) => (
             <motion.div
               key={s.l}
@@ -159,7 +137,7 @@ const Landing = () => {
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.5, delay: i * 0.12 }}
               whileHover={{ y: -4 }}
-              className="surface rounded-2xl p-6 shadow-card relative overflow-hidden group hover:border-border-strong transition-colors"
+              className="matte-panel rounded-lg p-6 relative overflow-hidden group hover:border-primary/28 transition-colors"
             >
               <div className="text-[80px] font-display font-bold text-primary/5 absolute -top-4 -right-2 leading-none">{s.n}</div>
               <s.icon className="w-6 h-6 text-primary mb-4 relative" />
@@ -172,32 +150,36 @@ const Landing = () => {
       </section>
 
       {/* Featured vaults */}
-      <section className="container py-12">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="font-display font-bold text-3xl">Featured vaults</h2>
-            <p className="text-muted-foreground mt-1">Top-performing graduated vaults open for deposits.</p>
+      <section className="border-t border-border/35 py-12">
+        <div className="container">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <h2 className="font-display font-bold text-3xl">Featured vaults</h2>
+              <p className="text-muted-foreground mt-1">Top-performing graduated vaults open for deposits.</p>
+            </div>
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/vaults">View all <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
+            </Button>
           </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/vaults">View all <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
-          </Button>
+          {featured.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-5">
+              {featured.map(v => (
+                <VaultCard key={v.id} vault={v} />
+              ))}
+            </div>
+          ) : (
+            <div className="matte-panel rounded-lg p-10 text-center text-muted-foreground">
+              No active vaults yet. Connect your wallet and create the first one!
+            </div>
+          )}
         </div>
-        {featured.length > 0 ? (
-          <div className="grid md:grid-cols-3 gap-5">
-            {featured.map(v => <VaultCard key={v.id} vault={v} />)}
-          </div>
-        ) : (
-          <div className="surface rounded-2xl p-10 text-center text-muted-foreground">
-            No active vaults yet. Connect your wallet and create the first one!
-          </div>
-        )}
       </section>
 
       <VaultCalculator />
 
       {/* Trust strip */}
       <section className="container py-20">
-        <div className="surface-elevated rounded-2xl p-8 md:p-12">
+        <div className="surface-elevated rounded-lg p-8 md:p-12">
           <div className="grid md:grid-cols-4 gap-6">
             {[
               { icon: Activity, title: "30-day paper mode", desc: "Every vault must build a public track record before accepting investor capital." },
@@ -214,8 +196,180 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      {/* FAQ Section */}
+      <section className="border-t border-border/35 py-20">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center max-w-2xl mx-auto mb-12"
+          >
+            <h2 className="font-display font-bold text-4xl">Frequently Asked Questions</h2>
+            <p className="text-muted-foreground mt-3">Everything you need to know about SynQ</p>
+          </motion.div>
+          <div className="max-w-2xl mx-auto space-y-4">
+            {[
+              {
+                q: "What is the minimum deposit?",
+                a: "There is no minimum deposit. You can start with as little as 0.1 SOL and deposit more whenever you want.",
+              },
+              {
+                q: "Can I withdraw my funds anytime?",
+                a: "Yes. With the instant-exit mechanism, you can withdraw your funds at any time, even if the vault is in cooldown or experiencing drawdown.",
+              },
+              {
+                q: "How long is paper mode?",
+                a: "Paper mode typically lasts 30 days. During this period, all trading is simulated and no real funds are at risk. This gives traders time to prove their strategy.",
+              },
+              {
+                q: "What happens if the junior buffer drops below 20%?",
+                a: "The vault enters a freeze state. No new deposits are allowed and position sizes shrink automatically. This protects senior capital (investor funds).",
+              },
+              {
+                q: "How are performance fees calculated?",
+                a: "Fees are charged only on profits above the high-water mark (HWM). A typical rate is 20% of gains. If the vault loses money, no performance fees are charged.",
+              },
+              {
+                q: "Are these vaults audited?",
+                a: "All vaults are deployed on-chain via the verified SynQ smart contracts on Solana. Every trade, deposit, and fee is transparent and immutable.",
+              },
+            ].map((faq, idx) => (
+              <FAQItem key={idx} question={faq.q} answer={faq.a} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Detailed */}
+      <section className="border-t border-border/35 py-20 bg-card/25">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center max-w-2xl mx-auto mb-16"
+          >
+            <h2 className="font-display font-bold text-4xl">Deep Dive: SynQ Protocol</h2>
+            <p className="text-muted-foreground mt-3">Understanding our first-loss vault architecture</p>
+          </motion.div>
+
+          <div className="space-y-8">
+            {[
+              {
+                title: "Junior Capital: The First-Loss Buffer",
+                desc: "Every trader deposits their own capital upfront. This money is the first to absorb any losses. Investors know the manager has skin in the game.",
+                icon: Layers,
+              },
+              {
+                title: "Paper Mode: Risk-Free Proof",
+                desc: "Before accepting real investor capital, traders spend 30 days in paper mode. All trades are simulated on-chain. Investors see the real track record before committing funds.",
+                icon: Activity,
+              },
+              {
+                title: "Senior Capital: Protected Upside",
+                desc: "Once graduated, investors deposit senior capital behind the junior buffer. The junior capital absorbs losses first, protecting investor funds.",
+                icon: Shield,
+              },
+              {
+                title: "Dynamic Risk Controls",
+                desc: "As the junior buffer drops, position sizes shrink automatically. If the buffer drops below 20%, the vault freezes. If it drops below 10%, instant-exit is triggered.",
+                icon: TrendingUp,
+              },
+              {
+                title: "Cooldown & Reputation",
+                desc: "After graduation, managers enter a cooldown period. Multiple cooldowns (5+) can freeze the vault permanently. On-chain reputation is immutable.",
+                icon: Lock,
+              },
+              {
+                title: "Performance Fees",
+                desc: "Managers earn 20% of profits above the high-water mark (HWM). If the vault loses money, no fees are charged. Fees go to managers, not to SynQ.",
+                icon: Users,
+              },
+            ].map((section, i) => (
+              <motion.div
+                key={section.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: i * 0.08 }}
+                className="surface rounded-lg p-8"
+              >
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0">
+                    <section.icon className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-semibold text-xl mb-2">{section.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{section.desc}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="mt-16 text-center"
+          >
+            <p className="text-muted-foreground mb-6">Ready to explore SynQ?</p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button asChild size="lg">
+                <Link to="/vaults">Browse Vaults <ArrowRight className="w-4 h-4 ml-2" /></Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to="/traders">Explore Managers</Link>
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
     </Layout>
   );
 };
+
+function FAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.3 }}
+      className="matte-panel rounded-lg overflow-hidden"
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-primary/5 transition-colors"
+      >
+        <span className="font-semibold text-left">{question}</span>
+        <ChevronDown
+          className={cn(
+            "w-5 h-5 text-primary transition-transform flex-shrink-0 ml-4",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.2 }}
+          className="border-t border-border/30 px-6 py-4 text-muted-foreground"
+        >
+          {answer}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
 
 export default Landing;

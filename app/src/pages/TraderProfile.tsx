@@ -73,8 +73,8 @@ const TraderProfile = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           <StatCard label="Total vaults" value={manager.totalVaults} />
           <StatCard label="Active vaults" value={manager.activeVaults} />
-          <StatCard label="Total AUM" value={`${fmtUSD(totalAum, { compact: true })} SOL`} />
-          <StatCard label="Junior deployed" value={`${fmtUSD(manager.totalJuniorDeposited, { compact: true })} SOL`} />
+          <StatCard label="Total AUM" value={`${fmtUSD(totalAum, { compact: true })} USDC`} />
+          <StatCard label="Junior deployed" value={`${fmtUSD(manager.totalJuniorDeposited, { compact: true })} USDC`} />
         </div>
 
         <div className="space-y-6">

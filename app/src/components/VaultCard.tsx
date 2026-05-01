@@ -1,116 +1,78 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import type { VaultView } from "@/hooks/useVaults";
 import { fmtUSD } from "@/lib/format";
 import { StatusBadge } from "./StatusBadge";
 import { HealthMeter } from "./HealthMeter";
-import { ArrowRight, Zap, TrendingUp } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import { shortAddr } from "@/lib/wallet";
 
 export const VaultCard = ({ vault }: { vault: VaultView }) => {
   const juniorPct = vault.tvl > 0 ? Math.round((vault.juniorCapital / vault.tvl) * 100) : 0;
-  const pnlPercent = ((vault.currentNav - vault.tvl) / vault.tvl) * 100 || 0;
-  const isProfitable = pnlPercent >= 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5 }}
-      whileHover={{ y: -4 }}
-      className="vc"
+    <Link
+      to={`/vault/${vault.id}`}
+      className="group matte-panel rounded-lg p-5 transition-colors hover:border-primary/30 hover:bg-card-elevated/80 flex flex-col gap-4"
     >
-      <Link to={`/vault/${vault.id}`} className="block h-full">
-        {/* Glow blob */}
-        <div
-          className="vc-glow"
-          style={{
-            background: isProfitable ? "rgba(74,222,128,0.08)" : "rgba(248,113,113,0.08)",
-          }}
-        />
-
-        {/* Head: Avatar, Name, Trader, Status */}
-        <div className="vc-head">
-          <div className="vc-top">
-            <div className="vc-av" style={{ background: `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)/0.7))` }}>
-              {vault.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="vc-info">
-              <div className="vc-name">{vault.name}</div>
-              <div className="vc-addr">{shortAddr(vault.managerPubkey)}</div>
-              <div className="vc-tags">
-                {vault.status === "active" && <span className="tag t-live">LIVE</span>}
-                {juniorPct >= 15 && <span className="tag t-tier">TIER 1</span>}
-              </div>
-            </div>
-            <div className="vc-pnl-wrap">
-              <div className={`vc-pnl ${isProfitable ? "up" : "dn"}`}>
-                {isProfitable ? "+" : ""}{pnlPercent.toFixed(1)}%
-              </div>
-              <div className="vc-pnl-lbl">PNL</div>
-            </div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-display font-semibold text-lg leading-tight truncate">{vault.name}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground truncate font-mono">
+              by {shortAddr(vault.managerPubkey)}
+            </span>
           </div>
         </div>
+        <StatusBadge status={vault.status} />
+      </div>
 
-        {/* Divider */}
-        <div className="vc-div" />
-
-        {/* Stats Grid */}
-        <div className="vc-stats">
-          <div className="vs">
-            <div className="vs-l">TVL</div>
-            <div className="vs-v">${fmtUSD(vault.tvl, { compact: true })}</div>
-          </div>
-          <div className="vs">
-            <div className="vs-l">JUNIOR</div>
-            <div className="vs-v">{juniorPct}%</div>
-          </div>
-          <div className="vs">
-            <div className="vs-l">SHARPE</div>
-            <div className="vs-v up">—</div>
+      <div className="grid grid-cols-3 gap-3 py-3 border-y border-border/45">
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">TVL</div>
+          <div className="tabular font-semibold text-sm mt-0.5">
+            {vault.tvl > 0 ? `${fmtUSD(vault.tvl, { compact: true })} USDC` : "—"}
           </div>
         </div>
-
-        {/* Health Bar */}
-        <div className="vc-hlth">
-          <div className="hl">BUFFER</div>
-          <div className="ht">
-            <div
-              className="hf"
-              style={{
-                width: `${Math.min(100, vault.juniorHealth)}%`,
-                background:
-                  vault.juniorHealth > 80
-                    ? "hsl(142, 71%, 45%)"
-                    : vault.juniorHealth > 50
-                      ? "hsl(38, 92%, 50%)"
-                      : "hsl(0, 84%, 60%)",
-              }}
-            />
-          </div>
-          <div
-            className="hp"
-            style={{
-              color:
-                vault.juniorHealth > 80
-                  ? "hsl(142, 71%, 45%)"
-                  : vault.juniorHealth > 50
-                    ? "hsl(38, 92%, 50%)"
-                    : "hsl(0, 84%, 60%)",
-            }}
-          >
-            {Math.round(vault.juniorHealth)}%
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">NAV</div>
+          <div className="tabular font-semibold text-sm mt-0.5">
+            {vault.currentNav > 0 ? `${fmtUSD(vault.currentNav, { compact: true })} USDC` : "—"}
           </div>
         </div>
-
-        {/* Deposit Button */}
-        <div className="vc-foot">
-          <button className="dep-btn">
-            <span>DEPOSIT</span>
-          </button>
+        <div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Junior</div>
+          <div className="tabular font-semibold text-sm mt-0.5">{juniorPct}%</div>
         </div>
-      </Link>
-    </motion.div>
+      </div>
+
+      <HealthMeter health={vault.juniorHealth} />
+
+      <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
+          Fee: {vault.feeBps / 100}%
+        </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/70 text-muted-foreground">
+          Slippage: {vault.maxSlippageBps / 100}%
+        </span>
+        {vault.instantExit && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/12 text-primary inline-flex items-center gap-1 shadow-[0_0_16px_hsl(var(--primary)/0.12)]">
+            <Zap className="w-2.5 h-2.5" /> Instant exit
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between pt-1">
+        <span className="text-xs text-muted-foreground">
+          {vault.status === "paper"
+            ? `${vault.paperTradeCount}/${vault.minQualifyingTrades} trades`
+            : vault.graduatedAt > 0
+            ? `Graduated ${new Date(vault.graduatedAt * 1000).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
+            : ""}
+        </span>
+        <span className="text-xs text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-[gap]">
+          View vault <ArrowRight className="w-3 h-3" />
+        </span>
+      </div>
+    </Link>
   );
 };
