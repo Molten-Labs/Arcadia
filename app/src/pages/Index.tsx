@@ -5,18 +5,22 @@ import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
-import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users, AlertTriangle, TrendingDown, Award } from "lucide-react";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
 import { ArcadiaLogo } from "@/components/ArcadiaLogo";
+import { useDataMode } from "@/hooks/useDataMode";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
 
 const HERO_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260325_094440_a3592600-bd1e-49e5-9bce-a73662061d83.mp4";
 
 const Landing = () => {
   const { data: vaults } = useVaults();
+  const { mode, setMode } = useDataMode();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
 
   const featured = useMemo(
@@ -35,7 +39,7 @@ const Landing = () => {
     <Layout>
       {/* Hero */}
       <section className="relative min-h-[calc(100dvh-6.75rem)] overflow-hidden border-b border-border/35">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)),hsl(var(--background-secondary)/0.76)_44%,hsl(var(--background)))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.6),hsl(var(--background-secondary)/0.5)_44%,hsl(var(--background)/0.6))]" />
         <video
           className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.38] saturate-[0.72]"
           src={HERO_VIDEO}
@@ -77,6 +81,30 @@ const Landing = () => {
                 <Button asChild size="lg" variant="outline">
                   <Link to="/manager">Trader console</Link>
                 </Button>
+                <div className="flex items-center gap-2 rounded-lg bg-card/35 p-1 border border-border/45">
+                  <button
+                    onClick={() => setMode("mock")}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                      mode === "mock"
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Mock data
+                  </button>
+                  <button
+                    onClick={() => setMode("real")}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                      mode === "real"
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Live data
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -173,6 +201,78 @@ const Landing = () => {
       </section>
 
       <VaultCalculator />
+
+      {/* Deep dive section */}
+      <section className="container py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-center max-w-2xl mx-auto mb-12"
+        >
+          <h2 className="font-display type-h2 font-semibold">Deep dive</h2>
+          <p className="text-muted-foreground mt-3">Advanced concepts and mechanics.</p>
+        </motion.div>
+        <div className="space-y-5">
+          {[
+            { icon: Layers, title: "Junior and senior capital", body: "Each vault holds two layers. Junior capital comes from the trader. Senior capital comes from investors. Losses always hit junior first — investors are protected as long as the junior buffer holds." },
+            { icon: Activity, title: "Paper mode", body: "New vaults run in paper mode for 30 days with only trader capital. The trader builds a public, on-chain track record before any investor can deposit." },
+            { icon: Award, title: "Graduation", body: "After paper mode and a positive performance check, the vault graduates and opens to investor deposits. The graduation event is recorded on-chain." },
+            { icon: TrendingDown, title: "Dynamic risk limits", body: "As the junior buffer drops, position sizes shrink automatically. At 50% junior health, the vault enters cooldown. Below 20%, investor exits become instant." },
+            { icon: AlertTriangle, title: "Freeze", body: "If the junior buffer is depleted, trading is disabled and the vault is frozen. Investors withdraw available liquidity. The trader's reputation is permanently affected." },
+            { icon: Shield, title: "Performance fees", body: "Traders only earn fees on gains above the previous high-water mark. No fees during drawdowns. No fees on flat performance." },
+          ].map((s, i) => (
+            <motion.div
+              key={s.title}
+              initial={{ opacity: 0, y: 15 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.4, delay: i * 0.06 }}
+              className="surface rounded-lg p-6 flex gap-5"
+            >
+              <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <s.icon className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-mono text-muted-foreground mb-1">0{i + 1}</div>
+                <h3 className="font-display type-h3 font-semibold">{s.title}</h3>
+                <p className="text-sm text-foreground/80 mt-2 leading-relaxed">{s.body}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ section */}
+      <section className="container py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="max-w-3xl mx-auto"
+        >
+          <div className="text-center mb-12">
+            <h2 className="font-display type-h2 font-semibold">Frequently asked questions</h2>
+          </div>
+          <Accordion type="single" collapsible className="border-t border-border">
+            {[
+              { q: "What is junior capital?", a: "It's the trader's own money, posted as first-loss collateral. If the vault loses money, the junior buffer absorbs the losses before any investor capital is touched." },
+              { q: "What happens if a vault freezes?", a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's reputation is reduced significantly." },
+              { q: "When can I withdraw?", a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant." },
+              { q: "How are performance fees calculated?", a: "Traders earn 15-20% only on gains above the previous high-water mark. No fees during drawdowns or sideways performance." },
+              { q: "Is Arcadia custodial?", a: "No. Arcadia is a non-custodial protocol on Solana. You sign every transaction yourself." },
+              { q: "Why does paper mode exist?", a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits." },
+            ].map((item, i) => (
+              <AccordionItem key={i} value={`i-${i}`} className="border-b border-border/35">
+                <AccordionTrigger className="text-left font-display font-semibold hover:no-underline py-4">{item.q}</AccordionTrigger>
+                <AccordionContent className="text-foreground/80 pb-4">{item.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </motion.div>
+      </section>
 
       {/* Trust strip */}
       <section className="container py-20">

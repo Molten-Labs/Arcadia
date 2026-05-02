@@ -42,7 +42,6 @@ export const Nav = () => {
     const publicLinks = [
         { to: "/vaults", label: "Marketplace" },
         { to: "/traders", label: "Traders" },
-        { to: "/how-it-works", label: "How it works" },
         { to: "/docs", label: "Docs" },
     ];
 

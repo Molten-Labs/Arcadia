@@ -20,9 +20,7 @@ const ManagerDashboard = lazy(() => import("./pages/ManagerDashboard.tsx"));
 const ManagerVault = lazy(() => import("./pages/ManagerVault.tsx"));
 const CreateVault = lazy(() => import("./pages/CreateVault.tsx"));
 const Trade = lazy(() => import("./pages/Trade.tsx"));
-const HowItWorks = lazy(() => import("./pages/HowItWorks.tsx"));
 const Docs = lazy(() => import("./pages/Docs.tsx"));
-const FAQ = lazy(() => import("./pages/FAQ.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
@@ -114,12 +112,7 @@ const App = () => (
                                         </ProtectedRoute>
                                     }
                                 />
-                                <Route
-                                    path="/how-it-works"
-                                    element={<HowItWorks />}
-                                />
                                 <Route path="/docs" element={<Docs />} />
-                                <Route path="/faq" element={<FAQ />} />
                                 <Route path="*" element={<NotFound />} />
                             </Routes>
                         </Suspense>
