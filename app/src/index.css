@@ -260,6 +260,15 @@
 }
 .animate-line-scan { animation: line-scan 6s cubic-bezier(0, 0, 0.2, 1) infinite; }
 
+@keyframes vault-carousel {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+.animate-vault-carousel {
+  animation: vault-carousel 32s linear infinite;
+}
+.animate-vault-carousel:hover { animation-play-state: paused; }
+
 @keyframes ticker {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
