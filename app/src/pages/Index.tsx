@@ -45,16 +45,16 @@ const Landing = () => {
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="relative min-h-[calc(100dvh-7.25rem)] overflow-hidden border-b border-border/35">
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.35] saturate-[0.65]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.58] saturate-[0.75]"
           src={HERO_VIDEO}
           autoPlay muted loop playsInline preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.82)_0%,hsl(var(--background)/0.52)_40%,hsl(var(--background))_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.88)_30%,hsl(var(--background)/0.42)_62%,hsl(var(--background)/0.96)_100%)]" />
-        <div className="absolute inset-0 arcadia-glow opacity-80" />
-        <div className="absolute inset-0 hairline-grid opacity-[0.13]" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.60)_0%,hsl(var(--background)/0.28)_40%,hsl(var(--background)/0.88)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.92)_0%,hsl(var(--background)/0.70)_30%,hsl(var(--background)/0.18)_62%,hsl(var(--background)/0.72)_100%)]" />
+        <div className="absolute inset-0 arcadia-glow opacity-50" />
+        <div className="absolute inset-0 hairline-grid opacity-[0.08]" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
         {/* Floating orbs */}
         <div className="pointer-events-none absolute top-32 right-[18%] h-64 w-64 rounded-full bg-primary/[0.08] blur-[72px] signal-orb-1" />
