@@ -13,9 +13,14 @@ export async function fetchKilnApi<T>(path: string): Promise<T | null> {
   const baseUrl = getKilnApiUrl();
   if (!baseUrl) return null;
 
-  const response = await fetch(`${baseUrl}${path}`);
-  if (!response.ok) {
-    throw new Error(`Arcadia API request failed: ${response.status}`);
+  try {
+    const response = await fetch(`${baseUrl}${path}`);
+    if (!response.ok) {
+      throw new Error(`Arcadia API request failed: ${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  } catch (error) {
+    console.warn(`Failed to fetch from Arcadia API (${baseUrl}${path}):`, error);
+    return null;
   }
-  return response.json() as Promise<T>;
 }
