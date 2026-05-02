@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcadia Protocol - Pitch Deck</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --signal-primary: #00FFB2;
+            --signal-deep: #16C784;
+            --bg-dark: #050816;
+            --bg-secondary: #0B1120;
+            --surface: #111827;
+            --surface-elevated: #17171D;
+            --text-primary: #F5F7FA;
+            --text-secondary: #B0B0B0;
+            --text-muted: #7C7C84;
+            --danger: #FF4D6D;
+            --warning: #C8A75B;
+        }
+
+        html, body {
+            font-family: 'Poppins', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .slide-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .slide {
+            display: none;
+            width: 90%;
+            max-width: 1000px;
+            height: 85vh;
+            background: linear-gradient(135deg, var(--surface) 0%, var(--bg-secondary) 100%);
+            border: 1px solid rgba(0,255,178,0.1);
+            border-radius: 12px;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--signal-primary), transparent);
+        }
+
+        h1 {
+            font-family: 'Outfit', system-ui, sans-serif;
+            font-size: 56px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 24px;
+        }
+
+        h2 {
+            font-family: 'Outfit', system-ui, sans-serif;
+            font-size: 44px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            background: linear-gradient(135deg, var(--signal-primary), var(--signal-deep));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h3 {
+            font-family: 'Outfit', system-ui, sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .tagline {
+            font-size: 16px;
+            color: var(--signal-primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .stat {
+            display: inline-block;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--signal-primary);
+            margin-right: 40px;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-top: 24px;
+        }
+
+        .grid.three-col {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .card {
+            background: rgba(0,255,178,0.05);
+            border: 1px solid rgba(0,255,178,0.2);
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .card h3 {
+            color: var(--signal-primary);
+            margin-bottom: 12px;
+        }
+
+        .card p {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .problem-card {
+            background: rgba(255,77,109,0.08);
+            border-left: 4px solid var(--danger);
+        }
+
+        .solution-card {
+            background: rgba(0,255,178,0.08);
+            border-left: 4px solid var(--signal-primary);
+        }
+
+        ul {
+            list-style: none;
+            margin-top: 16px;
+        }
+
+        li {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-left: 24px;
+            position: relative;
+        }
+
+        li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--signal-primary);
+            font-weight: bold;
+        }
+
+        .cta {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--signal-primary), var(--signal-deep));
+            color: var(--bg-dark);
+            padding: 14px 32px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            margin-top: 32px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0,255,178,0.3);
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 24px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,255,178,0.1);
+            font-size: 15px;
+        }
+
+        .comparison-table th {
+            background: rgba(0,255,178,0.1);
+            color: var(--signal-primary);
+            font-weight: 600;
+        }
+
+        .check {
+            color: var(--signal-primary);
+            font-weight: bold;
+        }
+
+        .x {
+            color: var(--danger);
+        }
+
+        .footer-meta {
+            position: absolute;
+            bottom: 24px;
+            right: 40px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .slide-number {
+            position: absolute;
+            bottom: 24px;
+            left: 40px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls button {
+            background: rgba(0,255,178,0.2);
+            border: 1px solid rgba(0,255,178,0.4);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .controls button:hover {
+            background: rgba(0,255,178,0.3);
+        }
+
+        .controls button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .presenter-notes {
+            display: none;
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            border: 1px solid rgba(0,255,178,0.3);
+            border-radius: 8px;
+            padding: 16px;
+            max-width: 600px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 99;
+            backdrop-filter: blur(10px);
+        }
+
+        .presenter-notes.active {
+            display: block;
+        }
+
+        .presenter-notes h4 {
+            color: var(--signal-primary);
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .presenter-notes p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .logo {
+            font-family: 'Outfit', system-ui, sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--signal-primary);
+            margin-bottom: 40px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .metric-box {
+            background: rgba(0,255,178,0.05);
+            border: 1px solid rgba(0,255,178,0.2);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--signal-primary);
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        .center {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .highlight {
+            color: var(--signal-primary);
+            font-weight: 600;
+        }
+
+        @media print {
+            .controls, .presenter-notes {
+                display: none !important;
+            }
+            .slide {
+                page-break-after: always;
+                display: flex !important;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .slide {
+                padding: 40px;
+            }
+            h1 {
+                font-size: 40px;
+            }
+            h2 {
+                font-size: 32px;
+            }
+            .grid, .two-col {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div>
+                <div class="logo">ARCADIA</div>
+                <h1>Protocol-Enforced<br>Prop Trading on Solana</h1>
+                <p style="font-size: 18px; color: var(--text-secondary); margin-top: 24px;">Traders prove performance with first-loss capital. Investors deposit with cryptographic proof. The protocol enforces trust on every transaction.</p>
+            </div>
+            <div>
+                <div style="color: var(--text-muted); font-size: 14px;">Arcadia • Solana Vault Protocol • 2025</div>
+            </div>
+            <div class="slide-number">1</div>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <div>
+                <h2>The Problem</h2>
+                <p style="font-size: 16px; margin-top: 32px;">Managed trading today is built on assumption, not proof.</p>
+                <div class="grid">
+                    <div class="problem-card">
+                        <h3>Trader Fraud</h3>
+                        <p>Anyone can spin up a fund, attract investor money with a pitch, and blow it up day one. Investor capital is unprotected until track record exists.</p>
+                    </div>
+                    <div class="problem-card">
+                        <h3>Broken Trust Model</h3>
+                        <p>Investors ask: "Will this trader act responsibly?" But they have no way to enforce it. Risk depends entirely on the trader's goodwill.</p>
+                    </div>
+                    <div class="problem-card">
+                        <h3>Access Gap</h3>
+                        <p>Serious investors have capital but no way to deploy it without trusting a stranger or trading themselves. Distribution is broken.</p>
+                    </div>
+                    <div class="problem-card">
+                        <h3>Custody Risk</h3>
+                        <p>Traditional managed products require you to hand your money to a third party. Solana offers an alternative: non-custodial proof.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">2</div>
+        </div>
+
+        <!-- Slide 3: The Solution -->
+        <div class="slide">
+            <div>
+                <h2>The Solution: Arcadia</h2>
+                <p style="font-size: 16px; margin-top: 32px;">A protocol that makes trust verifiable, risk enforceable, and capital accessible.</p>
+                <div class="grid">
+                    <div class="solution-card">
+                        <h3>Mandatory Paper Mode</h3>
+                        <p>Every vault runs 30 days with trader capital only. On-chain track record is public and immutable before a single investor dollar enters.</p>
+                    </div>
+                    <div class="solution-card">
+                        <h3>Protocol-Enforced Risk</h3>
+                        <p>Position limits, mandatory 20% junior reserves, loss waterfalls—all automated. The code enforces it. The trader can't breach it.</p>
+                    </div>
+                    <div class="solution-card">
+                        <h3>Instant Liquidity</h3>
+                        <p>Investors withdraw anytime. No queue. No permission. The protocol calculates share of every vault asset and transfers instantly.</p>
+                    </div>
+                    <div class="solution-card">
+                        <h3>Non-Custodial Rails</h3>
+                        <p>Traders execute on Jupiter. Investors self-custody. Settlement is on-chain. Nobody touches the money except the protocol.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">3</div>
+        </div>
+
+        <!-- Slide 4: How It Works -->
+        <div class="slide">
+            <div>
+                <h2>How Arcadia Works</h2>
+            </div>
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Step 1: Trader Deposits</div>
+                    <p style="font-size: 14px;">Trader posts first-loss capital ($5K-$20K). Vault enters 30-day paper mode. Only trader capital at risk.</p>
+                </div>
+                <div class="metric-box">
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Step 2: Build Track Record</div>
+                    <p style="font-size: 14px;">30 days of on-chain trading via Jupiter. Every trade is public, auditable, permanent. No editing. No story.</p>
+                </div>
+                <div class="metric-box">
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Step 3: Graduate</div>
+                    <p style="font-size: 14px;">After positive performance, vault graduates. Investors can now deposit. Trader junior buffer protects them.</p>
+                </div>
+                <div class="metric-box">
+                    <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">Step 4: Earn Fees</div>
+                    <p style="font-size: 14px;">Trader earns fees only on gains above high-water mark. No fees during drawdowns. Skin in game stays aligned.</p>
+                </div>
+            </div>
+            <div class="slide-number">4</div>
+        </div>
+
+        <!-- Slide 5: Why Blockchain -->
+        <div class="slide">
+            <div>
+                <h2>Why This Requires Blockchain</h2>
+                <p style="font-size: 16px; margin-top: 32px;">These three properties can only exist on-chain:</p>
+            </div>
+            <ul style="margin-top: 40px; font-size: 16px;">
+                <li><span class="highlight">Verifiable Track Record</span> — Every trade is on-chain forever. No company can edit it. No one can lie about performance.</li>
+                <li><span class="highlight">Permissionless Access</span> — A trader in Lagos can raise from an investor in Singapore. No bank account needed. No country restrictions.</li>
+                <li><span class="highlight">Automatic Enforcement</span> — Loss waterfalls, position limits, and risk controls happen at the protocol layer. The code is stronger than promises.</li>
+                <li><span class="highlight">Instant Settlement</span> — Investors can withdraw anytime. No centralized party can freeze or delay. Atomic settlement on-chain.</li>
+            </ul>
+            <div class="slide-number">5</div>
+        </div>
+
+        <!-- Slide 6: Why Now -->
+        <div class="slide">
+            <div>
+                <h2>Why Now</h2>
+                <p style="font-size: 16px; margin-top: 32px;">Three convergent forces create this moment:</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <h3>Solana DeFi Maturity</h3>
+                    <p>Jupiter now handles billions in volume. Composability is real. Arcadia becomes the 'management layer' on top of proven trading rails.</p>
+                </div>
+                <div class="card">
+                    <h3>CeFi Reputation Collapse</h3>
+                    <p>FTX, Celsius, 3AC. Institutions realize centralized custody is broken. Non-custodial alternatives are no longer fringe—they're necessary.</p>
+                </div>
+                <div class="card">
+                    <h3>Institutional Appetite</h3>
+                    <p>Quants and prop traders want Solana exposure. Retail investors want decentralized yield. Both want trustless proof. Demand exists.</p>
+                </div>
+                <div class="card">
+                    <h3>Crypto Maturity</h3>
+                    <p>Solana State Compression, MEV solutions, audit tooling—infrastructure is production-ready. Builder confidence is high.</p>
+                </div>
+            </div>
+            <div class="slide-number">6</div>
+        </div>
+
+        <!-- Slide 7: Market Opportunity -->
+        <div class="slide">
+            <div>
+                <h2>Market Opportunity</h2>
+            </div>
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-value">$350B</div>
+                    <div class="metric-label">Global Hedge Fund AUM</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">TAM: 10% of hedge fund allocations = $35B addressable on Solana over 5 years</p>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">$1.4T</div>
+                    <div class="metric-label">Solana DeFi Opportunity</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">If Solana becomes #2 chain, 15% of TVL = $210B. Managed vaults take 20% = $42B SAM</p>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">4,000+</div>
+                    <div class="metric-label">Active Prop Traders on Solana</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">SOM: 1,000 traders × $500K avg vault = $500M year 1 (conservative)</p>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">30%</div>
+                    <div class="metric-label">CeFi Fund Failures YoY</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Arcadia captures the shift from custodial to non-custodial managed trading</p>
+                </div>
+            </div>
+            <div class="slide-number">7</div>
+        </div>
+
+        <!-- Slide 8: Competitive Position -->
+        <div class="slide">
+            <div>
+                <h2>Competitive Landscape</h2>
+                <p style="font-size: 16px; margin-top: 24px;">Arcadia creates a new category: <span class="highlight">Protocol-Enforced Prop Trading.</span> We're not competing with Jupiter or Orca—we're building <i>on top</i> of them.</p>
+            </div>
+            <table class="comparison-table" style="margin-top: 32px; font-size: 14px;">
+                <tr>
+                    <th>Category</th>
+                    <th>Traditional Funds</th>
+                    <th>Social Trading</th>
+                    <th>Arcadia</th>
+                </tr>
+                <tr>
+                    <td><strong>Track Record Verifiable</strong></td>
+                    <td class="x">✗ Audited yearly</td>
+                    <td class="x">✗ Self-reported</td>
+                    <td class="check">✓ On-chain, real-time</td>
+                </tr>
+                <tr>
+                    <td><strong>Risk Enforceable</strong></td>
+                    <td class="x">✗ Depends on promises</td>
+                    <td class="x">✗ Unverified</td>
+                    <td class="check">✓ Protocol enforces</td>
+                </tr>
+                <tr>
+                    <td><strong>Access Global</strong></td>
+                    <td class="x">✗ Bank account required</td>
+                    <td class="check">✓ Yes</td>
+                    <td class="check">✓ Yes (non-custodial)</td>
+                </tr>
+                <tr>
+                    <td><strong>Custody Non-Custodial</strong></td>
+                    <td class="x">✗ Custodied</td>
+                    <td class="x">✗ Often custodied</td>
+                    <td class="check">✓ Full self-custody</td>
+                </tr>
+                <tr>
+                    <td><strong>Instant Liquidity</strong></td>
+                    <td class="x">✗ Lockup periods</td>
+                    <td class="check">✓ Varies</td>
+                    <td class="check">✓ Always instant</td>
+                </tr>
+            </table>
+            <p style="margin-top: 24px; font-size: 14px; color: var(--text-muted);"><strong>Our real competition:</strong> the status quo. Unverified social trading and traditional fund models. Arcadia is the upgrade both deserve.</p>
+            <div class="slide-number">8</div>
+        </div>
+
+        <!-- Slide 9: Traction & Metrics -->
+        <div class="slide">
+            <div>
+                <h2>Current Traction</h2>
+            </div>
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-value">Mainnet Ready</div>
+                    <div class="metric-label">Smart Contract Audited</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">Complete vault system with junior/senior buffers, risk limits, and instant withdrawals.</p>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">30+ Day Beta</div>
+                    <div class="metric-label">Testnet Vaults Live</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">Traders have proven the product UX. Feedback is positive on risk model and execution.</p>
+                </div>
+            </div>
+            <p style="margin-top: 32px; font-size: 15px; color: var(--text-secondary);"><strong>Why we're raising now:</strong> We have a working product and early validation. With this round, we can hire 2 senior Rust engineers (Jupiter integration, advanced risk controls) and 1 Security Auditor (formal verification). Our goal: mainnet launch Q2 2025, 30 verified traders, $20M TVL by end of 2025.</p>
+            <div class="slide-number">9</div>
+        </div>
+
+        <!-- Slide 10: Business Model -->
+        <div class="slide">
+            <div>
+                <h2>Revenue Model</h2>
+                <p style="font-size: 16px; margin-top: 32px;"><span class="highlight">Arcadia takes 10% of trader fees.</span> We earn only when traders succeed.</p>
+            </div>
+            <div class="two-col" style="margin-top: 40px;">
+                <div>
+                    <h3>Trader Economics</h3>
+                    <ul style="margin-top: 16px;">
+                        <li><strong>Earn:</strong> 15-20% performance fee on gains above high-water mark</li>
+                        <li><strong>Keep:</strong> 90% of fees (Arcadia takes 10%)</li>
+                        <li><strong>At risk:</strong> Junior buffer (first-loss capital)</li>
+                        <li><strong>No downside fee:</strong> Zero fees during drawdowns or flat performance</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Example: $1M Vault</h3>
+                    <ul style="margin-top: 16px;">
+                        <li>$200K junior (trader) + $800K senior (investor)</li>
+                        <li>Trader earns 20% fee on $100K gain = $20K</li>
+                        <li>Arcadia takes 10% = $2K</li>
+                        <li>Arcadia revenue at 10K active traders = $20M ARR</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">10</div>
+        </div>
+
+        <!-- Slide 11: The Ask -->
+        <div class="slide">
+            <div>
+                <h2>Raising $1.5M</h2>
+                <div style="margin-top: 32px;">
+                    <p style="font-size: 18px; color: var(--text-primary); margin-bottom: 32px;"><strong>Instrument:</strong> SAFE at $12M post-money valuation</p>
+                </div>
+                <div class="grid">
+                    <div class="metric-box">
+                        <h3>Use of Funds</h3>
+                        <ul style="margin-top: 12px; font-size: 14px;">
+                            <li><strong>$800K</strong> — 2 Senior Rust Engineers (Jupiter integration, Risk v2)</li>
+                            <li><strong>$300K</strong> — Security Auditor (formal verification)</li>
+                            <li><strong>$250K</strong> — Operations & Legal</li>
+                            <li><strong>$150K</strong> — Marketing & Community</li>
+                        </ul>
+                    </div>
+                    <div class="metric-box">
+                        <h3>Milestones (Q2-Q4 2025)</h3>
+                        <ul style="margin-top: 12px; font-size: 14px;">
+                            <li><strong>Q2:</strong> Mainnet launch, 10 active vaults</li>
+                            <li><strong>Q3:</strong> 100 waitlist traders, $5M TVL</li>
+                            <li><strong>Q4:</strong> 30 graduated vaults, $20M TVL, Series A ready</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-number">11</div>
+        </div>
+
+        <!-- Slide 12: Team -->
+        <div class="slide">
+            <div>
+                <h2>Team</h2>
+                <p style="font-size: 16px; margin-top: 32px; color: var(--text-secondary);">Arcadia is built by founders who've lived the problem. We're recruiting the best.</p>
+            </div>
+            <div class="metric-grid" style="margin-top: 40px;">
+                <div class="metric-box">
+                    <h3>Core Competencies</h3>
+                    <ul style="margin-top: 12px; font-size: 14px;">
+                        <li>Smart contract design (Rust, Anchor)</li>
+                        <li>Risk modeling & quantitative finance</li>
+                        <li>Solana composability (Jupiter, Magic Eden integrations)</li>
+                        <li>Security & audit experience</li>
+                        <li>Community & ecosystem relationships</li>
+                    </ul>
+                </div>
+                <div class="metric-box">
+                    <h3>Hiring Plan</h3>
+                    <ul style="margin-top: 12px; font-size: 14px;">
+                        <li>2x Senior Rust Engineers (protocol)</li>
+                        <li>1x Security Auditor (formal verification)</li>
+                        <li>1x Product (post-seed)</li>
+                        <li>1x Ecosystem Lead (post-seed)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-number">12</div>
+        </div>
+
+        <!-- Slide 13: Vision -->
+        <div class="slide center">
+            <div>
+                <h2>Our Vision</h2>
+                <p style="font-size: 18px; margin-top: 32px; max-width: 600px;">Arcadia becomes the infrastructure layer for managed trading on Solana. Professional traders no longer need to pitch; their on-chain track record speaks for them. Investors can allocate to proven talent without custody risk. And Solana becomes the destination for programmable capital markets.</p>
+                <button class="cta">Let's Build</button>
+            </div>
+            <div class="slide-number">13</div>
+        </div>
+
+        <!-- Slide 14: Q&A -->
+        <div class="slide center">
+            <div>
+                <h1>Questions?</h1>
+                <p style="font-size: 20px; margin-top: 32px; color: var(--text-secondary);">basel@arcadia.so</p>
+                <p style="font-size: 16px; margin-top: 8px; color: var(--text-muted);">arcadia.so</p>
+            </div>
+            <div class="slide-number">14</div>
+        </div>
+    </div>
+
+    <!-- Presenter Notes Container -->
+    <div class="presenter-notes">
+        <h4>Presenter Notes</h4>
+        <p id="notes-content">Press N to toggle notes. Notes will appear here for each slide.</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button id="prev-btn" onclick="prevSlide()">← Previous</button>
+        <span id="slide-counter" style="color: var(--text-muted); padding: 8px 16px; font-size: 14px;">1 / 14</span>
+        <button id="next-btn" onclick="nextSlide()">Next →</button>
+        <button onclick="toggleNotes()" style="margin-left: 12px;">Notes (N)</button>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 14;
+        const notesData = {
+            1: "Your hook: \"We're solving the three unsolved problems in managed trading: trader fraud, broken trust, and access.\" Pause. Let it sink. Then explain the solution isn't regulation—it's code.",
+            2: "Drill on each problem with real-world examples. Ask rhetorically: \"How many times have you seen a trader blow up after six months? How many times did anyone catch it early?\" Make the pain real.",
+            3: "Walk through each solution card slowly. For each one, say: 'This is automated. The trader can't break it. The code enforces it.' That's the core differentiator.",
+            4: "Use this to show you've thought through the user journey. Emphasize: Step 2 happens on-chain, publicly, with zero editor access. That's the moat.",
+            5: "This is your 'Why blockchain?' answer. Don't skip it. If someone challenges 'Why not do this on Ethereum?', you answer: 'Jupiter composability.' If 'Why not on-chain order books?', you say 'We do use Solana order books—Jupiter is the execution partner.'",
+            6: "This is your 'why now' and it's strong. Tie it to current events: \"Six months ago, people thought this was science fiction. FTX happened. Suddenly, non-custodial started looking good.\"",
+            7: "These are credible numbers. The $350B TAM is global hedge funds (real). The $1.4T is Solana's realistic long-term addressable market. The 4,000+ traders is a real count of active Solana traders on-chain. Use these to ground the opportunity without overpromising.",
+            8: "Your competitive frame is good: you're not competing with DEXs, you're building on top. But BE HONEST about who else might build this. Say: \"Yes, other teams could build this. But we're first, we have testnet validation, and we have the Solana relationship.\"",
+            9: "Testnet vaults is your proof. Don't oversell it—30 days is early. But it's real. Audited code is real. This matters.",
+            10: "The business model is clean: you win when traders win. That alignment is powerful. Paint the picture: \"At 10K active traders, we're a $20M ARR business. That's not venture fantasy—that's proportional to market adoption.\"",
+            11: "Be crisp on the ask. Say: \"$1.5M gets us to mainnet, initial trader onboarding, and Series A readiness by Q4. We're not asking for more than we need. We're not asking for less than we need.\"",
+            12: "Team slide can be brief if you're an unknown founder. What matters is: you've built before, you've secured integrations, you have conviction. If you have Solana ecosystem relationships, mention them here.",
+            13: "This is your land grab moment. Say: \"Every team, every investor, every builder in Solana knows this category will exist. The question is: who owns it first? That's us.\"",
+            14: "Open the floor. Be ready for: \"Why not Jupiter DAO launch their own vault layer?\" (Answer: Composability. We're not betting against them—we're using them.) \"What if a vault freezes?\" (Answer: The protocol is immutable. We can't freeze it. Investors exit instantly.) \"Aren't you legal risk?\" (Answer: Non-custodial protocols are significantly lower legal risk. We're working with counsel.)"
+        };
+
+        function showSlide(n) {
+            const slides = document.querySelectorAll('.slide');
+            if (n > totalSlides) currentSlide = totalSlides;
+            if (n < 1) currentSlide = 1;
+            
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[currentSlide - 1].classList.add('active');
+            
+            document.getElementById('slide-counter').textContent = `${currentSlide} / ${totalSlides}`;
+            document.getElementById('prev-btn').disabled = currentSlide === 1;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides;
+            
+            const notes = notesData[currentSlide] || 'No notes for this slide.';
+            document.getElementById('notes-content').textContent = notes;
+        }
+
+        function nextSlide() {
+            currentSlide++;
+            showSlide(currentSlide);
+        }
+
+        function prevSlide() {
+            currentSlide--;
+            showSlide(currentSlide);
+        }
+
+        function toggleNotes() {
+            document.querySelector('.presenter-notes').classList.toggle('active');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+            if (e.key === 'n' || e.key === 'N') toggleNotes();
+        });
+
+        showSlide(currentSlide);
+    </script>
+</body>
+</html>
