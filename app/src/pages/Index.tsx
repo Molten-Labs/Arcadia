@@ -5,13 +5,31 @@ import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
-import { ArrowRight, Shield, Layers, Activity, Lock, TrendingUp, Users, ChevronRight, ChevronDown, Award, TrendingDown, AlertTriangle } from "lucide-react";
+import {
+  ArrowRight,
+  Shield,
+  Layers,
+  Activity,
+  Lock,
+  TrendingUp,
+  Users,
+  ChevronRight,
+  ChevronDown,
+  Award,
+  TrendingDown,
+  AlertTriangle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
 import { ArcadiaLogo } from "@/components/ArcadiaLogo";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const HERO_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260325_094440_a3592600-bd1e-49e5-9bce-a73662061d83.mp4";
@@ -21,28 +39,82 @@ const fadeUp = {
   show: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.55, delay: i * 0.10, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
 const HOW_STEPS = [
-  { icon: Layers,       n: "01", title: "Trader funds junior capital",       body: "Every trader puts their own money down first. This first-loss capital absorbs any drawdown before investors are ever affected." },
-  { icon: Activity,     n: "02", title: "Vault graduates after paper mode",  body: "30 days of public, on-chain track record. Investors see real, immutable performance — not pitch decks or back-tests." },
-  { icon: Award,        n: "03", title: "Investors deposit with protection", body: "Senior capital sits behind the junior buffer. Risk controls trigger automatically as the buffer drops." },
-  { icon: TrendingDown, n: "04", title: "Dynamic risk limits",               body: "As the junior buffer drops, position sizes shrink automatically. At 50% junior health, the vault enters cooldown." },
-  { icon: AlertTriangle,n: "05", title: "Freeze & recovery",                 body: "If the buffer is depleted, trading is disabled and the vault is frozen. Investors withdraw remaining liquidity." },
-  { icon: Shield,       n: "06", title: "Performance fees on gains only",    body: "Traders earn only above the previous high-water mark. No fees during drawdowns. No fees on flat performance." },
+  {
+    icon: Layers,
+    n: "01",
+    title: "Trader funds junior capital",
+    body: "Every trader puts their own money down first. This first-loss capital absorbs any drawdown before investors are ever affected.",
+  },
+  {
+    icon: Activity,
+    n: "02",
+    title: "Vault graduates after paper mode",
+    body: "30 days of public, on-chain track record. Investors see real, immutable performance — not pitch decks or back-tests.",
+  },
+  {
+    icon: Award,
+    n: "03",
+    title: "Investors deposit with protection",
+    body: "Senior capital sits behind the junior buffer. Risk controls trigger automatically as the buffer drops.",
+  },
+  {
+    icon: TrendingDown,
+    n: "04",
+    title: "Dynamic risk limits",
+    body: "As the junior buffer drops, position sizes shrink automatically. At 50% junior health, the vault enters cooldown.",
+  },
+  {
+    icon: AlertTriangle,
+    n: "05",
+    title: "Freeze & recovery",
+    body: "If the buffer is depleted, trading is disabled and the vault is frozen. Investors withdraw remaining liquidity.",
+  },
+  {
+    icon: Shield,
+    n: "06",
+    title: "Performance fees on gains only",
+    body: "Traders earn only above the previous high-water mark. No fees during drawdowns. No fees on flat performance.",
+  },
 ];
 
 const FAQ_ITEMS = [
-  { q: "What is junior capital?",          a: "It's the trader's own money, posted as first-loss collateral. If the vault loses money, the junior buffer absorbs losses before any investor capital is touched." },
-  { q: "What happens if a vault freezes?", a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's on-chain reputation is reduced significantly." },
-  { q: "When can I withdraw?",             a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant." },
-  { q: "How are performance fees calculated?", a: "Traders earn 15–20% only on gains above the previous high-water mark. No fees during drawdowns or flat performance." },
-  { q: "Is Arcadia custodial?",            a: "No. Arcadia is a non-custodial protocol on Solana. You sign every transaction with your own wallet." },
-  { q: "Why does paper mode exist?",       a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits." },
-  { q: "How does the junior buffer protect me?", a: "The trader's junior capital always absorbs losses first. Investor (senior) capital is only at risk once the entire junior buffer is wiped out." },
-  { q: "Can I see the vault's trade history?", a: "Yes. All trades are recorded on-chain and visible on the vault detail page, including NAV impact and position history." },
+  {
+    q: "What is junior capital?",
+    a: "It's the trader's own money, posted as first-loss collateral. If the vault loses money, the junior buffer absorbs losses before any investor capital is touched.",
+  },
+  {
+    q: "What happens if a vault freezes?",
+    a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's on-chain reputation is reduced significantly.",
+  },
+  {
+    q: "When can I withdraw?",
+    a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant.",
+  },
+  {
+    q: "How are performance fees calculated?",
+    a: "Traders earn 15–20% only on gains above the previous high-water mark. No fees during drawdowns or flat performance.",
+  },
+  {
+    q: "Is Arcadia custodial?",
+    a: "No. Arcadia is a non-custodial protocol on Solana. You sign every transaction with your own wallet.",
+  },
+  {
+    q: "Why does paper mode exist?",
+    a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits.",
+  },
+  {
+    q: "How does the junior buffer protect me?",
+    a: "The trader's junior capital always absorbs losses first. Investor (senior) capital is only at risk once the entire junior buffer is wiped out.",
+  },
+  {
+    q: "Can I see the vault's trade history?",
+    a: "Yes. All trades are recorded on-chain and visible on the vault detail page, including NAV impact and position history.",
+  },
 ];
 
 const Landing = () => {
@@ -51,24 +123,29 @@ const Landing = () => {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const activeVaults = useMemo(
-    () => allVaults.filter(v => v.status === "active" || v.status === "paper"),
-    [allVaults]
+    () =>
+      allVaults.filter((v) => v.status === "active" || v.status === "paper"),
+    [allVaults],
   );
 
   // Duplicate for seamless loop — need at least enough cards to fill two widths
   const carouselVaults = useMemo(
-    () => activeVaults.length > 0
-      ? [...activeVaults, ...activeVaults, ...activeVaults]
-      : [],
-    [activeVaults]
+    () =>
+      activeVaults.length > 0
+        ? [...activeVaults, ...activeVaults, ...activeVaults]
+        : [],
+    [activeVaults],
   );
 
-  const stats = useMemo(() => ({
-    totalVaults: allVaults.length,
-    totalTVL: allVaults.reduce((s, v) => s + v.tvl, 0),
-    graduated: allVaults.filter(v => v.status !== "paper").length,
-    protected: allVaults.reduce((s, v) => s + v.seniorCapital, 0),
-  }), [allVaults]);
+  const stats = useMemo(
+    () => ({
+      totalVaults: allVaults.length,
+      totalTVL: allVaults.reduce((s, v) => s + v.tvl, 0),
+      graduated: allVaults.filter((v) => v.status !== "paper").length,
+      protected: allVaults.reduce((s, v) => s + v.seniorCapital, 0),
+    }),
+    [allVaults],
+  );
 
   return (
     <Layout>
@@ -77,7 +154,11 @@ const Landing = () => {
         <video
           className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.58] saturate-[0.75]"
           src={HERO_VIDEO}
-          autoPlay muted loop playsInline preload="metadata"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
           aria-hidden="true"
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.60)_0%,hsl(var(--background)/0.28)_40%,hsl(var(--background)/0.88)_100%)]" />
@@ -120,20 +201,40 @@ const Landing = () => {
               custom={2}
               className="mt-6 max-w-lg text-[1.05rem] leading-[1.65] text-foreground/72"
             >
-              Traders earn investor allocation only after posting first-loss capital and building a public, on-chain track record in paper mode.
+              Traders earn investor allocation only after posting first-loss
+              capital and building a public, on-chain track record in paper
+              mode.
             </motion.p>
 
-            <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-11 bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold shadow-signal">
+            <motion.div
+              variants={fadeUp}
+              custom={3}
+              className="mt-8 flex flex-wrap gap-3"
+            >
+              <Button
+                asChild
+                size="lg"
+                className="h-11 bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold shadow-signal"
+              >
                 <Link to="/vaults">
                   Open marketplace
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-11 font-display font-semibold border-border/60 hover:bg-secondary/60">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-11 font-display font-semibold border-border/60 hover:bg-secondary/60"
+              >
                 <Link to="/manager">Trader console</Link>
               </Button>
-              <Button asChild size="sm" variant="ghost" className="h-11 text-muted-foreground hover:text-foreground">
+              <Button
+                asChild
+                size="sm"
+                variant="ghost"
+                className="h-11 text-muted-foreground hover:text-foreground"
+              >
                 <a href="#how-it-works">
                   How it works <ChevronRight className="w-3.5 h-3.5 ml-1" />
                 </a>
@@ -148,7 +249,9 @@ const Landing = () => {
             transition={{ duration: 0.6, delay: 1.2 }}
             className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em]">scroll</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em]">
+              scroll
+            </span>
             <ChevronDown className="w-4 h-4 animate-bounce" />
           </motion.a>
         </div>
@@ -163,10 +266,16 @@ const Landing = () => {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
         <div className="container py-9 grid grid-cols-2 md:grid-cols-4 gap-px bg-border/25">
           {[
-            { l: "Total TVL",        v: `${fmtUSD(stats.totalTVL, { compact: true })} USDC` },
-            { l: "Live vaults",      v: stats.totalVaults },
-            { l: "Graduated",        v: stats.graduated },
-            { l: "Protected capital",v: `${fmtUSD(stats.protected, { compact: true })} USDC` },
+            {
+              l: "Total TVL",
+              v: `${fmtUSD(stats.totalTVL, { compact: true })} USDC`,
+            },
+            { l: "Live vaults", v: stats.totalVaults },
+            { l: "Graduated", v: stats.graduated },
+            {
+              l: "Protected capital",
+              v: `${fmtUSD(stats.protected, { compact: true })} USDC`,
+            },
           ].map((s, i) => (
             <motion.div
               key={s.l}
@@ -176,8 +285,12 @@ const Landing = () => {
               transition={{ duration: 0.4, delay: i * 0.07 }}
               className="bg-background px-6 py-7"
             >
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-2">{s.l}</div>
-              <div className="font-display font-bold text-2xl tabular text-foreground">{s.v}</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-2">
+                {s.l}
+              </div>
+              <div className="font-display font-bold text-2xl tabular text-foreground">
+                {s.v}
+              </div>
             </motion.div>
           ))}
         </div>
@@ -189,11 +302,22 @@ const Landing = () => {
         <div className="container mb-8 flex items-end justify-between">
           <div>
             <span className="page-header-label">Marketplace</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">Featured vaults</h2>
-            <p className="text-muted-foreground mt-1 text-[14px]">Top-performing graduated vaults open for deposits.</p>
+            <h2 className="font-display type-h2 font-semibold mt-3">
+              Featured vaults
+            </h2>
+            <p className="text-muted-foreground mt-1 text-[14px]">
+              Top-performing graduated vaults open for deposits.
+            </p>
           </div>
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hidden sm:flex shrink-0">
-            <Link to="/vaults">View all <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground hidden sm:flex shrink-0"
+          >
+            <Link to="/vaults">
+              View all <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+            </Link>
           </Button>
         </div>
 
@@ -217,8 +341,14 @@ const Landing = () => {
           ) : (
             <div className="container">
               <div className="surface rounded-[11px] p-12 text-center text-muted-foreground">
-                <p className="text-sm">No vaults yet. Connect your wallet and create the first one.</p>
-                <Button asChild size="sm" className="mt-4 bg-primary text-primary-foreground border-0">
+                <p className="text-sm">
+                  No vaults yet. Connect your wallet and create the first one.
+                </p>
+                <Button
+                  asChild
+                  size="sm"
+                  className="mt-4 bg-primary text-primary-foreground border-0"
+                >
                   <Link to="/manager/create">Create vault</Link>
                 </Button>
               </div>
@@ -228,7 +358,9 @@ const Landing = () => {
 
         <div className="container mt-5 flex sm:hidden">
           <Button asChild variant="outline" size="sm" className="w-full">
-            <Link to="/vaults">View all vaults <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
+            <Link to="/vaults">
+              View all vaults <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+            </Link>
           </Button>
         </div>
       </section>
@@ -237,7 +369,10 @@ const Landing = () => {
       <VaultCalculator />
 
       {/* ── How it works ─────────────────────────────── */}
-      <section id="how-it-works" className="border-t border-border/35 py-20 lg:py-28 scroll-mt-16">
+      <section
+        id="how-it-works"
+        className="border-t border-border/35 py-20 lg:py-28 scroll-mt-16"
+      >
         <div className="container">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -247,8 +382,12 @@ const Landing = () => {
             className="mb-12"
           >
             <span className="page-header-label">Protocol guide</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">How Arcadia works</h2>
-            <p className="text-muted-foreground mt-2 max-w-md">Six steps. Aligned incentives. Immutable on-chain proof.</p>
+            <h2 className="font-display type-h2 font-semibold mt-3">
+              How Arcadia works
+            </h2>
+            <p className="text-muted-foreground mt-2 max-w-md">
+              Six steps. Aligned incentives. Immutable on-chain proof.
+            </p>
           </motion.div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -271,8 +410,12 @@ const Landing = () => {
                 <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5">
                   <s.icon className="w-4 h-4" />
                 </div>
-                <h3 className="font-display font-semibold text-[14px] leading-snug">{s.title}</h3>
-                <p className="text-[13px] text-muted-foreground mt-2.5 leading-relaxed">{s.body}</p>
+                <h3 className="font-display font-semibold text-[14px] leading-snug">
+                  {s.title}
+                </h3>
+                <p className="text-[13px] text-muted-foreground mt-2.5 leading-relaxed">
+                  {s.body}
+                </p>
                 <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </motion.div>
             ))}
@@ -287,14 +430,32 @@ const Landing = () => {
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
             <div className="mb-8">
               <span className="page-header-label">Trust rails</span>
-              <h2 className="font-display type-h2 font-semibold mt-3">Built different</h2>
+              <h2 className="font-display type-h2 font-semibold mt-3">
+                Built different
+              </h2>
             </div>
             <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
               {[
-                { icon: Activity,   title: "30-day paper mode",      desc: "Every vault must build a public track record before accepting investor capital." },
-                { icon: Lock,       title: "First-loss enforced",    desc: "Trader junior capital absorbs losses before any investor funds are touched." },
-                { icon: TrendingUp, title: "Dynamic risk limits",    desc: "Position sizes shrink automatically as the junior buffer drops." },
-                { icon: Users,      title: "On-chain track record",  desc: "Reputation, freezes, and cooldowns are all immutable and public." },
+                {
+                  icon: Activity,
+                  title: "30-day paper mode",
+                  desc: "Every vault must build a public track record before accepting investor capital.",
+                },
+                {
+                  icon: Lock,
+                  title: "First-loss enforced",
+                  desc: "Trader junior capital absorbs losses before any investor funds are touched.",
+                },
+                {
+                  icon: TrendingUp,
+                  title: "Dynamic risk limits",
+                  desc: "Position sizes shrink automatically as the junior buffer drops.",
+                },
+                {
+                  icon: Users,
+                  title: "On-chain track record",
+                  desc: "Reputation, freezes, and cooldowns are all immutable and public.",
+                },
               ].map((t, i) => (
                 <motion.div
                   key={t.title}
@@ -306,8 +467,12 @@ const Landing = () => {
                   <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
                     <t.icon className="w-4 h-4" />
                   </div>
-                  <h3 className="font-display font-semibold text-[14px]">{t.title}</h3>
-                  <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">{t.desc}</p>
+                  <h3 className="font-display font-semibold text-[14px]">
+                    {t.title}
+                  </h3>
+                  <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">
+                    {t.desc}
+                  </p>
                 </motion.div>
               ))}
             </div>
@@ -316,7 +481,10 @@ const Landing = () => {
       </section>
 
       {/* ── FAQ ─────────────────────────────────────── */}
-      <section id="faq" className="border-t border-border/35 py-20 scroll-mt-16">
+      <section
+        id="faq"
+        className="border-t border-border/35 py-20 scroll-mt-16"
+      >
         <div className="container max-w-3xl">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -326,8 +494,13 @@ const Landing = () => {
             className="mb-10"
           >
             <span className="page-header-label">Common questions</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">Frequently asked</h2>
-            <p className="text-muted-foreground mt-2 text-[14px]">Everything investors and traders need to know before getting started.</p>
+            <h2 className="font-display type-h2 font-semibold mt-3">
+              Frequently asked
+            </h2>
+            <p className="text-muted-foreground mt-2 text-[14px]">
+              Everything investors and traders need to know before getting
+              started.
+            </p>
           </motion.div>
 
           <Accordion type="single" collapsible className="space-y-2">
@@ -361,8 +534,13 @@ const Landing = () => {
             transition={{ duration: 0.4, delay: 0.3 }}
             className="mt-8 flex flex-wrap gap-3 justify-center"
           >
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold">
-              <Link to="/vaults">Open marketplace <ArrowRight className="w-4 h-4 ml-2" /></Link>
+            <Button
+              asChild
+              className="bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold"
+            >
+              <Link to="/vaults">
+                Open marketplace <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
             </Button>
             <Button asChild variant="outline">
               <Link to="/traders">Explore traders</Link>
