@@ -5,26 +5,93 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Light mode (default) ─────────────────────── */
   :root {
-    --bg-primary: #050816;
-    --bg-secondary: #0B1120;
-    --surface: #111827;
-    --surface-elevated: #17171D;
+    --signal-primary: #34D399;
+    --signal-hover: #059669;
+    --signal-deep: #047857;
+    --glow-primary: rgba(52,211,153,0.22);
 
-    --border-subtle: rgba(255,255,255,0.07);
-    --border-medium: rgba(255,255,255,0.12);
+    --background: 0 0% 98%;
+    --background-secondary: 220 14% 95%;
+    --foreground: 222 47% 11%;
 
+    --card: 0 0% 100%;
+    --card-elevated: 220 14% 97%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 158 64% 38%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 157 76% 48%;
+    --primary-deep: 160 84% 30%;
+
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 220 14% 93%;
+    --muted-foreground: 215 16% 42%;
+
+    --accent: 160 84% 30%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 343 96% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning-hsl: 38 92% 44%;
+    --warning-foreground: 0 0% 100%;
+    --info: 158 64% 38%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 220 14% 87%;
+    --border-strong: 220 14% 76%;
+    --input: 220 14% 93%;
+    --ring: 158 64% 38%;
+
+    --radius: 0.6875rem;
+
+    --status-paper: 215 16% 55%;
+    --status-active: 158 64% 38%;
+    --status-cooldown: 38 92% 44%;
+    --status-frozen: 343 96% 50%;
+    --status-closed: 0 0% 60%;
+
+    --tier-novice: 0 0% 55%;
+    --tier-proven: 158 64% 38%;
+    --tier-established: 160 84% 30%;
+    --tier-veteran: 38 92% 44%;
+    --tier-elite: 157 76% 40%;
+
+    --gradient-signal: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-deep)) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(var(--card-elevated)) 0%, hsl(var(--card)) 100%);
+    --gradient-radial: radial-gradient(ellipse at top, hsl(var(--primary) / 0.08), transparent 62%);
+    --gradient-junior: linear-gradient(90deg, hsl(var(--primary-deep)), hsl(var(--primary)));
+    --gradient-senior: linear-gradient(90deg, hsl(var(--card-elevated)), hsl(var(--card)));
+
+    --shadow-elegant: 0 24px 80px -36px hsl(var(--foreground) / 0.08);
+    --shadow-signal: 0 0 24px hsl(var(--primary) / 0.14), 0 0 60px hsl(var(--primary-deep) / 0.08);
+    --shadow-card: 0 1px 0 hsl(var(--foreground) / 0.06) inset, 0 4px 24px -6px hsl(var(--foreground) / 0.08);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 158 64% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 93%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 14% 87%;
+    --sidebar-ring: 158 64% 38%;
+  }
+
+  /* ── Dark mode ────────────────────────────────── */
+  .dark {
     --signal-primary: #34D399;
     --signal-hover: #6EE7B7;
     --signal-deep: #059669;
     --glow-primary: rgba(52,211,153,0.28);
-
-    --text-primary: #F1F5F9;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
-
-    --danger: #F43F5E;
-    --warning: #F59E0B;
 
     --background: 229 63% 5%;
     --background-secondary: 223 49% 7%;
@@ -66,8 +133,6 @@
     --input: 220 26% 14%;
     --ring: 158 64% 52%;
 
-    --radius: 0.6875rem;
-
     --status-paper: 215 20% 47%;
     --status-active: 158 64% 52%;
     --status-cooldown: 38 92% 50%;
@@ -99,19 +164,21 @@
     --sidebar-border: 220 18% 18%;
     --sidebar-ring: 158 64% 52%;
   }
-
-  .dark {
-    --background: 229 63% 5%;
-    --foreground: 213 31% 95%;
-  }
 }
 
 @layer base {
   * { @apply border-border; }
-  html { color-scheme: dark; scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Space Grotesk', system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 50% -10%, hsl(var(--primary) / 0.06), transparent 28rem),
+      radial-gradient(circle at 86% 8%, hsl(var(--primary-deep) / 0.05), transparent 22rem),
+      hsl(var(--background));
+    background-attachment: fixed;
+  }
+  .dark body {
     background:
       radial-gradient(circle at 50% -10%, hsl(var(--primary) / 0.10), transparent 28rem),
       radial-gradient(circle at 86% 8%, hsl(var(--primary-deep) / 0.08), transparent 22rem),

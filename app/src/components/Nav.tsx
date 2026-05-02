@@ -25,6 +25,7 @@ import {
     DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { ArcadiaLogo } from "@/components/ArcadiaLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Nav = () => {
     const { connected, address, role, network, walletName, setRole, disconnect } = useWallet();
@@ -94,6 +95,7 @@ export const Nav = () => {
                     </div>
 
                     <div className="flex items-center gap-1.5">
+                        <ThemeToggle />
                         {connected && (
                             <div className="hidden lg:flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-1.5 text-[11px]">
                                 <span className="flex items-center gap-1.5 text-muted-foreground">

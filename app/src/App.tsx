@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletProvider } from "@/lib/wallet";
+import { ThemeProvider } from "@/lib/theme";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -37,6 +38,7 @@ const RouteFallback = () => (
 
 const App = () => (
     <AppErrorBoundary>
+        <ThemeProvider>
         <QueryClientProvider client={queryClient}>
             <WalletProvider>
                 <TooltipProvider>
@@ -120,7 +122,10 @@ const App = () => (
                 </TooltipProvider>
             </WalletProvider>
         </QueryClientProvider>
-    </AppErrorBoundary>
+        </ThemeProvider>
+    </AppErrorBoundary>  
 );
+
+// NOTE: JSX structure: AppErrorBoundary > ThemeProvider > QueryClientProvider > WalletProvider > TooltipProvider
 
 export default App;
