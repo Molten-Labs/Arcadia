@@ -12,6 +12,7 @@ import {
     ArrowLeftRight,
     Globe2,
     ShieldCheck,
+    LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
@@ -26,15 +27,7 @@ import {
 import { ArcadiaLogo } from "@/components/ArcadiaLogo";
 
 export const Nav = () => {
-    const {
-        connected,
-        address,
-        role,
-        network,
-        walletName,
-        setRole,
-        disconnect,
-    } = useWallet();
+    const { connected, address, role, network, walletName, setRole, disconnect } = useWallet();
     const [open, setOpen] = useState(false);
     const { setVisible: openWalletModal } = useWalletModal();
     const location = useLocation();
@@ -49,235 +42,194 @@ export const Nav = () => {
     const investorLinks = [
         { to: "/vaults", label: "Marketplace" },
         { to: "/portfolio", label: "Portfolio" },
+        { to: "/traders", label: "Traders" },
         { to: "/alerts", label: "Activity" },
-        { to: "/settings", label: "Settings" },
     ];
 
     const traderLinks = [
-        { to: "/manager", label: "Manager" },
+        { to: "/manager", label: "Dashboard" },
         { to: "/trade", label: "Trade" },
-        { to: "/manager/create", label: "Vault config" },
-        { to: "/traders", label: "Investors" },
+        { to: "/manager/create", label: "New vault" },
+        { to: "/traders", label: "Directory" },
         { to: "/alerts", label: "Alerts" },
     ];
 
-    const links = !connected
-        ? publicLinks
-        : role === "trader"
-          ? traderLinks
-          : investorLinks;
+    const links = !connected ? publicLinks : role === "trader" ? traderLinks : investorLinks;
+
+    const isActive = (to: string) =>
+        location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border/35 bg-background/78 backdrop-blur-xl shadow-[0_1px_0_hsl(var(--foreground)/0.035)]">
-                <div className="container flex items-center justify-between h-16">
-                    <div className="flex items-center gap-8">
-                        <Link to="/" className="flex items-center gap-2.5 group">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary shadow-signal ring-1 ring-primary/25">
-                                <ArcadiaLogo className="h-6 w-6" />
+            <header className="sticky top-0 z-40 border-b border-border/30 bg-background/80 backdrop-blur-xl">
+                <div className="container flex items-center justify-between h-[3.75rem]">
+                    <div className="flex items-center gap-7">
+                        <Link to="/" className="flex items-center gap-2 group shrink-0">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20 shadow-signal">
+                                <ArcadiaLogo className="h-[18px] w-[18px]" />
                             </div>
-                            <span className="font-display font-bold text-lg tracking-tight">
+                            <span className="font-display font-semibold text-[15px] tracking-tight text-foreground">
                                 Arcadia
                             </span>
                         </Link>
-                        <nav className="hidden md:flex items-center gap-1">
-                            {links.map((l) => {
-                                const active =
-                                    location.pathname === l.to ||
-                                    (l.to !== "/" &&
-                                        location.pathname.startsWith(l.to));
-                                return (
-                                    <Link
-                                        key={l.to}
-                                        to={l.to}
-                                        className={cn(
-                                            "relative px-3 py-2 text-sm font-medium transition-[color] after:absolute after:inset-x-3 after:bottom-1 after:h-px after:origin-center after:scale-x-0 after:bg-primary after:shadow-[0_0_18px_hsl(var(--primary)/0.65)] after:transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                            active
-                                                ? "text-foreground after:scale-x-100"
-                                                : "text-muted-foreground hover:text-foreground",
-                                        )}
-                                    >
-                                        {l.label}
-                                    </Link>
-                                );
-                            })}
+
+                        <nav className="hidden md:flex items-center gap-0.5">
+                            {links.map((l) => (
+                                <Link
+                                    key={l.to}
+                                    to={l.to}
+                                    className={cn(
+                                        "relative px-3 py-2 text-[13px] font-medium rounded-md transition-colors",
+                                        "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
+                                        "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        isActive(l.to)
+                                            ? "text-foreground after:scale-x-100"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                                    )}
+                                >
+                                    {l.label}
+                                </Link>
+                            ))}
                         </nav>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         {connected && (
-                            <div className="hidden lg:flex items-center gap-2 rounded-full bg-card/50 px-3 py-1.5 text-xs shadow-card ring-1 ring-border/35">
-                                <span className="inline-flex items-center gap-1.5 capitalize text-muted-foreground">
-                                    <Globe2 className="w-3.5 h-3.5 text-primary" />
-                                    {network}
+                            <div className="hidden lg:flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3 py-1.5 text-[11px]">
+                                <span className="flex items-center gap-1.5 text-muted-foreground">
+                                    <Globe2 className="w-3 h-3 text-primary/70" />
+                                    <span className="capitalize font-mono">{network}</span>
                                 </span>
                                 <span className="h-3 w-px bg-border" />
-                                <span className="inline-flex items-center gap-1.5 capitalize text-foreground">
-                                    <ShieldCheck className="w-3.5 h-3.5 text-success" />
-                                    {role}
+                                <span className="flex items-center gap-1.5">
+                                    <LayoutDashboard className="w-3 h-3 text-primary/70" />
+                                    <span className="capitalize font-mono text-foreground/80">{role}</span>
                                 </span>
                             </div>
                         )}
+
                         {connected && (
                             <Link
                                 to="/alerts"
                                 aria-label="Notifications"
-                                className="relative hidden min-h-10 min-w-10 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color] hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:inline-flex"
+                                className="relative hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-colors"
                             >
-                                <Bell className="w-4 h-4" />
-                                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                                <Bell className="w-3.5 h-3.5" />
+                                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
                             </Link>
                         )}
+
                         {!connected ? (
                             <Button
                                 onClick={() => openWalletModal(true)}
-                                className="border-0 bg-primary text-primary-foreground hover:bg-primary-glow"
+                                size="sm"
+                                className="h-9 border-0 bg-primary text-primary-foreground hover:bg-primary-glow font-display font-semibold text-[13px]"
                             >
-                                <Wallet className="w-4 h-4 mr-2" />
+                                <Wallet className="w-3.5 h-3.5 mr-1.5" />
                                 Connect Wallet
                             </Button>
                         ) : (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="font-mono"
-                                    >
-                                        <span className="w-2 h-2 rounded-full bg-status-active mr-2" />
+                                    <Button variant="outline" size="sm" className="h-9 font-mono text-[12px] border-border/60">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-status-active mr-1.5 animate-pulse-glow" />
                                         {shortAddr(address)}
-                                        <ChevronDown className="w-3 h-3 ml-1.5" />
+                                        <ChevronDown className="w-3 h-3 ml-1.5 text-muted-foreground" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                    align="end"
-                                    className="w-56"
-                                >
+                                <DropdownMenuContent align="end" className="w-56">
                                     <DropdownMenuLabel className="space-y-1">
-                                        <div className="font-mono text-xs">
-                                            {address?.slice(0, 16)}...
+                                        <div className="font-mono text-[11px] text-foreground">
+                                            {address?.slice(0, 18)}…
                                         </div>
-                                        <div className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-                                            <span>
-                                                {walletName ?? "Demo wallet"}
-                                            </span>
+                                        <div className="flex items-center gap-2 text-[11px] font-normal text-muted-foreground">
+                                            <span>{walletName ?? "Demo wallet"}</span>
                                             <span>·</span>
-                                            <span className="capitalize">
-                                                {network}
-                                            </span>
+                                            <span className="capitalize">{network}</span>
                                         </div>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuLabel className="text-xs text-muted-foreground">
-                                        Active role
-                                    </DropdownMenuLabel>
+                                    <DropdownMenuLabel className="text-[11px] text-muted-foreground">Switch role</DropdownMenuLabel>
                                     <DropdownMenuItem
                                         onClick={() => setRole("investor")}
-                                        className={cn(
-                                            role === "investor" &&
-                                                "bg-secondary",
-                                        )}
+                                        className={cn("text-sm", role === "investor" && "bg-secondary")}
                                     >
-                                        <ArrowLeftRight className="w-4 h-4 mr-2" />{" "}
-                                        Investor
+                                        <ArrowLeftRight className="w-3.5 h-3.5 mr-2" /> Investor
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onClick={() => setRole("trader")}
-                                        className={cn(
-                                            role === "trader" && "bg-secondary",
-                                        )}
+                                        className={cn("text-sm", role === "trader" && "bg-secondary")}
                                     >
-                                        <ArrowLeftRight className="w-4 h-4 mr-2" />{" "}
-                                        Trader
+                                        <ArrowLeftRight className="w-3.5 h-3.5 mr-2" /> Trader
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem asChild>
-                                        <Link to="/settings">Settings</Link>
+                                    <DropdownMenuItem asChild className="text-sm">
+                                        <Link to="/settings">
+                                            <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Settings
+                                        </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        onClick={disconnect}
-                                        className="text-destructive"
-                                    >
-                                        <LogOut className="w-4 h-4 mr-2" />{" "}
-                                        Disconnect
+                                    <DropdownMenuItem onClick={disconnect} className="text-sm text-destructive">
+                                        <LogOut className="w-3.5 h-3.5 mr-2" /> Disconnect
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}
+
                         <button
                             onClick={() => setOpen(!open)}
-                            aria-label={
-                                open
-                                    ? "Close navigation menu"
-                                    : "Open navigation menu"
-                            }
+                            aria-label={open ? "Close menu" : "Open menu"}
                             aria-expanded={open}
-                            className="md:hidden p-2 rounded-md hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            {open ? (
-                                <X className="w-4 h-4" />
-                            ) : (
-                                <Menu className="w-4 h-4" />
-                            )}
+                            {open ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
                         </button>
                     </div>
                 </div>
 
                 {open && (
-                    <nav className="md:hidden border-t border-border/35 bg-background/95 backdrop-blur-xl">
+                    <nav className="md:hidden border-t border-border/30 bg-background/95 backdrop-blur-xl">
                         <div className="container py-3 flex flex-col gap-1">
                             {connected && (
-                                <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-card/55 p-2 text-xs shadow-card ring-1 ring-border/35">
+                                <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-card/60 border border-border/40 p-2.5 text-[11px]">
                                     <div>
-                                        <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                                            Network
-                                        </div>
-                                        <div className="mt-0.5 flex items-center gap-1.5 capitalize text-foreground">
-                                            <Globe2 className="w-3.5 h-3.5 text-primary" />
-                                            {network}
+                                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Network</div>
+                                        <div className="flex items-center gap-1.5 capitalize text-foreground font-mono">
+                                            <Globe2 className="w-3 h-3 text-primary/70" />{network}
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                                            Role
-                                        </div>
-                                        <div className="mt-0.5 flex items-center gap-1.5 capitalize text-foreground">
-                                            <ShieldCheck className="w-3.5 h-3.5 text-success" />
-                                            {role}
+                                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Role</div>
+                                        <div className="flex items-center gap-1.5 capitalize text-foreground font-mono">
+                                            <ShieldCheck className="w-3 h-3 text-success/70" />{role}
                                         </div>
                                     </div>
                                 </div>
                             )}
-                            {links.map((l) => {
-                                const active =
-                                    location.pathname === l.to ||
-                                    (l.to !== "/" &&
-                                        location.pathname.startsWith(l.to));
-                                return (
-                                    <Link
-                                        key={l.to}
-                                        to={l.to}
-                                        onClick={() => setOpen(false)}
-                                        className={cn(
-                                            "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                            active
-                                                ? "bg-primary/10 text-foreground"
-                                                : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
-                                        )}
-                                    >
-                                        {l.label}
-                                    </Link>
-                                );
-                            })}
-                            {!links.some((link) => link.to === "/settings") && (
+                            {links.map((l) => (
+                                <Link
+                                    key={l.to}
+                                    to={l.to}
+                                    onClick={() => setOpen(false)}
+                                    className={cn(
+                                        "px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
+                                        isActive(l.to)
+                                            ? "bg-primary/10 text-foreground"
+                                            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                                    )}
+                                >
+                                    {l.label}
+                                </Link>
+                            ))}
+                            {!links.some((l) => l.to === "/settings") && (
                                 <Link
                                     to="/settings"
                                     onClick={() => setOpen(false)}
                                     className={cn(
-                                        "px-3 py-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        "px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
                                         location.pathname === "/settings"
                                             ? "bg-primary/10 text-foreground"
-                                            : "text-muted-foreground hover:bg-primary/10 hover:text-foreground",
+                                            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                                     )}
                                 >
                                     Settings

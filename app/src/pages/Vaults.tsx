@@ -34,13 +34,13 @@ const Vaults = () => {
   }), [allVaults]);
 
   const portfolioStats = useMemo(() => {
-    const allPositions = positions ?? [];
-    const currentValue = allPositions.reduce((sum, position) => sum + position.currentValue, 0);
-    const deposited = allPositions.reduce((sum, position) => sum + position.totalDeposited, 0);
-    const avgHealth = allPositions.length
-      ? Math.round(allPositions.reduce((sum, position) => sum + (position.vault?.juniorHealth ?? 0), 0) / allPositions.length)
+    const all = positions ?? [];
+    const currentValue = all.reduce((sum, p) => sum + p.currentValue, 0);
+    const deposited = all.reduce((sum, p) => sum + p.totalDeposited, 0);
+    const avgHealth = all.length
+      ? Math.round(all.reduce((sum, p) => sum + (p.vault?.juniorHealth ?? 0), 0) / all.length)
       : 0;
-    return { count: allPositions.length, currentValue, pnl: currentValue - deposited, avgHealth };
+    return { count: all.length, currentValue, pnl: currentValue - deposited, avgHealth };
   }, [positions]);
 
   const filtered = useMemo(() => {
@@ -57,17 +57,16 @@ const Vaults = () => {
       });
   }, [allVaults, statuses, minHealth, instantOnly, query, sort]);
 
-  const toggle = <T,>(arr: T[], setter: (v: T[]) => void, val: T) => {
+  const toggle = <T,>(arr: T[], setter: (v: T[]) => void, val: T) =>
     setter(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
-  };
 
   const Filters = (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Status</h3>
+        <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">Status</h3>
         <div className="space-y-2">
           {statusOptions.map(s => (
-            <label key={s} className="flex items-center gap-2 text-sm capitalize cursor-pointer">
+            <label key={s} className="flex items-center gap-2.5 text-sm capitalize cursor-pointer select-none">
               <Checkbox checked={statuses.includes(s)} onCheckedChange={() => toggle(statuses, setStatuses, s)} />
               {s}
             </label>
@@ -75,11 +74,13 @@ const Vaults = () => {
         </div>
       </div>
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Min junior health: {minHealth[0]}%</h3>
+        <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-3">
+          Min junior health: <span className="text-foreground">{minHealth[0]}%</span>
+        </h3>
         <Slider value={minHealth} onValueChange={setMinHealth} min={0} max={100} step={5} />
       </div>
       <div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none">
           <Checkbox checked={instantOnly} onCheckedChange={(v) => setInstantOnly(!!v)} />
           Instant exit available
         </label>
@@ -90,15 +91,17 @@ const Vaults = () => {
   return (
     <Layout>
       <div className="container py-10">
+        {/* Page header */}
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor marketplace</div>
-            <h1 className="font-display type-h1 font-semibold">Arcadia graduated vaults</h1>
-            <p className="text-muted-foreground mt-2">Discover trader vaults backed by first-loss junior capital.</p>
+            <span className="page-header-label">Investor marketplace</span>
+            <h1 className="font-display type-h1 font-semibold mt-3">Graduated vaults</h1>
+            <p className="text-muted-foreground mt-2 text-[14px]">Discover trader vaults backed by first-loss junior capital.</p>
           </div>
           <DataModeToggle compact />
         </div>
 
+        {/* Protocol stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { l: "Live vaults", v: protocolStats.totalVaults },
@@ -107,27 +110,34 @@ const Vaults = () => {
             { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} USDC` },
           ].map(k => (
             <div key={k.l} className="surface rounded-lg p-4">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">{k.l}</div>
-              <div className="font-display type-h3 font-semibold mt-1 tabular">{k.v}</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-muted-foreground mb-1">{k.l}</div>
+              <div className="font-display font-semibold text-xl tabular">{k.v}</div>
             </div>
           ))}
         </div>
 
-        <div className="flex gap-8">
-          <aside className="hidden lg:block w-64 shrink-0 surface rounded-lg p-5 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-auto scrollbar-thin">
+        <div className="flex gap-6">
+          {/* Sidebar filters */}
+          <aside className="hidden lg:block w-60 shrink-0 surface rounded-lg p-5 sticky top-24 self-start max-h-[calc(100vh-7rem)] overflow-auto scrollbar-thin">
             {Filters}
           </aside>
 
+          {/* Main vault grid */}
           <div className="flex-1 min-w-0">
-            <div className="surface mb-5 flex flex-wrap items-center gap-3 rounded-lg p-3">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vaults..." className="pl-9" />
+            <div className="surface mb-5 flex flex-wrap items-center gap-2.5 rounded-lg p-3">
+              <div className="relative flex-1 min-w-[180px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search vaults…"
+                  className="pl-8 h-9 text-[13px]"
+                />
               </div>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as typeof sort)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                className="h-9 rounded-md border border-input bg-background px-3 text-[13px] text-foreground"
               >
                 <option value="tvl">Sort: TVL</option>
                 <option value="health">Sort: Junior health</option>
@@ -135,8 +145,8 @@ const Vaults = () => {
               </select>
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden">
-                    <SlidersHorizontal className="w-4 h-4 mr-1.5" /> Filters
+                  <Button variant="outline" size="sm" className="h-9 lg:hidden">
+                    <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" /> Filters
                   </Button>
                 </SheetTrigger>
                 <SheetContent>
@@ -145,28 +155,32 @@ const Vaults = () => {
                 </SheetContent>
               </Sheet>
               {(statuses.length > 0 || instantOnly || minHealth[0] > 0) && (
-                <Button variant="ghost" size="sm" onClick={() => { setStatuses([]); setMinHealth([0]); setInstantOnly(false); }}>
+                <Button variant="ghost" size="sm" className="h-9" onClick={() => { setStatuses([]); setMinHealth([0]); setInstantOnly(false); }}>
                   <X className="w-3 h-3 mr-1" /> Clear
                 </Button>
               )}
             </div>
 
             {isLoading ? (
-              <div className="surface rounded-lg p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading vaults...
+              <div className="surface rounded-lg p-12 text-center text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading vaults…
               </div>
             ) : error ? (
-              <div className="surface rounded-lg p-10 text-center text-muted-foreground">
+              <div className="surface rounded-lg p-12 text-center text-muted-foreground text-sm">
                 Connect your wallet or configure the Arcadia API to browse vaults.
               </div>
             ) : (
               <>
-                <div className="mb-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                  <span>{filtered.length} vault{filtered.length !== 1 && "s"} · senior deposits never expose trader execution controls</span>
-                  <span className="hidden font-mono text-primary sm:inline">SENIOR CAPITAL VIEW</span>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {filtered.length} vault{filtered.length !== 1 && "s"} · senior deposits never expose trader execution controls
+                  </span>
+                  <span className="hidden font-mono text-[10px] text-primary/70 uppercase tracking-wider sm:inline">
+                    Senior capital view
+                  </span>
                 </div>
                 {filtered.length === 0 ? (
-                  <div className="surface rounded-lg p-10 text-center text-muted-foreground">
+                  <div className="surface rounded-lg p-12 text-center text-muted-foreground text-sm">
                     {allVaults.length === 0
                       ? "No vaults created yet. Be the first to create a vault!"
                       : "No vaults match your filters."}
@@ -179,48 +193,52 @@ const Vaults = () => {
               </>
             )}
           </div>
-          <aside className="hidden w-72 shrink-0 space-y-4 xl:block">
+
+          {/* Right sidebar */}
+          <aside className="hidden w-68 shrink-0 space-y-4 xl:block">
             <div className="surface rounded-lg p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <WalletCards className="h-4 w-4 text-primary" aria-hidden="true" />
+              <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <WalletCards className="h-3.5 w-3.5 text-primary" />
                 My portfolio
               </div>
-              <div className="font-display text-3xl font-bold tabular">{fmtUSD(portfolioStats.currentValue, { compact: true })}</div>
-              <div className={portfolioStats.pnl >= 0 ? "mt-1 font-mono text-xs text-success" : "mt-1 font-mono text-xs text-destructive"}>
+              <div className="font-display text-2xl font-bold tabular">{fmtUSD(portfolioStats.currentValue, { compact: true })}</div>
+              <div className={portfolioStats.pnl >= 0 ? "mt-1 font-mono text-[11px] text-success" : "mt-1 font-mono text-[11px] text-destructive"}>
                 {portfolioStats.pnl >= 0 ? "+" : ""}{fmtUSD(portfolioStats.pnl, { compact: true })} unrealized
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg border border-border bg-secondary/50 p-3">
-                  <div className="text-muted-foreground">Positions</div>
-                  <div className="mt-1 font-mono text-sm text-foreground">{portfolioStats.count}</div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-secondary/50 border border-border/50 p-3">
+                  <div className="font-mono text-[10px] text-muted-foreground">Positions</div>
+                  <div className="mt-1 font-mono text-[12px] text-foreground">{portfolioStats.count}</div>
                 </div>
-                <div className="rounded-lg border border-border bg-secondary/50 p-3">
-                  <div className="text-muted-foreground">Avg health</div>
-                  <div className="mt-1 font-mono text-sm text-success">{portfolioStats.avgHealth}%</div>
+                <div className="rounded-lg bg-secondary/50 border border-border/50 p-3">
+                  <div className="font-mono text-[10px] text-muted-foreground">Avg health</div>
+                  <div className="mt-1 font-mono text-[12px] text-success">{portfolioStats.avgHealth}%</div>
                 </div>
               </div>
             </div>
+
             <div className="surface rounded-lg p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
+              <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <ShieldCheck className="h-3.5 w-3.5 text-success" />
                 Trust rails
               </div>
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <div>Trader junior capital takes first loss before senior deposits.</div>
-                <div>Instant exits unlock when the junior buffer drops below 20%.</div>
-                <div>Paper vaults cannot accept investor deposits until graduation.</div>
+              <div className="space-y-3 text-[12px] text-muted-foreground leading-relaxed">
+                <p>Trader junior capital takes first loss before senior deposits.</p>
+                <p>Instant exits unlock when the junior buffer drops below 20%.</p>
+                <p>Paper vaults cannot accept investor deposits until graduation.</p>
               </div>
             </div>
+
             <div className="surface rounded-lg p-4">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <Activity className="h-4 w-4 text-primary" aria-hidden="true" />
+              <div className="mb-3 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <Activity className="h-3.5 w-3.5 text-primary" />
                 Live activity
               </div>
-              <div className="space-y-3 text-xs text-muted-foreground">
-                {allVaults.slice(0, 4).map((vault) => (
-                  <div key={vault.id} className="flex items-center justify-between gap-3 border-b border-border pb-2 last:border-0 last:pb-0">
-                    <span className="truncate">{vault.name}</span>
-                    <span className="font-mono text-foreground">{vault.juniorHealth}%</span>
+              <div className="space-y-2">
+                {allVaults.slice(0, 5).map((vault) => (
+                  <div key={vault.id} className="flex items-center justify-between gap-3 border-b border-border/40 pb-1.5 last:border-0 last:pb-0">
+                    <span className="font-mono text-[11px] text-muted-foreground truncate">{vault.name}</span>
+                    <span className="font-mono text-[11px] text-foreground shrink-0">{vault.juniorHealth}%</span>
                   </div>
                 ))}
               </div>

@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { usePositions } from "@/hooks/usePositions";
@@ -10,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { fmtUSD } from "@/lib/format";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { useDataMode } from "@/hooks/useDataMode";
-import { Wallet, ArrowRight, Loader2 } from "lucide-react";
+import { Wallet, ArrowRight, Loader2, PieChart } from "lucide-react";
 import { DataModeToggle } from "@/components/DataModeToggle";
 
 const Portfolio = () => {
@@ -22,7 +21,11 @@ const Portfolio = () => {
     return (
       <Layout>
         <div className="container py-20">
-          <EmptyState icon={<Wallet className="w-5 h-5" />} title="Connect your wallet" description="Connect to view your portfolio and active positions." />
+          <EmptyState
+            icon={<Wallet className="w-5 h-5" />}
+            title="Connect your wallet"
+            description="Connect to view your portfolio and active positions."
+          />
         </div>
       </Layout>
     );
@@ -39,29 +42,41 @@ const Portfolio = () => {
   return (
     <Layout>
       <div className="container py-10">
+        {/* Header */}
         <div className="mb-8 flex flex-wrap justify-between gap-4 items-end">
           <div>
-            <div className="mb-3 text-xs font-bold uppercase tracking-[0.22em] text-primary">Investor capital</div>
-            <h1 className="font-display type-h1 font-semibold">Arcadia portfolio</h1>
-            <p className="text-muted-foreground mt-2">Investor principal, current claim value, and first-loss buffer exposure.</p>
+            <span className="page-header-label">
+              <PieChart className="w-3 h-3" /> Investor capital
+            </span>
+            <h1 className="font-display type-h1 font-semibold mt-3">Portfolio</h1>
+            <p className="text-muted-foreground mt-2 text-[14px]">
+              Principal, current claim value, and first-loss buffer exposure.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <DataModeToggle compact />
-            <Button asChild variant="outline"><Link to="/vaults">Browse vaults</Link></Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/vaults">Browse vaults <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
+            </Button>
           </div>
         </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
           <StatCard label="Total invested" value={`${fmtUSD(totalDeposited, { decimals: 2 })} USDC`} />
           <StatCard label="Current value" value={`${fmtUSD(totalValue, { decimals: 2 })} USDC`} />
-          <StatCard label="Unrealized PnL" value={`${pnl >= 0 ? "+" : ""}${fmtUSD(pnl, { decimals: 2 })} USDC`} trend={totalDeposited > 0 ? (pnl / totalDeposited) * 100 : 0} />
+          <StatCard
+            label="Unrealized PnL"
+            value={`${pnl >= 0 ? "+" : ""}${fmtUSD(pnl, { decimals: 2 })} USDC`}
+            trend={totalDeposited > 0 ? (pnl / totalDeposited) * 100 : 0}
+          />
           <StatCard label="Active vaults" value={allPositions.length} />
           <StatCard label="Avg junior health" value={`${avgHealth}%`} />
         </div>
 
         {isLoading ? (
-          <div className="surface rounded-lg p-10 text-center text-muted-foreground flex items-center justify-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading positions...
+          <div className="surface rounded-lg p-12 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading positions…
           </div>
         ) : allPositions.length === 0 ? (
           <EmptyState
@@ -71,45 +86,45 @@ const Portfolio = () => {
           />
         ) : (
           <div className="space-y-4">
-            <h2 className="font-display font-semibold text-lg">Senior positions</h2>
+            <h2 className="font-display font-semibold text-[17px] text-foreground">Senior positions</h2>
             {allPositions.map(p => (
-              <div key={p.pubkey} className="surface rounded-lg p-5">
+              <div key={p.pubkey} className="surface rounded-[11px] p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <Link to={`/vault/${p.vaultConfigPubkey}`} className="font-display font-semibold hover:text-primary">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <Link
+                        to={`/vault/${p.vaultConfigPubkey}`}
+                        className="font-display font-semibold text-[15px] hover:text-primary transition-colors"
+                      >
                         {p.vault?.name ?? shortAddr(p.vaultConfigPubkey)}
                       </Link>
                       {p.vault && <StatusBadge status={p.vault.status} />}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="font-mono text-[11px] text-muted-foreground mt-1">
                       Deposited {new Date(p.depositedAt * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </div>
                   </div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/vault/${p.vaultConfigPubkey}`}>View</Link>
+                  <Button asChild variant="outline" size="sm" className="h-8 text-[12px]">
+                    <Link to={`/vault/${p.vaultConfigPubkey}`}>View vault</Link>
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm border-y border-border py-3 mb-3">
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground">Deposited</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.totalDeposited, { decimals: 2 })} USDC</div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground">Current claim</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.currentValue, { decimals: 2 })} USDC</div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground">Principal left</div>
-                    <div className="tabular font-semibold">{fmtUSD(p.seniorPrincipalRemaining, { decimals: 2 })} USDC</div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground">Withdrawal</div>
-                    <div className="tabular text-xs">{p.vault?.instantExit ? "Instant" : "24h cooldown"}</div>
-                  </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-y border-border/40 py-3 mb-4">
+                  {[
+                    { l: "Deposited", v: `${fmtUSD(p.totalDeposited, { decimals: 2 })} USDC` },
+                    { l: "Current claim", v: `${fmtUSD(p.currentValue, { decimals: 2 })} USDC` },
+                    { l: "Principal left", v: `${fmtUSD(p.seniorPrincipalRemaining, { decimals: 2 })} USDC` },
+                    { l: "Withdrawal", v: p.vault?.instantExit ? "Instant" : "24h cooldown" },
+                  ].map(s => (
+                    <div key={s.l}>
+                      <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground mb-1">{s.l}</div>
+                      <div className="font-mono font-semibold text-[13px] tabular">{s.v}</div>
+                    </div>
+                  ))}
                 </div>
+
                 {p.vault && <HealthMeter health={p.vault.juniorHealth} />}
-                <p className="mt-3 text-xs text-muted-foreground">
+                <p className="mt-3 font-mono text-[11px] text-muted-foreground">
                   This investor view shows risk, principal, claim value, and exit terms only. Trader execution controls stay in the manager console.
                 </p>
               </div>
