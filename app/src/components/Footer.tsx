@@ -16,12 +16,6 @@ export const Footer = () => (
                 <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                     Managed vaults with real skin in the game. Traders prove themselves on-chain before they touch your capital.
                 </p>
-                <div className="mt-5 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
-                        Devnet live
-                    </span>
-                </div>
             </div>
 
             <FooterCol
