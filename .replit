@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash -c 'cd app && node node_modules/vite/bin/vite.js --config vite.config.ts'"
+args = "bash dev.sh"
 waitForPort = 5000
 
 [[ports]]

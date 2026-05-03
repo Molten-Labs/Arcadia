@@ -1,4 +1,9 @@
 #!/bin/bash
-# Custom setup script - skip mise, use system pnpm
-cd app && pnpm install
-echo "Setup complete - using system pnpm"
+# setup.sh — one-time environment bootstrap
+# Uses npm (ships with Node 20) so no pnpm version issues.
+
+set -e
+
+echo "[setup] Installing frontend dependencies..."
+cd app && npm install --legacy-peer-deps
+echo "[setup] Done. Run 'bash dev.sh' or click Run to start the app."
