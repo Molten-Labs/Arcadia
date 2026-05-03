@@ -3,19 +3,20 @@ import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
+import { useDataMode } from "@/hooks/useDataMode";
 import { VaultCard } from "@/components/VaultCard";
+import { Switch } from "@/components/ui/switch";
 import { fmtUSD } from "@/lib/format";
 import {
-  ArrowRight, Shield, Layers, Activity,
+  ArrowRight, Shield, Activity,
   TrendingUp, Users, ChevronRight, ChevronDown,
-  Award, TrendingDown, AlertTriangle, ChevronUp,
+  Award, ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
-import { ArcadiaLogo } from "@/components/ArcadiaLogo";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
@@ -31,14 +32,6 @@ const fadeUp = {
   }),
 };
 
-const HOW_STEPS = [
-  { icon: Layers,        n: "01", title: "Trader funds junior capital",      body: "Every trader puts their own money down first. This first-loss capital absorbs any drawdown before investors are ever affected." },
-  { icon: Activity,      n: "02", title: "Vault graduates after paper mode", body: "30 days of public, on-chain track record. Investors see real, immutable performance — not pitch decks or back-tests." },
-  { icon: Award,         n: "03", title: "Investors deposit with protection",body: "Senior capital sits behind the junior buffer. Risk controls trigger automatically as the buffer drops." },
-  { icon: TrendingDown,  n: "04", title: "Dynamic risk limits",              body: "As the junior buffer drops, position sizes shrink automatically. At 50% junior health, the vault enters cooldown." },
-  { icon: AlertTriangle, n: "05", title: "Freeze and recovery",              body: "If the buffer is depleted, trading is disabled and the vault is frozen. Investors withdraw remaining liquidity." },
-  { icon: Shield,        n: "06", title: "Performance fees on gains only",   body: "Traders earn only above the previous high-water mark. No fees during drawdowns. No fees on flat performance." },
-];
 
 const FAQ_ITEMS = [
   { q: "What is junior capital?",                     a: "The trader's own money, posted as first-loss collateral. If the vault loses money, the junior buffer absorbs losses before any investor capital is touched." },
@@ -86,6 +79,7 @@ const FLOW_STEPS = [
 
 const Landing = () => {
   const { data: vaults } = useVaults();
+  const { mode, setMode } = useDataMode();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -130,11 +124,20 @@ const Landing = () => {
             variants={{ show: { transition: { staggerChildren: 0.08 } } }}
             className="max-w-[720px]"
           >
-            <motion.div variants={fadeUp} custom={0}>
-              <span className="page-header-label">
-                <ArcadiaLogo className="h-3.5 w-3.5" />
-                Arcadia Protocol · Solana
+            <motion.div variants={fadeUp} custom={0} className="flex items-center gap-4">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
+                ● Proof-of-Performance · Solana
               </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                  {mode === "mock" ? "Mock" : "Live"}
+                </span>
+                <Switch
+                  checked={mode === "mock"}
+                  onCheckedChange={(checked) => setMode(checked ? "mock" : "real")}
+                />
+              </div>
             </motion.div>
 
             <motion.h1
@@ -142,17 +145,18 @@ const Landing = () => {
               className="font-display font-semibold text-foreground/95 leading-[1.04] tracking-[-0.025em]"
               style={{ fontSize: "clamp(2.25rem, 5.5vw, 3.75rem)" }}
             >
-              Capital follows
+              Proof-of-Performance
               <br />
-              <span className="text-gradient-signal">proof.</span>
+              Capital Protocol.
             </motion.h1>
 
             <motion.p
               variants={fadeUp} custom={2}
               className="mt-6 max-w-lg text-[1.05rem] leading-[1.65] text-foreground/72"
             >
-              Traders earn investor allocation only after posting first-loss capital
-              and building a public, on-chain track record in paper mode.
+              Arcadia is where traders prove themselves with their own
+              money before touching investor capital. They lose first
+              when trades go wrong. No trust required. Code enforces it.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
@@ -167,7 +171,7 @@ const Landing = () => {
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-11 text-muted-foreground hover:text-foreground">
                 <a href="#how-it-works">
-                  How it works <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  See how it works →
                 </a>
               </Button>
             </motion.div>
@@ -264,8 +268,8 @@ const Landing = () => {
       {/* Calculator */}
       <VaultCalculator />
 
-      {/* How it works */}
-      <section id="how-it-works" className="border-t border-border/35 py-20 lg:py-28 scroll-mt-16">
+      {/* Capital flow diagram */}
+      <section id="how-it-works" className="border-t border-border/35 py-20 scroll-mt-16">
         <div className="container">
           <motion.div
             initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
@@ -274,50 +278,6 @@ const Landing = () => {
           >
             <span className="page-header-label">Protocol guide</span>
             <h2 className="font-display type-h2 font-semibold mt-3">How Arcadia works</h2>
-            <p className="text-muted-foreground mt-2 max-w-md">Six steps. Aligned incentives. Immutable on-chain proof.</p>
-          </motion.div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {HOW_STEPS.map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <motion.div
-                  key={s.n}
-                  initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-40px" }}
-                  transition={{ duration: 0.45, delay: i * 0.07 }}
-                  className="surface rounded-[11px] p-6 relative overflow-hidden group hover:border-primary/25 transition-[border-color,box-shadow] hover:shadow-[0_8px_28px_hsl(var(--background)/0.6),0_0_20px_hsl(var(--primary)/0.05)]"
-                >
-                  <div
-                    className="font-display font-bold text-primary/[0.04] absolute -top-2 -right-1 leading-none select-none pointer-events-none"
-                    style={{ fontSize: "clamp(3.5rem, 7vw, 5.5rem)" }}
-                    aria-hidden="true"
-                  >
-                    {s.n}
-                  </div>
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <h3 className="font-display font-semibold text-[14px] leading-snug">{s.title}</h3>
-                  <p className="text-[13px] text-muted-foreground mt-2.5 leading-relaxed">{s.body}</p>
-                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Capital flow diagram */}
-      <section className="border-t border-border/35 py-20">
-        <div className="container">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.5 }}
-            className="mb-12"
-          >
-            <span className="page-header-label">Capital flow</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">How the money moves</h2>
             <p className="text-muted-foreground mt-2 max-w-md">Follow a vault from first deposit to investor exit.</p>
           </motion.div>
 
@@ -364,13 +324,13 @@ const Landing = () => {
               })}
             </div>
 
-            {/* Corner: down connector on the far right */}
-            <div className="flex justify-end">
+            {/* Corner: down connector pointing to step 04 */}
+            <div className="grid items-start" style={{ gridTemplateColumns: "1fr 44px 1fr 44px 1fr" }}>
               <motion.div
                 initial={{ opacity: 0, scaleY: 0 }} whileInView={{ opacity: 1, scaleY: 1 }}
                 viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.55 }}
                 style={{ originY: 0 }}
-                className="flex flex-col items-center w-[calc(33.333%)]"
+                className="flex justify-center"
               >
                 <div className="w-px h-8 bg-primary/30 relative">
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-x-[4px] border-x-transparent border-t-[6px] border-t-primary/50" />

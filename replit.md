@@ -1,81 +1,173 @@
 # Kiln / Arcadia Protocol
 
-A full-stack monorepo for a "first-loss" managed trading vault protocol on the Solana blockchain. Traders ("managers") prove their performance using their own junior capital before accepting senior capital from investors.
+A full-stack monorepo for a "first-loss" managed trading vault protocol on Solana. Traders ("managers") prove their performance using their own junior capital before accepting senior capital from investors.
 
-## Architecture
+## Repository Layout
 
-Monorepo managed with pnpm workspaces:
+```
+/app                        — React 18 + Vite 5 frontend (Arcadia Protocol UI)
+/Kiln_program/              — Cargo workspace (on-chain program + tests)
+  program/                  —   SBF program crate (NO litesvm / solana 3.x deps)
+    src/                    —     Rust program source (Pinocchio, no_std)
+    tests/unit_tests.rs     —     Unit tests (no litesvm, safe for SBF graph)
+  kiln-tests/               —   Integration-test crate (litesvm / solana 3.x isolated here)
+    tests/vault_flow.rs
+    tests/update_and_graduate.rs
+/clients                    — TypeScript SDK auto-generated from program IDL (Codama/Shank)
+/server-rs                  — Rust indexer + API backend (Axum, SQLx, Helius webhooks)
+/docs                       — Protocol documentation
+/context                    — Build plans and design context
+```
 
-- `/app` — React + Vite frontend (Arcadia Protocol UI)
-- `/Kiln_program` — On-chain Solana program (Rust, Pinocchio framework)
-- `/clients` — TypeScript SDK generated from the program IDL (Codama/Shank)
-- `/server-rs` — Rust indexer/API backend (Axum, SQLx, Helius webhooks)
-- `/docs`, `/context` — Documentation and build plans
+### Why two crates inside `Kiln_program/`?
+
+The Solana SBF toolchain runs Cargo 1.84 which rejects `edition2024`.  
+`litesvm` + `solana 3.x` transitively pull in `toml_edit 0.25+` / `proc-macro-crate 3.x`, both of which require `edition2024`.  
+Keeping those deps **only** in `kiln-tests/` ensures they never enter the SBF dependency graph.
 
 ## Tech Stack
 
-### Frontend (`/app`)
-- **Framework:** React 18 + Vite 5
-- **Styling:** Tailwind CSS + Shadcn/UI + Framer Motion
-- **Data Fetching:** TanStack Query (React Query)
-- **Solana:** @solana/web3.js v1, @solana/wallet-adapter, Jupiter SDK for swaps
-- **Routing:** React Router DOM v6
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 5, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
+| Data | TanStack Query (React Query), React Router DOM v6 |
+| Solana | @solana/web3.js v1, @solana/wallet-adapter (Phantom, Solflare) |
+| Backend | Rust, Axum, SQLx, PostgreSQL, Helius webhooks |
+| On-chain | Rust, Pinocchio, Shank IDL |
+| SDK | Codama-generated TypeScript client |
 
-### Backend (`/server-rs`)
-- **Language:** Rust
-- **Web Framework:** Axum
-- **Database:** PostgreSQL with SQLx
-- **Indexing:** Helius Webhooks
+---
 
-### On-Chain Program (`/Kiln_program`)
-- **Language:** Rust
-- **Framework:** Pinocchio (lightweight Solana framework)
-- **IDL Generation:** Shank
+## Quick Start (Replit / AI Agents)
 
-## Development
+### 1. Install frontend dependencies (first time only)
 
-### Frontend
 ```bash
-cd app && node node_modules/vite/bin/vite.js --config vite.config.js
+bash setup.sh
+# or: cd app && npm install --legacy-peer-deps
 ```
-Runs on port 5000.
 
-**Note:** Uses `vite.config.js` (JavaScript) instead of `vite.config.ts` to avoid esbuild subprocess spawning issues in the Replit environment.
+### 2. Start the frontend dev server
 
-### Backend (Indexer)
+```bash
+bash dev.sh
+# or: npm run dev
+```
+
+The app runs on **port 5000**. The `dev.sh` script auto-installs `node_modules` if missing, so it is safe to run cold.
+
+### 3. (Optional) Start the backend indexer
+
 ```bash
 cargo run --manifest-path server-rs/Cargo.toml
+# Listens on PORT env var, default 8080
 ```
-Runs on port 8080 (configurable via `PORT` env var).
 
-### Code Generation
+---
+
+## Workflow (Replit Run button)
+
+The **"Start application"** workflow runs:
+
 ```bash
-pnpm codegen:shank   # Generate IDL from Rust program
-pnpm codegen:codama  # Generate TypeScript SDK from IDL
+bash dev.sh
 ```
+
+This handles auto-install + Vite startup in a single step.
+
+---
+
+## NPM Scripts (root)
+
+| Command | What it does |
+|---------|-------------|
+| `npm run dev` | Auto-install check + start Vite on port 5000 |
+| `npm run setup` | Install all frontend deps (`app/node_modules`) |
+| `npm run dev:app` | Start Vite directly (assumes `node_modules` present) |
+| `npm run build:app` | Production build → `app/dist/` |
+| `npm run dev:server` | Start Rust indexer/API |
+| `npm run build:server` | Build Rust indexer |
+
+---
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in:
-- `VITE_RPC_URL` — Solana RPC endpoint (defaults to devnet)
-- `VITE_SOLANA_CLUSTER` — `devnet` or `mainnet-beta`
-- `VITE_KILN_API_URL` — Backend API URL (default: `http://localhost:8080`)
-- `HELIUS_API_KEY` — Helius API key for indexing webhooks
-- `DATABASE_URL` — PostgreSQL connection string
-- `PORT` — Backend listen port (default: `8080`)
+Copy `.env.example` to `.env` in the project root and fill in:
 
-## Workflow
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_RPC_URL` | `https://api.devnet.solana.com` | Solana RPC endpoint |
+| `VITE_SOLANA_CLUSTER` | `devnet` | `devnet` or `mainnet-beta` |
+| `VITE_KILN_API_URL` | `http://localhost:8080` | Backend API base URL |
+| `HELIUS_API_KEY` | — | Helius API key (indexer) |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/kiln` | PostgreSQL DSN |
+| `PORT` | `8080` | Backend listen port |
 
-- **Start application** — `cd app && node node_modules/vite/bin/vite.js --config vite.config.js` (port 5000, webview)
+---
+
+## Dependency Notes
+
+- **Frontend packages live in `app/node_modules`** (not the repo root). Always `cd app` or use the scripts above.
+- The `package-lock.json` inside `app/` is the canonical lock file for frontend deps — use `npm install` inside `app/`.
+- `vite.config.ts` is the active Vite config. `vite.config.js` is kept as a fallback.
+- `lovable-tagger` is a dev-only plugin used in `vite.config.ts`; it's excluded from `vite.config.js`.
+
+---
+
+## Code Generation (SDK)
+
+```bash
+npm run codegen:shank   # Re-generate IDL from Rust source
+npm run codegen:codama  # Re-generate TypeScript SDK from IDL
+```
+
+---
+
+## On-Chain Program (Kiln_program)
+
+### Build the SBF program (deploys to Solana)
+
+```bash
+# Must be run from the program sub-crate — NOT the workspace root
+cargo build-sbf --manifest-path Kiln_program/program/Cargo.toml
+# Output: Kiln_program/target/deploy/Kiln_program.so
+```
+
+### Run unit tests (pure logic, no SBF needed)
+
+```bash
+cargo test --manifest-path Kiln_program/program/Cargo.toml \
+  --features test-default
+```
+
+### Run litesvm integration tests (requires .so built first)
+
+```bash
+# 1. Build the SBF artifact
+cargo build-sbf --manifest-path Kiln_program/program/Cargo.toml
+
+# 2. Run integration tests in the isolated test crate
+cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+
+# Skip the freshness check if you know the .so is up-to-date:
+KILN_SKIP_SBF_FRESHNESS_CHECK=1 cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+
+# Or point to a custom .so path:
+KILN_SBF_PATH=/path/to/Kiln_program.so cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+```
+
+### Dependency isolation rules
+
+| Dependency | Allowed in `program/` | Allowed in `kiln-tests/` |
+|---|---|---|
+| pinocchio, borsh, bytemuck, shank, wincode | ✅ | ✅ (dev-dep only) |
+| litesvm, solana 3.x | ❌ NEVER | ✅ dev-dep only |
+| toml_edit 0.25+, proc-macro-crate 3.x | ❌ NEVER | ✅ (transitive, isolated) |
+
+---
 
 ## Deployment
 
-Configured as a **static** deployment:
-- **Build:** `cd app && node node_modules/vite/bin/vite.js build --config vite.config.js`
-- **Public directory:** `app/dist`
-
-## Key Notes
-
-- The vite config is `vite.config.js` (not `.ts`) to avoid TypeScript transpilation needing esbuild to spawn a subprocess — which hits process limits in the Replit container.
-- The `lovable-tagger` plugin is excluded from `vite.config.js` to keep config loading lightweight.
-- Frontend runs on port 5000 with `host: "0.0.0.0"` and `allowedHosts: true` for Replit proxy compatibility.
+Static deployment via Replit:
+- **Build:** `npm run build:app`
+- **Output directory:** `app/dist`

@@ -190,9 +190,9 @@
     letter-spacing: -0.01em;
     text-wrap: balance;
   }
-  p { line-height: 1.65; text-wrap: pretty; font-family: 'Space Grotesk', system-ui, sans-serif; }
+  p { line-height: 1.6; text-wrap: pretty; font-family: 'Inter', system-ui, sans-serif; }
   .font-display, .font-hero { font-family: 'Inter', system-ui, sans-serif; }
-  .font-body { font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .font-body { font-family: 'Inter', system-ui, sans-serif; }
   .font-mono, .tabular {
     font-family: 'JetBrains Mono', monospace;
     font-variant-numeric: tabular-nums;
@@ -277,6 +277,8 @@
   }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border-strong)); border-radius: 3px; }
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
 
   .page-header-label {
     font-family: 'JetBrains Mono', monospace;

@@ -8,20 +8,11 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "bytemuck",
- "litesvm",
- "litesvm-token",
  "pinocchio",
  "pinocchio-log",
  "pinocchio-pubkey",
  "pinocchio-system",
  "shank",
- "solana-instruction",
- "solana-keypair",
- "solana-native-token",
- "solana-pubkey 3.0.0",
- "solana-sdk-ids",
- "solana-signer",
- "solana-transaction",
  "wincode",
 ]
 
@@ -1312,6 +1303,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb26cec98cce3a3d96cbb7bced3c4b16e3d13f27ec56dbd62cbc8f39cfb9d653"
 dependencies = [
  "cpufeatures 0.2.17",
+]
+
+[[package]]
+name = "kiln-tests"
+version = "0.1.0"
+dependencies = [
+ "Kiln_program",
+ "bytemuck",
+ "litesvm",
+ "litesvm-token",
+ "pinocchio",
+ "solana-instruction",
+ "solana-keypair",
+ "solana-native-token",
+ "solana-pubkey 3.0.0",
+ "solana-sdk-ids",
+ "solana-signer",
+ "solana-transaction",
 ]
 
 [[package]]

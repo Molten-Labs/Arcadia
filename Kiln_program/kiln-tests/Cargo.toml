@@ -1,0 +1,29 @@
+[package]
+name    = "kiln-tests"
+version = "0.1.0"
+edition = "2021"
+
+# ────────────────────────────────────────────────────────────────────────────
+# This crate exists solely to host litesvm integration tests.
+# It deliberately keeps litesvm / solana 3.x isolated from the SBF program
+# crate so that the edition2024 transitive deps they carry never enter the
+# cargo build-sbf dependency graph.
+# ────────────────────────────────────────────────────────────────────────────
+
+# A minimal library is required so Cargo treats this as a valid package.
+[lib]
+path = "src/lib.rs"
+
+[dev-dependencies]
+Kiln_program     = { path = "../program", features = ["no-entrypoint", "std"] }
+bytemuck         = "1.24.0"
+litesvm          = "0.10"
+litesvm-token    = "0.10"
+pinocchio        = "0.9.2"
+solana-instruction   = "3.0"
+solana-keypair       = "3.0"
+solana-native-token  = "3.0"
+solana-pubkey        = "3.0"
+solana-sdk-ids       = "3.0"
+solana-signer        = "3.0"
+solana-transaction   = { version = "3.0", features = ["verify"] }
