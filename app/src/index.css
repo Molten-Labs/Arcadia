@@ -277,6 +277,8 @@
   }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
   .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border-strong)); border-radius: 3px; }
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
 
   .page-header-label {
     font-family: 'JetBrains Mono', monospace;
