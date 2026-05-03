@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
+import { useDataMode } from "@/hooks/useDataMode";
 import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
 import {
@@ -77,6 +78,7 @@ const FLOW_STEPS = [
 
 const Landing = () => {
   const { data: vaults } = useVaults();
+  const { mode, setMode } = useDataMode();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
   const carouselRef = useRef<HTMLDivElement>(null);
 
@@ -121,11 +123,17 @@ const Landing = () => {
             variants={{ show: { transition: { staggerChildren: 0.08 } } }}
             className="max-w-[720px]"
           >
-            <motion.div variants={fadeUp} custom={0}>
+            <motion.div variants={fadeUp} custom={0} className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
                 ● Proof-of-Performance · Solana
               </span>
+              <button
+                onClick={() => setMode(mode === "mock" ? "real" : "mock")}
+                className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1 hover:border-primary/50 hover:text-primary transition-colors"
+              >
+                {mode === "mock" ? "Mock Data" : "Live Data"}
+              </button>
             </motion.div>
 
             <motion.h1
@@ -312,13 +320,13 @@ const Landing = () => {
               })}
             </div>
 
-            {/* Corner: down connector on the far right */}
-            <div className="flex justify-end">
+            {/* Corner: down connector pointing to step 04 */}
+            <div className="flex justify-start" style={{ paddingLeft: "calc(33.333% + 22px)" }}>
               <motion.div
                 initial={{ opacity: 0, scaleY: 0 }} whileInView={{ opacity: 1, scaleY: 1 }}
                 viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.55 }}
                 style={{ originY: 0 }}
-                className="flex flex-col items-center w-[calc(33.333%)]"
+                className="flex flex-col items-center"
               >
                 <div className="w-px h-8 bg-primary/30 relative">
                   <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-x-[4px] border-x-transparent border-t-[6px] border-t-primary/50" />
