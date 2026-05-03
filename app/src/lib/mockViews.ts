@@ -5,12 +5,27 @@ import type { ManagerView, VaultView } from "@/hooks/useVaults";
 const toLamports = (value: number) => BigInt(Math.round(value * 1e6));
 const toUnix = (date: string | undefined) => date ? Math.floor(new Date(date).getTime() / 1000) : 0;
 
+// Smooth sine-wave oscillation for "live" feel — different phase per vault
+const liveJitter = (seed: number, amplitude: number): number => {
+  const t = Date.now() / 1000;
+  return Math.sin(t * 0.22 + seed * 1.7) * amplitude;
+};
+
 export function mockVaultViews(): VaultView[] {
   return vaults.map((vault, index) => {
-    const currentNav = vault.tvl;
+    // Apply small live jitter to health and tvl
+    const jHealth = Math.max(1, Math.min(100,
+      Math.round((vault.juniorHealth + liveJitter(index, 1.8)) * 10) / 10
+    ));
+    const jTvl = Math.round(vault.tvl * (1 + liveJitter(index + 5, 0.003)));
+
+    const currentNav = jTvl;
     const highWaterMark = vault.hwm;
     const paperWindowSecs = (vault.paperDaysRequired ?? 30) * 86400;
     const paperTradeCount = vault.trades.length || Math.max(0, Math.min(10, vault.paperDaysElapsed ?? 0));
+
+    // Sparkline: last 30 nav data points
+    const sparkline = vault.navHistory.slice(-30).map(h => h.nav);
 
     return {
       id: vault.id,
@@ -20,8 +35,8 @@ export function mockVaultViews(): VaultView[] {
       treasuryPubkey: `${vault.id}-treasury`,
       managerPubkey: vault.traderWallet,
       status: vault.status,
-      tvl: vault.tvl,
-      juniorCapital: vault.juniorCapital,
+      tvl: jTvl,
+      juniorCapital: Math.round(vault.juniorCapital * (1 + liveJitter(index + 2, 0.002))),
       seniorCapital: vault.seniorCapital,
       originalJuniorDepositLamports: toLamports(vault.juniorCapital / Math.max(vault.juniorHealth / 100, 0.01)),
       juniorCapitalLamports: toLamports(vault.juniorCapital),
@@ -30,7 +45,7 @@ export function mockVaultViews(): VaultView[] {
       seniorSharesOutstanding: vault.seniorCapital,
       juniorSharesOutstandingRaw: toLamports(vault.juniorCapital),
       seniorSharesOutstandingRaw: toLamports(vault.seniorCapital),
-      juniorHealth: vault.juniorHealth,
+      juniorHealth: jHealth,
       currentNav,
       currentNavLamports: toLamports(currentNav),
       highWaterMark,
@@ -47,6 +62,12 @@ export function mockVaultViews(): VaultView[] {
       tradingEnabled: vault.status !== "frozen" && vault.status !== "cooldown",
       instantExit: vault.instantExit,
       vaultIndex: index,
+      // enriched display fields
+      sparkline,
+      return30d: vault.return30d + liveJitter(index + 8, 0.15),
+      return7d: vault.return7d + liveJitter(index + 12, 0.08),
+      returnAll: vault.returnAll,
+      strategyTags: vault.strategyTags,
     };
   });
 }

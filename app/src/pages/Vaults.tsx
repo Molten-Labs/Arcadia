@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { useVaults, type VaultView } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
@@ -7,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { fmtUSD } from "@/lib/format";
-import { Search, SlidersHorizontal, X, Loader2, ShieldCheck, Activity, WalletCards } from "lucide-react";
+import { Search, SlidersHorizontal, X, Loader2, ShieldCheck, Shield, Activity, WalletCards, TrendingUp, TrendingDown } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { VaultStatus } from "@/components/StatusBadge";
 import { DataModeToggle } from "@/components/DataModeToggle";
 import { usePositions } from "@/hooks/usePositions";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const statusOptions: VaultStatus[] = ["active", "paper", "cooldown", "frozen"];
 
@@ -104,17 +107,92 @@ const Vaults = () => {
         {/* Protocol stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
-            { l: "Live vaults", v: protocolStats.totalVaults },
-            { l: "Total TVL", v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} USDC` },
-            { l: "Graduated", v: protocolStats.graduatedVaults },
+            { l: "Live vaults",       v: String(protocolStats.totalVaults) },
+            { l: "Total TVL",         v: `${fmtUSD(protocolStats.totalTVL, { compact: true })} USDC` },
+            { l: "Graduated",         v: String(protocolStats.graduatedVaults) },
             { l: "Protected capital", v: `${fmtUSD(protocolStats.protectedCapital, { compact: true })} USDC` },
-          ].map(k => (
-            <div key={k.l} className="surface rounded-lg p-4">
+          ].map((k, i) => (
+            <motion.div
+              key={k.l}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.06 }}
+              className="surface rounded-lg p-4 relative overflow-hidden"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
               <div className="font-mono text-[10px] uppercase tracking-[0.13em] text-muted-foreground mb-1">{k.l}</div>
               <div className="font-display font-semibold text-xl tabular">{k.v}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
+
+        {/* My positions strip */}
+        {positions && positions.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">
+                <WalletCards className="w-3 h-3 text-primary" /> My positions
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-r from-border/60 to-transparent" />
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
+              {positions.map((pos, i) => {
+                if (!pos.vault) return null;
+                const pnl = pos.currentValue - pos.totalDeposited;
+                const pnlPct = pos.totalDeposited > 0
+                  ? ((pnl / pos.totalDeposited) * 100)
+                  : 0;
+                const pnlPos = pnl >= 0;
+                const health = pos.vault.juniorHealth;
+                const healthBg = health < 20 ? "bg-destructive" : health < 50 ? "bg-warning" : "bg-success";
+                return (
+                  <motion.div
+                    key={pos.pubkey}
+                    initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.35, delay: i * 0.07 }}
+                  >
+                    <Link
+                      to={`/vault/${pos.vault.id}`}
+                      className="flex-shrink-0 w-[190px] surface rounded-[11px] p-4 block relative overflow-hidden
+                        hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 group"
+                    >
+                      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                      <p className="font-display font-semibold text-[13px] truncate leading-tight">
+                        {pos.vault.name}
+                      </p>
+                      <p className="font-mono text-[9px] text-muted-foreground mt-0.5 mb-3">
+                        {pos.vault.strategyTags?.slice(0, 2).join(" · ") || "Vault"}
+                      </p>
+                      <div className="font-display font-bold text-[18px] tabular leading-none">
+                        {fmtUSD(pos.currentValue, { compact: true })}
+                      </div>
+                      <div className={cn(
+                        "flex items-center gap-1 font-mono text-[10px] mt-1 font-medium tabular",
+                        pnlPos ? "text-success" : "text-destructive"
+                      )}>
+                        {pnlPos
+                          ? <TrendingUp className="w-3 h-3" />
+                          : <TrendingDown className="w-3 h-3" />
+                        }
+                        {pnlPos ? "+" : ""}{fmtUSD(pnl, { compact: true })} ({pnlPos ? "+" : ""}{pnlPct.toFixed(1)}%)
+                      </div>
+                      <div className="mt-3 space-y-1">
+                        <div className="flex justify-between font-mono text-[9px] text-muted-foreground">
+                          <span className="flex items-center gap-1"><Shield className="w-2.5 h-2.5" /> Buffer</span>
+                          <span className={cn(
+                            health < 20 ? "text-destructive" : health < 50 ? "text-warning" : "text-success"
+                          )}>{Math.round(health)}%</span>
+                        </div>
+                        <div className="h-[2px] bg-secondary/60 rounded-full overflow-hidden">
+                          <div className={cn("h-full rounded-full", healthBg)} style={{ width: `${health}%` }} />
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="flex gap-6">
           {/* Sidebar filters */}

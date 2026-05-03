@@ -48,6 +48,12 @@ export interface VaultView {
   tradingEnabled: boolean;
   instantExit: boolean;
   vaultIndex: number;
+  // ── enriched display fields (populated in mock mode & API) ──
+  sparkline?: number[];
+  return30d?: number;
+  return7d?: number;
+  returnAll?: number;
+  strategyTags?: string[];
 }
 
 type ApiVaultView = Partial<VaultView> & {
@@ -143,8 +149,8 @@ export function useVaults() {
       return raw.map(toVaultView).filter((v): v is VaultView => v !== null);
     },
     enabled: isMock || !!connection || !!getKilnApiUrl(),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: isMock ? 5_000 : 30_000,
+    refetchInterval: isMock ? 8_000 : 60_000,
   });
 }
 
