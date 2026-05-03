@@ -6,9 +6,9 @@ import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
 import {
-  ArrowRight, Shield, Layers, Activity,
+  ArrowRight, Shield, Activity,
   TrendingUp, Users, ChevronRight, ChevronDown,
-  Award, TrendingDown, AlertTriangle, ChevronUp,
+  Award, ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -31,14 +31,6 @@ const fadeUp = {
   }),
 };
 
-const HOW_STEPS = [
-  { icon: Layers,        n: "01", title: "Trader funds junior capital",      body: "Every trader puts their own money down first. This first-loss capital absorbs any drawdown before investors are ever affected." },
-  { icon: Activity,      n: "02", title: "Vault graduates after paper mode", body: "30 days of public, on-chain track record. Investors see real, immutable performance — not pitch decks or back-tests." },
-  { icon: Award,         n: "03", title: "Investors deposit with protection",body: "Senior capital sits behind the junior buffer. Risk controls trigger automatically as the buffer drops." },
-  { icon: TrendingDown,  n: "04", title: "Dynamic risk limits",              body: "As the junior buffer drops, position sizes shrink automatically. At 50% junior health, the vault enters cooldown." },
-  { icon: AlertTriangle, n: "05", title: "Freeze and recovery",              body: "If the buffer is depleted, trading is disabled and the vault is frozen. Investors withdraw remaining liquidity." },
-  { icon: Shield,        n: "06", title: "Performance fees on gains only",   body: "Traders earn only above the previous high-water mark. No fees during drawdowns. No fees on flat performance." },
-];
 
 const FAQ_ITEMS = [
   { q: "What is junior capital?",                     a: "The trader's own money, posted as first-loss collateral. If the vault loses money, the junior buffer absorbs losses before any investor capital is touched." },
@@ -264,8 +256,8 @@ const Landing = () => {
       {/* Calculator */}
       <VaultCalculator />
 
-      {/* How it works */}
-      <section id="how-it-works" className="border-t border-border/35 py-20 lg:py-28 scroll-mt-16">
+      {/* Capital flow diagram */}
+      <section id="how-it-works" className="border-t border-border/35 py-20 scroll-mt-16">
         <div className="container">
           <motion.div
             initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
@@ -274,50 +266,6 @@ const Landing = () => {
           >
             <span className="page-header-label">Protocol guide</span>
             <h2 className="font-display type-h2 font-semibold mt-3">How Arcadia works</h2>
-            <p className="text-muted-foreground mt-2 max-w-md">Six steps. Aligned incentives. Immutable on-chain proof.</p>
-          </motion.div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {HOW_STEPS.map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <motion.div
-                  key={s.n}
-                  initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-40px" }}
-                  transition={{ duration: 0.45, delay: i * 0.07 }}
-                  className="surface rounded-[11px] p-6 relative overflow-hidden group hover:border-primary/25 transition-[border-color,box-shadow] hover:shadow-[0_8px_28px_hsl(var(--background)/0.6),0_0_20px_hsl(var(--primary)/0.05)]"
-                >
-                  <div
-                    className="font-display font-bold text-primary/[0.04] absolute -top-2 -right-1 leading-none select-none pointer-events-none"
-                    style={{ fontSize: "clamp(3.5rem, 7vw, 5.5rem)" }}
-                    aria-hidden="true"
-                  >
-                    {s.n}
-                  </div>
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-5">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <h3 className="font-display font-semibold text-[14px] leading-snug">{s.title}</h3>
-                  <p className="text-[13px] text-muted-foreground mt-2.5 leading-relaxed">{s.body}</p>
-                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Capital flow diagram */}
-      <section className="border-t border-border/35 py-20">
-        <div className="container">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.5 }}
-            className="mb-12"
-          >
-            <span className="page-header-label">Capital flow</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">How the money moves</h2>
             <p className="text-muted-foreground mt-2 max-w-md">Follow a vault from first deposit to investor exit.</p>
           </motion.div>
 
