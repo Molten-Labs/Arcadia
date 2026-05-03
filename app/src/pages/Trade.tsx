@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { useWallet } from "@/lib/wallet";
 import { toast } from "sonner";
 import { ArrowDownUp, AlertTriangle, Star } from "lucide-react";
-import { Link } from "react-router-dom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -499,17 +498,6 @@ const Trade = () => {
 
     return (
         <Layout hideFooter>
-            {/* Investor warning */}
-            {role === "investor" && connected && (
-                <div className="border-b border-border/30 bg-card/20 px-4 py-2 flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <AlertTriangle className="w-3 h-3 shrink-0" />
-                        Switch to <strong className="text-foreground mx-0.5">trader mode</strong> to execute swaps.
-                    </div>
-                    <Link to="/vaults" className="text-primary hover:underline">Browse vaults →</Link>
-                </div>
-            )}
-
             {/* ── Main layout ─────────────────────────────────────────────────── */}
             <div className="flex h-[calc(100vh-3.75rem)] overflow-hidden">
 
