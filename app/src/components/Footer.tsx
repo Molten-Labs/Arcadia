@@ -47,7 +47,7 @@ export const Footer = () => (
 
         <div className="border-t border-border/30">
             <div className="container py-5 flex flex-col md:flex-row gap-2 justify-between text-[11px] text-muted-foreground font-mono">
-                <span>© 2025 Arcadia Labs. Non-custodial. Use at your own risk.</span>
+                <span>© 2026 Molten Labs. Non-custodial. Use at your own risk.</span>
                 <span>Performance figures are historical and do not guarantee future results.</span>
             </div>
         </div>
