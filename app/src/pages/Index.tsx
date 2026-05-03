@@ -15,7 +15,6 @@ import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { PriceTicker } from "@/components/PriceTicker";
-import { ArcadiaLogo } from "@/components/ArcadiaLogo";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
@@ -123,9 +122,9 @@ const Landing = () => {
             className="max-w-[720px]"
           >
             <motion.div variants={fadeUp} custom={0}>
-              <span className="page-header-label">
-                <ArcadiaLogo className="h-3.5 w-3.5" />
-                Arcadia Protocol · Solana
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
+                Solana Devnet · Live
               </span>
             </motion.div>
 

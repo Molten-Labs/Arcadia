@@ -18,19 +18,7 @@ export const Layout = ({
         </div>
 
         <Nav />
-        <DemoDisclosure />
         <main className="flex-1">{children}</main>
         {!hideFooter && <Footer />}
-    </div>
-);
-
-const DemoDisclosure = () => (
-    <div className="border-b border-border/20 bg-background/40 backdrop-blur-md">
-        <div className="container flex items-center justify-center py-1">
-            <span className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/60 px-1.5 py-0.5">
-                <span className="w-1 h-1 rounded-full bg-status-active animate-pulse-glow" />
-                Solana Devnet · Live
-            </span>
-        </div>
     </div>
 );
