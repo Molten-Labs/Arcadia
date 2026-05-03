@@ -14,13 +14,13 @@ const docCards: DocCard[] = [
     icon: Book,
     title: "Getting started",
     desc: "Connect a wallet, browse vaults, and make your first deposit.",
-    to: "/how-it-works",
+    to: "/#how-it-works",
   },
   {
     icon: Shield,
     title: "Risk model",
     desc: "How junior/senior layers, cooldowns, and freezes work.",
-    to: "/faq",
+    to: "/#faq",
   },
   {
     icon: Code,
