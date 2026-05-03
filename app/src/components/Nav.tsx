@@ -130,7 +130,7 @@ export const Nav = () => {
                                 <ArcadiaLogo className="h-[18px] w-[18px]" />
                             </div>
                             <span className="font-display font-semibold text-[15px] tracking-tight text-foreground">
-                                Arcadia
+                                Molten
                             </span>
                         </Link>
 

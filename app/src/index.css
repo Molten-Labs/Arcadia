@@ -191,7 +191,7 @@
     text-wrap: balance;
   }
   p { line-height: 1.65; text-wrap: pretty; font-family: 'Space Grotesk', system-ui, sans-serif; }
-  .font-display, .font-hero { font-family: 'Inter', system-ui, sans-serif; }
+  .font-display, .font-hero { font-family: 'Geist', 'Inter', system-ui, sans-serif; }
   .font-body { font-family: 'Space Grotesk', system-ui, sans-serif; }
   .font-mono, .tabular {
     font-family: 'JetBrains Mono', monospace;
