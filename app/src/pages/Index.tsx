@@ -6,10 +6,11 @@ import { useVaults } from "@/hooks/useVaults";
 import { VaultCard } from "@/components/VaultCard";
 import { fmtUSD } from "@/lib/format";
 import {
-  ArrowRight, Shield, Layers, Activity, Lock,
+  ArrowRight, Shield, Layers, Activity,
   TrendingUp, Users, ChevronRight, ChevronDown,
-  Award, TrendingDown, AlertTriangle,
+  Award, TrendingDown, AlertTriangle, ChevronUp,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
@@ -50,11 +51,37 @@ const FAQ_ITEMS = [
   { q: "Can I see the vault trade history?",          a: "Yes. All trades are recorded on-chain and visible on the vault detail page, including NAV impact and position history." },
 ];
 
-const TRUST_ITEMS = [
-  { icon: Activity,   title: "30-day paper mode",     desc: "Every vault must build a public track record before accepting investor capital." },
-  { icon: Lock,       title: "First-loss enforced",   desc: "Trader junior capital absorbs losses before any investor funds are touched." },
-  { icon: TrendingUp, title: "Dynamic risk limits",   desc: "Position sizes shrink automatically as the junior buffer drops." },
-  { icon: Users,      title: "On-chain track record", desc: "Reputation, freezes, and cooldowns are all immutable and public." },
+const FLOW_STEPS = [
+  {
+    n: "01", icon: Award,      accent: "neutral" as const,
+    title: "Trader puts money in first",
+    body:  "Junior capital is posted on-chain before the vault opens. Real skin in the game.",
+  },
+  {
+    n: "02", icon: Activity,   accent: "neutral" as const,
+    title: "30 days, publicly tracked",
+    body:  "Every trade recorded on-chain. No pitch decks — real performance anyone can verify.",
+  },
+  {
+    n: "03", icon: Users,      accent: "neutral" as const,
+    title: "Vault opens to investors",
+    body:  "After graduation, investors buy in with USDC. The vault is now live and capitalized.",
+  },
+  {
+    n: "04", icon: TrendingUp, accent: "positive" as const,
+    title: "Profits → shares worth more",
+    body:  "NAV rises, each share is worth more. The trader earns a cut only above the high-water mark.",
+  },
+  {
+    n: "05", icon: Shield,     accent: "warning" as const,
+    title: "Losses hit the trader first",
+    body:  "Any drawdown burns through the junior buffer first. Your USDC is last in line — always.",
+  },
+  {
+    n: "06", icon: ChevronUp,  accent: "neutral" as const,
+    title: "Exit anytime",
+    body:  "Small withdrawals settle instantly. Large ones queue to protect remaining investors.",
+  },
 ];
 
 const Landing = () => {
@@ -281,33 +308,190 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Trust strip */}
-      <section className="border-t border-border/35 py-16">
+      {/* Capital flow diagram */}
+      <section className="border-t border-border/35 py-20">
         <div className="container">
-          <div className="surface-elevated rounded-[11px] p-7 md:p-10 relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-            <div className="mb-8">
-              <span className="page-header-label">Trust rails</span>
-              <h2 className="font-display type-h2 font-semibold mt-3">Built different</h2>
-            </div>
-            <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
-              {TRUST_ITEMS.map((t, i) => {
-                const Icon = t.icon;
-                return (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }} transition={{ duration: 0.5 }}
+            className="mb-12"
+          >
+            <span className="page-header-label">Capital flow</span>
+            <h2 className="font-display type-h2 font-semibold mt-3">How the money moves</h2>
+            <p className="text-muted-foreground mt-2 max-w-md">Follow a vault from first deposit to investor exit.</p>
+          </motion.div>
+
+          {/* ── Desktop snake layout ─────────────────────── */}
+          <div className="hidden lg:block">
+            {/* Row 1: steps 01–03 */}
+            <div className="grid items-stretch" style={{ gridTemplateColumns: "1fr 44px 1fr 44px 1fr" }}>
+              {FLOW_STEPS.slice(0, 3).flatMap((step, i) => {
+                const Icon = step.icon;
+                const els = [
                   <motion.div
-                    key={t.title}
-                    initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }}
+                    key={step.n}
+                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }} transition={{ duration: 0.45, delay: i * 0.13 }}
+                    className="surface rounded-[11px] p-5 flex flex-col gap-3 relative overflow-hidden group hover:border-primary/25 transition-[border-color]"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
-                      <Icon className="w-4 h-4" />
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary">{step.n}</span>
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
                     </div>
-                    <h3 className="font-display font-semibold text-[14px]">{t.title}</h3>
-                    <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">{t.desc}</p>
-                  </motion.div>
-                );
+                    <h3 className="font-display font-semibold text-[13px] leading-snug">{step.title}</h3>
+                    <p className="text-[12px] text-muted-foreground leading-relaxed flex-1">{step.body}</p>
+                  </motion.div>,
+                ];
+                if (i < 2) {
+                  els.push(
+                    <motion.div
+                      key={`r1-conn-${i}`}
+                      className="flex items-center justify-center"
+                      initial={{ opacity: 0, scaleX: 0 }} whileInView={{ opacity: 1, scaleX: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.35, delay: i * 0.13 + 0.28 }}
+                      style={{ originX: 0 }}
+                    >
+                      <div className="w-full h-px bg-primary/30 relative">
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 border-y-[4px] border-y-transparent border-l-[6px] border-l-primary/50" />
+                      </div>
+                    </motion.div>
+                  );
+                }
+                return els;
               })}
             </div>
+
+            {/* Corner: down connector on the far right */}
+            <div className="flex justify-end">
+              <motion.div
+                initial={{ opacity: 0, scaleY: 0 }} whileInView={{ opacity: 1, scaleY: 1 }}
+                viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.55 }}
+                style={{ originY: 0 }}
+                className="flex flex-col items-center w-[calc(33.333%)]"
+              >
+                <div className="w-px h-8 bg-primary/30 relative">
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-x-[4px] border-x-transparent border-t-[6px] border-t-primary/50" />
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Row 2: steps 04–06 */}
+            <div className="grid items-stretch" style={{ gridTemplateColumns: "1fr 44px 1fr 44px 1fr" }}>
+              {FLOW_STEPS.slice(3).flatMap((step, i) => {
+                const Icon = step.icon;
+                const isPositive = step.accent === "positive";
+                const isWarning  = step.accent === "warning";
+                const els = [
+                  <motion.div
+                    key={step.n}
+                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.4 + i * 0.13 }}
+                    className={cn(
+                      "rounded-[11px] p-5 flex flex-col gap-3 relative overflow-hidden group transition-[border-color]",
+                      isPositive && "bg-primary/[0.05] border border-primary/20 hover:border-primary/35",
+                      isWarning  && "bg-warning/[0.05] border border-warning/20 hover:border-warning/35",
+                      !isPositive && !isWarning && "surface hover:border-primary/25",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={cn(
+                        "font-mono text-[10px] uppercase tracking-[0.15em]",
+                        isWarning ? "text-warning" : "text-primary"
+                      )}>{step.n}</span>
+                      <div className={cn(
+                        "w-7 h-7 rounded-lg flex items-center justify-center",
+                        isWarning ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
+                      )}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <h3 className="font-display font-semibold text-[13px] leading-snug">{step.title}</h3>
+                    <p className="text-[12px] text-muted-foreground leading-relaxed flex-1">{step.body}</p>
+                    {isPositive && (
+                      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                    )}
+                    {isWarning && (
+                      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-warning/40 to-transparent" />
+                    )}
+                  </motion.div>,
+                ];
+                if (i < 2) {
+                  els.push(
+                    <motion.div
+                      key={`r2-conn-${i}`}
+                      className="flex items-center justify-center"
+                      initial={{ opacity: 0, scaleX: 0 }} whileInView={{ opacity: 1, scaleX: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.35, delay: 0.4 + i * 0.13 + 0.28 }}
+                      style={{ originX: 0 }}
+                    >
+                      <div className="w-full h-px bg-primary/30 relative">
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 border-y-[4px] border-y-transparent border-l-[6px] border-l-primary/50" />
+                      </div>
+                    </motion.div>
+                  );
+                }
+                return els;
+              })}
+            </div>
+          </div>
+
+          {/* ── Mobile vertical list ─────────────────────── */}
+          <div className="lg:hidden flex flex-col gap-0">
+            {FLOW_STEPS.map((step, i) => {
+              const Icon = step.icon;
+              const isPositive = step.accent === "positive";
+              const isWarning  = step.accent === "warning";
+              const isLast = i === FLOW_STEPS.length - 1;
+              return (
+                <motion.div
+                  key={step.n}
+                  initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }}
+                  className="flex gap-4"
+                >
+                  {/* Left: number + connector line */}
+                  <div className="flex flex-col items-center shrink-0">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-mono font-semibold shrink-0 z-10",
+                      isWarning  ? "bg-warning/15 text-warning border border-warning/30" :
+                      isPositive ? "bg-primary/15 text-primary border border-primary/30" :
+                                   "bg-secondary text-muted-foreground border border-border"
+                    )}>
+                      {i + 1}
+                    </div>
+                    {!isLast && (
+                      <div className={cn(
+                        "w-px flex-1 my-1",
+                        isWarning ? "bg-warning/20" : "bg-primary/20"
+                      )} />
+                    )}
+                  </div>
+
+                  {/* Right: card */}
+                  <div className={cn(
+                    "rounded-[11px] p-4 mb-3 flex-1",
+                    isPositive && "bg-primary/[0.05] border border-primary/20",
+                    isWarning  && "bg-warning/[0.05] border border-warning/20",
+                    !isPositive && !isWarning && "surface",
+                  )}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={cn(
+                        "w-6 h-6 rounded-md flex items-center justify-center",
+                        isWarning ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
+                      )}>
+                        <Icon className="w-3 h-3" />
+                      </div>
+                      <h3 className="font-display font-semibold text-[13px]">{step.title}</h3>
+                    </div>
+                    <p className="text-[12px] text-muted-foreground leading-relaxed">{step.body}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
