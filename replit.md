@@ -5,13 +5,25 @@ A full-stack monorepo for a "first-loss" managed trading vault protocol on Solan
 ## Repository Layout
 
 ```
-/app            — React 18 + Vite 5 frontend (Arcadia Protocol UI)
-/Kiln_program   — On-chain Solana program (Rust, Pinocchio framework)
-/clients        — TypeScript SDK auto-generated from program IDL (Codama/Shank)
-/server-rs      — Rust indexer + API backend (Axum, SQLx, Helius webhooks)
-/docs           — Protocol documentation
-/context        — Build plans and design context
+/app                        — React 18 + Vite 5 frontend (Arcadia Protocol UI)
+/Kiln_program/              — Cargo workspace (on-chain program + tests)
+  program/                  —   SBF program crate (NO litesvm / solana 3.x deps)
+    src/                    —     Rust program source (Pinocchio, no_std)
+    tests/unit_tests.rs     —     Unit tests (no litesvm, safe for SBF graph)
+  kiln-tests/               —   Integration-test crate (litesvm / solana 3.x isolated here)
+    tests/vault_flow.rs
+    tests/update_and_graduate.rs
+/clients                    — TypeScript SDK auto-generated from program IDL (Codama/Shank)
+/server-rs                  — Rust indexer + API backend (Axum, SQLx, Helius webhooks)
+/docs                       — Protocol documentation
+/context                    — Build plans and design context
 ```
+
+### Why two crates inside `Kiln_program/`?
+
+The Solana SBF toolchain runs Cargo 1.84 which rejects `edition2024`.  
+`litesvm` + `solana 3.x` transitively pull in `toml_edit 0.25+` / `proc-macro-crate 3.x`, both of which require `edition2024`.  
+Keeping those deps **only** in `kiln-tests/` ensures they never enter the SBF dependency graph.
 
 ## Tech Stack
 
@@ -108,6 +120,49 @@ Copy `.env.example` to `.env` in the project root and fill in:
 npm run codegen:shank   # Re-generate IDL from Rust source
 npm run codegen:codama  # Re-generate TypeScript SDK from IDL
 ```
+
+---
+
+## On-Chain Program (Kiln_program)
+
+### Build the SBF program (deploys to Solana)
+
+```bash
+# Must be run from the program sub-crate — NOT the workspace root
+cargo build-sbf --manifest-path Kiln_program/program/Cargo.toml
+# Output: Kiln_program/target/deploy/Kiln_program.so
+```
+
+### Run unit tests (pure logic, no SBF needed)
+
+```bash
+cargo test --manifest-path Kiln_program/program/Cargo.toml \
+  --features test-default
+```
+
+### Run litesvm integration tests (requires .so built first)
+
+```bash
+# 1. Build the SBF artifact
+cargo build-sbf --manifest-path Kiln_program/program/Cargo.toml
+
+# 2. Run integration tests in the isolated test crate
+cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+
+# Skip the freshness check if you know the .so is up-to-date:
+KILN_SKIP_SBF_FRESHNESS_CHECK=1 cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+
+# Or point to a custom .so path:
+KILN_SBF_PATH=/path/to/Kiln_program.so cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+```
+
+### Dependency isolation rules
+
+| Dependency | Allowed in `program/` | Allowed in `kiln-tests/` |
+|---|---|---|
+| pinocchio, borsh, bytemuck, shank, wincode | ✅ | ✅ (dev-dep only) |
+| litesvm, solana 3.x | ❌ NEVER | ✅ dev-dep only |
+| toml_edit 0.25+, proc-macro-crate 3.x | ❌ NEVER | ✅ (transitive, isolated) |
 
 ---
 
