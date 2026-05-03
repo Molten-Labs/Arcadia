@@ -123,7 +123,8 @@ const Landing = () => {
           >
             <motion.div variants={fadeUp} custom={0}>
               <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
-                Proof-of-Performance
+                <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
+                Solana Devnet · Live
               </span>
             </motion.div>
 
