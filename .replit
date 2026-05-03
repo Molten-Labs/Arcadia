@@ -27,16 +27,12 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd app && node node_modules/vite/bin/vite.js --config vite.config.js"
+args = "bash -c 'cd app && node node_modules/vite/bin/vite.js --config vite.config.ts'"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
 
 [deployment]
 deploymentTarget = "static"
