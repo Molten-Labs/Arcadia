@@ -136,19 +136,22 @@ export function useVaults() {
     queryFn: async () => {
       if (isMock) return mockVaultViews();
 
-      try {
-        const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
-        if (api) return api.items.map(normalizeVaultView);
-      } catch (error) {
-        if (!connection) throw error;
-        console.warn("Arcadia API unavailable; falling back to direct RPC vault reads.", error);
+      // Try API first if configured
+      if (getKilnApiUrl()) {
+        try {
+          const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
+          if (api) return api.items.map(normalizeVaultView);
+        } catch (error) {
+          console.warn("Arcadia API unavailable; falling back to direct RPC vault reads.", error);
+          if (!connection) throw error;
+        }
       }
 
-      if (!connection) throw new Error("No connection or Arcadia API configured");
+      if (!connection) throw new Error("No connection available and Arcadia API not configured");
       const raw = await fetchAllVaults(connection);
       return raw.map(toVaultView).filter((v): v is VaultView => v !== null);
     },
-    enabled: isMock || !!connection || !!getKilnApiUrl(),
+    enabled: isMock || !!connection,
     staleTime: isMock ? 5_000 : 30_000,
     refetchInterval: isMock ? 8_000 : 60_000,
   });
@@ -172,15 +175,18 @@ export function useManagers() {
     queryFn: async () => {
       if (isMock) return mockManagerViews();
 
-      try {
-        const api = await fetchKilnApi<ApiItems<ManagerView>>("/managers");
-        if (api) return api.items;
-      } catch (error) {
-        if (!connection) throw error;
-        console.warn("Arcadia API unavailable; falling back to direct RPC manager reads.", error);
+      // Try API first if configured
+      if (getKilnApiUrl()) {
+        try {
+          const api = await fetchKilnApi<ApiItems<ManagerView>>("/managers");
+          if (api) return api.items;
+        } catch (error) {
+          console.warn("Arcadia API unavailable; falling back to direct RPC manager reads.", error);
+          if (!connection) throw error;
+        }
       }
 
-      if (!connection) throw new Error("No connection or Arcadia API configured");
+      if (!connection) throw new Error("No connection available and Arcadia API not configured");
       const raw = await fetchAllManagers(connection);
       return raw.map((m) => ({
         pubkey: m.pubkey.toBase58(),
@@ -191,7 +197,7 @@ export function useManagers() {
         createdAt: m.data.createdAt,
       }));
     },
-    enabled: isMock || !!connection || !!getKilnApiUrl(),
+    enabled: isMock || !!connection,
     staleTime: 30_000,
   });
 }

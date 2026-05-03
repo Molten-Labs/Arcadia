@@ -124,7 +124,7 @@ const Landing = () => {
             <motion.div variants={fadeUp} custom={0}>
               <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
-                Solana Devnet · Live
+                ● Proof-of-Performance · Solana
               </span>
             </motion.div>
 
@@ -133,18 +133,18 @@ const Landing = () => {
               className="font-display font-semibold text-foreground/95 leading-[1.04] tracking-[-0.025em]"
               style={{ fontSize: "clamp(2.25rem, 5.5vw, 3.75rem)" }}
             >
-              Capital Protocol
+              Proof-of-Performance
               <br />
-              on Solana.
+              Capital Protocol.
             </motion.h1>
 
             <motion.p
               variants={fadeUp} custom={2}
               className="mt-6 max-w-lg text-[1.05rem] leading-[1.65] text-foreground/72"
             >
-              Arcadia is a Solana protocol where traders build verified on-chain
-              track records before accessing investor capital, creating a transparent
-              and aligned system for active capital allocation.
+              Arcadia is where traders prove themselves with their own
+              money before touching investor capital. They lose first
+              when trades go wrong. No trust required. Code enforces it.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
@@ -159,7 +159,7 @@ const Landing = () => {
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-11 text-muted-foreground hover:text-foreground">
                 <a href="#how-it-works">
-                  How it works <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  See how it works →
                 </a>
               </Button>
             </motion.div>
