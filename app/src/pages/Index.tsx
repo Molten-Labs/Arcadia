@@ -276,8 +276,7 @@ const Landing = () => {
             viewport={{ once: true }} transition={{ duration: 0.5 }}
             className="mb-12"
           >
-            <span className="page-header-label">Protocol guide</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">How Arcadia works</h2>
+            <h2 className="font-display type-h2 font-semibold">How Arcadia works</h2>
             <p className="text-muted-foreground mt-2 max-w-md">Follow a vault from first deposit to investor exit.</p>
           </motion.div>
 
@@ -464,8 +463,7 @@ const Landing = () => {
             viewport={{ once: true }} transition={{ duration: 0.5 }}
             className="mb-10"
           >
-            <span className="page-header-label">Common questions</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">Frequently asked questions</h2>
+            <h2 className="font-display type-h2 font-semibold">Frequently asked questions</h2>
             <p className="text-muted-foreground mt-2 text-[14px]">
               Everything investors and traders need to know before getting started.
             </p>
