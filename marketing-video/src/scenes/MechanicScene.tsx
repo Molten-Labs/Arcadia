@@ -62,7 +62,7 @@ const MechanicCard: React.FC<CardProps> = ({
         >
           {icon}
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <h3
             style={{
               fontFamily: FONT.ui,
@@ -98,6 +98,14 @@ export const MechanicScene: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
+  // Visual metaphor: capital alignment bars
+  const traderBarScale = interpolate(frame, [40, 60], [0, 1], {
+    extrapolateRight: "clamp",
+  });
+  const investorBarScale = interpolate(frame, [55, 75], [0, 1], {
+    extrapolateRight: "clamp",
+  });
+
   return (
     <AbsoluteFill
       style={{
@@ -110,28 +118,75 @@ export const MechanicScene: React.FC = () => {
         padding: "0 60px",
       }}
     >
-      {/* Primary card: Traders commit capital first */}
-      <div
+      {/* Primary headline: Traders commit capital first */}
+      <h2
         style={{
+          fontFamily: FONT.display,
+          fontSize: 52,
+          fontWeight: 700,
+          color: BRAND.signalPrimary,
+          margin: "0 0 60px 0",
           textAlign: "center",
-          marginBottom: 40,
+          opacity: interpolate(frame, [10, 40], [0, 1], {
+            extrapolateRight: "clamp",
+          }),
         }}
       >
-        <h2
-          style={{
-            fontFamily: FONT.display,
-            fontSize: 52,
-            fontWeight: 700,
-            color: BRAND.signalPrimary,
-            margin: 0,
-            marginBottom: 20,
-            opacity: interpolate(frame, [10, 40], [0, 1], {
-              extrapolateRight: "clamp",
-            }),
-          }}
-        >
-          Traders commit capital first.
-        </h2>
+        Traders commit capital first.
+      </h2>
+
+      {/* Visual metaphor: capital alignment bars */}
+      <div
+        style={{
+          width: 600,
+          marginBottom: 60,
+        }}
+      >
+        {/* Trader capital bar (first/green) */}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 14,
+              color: BRAND.textSecondary,
+              marginBottom: 8,
+            }}
+          >
+            Trader capital (absorbs losses first)
+          </div>
+          <div
+            style={{
+              height: 12,
+              backgroundColor: BRAND.signalPrimary,
+              borderRadius: 4,
+              width: "40%",
+              transform: `scaleX(${traderBarScale})`,
+              transformOrigin: "left",
+            }}
+          />
+        </div>
+
+        {/* Investor capital bar (protected second) */}
+        <div>
+          <div
+            style={{
+              fontSize: 14,
+              color: BRAND.textSecondary,
+              marginBottom: 8,
+            }}
+          >
+            Investor capital (protected)
+          </div>
+          <div
+            style={{
+              height: 12,
+              backgroundColor: BRAND.signalDeep,
+              borderRadius: 4,
+              width: "60%",
+              transform: `scaleX(${investorBarScale})`,
+              transformOrigin: "left",
+            }}
+          />
+        </div>
       </div>
 
       {/* Supporting cards */}
@@ -144,8 +199,8 @@ export const MechanicScene: React.FC = () => {
         }}
       >
         <MechanicCard
-          title="Performance is publicly verifiable."
-          description="Every trade, every position, on-chain"
+          title="Performance is verifiable on-chain."
+          description="Every trade, every position, transparent"
           icon={<CheckCircle2 size={32} />}
           delay={120}
           frame={frame}

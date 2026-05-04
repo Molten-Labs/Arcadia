@@ -1,0 +1,42 @@
+ARCADIA MARKETING VIDEO — QUALITY UPGRADES APPLIED
+================================================
+
+✅ UPGRADE 1: Value Loop Closure
+   Added: "Allocate to proven traders" 
+   Location: ProductScene (after marketplace)
+   Why: Completes the outcome loop — viewers now know what to DO after watching
+   
+✅ UPGRADE 2: Beat of Silence in Hook
+   Added: 15-frame (0.5s) gap between hook lines
+   Timing: "Most systems rely on trust" → PAUSE → "Arcadia relies on performance"
+   Why: Creates authority, emphasis, cinematic breathing
+   File: HookScene.tsx
+
+✅ UPGRADE 3: Visual Metaphor for First-Loss Protection
+   Added: Capital alignment bars (green trader, dark green investor)
+   Location: MechanicScene (before supporting cards)
+   Why: Shows alignment structure visually — no need to explain it
+   File: MechanicScene.tsx
+
+✅ UPGRADE 4: Native Crypto Language
+   Changed: "publicly verifiable" → "verifiable on-chain"
+   Files: MechanicScene.tsx, HackathonClip.tsx
+   Why: One-word change signals credibility to target audience
+
+✅ UPGRADE 5: End Card Polish
+   Restructured: Logo (top) → Message (center) → Status (bottom) → Accent bar (slides up)
+   Location: CTAScene.tsx
+   Why: Creates brand stamp feeling instead of rushed text overlay
+   
+✅ UPGRADE 6: Optional Audio Enhancement
+   Recommended: 40-60Hz ambient tone (-30dB)
+   Location: Entire video, subtle presence
+   Why: Removes "too quiet" feeling, adds cinematic presence
+
+OVERALL EFFECT:
+From "professional + correct" → "sharp, intentional, high-signal"
+
+All changes maintain original brand.md colors and fonts.
+Zero animation vocabulary changes (all spring, damping=200, no bounce).
+
+Ready to render.

@@ -23,8 +23,14 @@ export const HookScene: React.FC = () => {
     damping: 200,
   });
 
-  // Supporting text appears later
-  const supportOpacity = interpolate(frame, [30, 50], [0, 1], {
+  // First line of supporting text appears at frame 30
+  const line1Opacity = interpolate(frame, [30, 45], [0, 1], {
+    extrapolateRight: "clamp",
+  });
+
+  // Beat of silence (frames 45-60)
+  // Second line appears at frame 60 with emphasis
+  const line2Opacity = interpolate(frame, [60, 75], [0, 1], {
     extrapolateRight: "clamp",
   });
 
@@ -47,7 +53,7 @@ export const HookScene: React.FC = () => {
           fontWeight: 700,
           color: BRAND.textPrimary,
           margin: 0,
-          marginBottom: 40,
+          marginBottom: 60,
           textAlign: "center",
           maxWidth: 1600,
           opacity: questionOpacity,
@@ -57,36 +63,35 @@ export const HookScene: React.FC = () => {
         Who earns the right to manage capital?
       </h1>
 
-      {/* Supporting text */}
-      <div
+      {/* First line: "Most systems rely on trust" */}
+      <p
         style={{
-          opacity: supportOpacity,
+          fontFamily: FONT.ui,
+          fontSize: 40,
+          color: BRAND.textSecondary,
+          margin: 0,
+          textAlign: "center",
+          opacity: line1Opacity,
         }}
       >
-        <p
-          style={{
-            fontFamily: FONT.ui,
-            fontSize: 40,
-            color: BRAND.textSecondary,
-            margin: "20px 0 0 0",
-            textAlign: "center",
-          }}
-        >
-          Most systems rely on trust.
-        </p>
-        <p
-          style={{
-            fontFamily: FONT.ui,
-            fontSize: 40,
-            color: BRAND.signalPrimary,
-            margin: "15px 0 0 0",
-            textAlign: "center",
-            fontWeight: 600,
-          }}
-        >
-          Arcadia relies on performance.
-        </p>
-      </div>
+        Most systems rely on trust.
+      </p>
+
+      {/* Beat of silence (15 frames = 0.5s) then second line */}
+      {/* Second line: "Arcadia relies on performance" */}
+      <p
+        style={{
+          fontFamily: FONT.ui,
+          fontSize: 40,
+          color: BRAND.signalPrimary,
+          margin: "20px 0 0 0",
+          textAlign: "center",
+          fontWeight: 600,
+          opacity: line2Opacity,
+        }}
+      >
+        Arcadia relies on performance.
+      </p>
     </AbsoluteFill>
   );
 };

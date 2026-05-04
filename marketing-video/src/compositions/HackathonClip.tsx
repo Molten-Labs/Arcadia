@@ -111,7 +111,7 @@ export const HackathonClip: React.FC = () => {
           >
             {[
               { num: 1, title: "Traders commit capital first", desc: "30-day on-chain verification" },
-              { num: 2, title: "Performance is publicly verifiable", desc: "Every trade, every position" },
+              { num: 2, title: "Performance is verifiable on-chain", desc: "Every trade, every position" },
               { num: 3, title: "Investors retain full control", desc: "Withdraw anytime, no lock-in" },
             ].map((item, i) => (
               <div

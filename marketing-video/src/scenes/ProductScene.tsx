@@ -97,19 +97,38 @@ export const ProductScene: React.FC = () => {
         </div>
       </div>
 
-      {/* Text overlay */}
-      <p
+      {/* Text overlays: two lines, staggered */}
+      <div
         style={{
-          fontFamily: FONT.display,
-          fontSize: 36,
-          color: BRAND.signalPrimary,
           marginTop: 40,
-          opacity: textOpacity,
-          margin: "40px 0 0 0",
+          textAlign: "center",
         }}
       >
-        Explore verified traders
-      </p>
+        <p
+          style={{
+            fontFamily: FONT.display,
+            fontSize: 36,
+            color: BRAND.signalPrimary,
+            margin: "0 0 12px 0",
+            opacity: textOpacity,
+          }}
+        >
+          Explore verified traders
+        </p>
+        <p
+          style={{
+            fontFamily: FONT.ui,
+            fontSize: 24,
+            color: BRAND.textSecondary,
+            margin: 0,
+            opacity: interpolate(frame, [50, 70], [0, 1], {
+              extrapolateRight: "clamp",
+            }),
+          }}
+        >
+          Allocate to proven traders.
+        </p>
+      </div>
     </AbsoluteFill>
   );
 };

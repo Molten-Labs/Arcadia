@@ -18,13 +18,18 @@ export const CTAScene: React.FC = () => {
     extrapolateRight: "clamp",
   });
 
-  // CTA text
-  const ctaOpacity = interpolate(frame, [15, 35], [0, 1], {
+  // Main message appears
+  const messageOpacity = interpolate(frame, [15, 35], [0, 1], {
     extrapolateRight: "clamp",
   });
 
-  // Accent bar slides up
-  const barHeight = interpolate(frame, [25, 45], [0, 6], {
+  // Status appears last
+  const statusOpacity = interpolate(frame, [35, 55], [0, 1], {
+    extrapolateRight: "clamp",
+  });
+
+  // Accent bar slides up at end
+  const barHeight = interpolate(frame, [40, 60], [0, 6], {
     extrapolateRight: "clamp",
   });
 
@@ -37,51 +42,63 @@ export const CTAScene: React.FC = () => {
         justifyContent: "center",
         alignItems: "center",
         position: "relative",
+        gap: 0,
       }}
     >
-      {/* Shield logo - ASCII representation, or use actual SVG */}
+      {/* Logo at top - brand stamp */}
       <div
         style={{
-          fontSize: 120,
+          position: "absolute",
+          top: 120,
+          fontSize: 48,
           fontWeight: 700,
           color: BRAND.signalPrimary,
           opacity: logoOpacity,
           transform: `scale(${logoScale})`,
-          marginBottom: 40,
+          fontFamily: FONT.display,
         }}
       >
-        ◆
+        Arcadia
       </div>
 
-      {/* Main CTA */}
+      {/* Main message in center */}
       <h1
         style={{
           fontFamily: FONT.display,
           fontSize: 56,
           fontWeight: 700,
           color: BRAND.textPrimary,
-          margin: "0 0 12px 0",
+          margin: 0,
           textAlign: "center",
-          opacity: ctaOpacity,
+          opacity: messageOpacity,
         }}
       >
         Explore live traders
       </h1>
 
-      {/* Sub CTA */}
-      <p
+      {/* Status at bottom */}
+      <div
         style={{
-          fontFamily: FONT.ui,
-          fontSize: 28,
-          color: BRAND.signalPrimary,
-          margin: "8px 0 0 0",
-          opacity: ctaOpacity,
+          position: "absolute",
+          bottom: 120,
+          textAlign: "center",
+          opacity: statusOpacity,
         }}
       >
-        Devnet Live
-      </p>
+        <p
+          style={{
+            fontFamily: FONT.ui,
+            fontSize: 28,
+            color: BRAND.signalPrimary,
+            margin: 0,
+            fontWeight: 600,
+          }}
+        >
+          Devnet Live
+        </p>
+      </div>
 
-      {/* Accent bar at bottom */}
+      {/* Accent bar slides up from bottom */}
       <div
         style={{
           position: "absolute",
