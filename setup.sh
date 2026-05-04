@@ -5,5 +5,5 @@
 set -e
 
 echo "[setup] Installing frontend dependencies..."
-cd app && npm install --legacy-peer-deps
+cd app && npm install --legacy-peer-deps --ignore-scripts
 echo "[setup] Done. Run 'bash dev.sh' or click Run to start the app."
