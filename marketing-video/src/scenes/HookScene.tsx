@@ -5,21 +5,48 @@ import { BRAND, FONT, TIMINGS } from "../constants";
 const HEADLINE = "Who earns the right to manage capital?";
 const WORDS = HEADLINE.split(" ");
 
+// Deterministic particle field (golden-ratio spread)
+const PARTICLES = Array.from({ length: 32 }, (_, i) => ({
+  cx: (i * 1618.034) % 1920,
+  cy: (i * 987.654) % 1080,
+  r: 1.2 + (i % 4) * 1.0,
+  speedX: 0.18 + (i % 5) * 0.07,
+  speedY: 0.12 + (i % 4) * 0.05,
+  phase: i * 0.937,
+  opacity: 0.07 + (i % 3) * 0.055,
+}));
+
+// Horizontal scan lines (adds CRT/data feel)
+const SCAN_LINES = Array.from({ length: 6 }, (_, i) => ({
+  y: 150 + i * 140,
+  delay: 20 + i * 10,
+  speed: 0.8 + i * 0.15,
+  phase: i * 1.04,
+}));
+
 const WordReveal: React.FC<{
   word: string;
   frame: number;
   startFrame: number;
-}> = ({ word, frame, startFrame }) => {
-  const f = frame - startFrame;
-  const opacity = interpolate(f, [0, 14], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const y = interpolate(f, [0, 14], [28, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  isLast?: boolean;
+}> = ({ word, frame, startFrame, isLast }) => {
+  const f = Math.max(0, frame - startFrame);
+  const opacity = interpolate(f, [0, 14], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const y = interpolate(f, [0, 14], [30, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   return (
     <span
       style={{
         display: "inline-block",
         opacity,
         transform: `translateY(${y}px)`,
-        marginRight: "0.28em",
+        marginRight: isLast ? 0 : "0.26em",
+        color: isLast ? BRAND.signalPrimary : BRAND.textPrimary,
       }}
     >
       {word}
@@ -29,23 +56,21 @@ const WordReveal: React.FC<{
 
 export const HookScene: React.FC = () => {
   const frame = useCurrentFrame();
+  const fps = TIMINGS.fps;
 
   const bgOpacity = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
+  const glowOpacity = interpolate(frame, [0, 40], [0, 1], { extrapolateRight: "clamp" });
 
-  const glowOpacity = interpolate(frame, [0, 30], [0, 0.6], { extrapolateRight: "clamp" });
+  const line1Opacity = interpolate(frame, [88, 108], [0, 1], { extrapolateRight: "clamp" });
+  const line1Y = interpolate(frame, [88, 108], [22, 0], { extrapolateRight: "clamp" });
 
-  const line1Opacity = interpolate(frame, [80, 100], [0, 1], { extrapolateRight: "clamp" });
-  const line1Y = interpolate(frame, [80, 100], [20, 0], { extrapolateRight: "clamp" });
+  const line2Opacity = interpolate(frame, [112, 132], [0, 1], { extrapolateRight: "clamp" });
+  const line2Y = interpolate(frame, [112, 132], [22, 0], { extrapolateRight: "clamp" });
 
-  const line2Opacity = interpolate(frame, [105, 125], [0, 1], { extrapolateRight: "clamp" });
-  const line2Y = interpolate(frame, [105, 125], [20, 0], { extrapolateRight: "clamp" });
+  const dividerW = interpolate(frame, [82, 100], [0, 140], { extrapolateRight: "clamp" });
 
-  const performancePulse = interpolate(
-    Math.sin((frame / TIMINGS.fps) * Math.PI * 1.2),
-    [-1, 1],
-    [0.85, 1],
-    { extrapolateRight: "clamp" }
-  );
+  // Pulsing glow on the signal word "performance"
+  const performancePulse = 0.85 + 0.15 * Math.sin((frame / fps) * Math.PI * 1.4);
 
   return (
     <AbsoluteFill
@@ -55,34 +80,78 @@ export const HookScene: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Atmospheric glow */}
+      {/* ── Atmospheric glow ── */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           background: `
-            radial-gradient(ellipse 70% 70% at 15% 50%, rgba(0, 255, 178, 0.07) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 60% at 85% 20%, rgba(22, 199, 132, 0.04) 0%, transparent 60%)
+            radial-gradient(ellipse 65% 65% at 12% 55%, rgba(0,255,178,0.08) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 55% at 88% 15%, rgba(22,199,132,0.05) 0%, transparent 60%),
+            radial-gradient(ellipse 80% 40% at 50% 100%, rgba(0,255,178,0.03) 0%, transparent 50%)
           `,
           opacity: glowOpacity,
         }}
       />
 
-      {/* Subtle grid */}
+      {/* ── Subtle grid ── */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           backgroundImage: `
-            linear-gradient(rgba(0, 255, 178, 0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 255, 178, 0.025) 1px, transparent 1px)
+            linear-gradient(rgba(0,255,178,0.022) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,255,178,0.022) 1px, transparent 1px)
           `,
-          backgroundSize: "100px 100px",
+          backgroundSize: "96px 96px",
           opacity: glowOpacity,
         }}
       />
 
-      {/* Content */}
+      {/* ── Floating particles (SVG) ── */}
+      <svg
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        viewBox="0 0 1920 1080"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {PARTICLES.map((p, i) => {
+          const x = p.cx + Math.sin((frame / fps) * p.speedX + p.phase) * 18;
+          const y = p.cy + Math.cos((frame / fps) * p.speedY + p.phase) * 12;
+          const pulse = p.opacity + 0.04 * Math.sin((frame / fps) * 1.3 + p.phase);
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r={p.r}
+              fill={BRAND.signalPrimary}
+              opacity={pulse * glowOpacity}
+            />
+          );
+        })}
+
+        {/* Horizontal scan flashes */}
+        {SCAN_LINES.map((sl, i) => {
+          const scanOpacity =
+            0.018 *
+            Math.max(0, Math.sin((frame / fps) * sl.speed * Math.PI + sl.phase) * 0 + 1) *
+            glowOpacity;
+          return (
+            <line
+              key={i}
+              x1="0"
+              y1={sl.y}
+              x2="1920"
+              y2={sl.y}
+              stroke={BRAND.signalPrimary}
+              strokeWidth="0.5"
+              opacity={scanOpacity}
+            />
+          );
+        })}
+      </svg>
+
+      {/* ── Content ── */}
       <div
         style={{
           position: "relative",
@@ -91,38 +160,37 @@ export const HookScene: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           height: "100%",
-          padding: "0 160px",
-          gap: 0,
+          padding: "0 180px",
         }}
       >
-        {/* Eyebrow label */}
+        {/* Eyebrow */}
         <div
           style={{
             fontFamily: FONT.mono,
-            fontSize: 18,
-            letterSpacing: "0.2em",
+            fontSize: 16,
+            letterSpacing: "0.22em",
             color: BRAND.signalPrimary,
             textTransform: "uppercase",
-            marginBottom: 48,
-            opacity: interpolate(frame, [5, 20], [0, 0.8], { extrapolateRight: "clamp" }),
+            marginBottom: 44,
+            opacity: interpolate(frame, [4, 18], [0, 0.85], { extrapolateRight: "clamp" }),
           }}
         >
-          Arcadia Protocol
+          Arcadia Protocol · First-Loss Managed Vaults
         </div>
 
-        {/* Main headline — word by word */}
+        {/* Headline — word by word */}
         <h1
           style={{
             fontFamily: FONT.display,
-            fontSize: 88,
+            fontSize: 86,
             fontWeight: 700,
             color: BRAND.textPrimary,
             margin: 0,
-            marginBottom: 72,
+            marginBottom: 64,
             textAlign: "center",
-            maxWidth: 1500,
+            maxWidth: 1480,
             lineHeight: 1.12,
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.025em",
           }}
         >
           {WORDS.map((word, i) => (
@@ -130,7 +198,8 @@ export const HookScene: React.FC = () => {
               key={i}
               word={word}
               frame={frame}
-              startFrame={18 + i * 9}
+              startFrame={20 + i * 9}
+              isLast={i === WORDS.length - 1}
             />
           ))}
         </h1>
@@ -138,10 +207,10 @@ export const HookScene: React.FC = () => {
         {/* Divider */}
         <div
           style={{
-            width: interpolate(frame, [78, 95], [0, 120], { extrapolateRight: "clamp" }),
+            width: dividerW,
             height: 2,
-            backgroundColor: BRAND.signalDeep,
-            marginBottom: 48,
+            background: `linear-gradient(90deg, transparent, ${BRAND.signalDeep}, transparent)`,
+            marginBottom: 44,
             borderRadius: 2,
           }}
         />
@@ -150,10 +219,9 @@ export const HookScene: React.FC = () => {
         <p
           style={{
             fontFamily: FONT.ui,
-            fontSize: 38,
+            fontSize: 36,
             color: BRAND.textSecondary,
-            margin: 0,
-            marginBottom: 20,
+            margin: "0 0 18px 0",
             textAlign: "center",
             fontWeight: 400,
             letterSpacing: "-0.01em",
@@ -164,11 +232,11 @@ export const HookScene: React.FC = () => {
           Most systems rely on trust.
         </p>
 
-        {/* Line 2 — with green emphasis */}
+        {/* Line 2 */}
         <p
           style={{
             fontFamily: FONT.ui,
-            fontSize: 38,
+            fontSize: 36,
             color: BRAND.textPrimary,
             margin: 0,
             textAlign: "center",
@@ -183,6 +251,7 @@ export const HookScene: React.FC = () => {
             style={{
               color: BRAND.signalPrimary,
               opacity: performancePulse,
+              textShadow: `0 0 40px rgba(0,255,178,0.4)`,
             }}
           >
             performance.
@@ -190,16 +259,16 @@ export const HookScene: React.FC = () => {
         </p>
       </div>
 
-      {/* Bottom signal bar */}
+      {/* Bottom signal strip */}
       <div
         style={{
           position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
-          height: 4,
-          background: `linear-gradient(90deg, transparent, ${BRAND.signalPrimary}, transparent)`,
-          opacity: interpolate(frame, [120, 145], [0, 0.6], { extrapolateRight: "clamp" }),
+          height: 3,
+          background: `linear-gradient(90deg, transparent 0%, ${BRAND.signalPrimary} 30%, ${BRAND.signalPrimary} 70%, transparent 100%)`,
+          opacity: interpolate(frame, [130, 150], [0, 0.5], { extrapolateRight: "clamp" }),
         }}
       />
     </AbsoluteFill>

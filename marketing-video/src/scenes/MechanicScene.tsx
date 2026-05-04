@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, interpolate, spring } from "remotion";
+import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
 import { BRAND, FONT, TIMINGS } from "../constants";
 
 interface MechanicCardProps {
@@ -11,9 +11,9 @@ interface MechanicCardProps {
 }
 
 const MechanicCard: React.FC<MechanicCardProps> = ({ icon, title, desc, startFrame, frame }) => {
-  const f = frame - startFrame;
+  const f = Math.max(0, frame - startFrame);
   const opacity = interpolate(f, [0, 18], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const x = interpolate(f, [0, 18], [40, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const x = interpolate(f, [0, 18], [50, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   const borderOpacity = interpolate(f, [8, 28], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
@@ -21,38 +21,21 @@ const MechanicCard: React.FC<MechanicCardProps> = ({ icon, title, desc, startFra
       style={{
         display: "flex",
         alignItems: "flex-start",
-        gap: 24,
+        gap: 22,
         backgroundColor: BRAND.surface,
-        padding: "28px 36px",
+        padding: "26px 32px",
         borderRadius: 10,
         borderLeft: `3px solid rgba(0,255,178,${borderOpacity})`,
         opacity,
         transform: `translateX(${x}px)`,
-        width: 680,
       }}
     >
-      <div style={{ fontSize: 32, lineHeight: 1, paddingTop: 2 }}>{icon}</div>
+      <div style={{ fontSize: 28, lineHeight: 1, paddingTop: 2, flexShrink: 0 }}>{icon}</div>
       <div>
-        <div
-          style={{
-            fontFamily: FONT.ui,
-            fontSize: 22,
-            fontWeight: 600,
-            color: BRAND.textPrimary,
-            marginBottom: 6,
-            letterSpacing: "-0.01em",
-          }}
-        >
+        <div style={{ fontFamily: FONT.ui, fontSize: 20, fontWeight: 600, color: BRAND.textPrimary, marginBottom: 5, letterSpacing: "-0.01em" }}>
           {title}
         </div>
-        <div
-          style={{
-            fontFamily: FONT.ui,
-            fontSize: 16,
-            color: BRAND.textSecondary,
-            lineHeight: 1.5,
-          }}
-        >
+        <div style={{ fontFamily: FONT.ui, fontSize: 15, color: BRAND.textSecondary, lineHeight: 1.5 }}>
           {desc}
         </div>
       </div>
@@ -62,38 +45,49 @@ const MechanicCard: React.FC<MechanicCardProps> = ({ icon, title, desc, startFra
 
 export const MechanicScene: React.FC = () => {
   const frame = useCurrentFrame();
+  const fps = TIMINGS.fps;
 
   const bgOpacity = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: "clamp" });
-
-  // Headline
   const headlineOpacity = interpolate(frame, [8, 28], [0, 1], { extrapolateRight: "clamp" });
   const headlineY = interpolate(frame, [8, 28], [20, 0], { extrapolateRight: "clamp" });
 
-  // Capital stack bars
-  const traderBarW = interpolate(frame, [45, 80], [0, 1], { extrapolateRight: "clamp" });
-  const investorBarW = interpolate(frame, [70, 110], [0, 1], { extrapolateRight: "clamp" });
+  // Capital bars build up
+  const investorBarW = interpolate(frame, [45, 90], [0, 1], { extrapolateRight: "clamp" });
+  const traderBarW = interpolate(frame, [60, 100], [0, 1], { extrapolateRight: "clamp" });
 
-  // Loss arrow
-  const arrowOpacity = interpolate(frame, [90, 108], [0, 1], { extrapolateRight: "clamp" });
+  // Label fades
+  const investorLabelOp = interpolate(frame, [88, 108], [0, 1], { extrapolateRight: "clamp" });
+  const traderLabelOp = interpolate(frame, [100, 120], [0, 1], { extrapolateRight: "clamp" });
 
-  // Label opacities
-  const traderLabelOpacity = interpolate(frame, [78, 95], [0, 1], { extrapolateRight: "clamp" });
-  const investorLabelOpacity = interpolate(frame, [108, 125], [0, 1], { extrapolateRight: "clamp" });
+  // ── Loss absorption animation ──
+  // Phase 1: Loss indicator appears (frame 145–165)
+  const lossAppearOp = interpolate(frame, [145, 165], [0, 1], { extrapolateRight: "clamp" });
+  // Phase 2: Loss bar slides in from right and hits the trader bar (165–200)
+  const lossSlide = interpolate(frame, [165, 200], [0, 1], { extrapolateRight: "clamp" });
+  // Phase 3: Trader bar flashes red and "absorbs" — shrinks slightly (200–230)
+  const absorbProgress = interpolate(frame, [200, 230], [0, 1], { extrapolateRight: "clamp" });
+  // Phase 4: "Investor protected ✓" appears (230–250)
+  const protectedOp = interpolate(frame, [230, 250], [0, 1], { extrapolateRight: "clamp" });
+
+  // Trader bar width shrinks during absorption
+  const traderBarCurrentW = traderBarW * 38 * (1 - absorbProgress * 0.32);
+
+  // Loss indicator red flash on trader bar
+  const lossFlash = Math.max(0, Math.sin((frame / fps) * Math.PI * 8)) * absorbProgress * 0.4;
+
+  const INVESTOR_BAR_W = 62; // % of container
+  const TRADER_BAR_W_FULL = 38; // % of container
 
   return (
     <AbsoluteFill
-      style={{
-        backgroundColor: BRAND.bgSecondary,
-        opacity: bgOpacity,
-        overflow: "hidden",
-      }}
+      style={{ backgroundColor: BRAND.bgSecondary, opacity: bgOpacity, overflow: "hidden" }}
     >
       {/* Atmospheric glow */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: `radial-gradient(ellipse 60% 70% at 80% 60%, rgba(0,255,178,0.05) 0%, transparent 60%)`,
+          background: `radial-gradient(ellipse 55% 65% at 80% 55%, rgba(0,255,178,0.05) 0%, transparent 60%)`,
         }}
       />
 
@@ -103,21 +97,21 @@ export const MechanicScene: React.FC = () => {
           display: "flex",
           height: "100%",
           alignItems: "center",
-          padding: "0 120px",
-          gap: 100,
+          padding: "0 110px",
+          gap: 90,
         }}
       >
-        {/* LEFT: headline + capital stack diagram */}
-        <div style={{ flex: "0 0 700px", display: "flex", flexDirection: "column" }}>
+        {/* ── LEFT: headline + capital stack ── */}
+        <div style={{ flex: "0 0 720px", display: "flex", flexDirection: "column" }}>
           {/* Section label */}
           <div
             style={{
               fontFamily: FONT.mono,
-              fontSize: 14,
-              letterSpacing: "0.18em",
+              fontSize: 13,
+              letterSpacing: "0.2em",
               color: BRAND.signalPrimary,
               textTransform: "uppercase",
-              marginBottom: 24,
+              marginBottom: 20,
               opacity: headlineOpacity,
             }}
           >
@@ -128,12 +122,12 @@ export const MechanicScene: React.FC = () => {
           <h2
             style={{
               fontFamily: FONT.display,
-              fontSize: 64,
+              fontSize: 66,
               fontWeight: 700,
               color: BRAND.textPrimary,
-              margin: "0 0 16px 0",
-              lineHeight: 1.1,
-              letterSpacing: "-0.025em",
+              margin: "0 0 14px 0",
+              lineHeight: 1.08,
+              letterSpacing: "-0.03em",
               opacity: headlineOpacity,
               transform: `translateY(${headlineY}px)`,
             }}
@@ -146,10 +140,10 @@ export const MechanicScene: React.FC = () => {
           <p
             style={{
               fontFamily: FONT.ui,
-              fontSize: 22,
+              fontSize: 20,
               color: BRAND.textSecondary,
-              margin: "0 0 60px 0",
-              lineHeight: 1.6,
+              margin: "0 0 52px 0",
+              lineHeight: 1.65,
               opacity: headlineOpacity,
               maxWidth: 560,
             }}
@@ -158,30 +152,30 @@ export const MechanicScene: React.FC = () => {
             of investor funds.
           </p>
 
-          {/* Capital Stack Diagram */}
-          <div style={{ width: 560 }}>
+          {/* ── Capital Stack Diagram ── */}
+          <div style={{ width: 580 }}>
             <div
               style={{
                 fontFamily: FONT.mono,
-                fontSize: 13,
+                fontSize: 12,
                 color: BRAND.textMuted,
-                letterSpacing: "0.1em",
+                letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                marginBottom: 20,
-                opacity: interpolate(frame, [38, 50], [0, 1], { extrapolateRight: "clamp" }),
+                marginBottom: 18,
+                opacity: interpolate(frame, [38, 52], [0, 1], { extrapolateRight: "clamp" }),
               }}
             >
               Capital structure
             </div>
 
             {/* Investor bar */}
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 12 }}>
               <div
                 style={{
-                  height: 48,
+                  height: 52,
                   backgroundColor: BRAND.bgPrimary,
-                  borderRadius: 6,
-                  border: `1px solid rgba(245,247,250,0.08)`,
+                  borderRadius: 7,
+                  border: `1px solid rgba(245,247,250,0.07)`,
                   overflow: "hidden",
                   position: "relative",
                 }}
@@ -192,12 +186,13 @@ export const MechanicScene: React.FC = () => {
                     left: 0,
                     top: 0,
                     bottom: 0,
-                    width: `${investorBarW * 100}%`,
-                    background: `linear-gradient(90deg, rgba(176,176,176,0.3), rgba(245,247,250,0.15))`,
-                    borderRadius: 6,
+                    width: `${investorBarW * INVESTOR_BAR_W}%`,
+                    background: `linear-gradient(90deg, rgba(176,176,176,0.28), rgba(245,247,250,0.14))`,
+                    borderRadius: 7,
                     display: "flex",
                     alignItems: "center",
-                    paddingLeft: 16,
+                    paddingLeft: 18,
+                    transition: "width 0.1s",
                   }}
                 >
                   <span
@@ -205,40 +200,44 @@ export const MechanicScene: React.FC = () => {
                       fontFamily: FONT.mono,
                       fontSize: 13,
                       color: BRAND.textSecondary,
-                      opacity: investorLabelOpacity,
+                      opacity: investorLabelOp,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Investor Capital — protected
+                    Investor Capital · protected
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Trader bar */}
-            <div style={{ position: "relative" }}>
+            {/* Trader bar (first loss) */}
+            <div style={{ position: "relative", marginBottom: 32 }}>
               <div
                 style={{
-                  height: 48,
+                  height: 52,
                   backgroundColor: BRAND.bgPrimary,
-                  borderRadius: 6,
-                  border: `1px solid rgba(0,255,178,0.12)`,
+                  borderRadius: 7,
+                  border: `1px solid rgba(0,255,178,${0.1 + lossFlash * 0.4})`,
                   overflow: "hidden",
                   position: "relative",
+                  boxShadow: lossFlash > 0.05
+                    ? `0 0 ${20 * lossFlash}px rgba(255,77,109,${lossFlash * 0.5})`
+                    : "none",
                 }}
               >
+                {/* Trader capital fill */}
                 <div
                   style={{
                     position: "absolute",
                     left: 0,
                     top: 0,
                     bottom: 0,
-                    width: `${traderBarW * 38}%`,
-                    background: `linear-gradient(90deg, rgba(0,255,178,0.35), rgba(0,255,178,0.15))`,
-                    borderRadius: 6,
+                    width: `${traderBarCurrentW}%`,
+                    background: `linear-gradient(90deg, rgba(0,255,178,${0.35 + lossFlash * 0.2}), rgba(0,255,178,${0.18 + lossFlash * 0.1}))`,
+                    borderRadius: 7,
                     display: "flex",
                     alignItems: "center",
-                    paddingLeft: 16,
+                    paddingLeft: 18,
                   }}
                 >
                   <span
@@ -246,80 +245,132 @@ export const MechanicScene: React.FC = () => {
                       fontFamily: FONT.mono,
                       fontSize: 13,
                       color: BRAND.signalPrimary,
-                      opacity: traderLabelOpacity,
+                      opacity: traderLabelOp,
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Trader Capital — first loss ↑
+                    Trader Capital · first loss ↑
                   </span>
                 </div>
+
+                {/* Loss absorption overlay — red fill from right */}
+                {absorbProgress > 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: `${100 - TRADER_BAR_W_FULL}%`,
+                      top: 0,
+                      bottom: 0,
+                      width: `${absorbProgress * TRADER_BAR_W_FULL * 0.32}%`,
+                      background: `rgba(255,77,109,${0.4 * absorbProgress})`,
+                      borderRadius: "0 7px 7px 0",
+                    }}
+                  />
+                )}
               </div>
 
-              {/* Loss absorbed label */}
-              <div
-                style={{
-                  position: "absolute",
-                  right: -8,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  opacity: arrowOpacity,
-                }}
-              >
+              {/* Loss event indicator */}
+              {lossAppearOp > 0.01 && (
                 <div
                   style={{
-                    width: 32,
-                    height: 1,
-                    backgroundColor: BRAND.signalDeep,
-                  }}
-                />
-                <div
-                  style={{
-                    fontFamily: FONT.mono,
-                    fontSize: 12,
-                    color: BRAND.signalDeep,
-                    letterSpacing: "0.08em",
-                    whiteSpace: "nowrap",
+                    position: "absolute",
+                    right: -8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    opacity: lossAppearOp,
                   }}
                 >
-                  absorbs losses first
+                  <div style={{ width: 28, height: 1, backgroundColor: BRAND.danger }} />
+                  <div
+                    style={{
+                      fontFamily: FONT.mono,
+                      fontSize: 12,
+                      color: BRAND.danger,
+                      letterSpacing: "0.06em",
+                      whiteSpace: "nowrap",
+                      textShadow: `0 0 12px rgba(255,77,109,0.6)`,
+                    }}
+                  >
+                    {absorbProgress > 0.5
+                      ? "✓ absorbed by trader"
+                      : "loss event: -8.2%"}
+                  </div>
                 </div>
+              )}
+            </div>
+
+            {/* "Investor capital protected" badge */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                opacity: protectedOp,
+                transform: `translateY(${interpolate(frame, [230, 250], [10, 0], { extrapolateRight: "clamp" })}px)`,
+              }}
+            >
+              <div
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  border: `2px solid ${BRAND.signalPrimary}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  color: BRAND.signalPrimary,
+                }}
+              >
+                ✓
               </div>
+              <span
+                style={{
+                  fontFamily: FONT.ui,
+                  fontSize: 16,
+                  color: BRAND.signalPrimary,
+                  fontWeight: 600,
+                  textShadow: `0 0 24px rgba(0,255,178,0.35)`,
+                }}
+              >
+                Investor capital intact — loss absorbed by trader
+              </span>
             </div>
           </div>
         </div>
 
-        {/* RIGHT: mechanic cards */}
+        {/* ── RIGHT: mechanic cards ── */}
         <div
           style={{
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            gap: 20,
-            paddingTop: 40,
+            gap: 18,
+            paddingTop: 30,
           }}
         >
           <MechanicCard
             icon="🔒"
             title="Traders commit capital first"
-            desc="30-day on-chain verification period. No shortcuts."
-            startFrame={130}
+            desc="30-day on-chain verification period. No shortcuts, no exceptions."
+            startFrame={118}
             frame={frame}
           />
           <MechanicCard
             icon="⛓️"
             title="Performance verified on-chain"
             desc="Every trade, every position — fully transparent on Solana."
-            startFrame={158}
+            startFrame={144}
             frame={frame}
           />
           <MechanicCard
             icon="🚪"
             title="Investors retain full control"
             desc="Non-custodial. Withdraw anytime. No lock-ins, no gatekeeping."
-            startFrame={186}
+            startFrame={170}
             frame={frame}
           />
         </div>
