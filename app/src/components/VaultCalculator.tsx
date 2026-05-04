@@ -36,11 +36,11 @@ export const VaultCalculator = () => {
             <Calculator className="w-3 h-3" /> Returns estimator
           </span>
           <h2 className="font-display type-h2 font-semibold mt-3">
-            Project your <span className="text-gradient-signal">expected returns</span>
+            Estimate potential <span className="text-gradient-signal">vault performance</span>
           </h2>
         </div>
         <p className="font-mono text-[11px] text-muted-foreground max-w-xs text-right leading-relaxed hidden sm:block">
-          Risk-adjusted projections. Past performance doesn't guarantee future results.
+          Illustrative scenarios · not guaranteed returns
         </p>
       </div>
 
@@ -108,7 +108,7 @@ export const VaultCalculator = () => {
               ))}
             </div>
             <div className="mt-2 font-mono text-[10px] text-muted-foreground">
-              Target {tierApy[tier].expected}% APY · {tierApy[tier].conservative}–{tierApy[tier].optimistic}% range
+              Historical performance simulation · {tierApy[tier].conservative}–{tierApy[tier].optimistic}% range
             </div>
           </div>
         </div>

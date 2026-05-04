@@ -14,7 +14,7 @@ export const Footer = () => (
                     <span className="font-display font-semibold text-[14px] tracking-tight">Arcadia</span>
                 </Link>
                 <p className="text-[13px] text-muted-foreground leading-relaxed max-w-xs">
-                    Managed vaults with traders proving themselves on-chain first.
+                    Performance-verified capital allocation on Solana.
                 </p>
             </div>
 

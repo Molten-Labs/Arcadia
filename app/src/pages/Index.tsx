@@ -34,41 +34,44 @@ const fadeUp = {
 
 
 const FAQ_ITEMS = [
-  { q: "What is junior capital?",                     a: "The trader's own money, posted as first-loss collateral. If the vault loses money, the junior buffer absorbs losses before any investor capital is touched." },
-  { q: "What happens if a vault freezes?",            a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's on-chain reputation is reduced significantly." },
-  { q: "When can I withdraw?",                        a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant." },
-  { q: "How are performance fees calculated?",        a: "Traders earn 15-20% only on gains above the previous high-water mark. No fees during drawdowns or flat performance." },
-  { q: "Is Arcadia custodial?",                       a: "No. Arcadia is a non-custodial protocol on Solana. You sign every transaction with your own wallet." },
-  { q: "Why does paper mode exist?",                  a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits." },
-  { q: "How does the junior buffer protect me?",      a: "The trader's junior capital always absorbs losses first. Investor (senior) capital is only at risk once the entire junior buffer is wiped out." },
-  { q: "Can I see the vault trade history?",          a: "Yes. All trades are recorded on-chain and visible on the vault detail page, including NAV impact and position history." },
+  { q: "What is junior capital?",                          a: "Capital provided by the trader and locked as first-loss protection. During drawdowns, the junior buffer absorbs losses before any investor capital is touched." },
+  { q: "How does the junior buffer protect me?",           a: "The trader's junior capital always absorbs losses first. Investor (senior) capital is only at risk once the entire junior buffer is wiped out." },
+  { q: "Why does paper mode exist?",                       a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits." },
+  { q: "What prevents reckless trading?",                  a: "Arcadia enforces protocol-level risk controls including position limits, cooldowns after major drawdowns, mandatory liquidity reserves, and automatic vault restrictions as junior capital declines." },
+  { q: "When can I withdraw?",                             a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant." },
+  { q: "What happens if a vault freezes?",                 a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's on-chain reputation is subject to reputation slashing." },
+  { q: "How are performance fees calculated?",             a: "Traders earn 15-20% only on gains above the previous high-water mark. No fees during drawdowns or flat performance." },
+  { q: "Why would traders use Arcadia?",                   a: "Arcadia gives traders a way to build verified on-chain reputation and access scalable investor capital without relying on private networks, social media audiences, or centralized firms." },
+  { q: "How do traders build reputation?",                 a: "Every vault contributes to a trader's on-chain performance history. Consistent performance unlocks higher reputation tiers, greater visibility, and access to more investor capital." },
+  { q: "Why is Arcadia different from copy trading?",      a: "Arcadia is built around aligned capital allocation, not signal following. Traders operate real vaults with first-loss protection, public performance histories, and protocol-enforced risk management." },
+  { q: "Are vaults transparent?",                         a: "Yes. Vault performance, trading history, NAV changes, and risk metrics are recorded on-chain and visible publicly through the protocol interface." },
 ];
 
 const FLOW_STEPS = [
   {
     n: "01", icon: Award,      accent: "neutral" as const,
-    title: "Trader puts money in first",
-    body:  "Junior capital is posted on-chain before the vault opens. Real skin in the game.",
+    title: "Trader stakes first",
+    body:  "Junior capital is locked before the vault opens.",
   },
   {
     n: "02", icon: Activity,   accent: "neutral" as const,
     title: "30 days, publicly tracked",
-    body:  "Every trade recorded on-chain. No pitch decks — real performance anyone can verify.",
+    body:  "Every trade recorded on-chain. Real performance anyone can verify.",
   },
   {
     n: "03", icon: Users,      accent: "neutral" as const,
     title: "Vault opens to investors",
-    body:  "After graduation, investors buy in with USDC. The vault is now live and capitalized.",
+    body:  "After graduation, investors deposit USDC. The vault is live and capitalized.",
   },
   {
     n: "04", icon: TrendingUp, accent: "positive" as const,
-    title: "Profits → shares worth more",
-    body:  "NAV rises, each share is worth more. The trader earns a cut only above the high-water mark.",
+    title: "Profits raise share value",
+    body:  "NAV rises, each share is worth more. Trader earns fees only above the high-water mark.",
   },
   {
     n: "05", icon: Shield,     accent: "warning" as const,
     title: "Losses hit the trader first",
-    body:  "Any drawdown burns through the junior buffer first. Your USDC is last in line — always.",
+    body:  "Drawdowns burn through the junior buffer first. Investor capital is last in line.",
   },
   {
     n: "06", icon: ChevronUp,  accent: "neutral" as const,
@@ -127,11 +130,11 @@ const Landing = () => {
             <motion.div variants={fadeUp} custom={0} className="flex items-center gap-4">
               <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
-                ● Proof-of-Performance · Solana
+                Devnet Live
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
-                  {mode === "mock" ? "Mock" : "Live"}
+                  {mode === "mock" ? "Devnet Preview" : "Live"}
                 </span>
                 <Switch
                   checked={mode === "mock"}
@@ -154,24 +157,24 @@ const Landing = () => {
               variants={fadeUp} custom={2}
               className="mt-6 max-w-lg text-[1.05rem] leading-[1.65] text-foreground/72"
             >
-              Arcadia is where traders prove themselves with their own
-              money before touching investor capital. They lose first
-              when trades go wrong. No trust required. Code enforces it.
+              Arcadia is a Proof-of-Performance protocol where traders earn access to investor capital through verified on-chain performance.
+              <br /><br />
+              Every vault is backed by first-loss protection, transparent track records, and protocol-enforced risk controls.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-11 bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold shadow-signal">
                 <Link to="/vaults">
-                  Open marketplace
+                  Explore Vaults
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-11 font-display font-semibold border-border/60 hover:bg-secondary/60">
-                <Link to="/manager">Trader console</Link>
+                <Link to="/manager">Launch Vault</Link>
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-11 text-muted-foreground hover:text-foreground">
                 <a href="#how-it-works">
-                  See how it works →
+                  How Protection Works →
                 </a>
               </Button>
             </motion.div>
@@ -201,7 +204,7 @@ const Landing = () => {
             { l: "Total TVL",         v: `${fmtUSD(stats.totalTVL, { compact: true })} USDC` },
             { l: "Live vaults",       v: String(stats.totalVaults) },
             { l: "Graduated",         v: String(stats.graduated) },
-            { l: "Protected capital", v: `${fmtUSD(stats.protected, { compact: true })} USDC` },
+            { l: "Capital Protected", v: `${fmtUSD(stats.protected, { compact: true })} USDC` },
           ].map((s, i) => (
             <motion.div
               key={s.l}
@@ -223,7 +226,7 @@ const Landing = () => {
           <div>
             <span className="page-header-label">Marketplace</span>
             <h2 className="font-display type-h2 font-semibold mt-3">Featured vaults</h2>
-            <p className="text-muted-foreground mt-1 text-[14px]">Top-performing graduated vaults open for deposits.</p>
+            <p className="text-muted-foreground mt-1 text-[14px]">Verified traders with live investor capital and protocol-enforced first-loss protection.</p>
           </div>
           <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hidden sm:flex shrink-0">
             <Link to="/vaults">View all <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
@@ -465,7 +468,7 @@ const Landing = () => {
             className="mb-10"
           >
             <span className="page-header-label">Common questions</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">Frequently asked</h2>
+            <h2 className="font-display type-h2 font-semibold mt-3">Frequently asked questions</h2>
             <p className="text-muted-foreground mt-2 text-[14px]">
               Everything investors and traders need to know before getting started.
             </p>
@@ -500,7 +503,7 @@ const Landing = () => {
           >
             <Button asChild className="bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold">
               <Link to="/vaults">
-                Open marketplace <ArrowRight className="w-4 h-4 ml-2" />
+                Explore Vaults <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </Button>
             <Button asChild variant="outline">
