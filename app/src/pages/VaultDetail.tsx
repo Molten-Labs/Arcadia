@@ -360,6 +360,7 @@ const VaultDetail = () => {
                       </div>
                       <div className="relative">
                         <Input
+                          aria-label="Amount"
                           value={amount}
                           onChange={e => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                           placeholder="0.00"

@@ -130,14 +130,15 @@ export function toVaultView(v: OnChainVault): VaultView | null {
 export function useVaults() {
   const { connection } = useWallet();
   const { mode, isMock } = useDataMode();
+  const apiUrl = getKilnApiUrl();
 
   return useQuery({
-    queryKey: ["vaults", mode, getKilnApiUrl() || "rpc"],
+    queryKey: ["vaults", mode, apiUrl || "rpc"],
     queryFn: async () => {
       if (isMock) return mockVaultViews();
 
       // Try API first if configured
-      if (getKilnApiUrl()) {
+      if (apiUrl) {
         try {
           const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
           if (api) return api.items.map(normalizeVaultView);
@@ -151,7 +152,7 @@ export function useVaults() {
       const raw = await fetchAllVaults(connection);
       return raw.map(toVaultView).filter((v): v is VaultView => v !== null);
     },
-    enabled: isMock || !!connection,
+    enabled: isMock || !!apiUrl || !!connection,
     staleTime: isMock ? 5_000 : 30_000,
     refetchInterval: isMock ? 8_000 : 60_000,
   });

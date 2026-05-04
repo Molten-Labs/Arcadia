@@ -139,6 +139,7 @@ describe("VaultDetail investor withdrawal", () => {
   it("withdraws senior capital by requested USDC amount", async () => {
     renderPage();
 
+    fireEvent.click(screen.getByRole("button", { name: /^withdraw$/i }));
     fireEvent.change(screen.getByLabelText(/^amount$/i), {
       target: { value: "1" },
     });
@@ -153,13 +154,14 @@ describe("VaultDetail investor withdrawal", () => {
   it("rejects withdrawals above the connected investor position", async () => {
     renderPage();
 
+    fireEvent.click(screen.getByRole("button", { name: /^withdraw$/i }));
     fireEvent.change(screen.getByLabelText(/^amount$/i), {
       target: { value: "2" },
     });
     fireEvent.click(screen.getByRole("button", { name: /withdraw usdc/i }));
 
     await waitFor(() =>
-      expect(mocks.toastError).toHaveBeenCalledWith("Withdrawal exceeds your current claim"),
+      expect(mocks.toastError).toHaveBeenCalledWith("Exceeds your current claim"),
     );
     expect(mocks.withdrawSenior).not.toHaveBeenCalled();
   });

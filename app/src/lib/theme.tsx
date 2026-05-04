@@ -28,7 +28,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     root.style.colorScheme = theme;
     try {
       localStorage.setItem("arcadia-theme", theme);
-    } catch {}
+    } catch {
+      // Local storage can be unavailable in private or embedded contexts.
+    }
   }, [theme]);
 
   const toggle = () => setTheme(t => (t === "dark" ? "light" : "dark"));
