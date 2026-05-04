@@ -455,6 +455,72 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Reputation becomes capital */}
+      <section className="border-t border-border/35 py-20 overflow-hidden relative">
+        <div className="pointer-events-none absolute top-0 right-0 h-[420px] w-[420px] rounded-full bg-primary/[0.06] blur-[100px]" />
+        <div className="container relative">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+
+            {/* Left — text */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <h2
+                className="font-display font-semibold text-foreground/95 leading-[1.08] tracking-[-0.022em] mb-6"
+                style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)" }}
+              >
+                Reputation becomes
+                <br />
+                <span className="text-gradient-signal">capital.</span>
+              </h2>
+              <p className="text-[1rem] leading-[1.7] text-foreground/68 mb-4">
+                Arcadia turns trading performance into an on-chain reputation layer.
+              </p>
+              <p className="text-[1rem] leading-[1.7] text-foreground/68">
+                As traders build verified track records, they unlock more investor capital, stronger visibility, and deeper protocol access — creating a merit-based capital network native to Solana.
+              </p>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold">
+                  <Link to="/traders">View traders <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="h-9 font-display font-semibold border-border/60 hover:bg-secondary/60">
+                  <Link to="/manager">Launch Vault</Link>
+                </Button>
+              </div>
+            </motion.div>
+
+            {/* Right — tier cards */}
+            <div className="flex flex-col gap-3">
+              {[
+                { tier: "Paper",       desc: "Build your track record. No investor capital yet.",             color: "text-muted-foreground", border: "border-border/50",      num: "01" },
+                { tier: "Established", desc: "First investors join. Junior buffer fully visible on-chain.",   color: "text-foreground",       border: "border-border/60",      num: "02" },
+                { tier: "Veteran",     desc: "Proven over multiple market cycles. Larger capital access.",    color: "text-primary",          border: "border-primary/30",     num: "03" },
+                { tier: "Elite",       desc: "Protocol-native reputation. Maximum visibility and capital.",   color: "text-primary",          border: "border-primary/50",     num: "04" },
+              ].map((row, i) => (
+                <motion.div
+                  key={row.tier}
+                  initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.45, delay: i * 0.09, ease: [0.22, 1, 0.36, 1] }}
+                  className={`surface rounded-[10px] border ${row.border} px-5 py-4 flex items-center gap-4 group hover:border-primary/30 transition-[border-color]`}
+                >
+                  <span className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground/60 shrink-0">{row.num}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-display font-semibold text-[13px] mb-0.5 ${row.color}`}>{row.tier}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground leading-snug">{row.desc}</div>
+                  </div>
+                  {i === 3 && (
+                    <div className="shrink-0 w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" className="border-t border-border/35 py-20 scroll-mt-16">
         <div className="container max-w-3xl">
