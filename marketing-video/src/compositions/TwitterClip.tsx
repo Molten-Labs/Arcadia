@@ -5,6 +5,7 @@ import { fade } from "@remotion/transitions/fade";
 import { slide } from "@remotion/transitions/slide";
 import { BRAND, FONT, secondsToFrames } from "../constants";
 import { HookScene } from "../scenes/HookScene";
+import { ProblemSolutionScene } from "../scenes/ProblemSolutionScene";
 import { MechanicScene } from "../scenes/MechanicScene";
 import { ProductScene } from "../scenes/ProductScene";
 import { StatsScene } from "../scenes/StatsScene";
@@ -17,6 +18,7 @@ const SPRING_TIMING = springTiming({
   durationRestThreshold: 0.001,
 });
 
+// Total: 3+7+7+6+3+3+1 = 30s = 900f ✓
 export const TwitterClip: React.FC = () => {
   return (
     <AbsoluteFill
@@ -27,8 +29,8 @@ export const TwitterClip: React.FC = () => {
       }}
     >
       <TransitionSeries>
-        {/* Scene 1: Hook — 4s = 120f */}
-        <TransitionSeries.Sequence durationInFrames={secondsToFrames(4)}>
+        {/* Scene 1: Hook — 3s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(3)}>
           <HookScene />
         </TransitionSeries.Sequence>
 
@@ -37,8 +39,18 @@ export const TwitterClip: React.FC = () => {
           timing={linearTiming({ durationInFrames: FADE_DUR })}
         />
 
-        {/* Scene 2: Mechanic — 9s = 270f */}
-        <TransitionSeries.Sequence durationInFrames={secondsToFrames(9)}>
+        {/* Scene 2: Problem / Solution — 7s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(7)}>
+          <ProblemSolutionScene />
+        </TransitionSeries.Sequence>
+
+        <TransitionSeries.Transition
+          presentation={slide({ direction: "from-right" })}
+          timing={SPRING_TIMING}
+        />
+
+        {/* Scene 3: Mechanic — 7s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(7)}>
           <MechanicScene />
         </TransitionSeries.Sequence>
 
@@ -47,8 +59,8 @@ export const TwitterClip: React.FC = () => {
           timing={SPRING_TIMING}
         />
 
-        {/* Scene 3: Product — 7s = 210f */}
-        <TransitionSeries.Sequence durationInFrames={secondsToFrames(7)}>
+        {/* Scene 4: Product — 6s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(6)}>
           <ProductScene />
         </TransitionSeries.Sequence>
 
@@ -57,8 +69,8 @@ export const TwitterClip: React.FC = () => {
           timing={linearTiming({ durationInFrames: FADE_DUR })}
         />
 
-        {/* Scene 4: Stats — 4s = 120f */}
-        <TransitionSeries.Sequence durationInFrames={secondsToFrames(4)}>
+        {/* Scene 5: Stats — 3s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(3)}>
           <StatsScene />
         </TransitionSeries.Sequence>
 
@@ -67,8 +79,8 @@ export const TwitterClip: React.FC = () => {
           timing={linearTiming({ durationInFrames: FADE_DUR })}
         />
 
-        {/* Scene 5: Close — 4s = 120f */}
-        <TransitionSeries.Sequence durationInFrames={secondsToFrames(4)}>
+        {/* Scene 6: Close — 3s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(3)}>
           <CloseScene />
         </TransitionSeries.Sequence>
 
@@ -77,8 +89,8 @@ export const TwitterClip: React.FC = () => {
           timing={linearTiming({ durationInFrames: FADE_DUR })}
         />
 
-        {/* Scene 6: CTA — 2s = 60f */}
-        <TransitionSeries.Sequence durationInFrames={secondsToFrames(2)}>
+        {/* Scene 7: CTA — 1s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(1)}>
           <CTAScene />
         </TransitionSeries.Sequence>
       </TransitionSeries>
