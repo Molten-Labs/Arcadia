@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,19 +7,27 @@ import { useDataMode } from "@/hooks/useDataMode";
 import { VaultCard } from "@/components/VaultCard";
 import { Switch } from "@/components/ui/switch";
 import { fmtUSD } from "@/lib/format";
+import { FAQ_ITEMS } from "@/lib/faq";
 import {
-  ArrowRight, Shield, Activity,
-  TrendingUp, Users, ChevronRight, ChevronDown,
-  Award, ChevronUp,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Activity,
+  ArrowRight,
+  Award,
+  BarChart3,
+  ChevronDown,
+  Lock,
+  Shield,
+  TrendingUp,
+  Users,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
-import { PriceTicker } from "@/components/PriceTicker";
-import {
-  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
-} from "@/components/ui/accordion";
 
 const HERO_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260325_094440_a3592600-bd1e-49e5-9bce-a73662061d83.mp4";
@@ -27,56 +35,67 @@ const HERO_VIDEO =
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
   show: (i = 0) => ({
-    opacity: 1, y: 0,
+    opacity: 1,
+    y: 0,
     transition: { duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
-
-const FAQ_ITEMS = [
-  { q: "What is junior capital?",                          a: "Capital provided by the trader and locked as first-loss protection. During drawdowns, the junior buffer absorbs losses before any investor capital is touched." },
-  { q: "How does the junior buffer protect me?",           a: "The trader's junior capital always absorbs losses first. Investor (senior) capital is only at risk once the entire junior buffer is wiped out." },
-  { q: "Why does paper mode exist?",                       a: "It forces every new trader to build a public, on-chain track record using only their own capital before they can attract investor deposits." },
-  { q: "What prevents reckless trading?",                  a: "Arcadia enforces protocol-level risk controls including position limits, cooldowns after major drawdowns, mandatory liquidity reserves, and automatic vault restrictions as junior capital declines." },
-  { q: "When can I withdraw?",                             a: "Standard withdrawals settle after a 24-hour cooldown. If junior health drops below 20%, withdrawals become instant." },
-  { q: "What happens if a vault freezes?",                 a: "Trading is permanently disabled. Investors can withdraw any remaining liquidity. The trader's on-chain reputation is subject to reputation slashing." },
-  { q: "How are performance fees calculated?",             a: "Traders earn 15-20% only on gains above the previous high-water mark. No fees during drawdowns or flat performance." },
-  { q: "Why would traders use Arcadia?",                   a: "Arcadia gives traders a way to build verified on-chain reputation and access scalable investor capital without relying on private networks, social media audiences, or centralized firms." },
-  { q: "How do traders build reputation?",                 a: "Every vault contributes to a trader's on-chain performance history. Consistent performance unlocks higher reputation tiers, greater visibility, and access to more investor capital." },
-  { q: "Why is Arcadia different from copy trading?",      a: "Arcadia is built around aligned capital allocation, not signal following. Traders operate real vaults with first-loss protection, public performance histories, and protocol-enforced risk management." },
-  { q: "Are vaults transparent?",                         a: "Yes. Vault performance, trading history, NAV changes, and risk metrics are recorded on-chain and visible publicly through the protocol interface." },
+const PROBLEM_COLUMNS = [
+  {
+    title: "For Traders",
+    items: [
+      "Hard to prove skill on-chain",
+      "No scalable way to access capital",
+      "Reliance on audience or connections",
+    ],
+  },
+  {
+    title: "For Investors",
+    items: [
+      "Hard to verify traders",
+      "Trust-based systems",
+      "Capital gets locked or delayed",
+    ],
+  },
 ];
 
 const FLOW_STEPS = [
   {
-    n: "01", icon: Award,      accent: "neutral" as const,
-    title: "Trader stakes first",
-    body:  "Junior capital is locked before the vault opens.",
+    n: "01",
+    icon: Shield,
+    title: "Capital is layered",
+    body: "Trader capital forms the junior buffer. Investor capital enters as senior capital after validation.",
   },
   {
-    n: "02", icon: Activity,   accent: "neutral" as const,
-    title: "30 days, publicly tracked",
-    body:  "Every trade recorded on-chain. Real performance anyone can verify.",
+    n: "02",
+    icon: Activity,
+    title: "Performance is observed",
+    body: "New vaults build a public record before accepting investor deposits.",
   },
   {
-    n: "03", icon: Users,      accent: "neutral" as const,
-    title: "Vault opens to investors",
-    body:  "After graduation, investors deposit USDC. The vault is live and capitalized.",
+    n: "03",
+    icon: Award,
+    title: "Vaults graduate",
+    body: "Qualified vaults open to investors with visible status, history, and risk context.",
   },
   {
-    n: "04", icon: TrendingUp, accent: "positive" as const,
-    title: "Profits raise share value",
-    body:  "NAV rises, each share is worth more. Trader earns fees only above the high-water mark.",
+    n: "04",
+    icon: BarChart3,
+    title: "Risk limits adjust",
+    body: "Operating limits respond to vault health so capital allocation stays controlled.",
   },
   {
-    n: "05", icon: Shield,     accent: "warning" as const,
-    title: "Losses hit the trader first",
-    body:  "Drawdowns burn through the junior buffer first. Investor capital is last in line.",
+    n: "05",
+    icon: Lock,
+    title: "Investors stay in control",
+    body: "Withdrawal context and liquidity status stay visible at the point of action.",
   },
   {
-    n: "06", icon: ChevronUp,  accent: "neutral" as const,
-    title: "Exit anytime",
-    body:  "Small withdrawals settle instantly. Large ones queue to protect remaining investors.",
+    n: "06",
+    icon: TrendingUp,
+    title: "Performance earns capital",
+    body: "Consistent results improve visibility and expand access to investor allocation.",
   },
 ];
 
@@ -84,56 +103,53 @@ const Landing = () => {
   const { data: vaults } = useVaults();
   const { mode, setMode } = useDataMode();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
-  const carouselRef = useRef<HTMLDivElement>(null);
 
-  const activeVaults = useMemo(
-    () => allVaults.filter((v) => v.status === "active" || v.status === "paper"),
+  const featuredVaults = useMemo(
+    () => allVaults.filter((v) => v.status === "active").slice(0, 3),
     [allVaults],
-  );
-
-  const carouselVaults = useMemo(
-    () => activeVaults.length > 0 ? [...activeVaults, ...activeVaults, ...activeVaults] : [],
-    [activeVaults],
   );
 
   const stats = useMemo(() => ({
     totalVaults: allVaults.length,
-    totalTVL:    allVaults.reduce((s, v) => s + v.tvl, 0),
-    graduated:   allVaults.filter((v) => v.status !== "paper").length,
-    protected:   allVaults.reduce((s, v) => s + v.seniorCapital, 0),
+    totalTVL: allVaults.reduce((s, v) => s + v.tvl, 0),
+    graduated: allVaults.filter((v) => v.status !== "paper").length,
+    protected: allVaults.reduce((s, v) => s + v.seniorCapital, 0),
   }), [allVaults]);
 
   return (
     <Layout>
-      {/* Hero */}
+      {/* 1. Hero */}
       <section className="relative min-h-[calc(100dvh-3.75rem)] overflow-hidden border-b border-border/35">
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.58] saturate-[0.75]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.54] saturate-[0.75]"
           src={HERO_VIDEO}
-          autoPlay muted loop playsInline preload="metadata"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.60)_0%,hsl(var(--background)/0.28)_40%,hsl(var(--background)/0.88)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.92)_0%,hsl(var(--background)/0.70)_30%,hsl(var(--background)/0.18)_62%,hsl(var(--background)/0.72)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.62)_0%,hsl(var(--background)/0.30)_40%,hsl(var(--background)/0.90)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.94)_0%,hsl(var(--background)/0.72)_34%,hsl(var(--background)/0.18)_64%,hsl(var(--background)/0.74)_100%)]" />
         <div className="absolute inset-0 arcadia-glow opacity-50" />
         <div className="absolute inset-0 hairline-grid opacity-[0.08]" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
-        <div className="pointer-events-none absolute top-32 right-[18%] h-64 w-64 rounded-full bg-primary/[0.08] blur-[72px] signal-orb-1" />
-        <div className="pointer-events-none absolute top-48 right-[36%] h-40 w-40 rounded-full bg-primary-deep/10 blur-[52px] signal-orb-2" />
 
         <div className="container relative flex min-h-[calc(100dvh-3.75rem)] flex-col justify-center py-16 md:py-24">
           <motion.div
-            initial="hidden" animate="show"
+            initial="hidden"
+            animate="show"
             variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-            className="max-w-[720px]"
+            className="max-w-[740px]"
           >
-            <motion.div variants={fadeUp} custom={0} className="flex items-center gap-4">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/50 rounded-md px-2 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-status-active animate-pulse-glow" />
+            <motion.div variants={fadeUp} custom={0} className="mb-6 flex flex-wrap items-center gap-4">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-status-active animate-pulse-glow" />
                 Devnet Live
               </span>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                   {mode === "mock" ? "Devnet Preview" : "Live"}
                 </span>
                 <Switch
@@ -144,310 +160,132 @@ const Landing = () => {
             </motion.div>
 
             <motion.h1
-              variants={fadeUp} custom={1}
-              className="font-display font-semibold text-foreground/95 leading-[1.04] tracking-[-0.025em]"
-              style={{ fontSize: "clamp(2.25rem, 5.5vw, 3.75rem)" }}
+              variants={fadeUp}
+              custom={1}
+              className="font-display font-semibold leading-[1.04] tracking-[-0.025em] text-foreground/95"
+              style={{ fontSize: "clamp(2.35rem, 5.5vw, 3.85rem)" }}
             >
               Proof-of-Performance
               <br />
-              Capital Protocol.
+              Capital Protocol
             </motion.h1>
 
             <motion.p
-              variants={fadeUp} custom={2}
-              className="mt-6 max-w-lg text-[1.05rem] leading-[1.65] text-foreground/72"
+              variants={fadeUp}
+              custom={2}
+              className="mt-6 max-w-xl text-[1.05rem] leading-[1.65] text-foreground/72"
             >
-              Arcadia is a Proof-of-Performance protocol where traders earn access to investor capital through verified on-chain performance.
+              Arcadia helps traders earn allocation through verified on-chain performance while investors evaluate capital, risk, and liquidity before connecting.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-11 bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold shadow-signal">
+              <Button asChild size="lg" className="h-11 border-0 bg-primary font-display font-semibold text-primary-foreground shadow-signal hover:bg-primary-glow">
                 <Link to="/vaults">
                   Explore Vaults
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-11 font-display font-semibold border-border/60 hover:bg-secondary/60">
-                <Link to="/manager">Launch Vault</Link>
-              </Button>
-              <Button asChild size="sm" variant="ghost" className="h-11 text-muted-foreground hover:text-foreground">
-                <a href="#how-it-works">
-                  How Protection Works →
-                </a>
+              <Button asChild size="lg" variant="outline" className="h-11 border-border/60 font-display font-semibold hover:bg-secondary/60">
+                <Link to="/manager/create">Launch Vault</Link>
               </Button>
             </motion.div>
           </motion.div>
 
           <motion.a
-            href="#how-it-works"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            href="#problem-solution"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 1.2 }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="absolute bottom-8 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5 text-muted-foreground/50 transition-colors hover:text-muted-foreground"
           >
             <span className="font-mono text-[10px] uppercase tracking-[0.18em]">scroll</span>
-            <ChevronDown className="w-4 h-4 animate-bounce" />
+            <ChevronDown className="h-4 w-4 animate-bounce" />
           </motion.a>
         </div>
       </section>
 
-      {/* Ticker */}
-      <PriceTicker />
-      <InfiniteSlider />
-
-      {/* Stats */}
-      <section className="border-b border-border/35 relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-        <div className="container py-9 grid grid-cols-2 md:grid-cols-4 gap-px bg-border/25">
-          {[
-            { l: "Total TVL",         v: `${fmtUSD(stats.totalTVL, { compact: true })} USDC` },
-            { l: "Live vaults",       v: String(stats.totalVaults) },
-            { l: "Graduated",         v: String(stats.graduated) },
-            { l: "Capital Protected", v: `${fmtUSD(stats.protected, { compact: true })} USDC` },
-          ].map((s, i) => (
-            <motion.div
-              key={s.l}
-              initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.07 }}
-              className="bg-background px-6 py-7"
-            >
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground mb-2">{s.l}</div>
-              <div className="font-display font-bold text-2xl tabular text-foreground">{s.v}</div>
-            </motion.div>
-          ))}
-        </div>
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-      </section>
-
-      {/* Featured vaults carousel */}
-      <section className="py-16 border-b border-border/35 overflow-hidden">
-        <div className="container mb-8 flex items-end justify-between">
-          <div>
-            <h2 className="font-display type-h2 font-semibold">Featured vaults</h2>
-            <p className="text-muted-foreground mt-1 text-[14px]">Verified traders with live investor capital and protocol-enforced first-loss protection.</p>
-          </div>
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hidden sm:flex shrink-0">
-            <Link to="/vaults">View all <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
-          </Button>
-        </div>
-
-        <div className="relative">
-          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
-
-          {carouselVaults.length > 0 ? (
-            <div
-              ref={carouselRef}
-              className="flex gap-4 animate-vault-carousel"
-              style={{ width: "max-content" }}
-            >
-              {carouselVaults.map((v, i) => (
-                <div key={`${v.id}-${i}`} className="w-[300px] shrink-0">
-                  <VaultCard vault={v} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="container">
-              <div className="surface rounded-[11px] p-12 text-center text-muted-foreground">
-                <p className="text-sm">No vaults yet. Connect your wallet and create the first one.</p>
-                <Button asChild size="sm" className="mt-4 bg-primary text-primary-foreground border-0">
-                  <Link to="/manager/create">Create vault</Link>
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="container mt-5 flex sm:hidden">
-          <Button asChild variant="outline" size="sm" className="w-full">
-            <Link to="/vaults">View all vaults <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Calculator */}
-      <VaultCalculator />
-
-      {/* Capital flow diagram */}
-      <section id="how-it-works" className="border-t border-border/35 py-20 scroll-mt-16">
+      {/* 2. Problem → Solution */}
+      <section id="problem-solution" className="border-b border-border/35 py-20 scroll-mt-16">
         <div className="container">
           <motion.div
-            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.5 }}
-            className="mb-12"
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-10 max-w-2xl text-center"
           >
-            <h2 className="font-display type-h2 font-semibold">How Arcadia works</h2>
-            <p className="text-muted-foreground mt-2 max-w-md">Follow a vault from first deposit to investor exit.</p>
+            <h2 className="font-display type-h2 font-semibold">The way capital is allocated today is broken.</h2>
           </motion.div>
 
-          {/* ── Desktop snake layout ─────────────────────── */}
-          <div className="hidden lg:block">
-            {/* Row 1: steps 01–03 */}
-            <div className="grid items-stretch" style={{ gridTemplateColumns: "1fr 44px 1fr 44px 1fr" }}>
-              {FLOW_STEPS.slice(0, 3).flatMap((step, i) => {
-                const Icon = step.icon;
-                const els = [
-                  <motion.div
-                    key={step.n}
-                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }} transition={{ duration: 0.45, delay: i * 0.13 }}
-                    className="surface rounded-[11px] p-5 flex flex-col gap-3 relative overflow-hidden group hover:border-primary/25 transition-[border-color]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary">{step.n}</span>
-                      <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <h3 className="font-display font-semibold text-[13px] leading-snug">{step.title}</h3>
-                    <p className="text-[12px] text-muted-foreground leading-relaxed flex-1">{step.body}</p>
-                  </motion.div>,
-                ];
-                if (i < 2) {
-                  els.push(
-                    <motion.div
-                      key={`r1-conn-${i}`}
-                      className="flex items-center justify-center"
-                      initial={{ opacity: 0, scaleX: 0 }} whileInView={{ opacity: 1, scaleX: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.35, delay: i * 0.13 + 0.28 }}
-                      style={{ originX: 0 }}
-                    >
-                      <div className="w-full h-px bg-primary/30 relative">
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 border-y-[4px] border-y-transparent border-l-[6px] border-l-primary/50" />
-                      </div>
-                    </motion.div>
-                  );
-                }
-                return els;
-              })}
-            </div>
-
-            {/* Corner: down connector pointing to step 04 */}
-            <div className="grid items-start" style={{ gridTemplateColumns: "1fr 44px 1fr 44px 1fr" }}>
+          <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
+            {PROBLEM_COLUMNS.map((column, i) => (
               <motion.div
-                initial={{ opacity: 0, scaleY: 0 }} whileInView={{ opacity: 1, scaleY: 1 }}
-                viewport={{ once: true }} transition={{ duration: 0.3, delay: 0.55 }}
-                style={{ originY: 0 }}
-                className="flex justify-center"
+                key={column.title}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.45, delay: i * 0.08 }}
+                className="surface rounded-[11px] p-6"
               >
-                <div className="w-px h-8 bg-primary/30 relative">
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 border-x-[4px] border-x-transparent border-t-[6px] border-t-primary/50" />
-                </div>
+                <h3 className="font-display type-h3 font-semibold">{column.title}</h3>
+                <ul className="mt-5 space-y-3">
+                  {column.items.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm text-foreground/78">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </motion.div>
-            </div>
-
-            {/* Row 2: steps 04–06 */}
-            <div className="grid items-stretch" style={{ gridTemplateColumns: "1fr 44px 1fr 44px 1fr" }}>
-              {FLOW_STEPS.slice(3).flatMap((step, i) => {
-                const Icon = step.icon;
-                const isPositive = step.accent === "positive";
-                const isWarning  = step.accent === "warning";
-                const els = [
-                  <motion.div
-                    key={step.n}
-                    initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.4 + i * 0.13 }}
-                    className={cn(
-                      "rounded-[11px] p-5 flex flex-col gap-3 relative overflow-hidden group transition-[border-color]",
-                      isPositive && "bg-primary/[0.05] border border-primary/20 hover:border-primary/35",
-                      isWarning  && "bg-warning/[0.05] border border-warning/20 hover:border-warning/35",
-                      !isPositive && !isWarning && "surface hover:border-primary/25",
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={cn(
-                        "font-mono text-[10px] uppercase tracking-[0.15em]",
-                        isWarning ? "text-warning" : "text-primary"
-                      )}>{step.n}</span>
-                      <div className={cn(
-                        "w-7 h-7 rounded-lg flex items-center justify-center",
-                        isWarning ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
-                      )}>
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                    <h3 className="font-display font-semibold text-[13px] leading-snug">{step.title}</h3>
-                    <p className="text-[12px] text-muted-foreground leading-relaxed flex-1">{step.body}</p>
-                    {isPositive && (
-                      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                    )}
-                    {isWarning && (
-                      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-warning/40 to-transparent" />
-                    )}
-                  </motion.div>,
-                ];
-                if (i < 2) {
-                  els.push(
-                    <motion.div
-                      key={`r2-conn-${i}`}
-                      className="flex items-center justify-center"
-                      initial={{ opacity: 0, scaleX: 0 }} whileInView={{ opacity: 1, scaleX: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.35, delay: 0.4 + i * 0.13 + 0.28 }}
-                      style={{ originX: 0 }}
-                    >
-                      <div className="w-full h-px bg-primary/30 relative">
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 border-y-[4px] border-y-transparent border-l-[6px] border-l-primary/50" />
-                      </div>
-                    </motion.div>
-                  );
-                }
-                return els;
-              })}
-            </div>
+            ))}
           </div>
 
-          {/* ── Mobile vertical list ─────────────────────── */}
-          <div className="lg:hidden flex flex-col gap-0">
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.45, delay: 0.16 }}
+            className="mx-auto mt-8 max-w-xl text-center font-display type-h3 font-semibold text-primary"
+          >
+            Arcadia replaces trust with performance.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* 3. How It Works */}
+      <section id="how-it-works" className="border-b border-border/35 py-20 scroll-mt-16">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mb-12 max-w-2xl"
+          >
+            <h2 className="font-display type-h2 font-semibold">How Arcadia works</h2>
+            <p className="mt-2 text-muted-foreground">Six steps from verified performance to controlled capital access.</p>
+          </motion.div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {FLOW_STEPS.map((step, i) => {
               const Icon = step.icon;
-              const isPositive = step.accent === "positive";
-              const isWarning  = step.accent === "warning";
-              const isLast = i === FLOW_STEPS.length - 1;
               return (
                 <motion.div
                   key={step.n}
-                  initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.08 }}
-                  className="flex gap-4"
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.42, delay: i * 0.06 }}
+                  className="surface rounded-[11px] p-5"
                 >
-                  {/* Left: number + connector line */}
-                  <div className="flex flex-col items-center shrink-0">
-                    <div className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-mono font-semibold shrink-0 z-10",
-                      isWarning  ? "bg-warning/15 text-warning border border-warning/30" :
-                      isPositive ? "bg-primary/15 text-primary border border-primary/30" :
-                                   "bg-secondary text-muted-foreground border border-border"
-                    )}>
-                      {i + 1}
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary">{step.n}</span>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Icon className="h-4 w-4" aria-hidden="true" />
                     </div>
-                    {!isLast && (
-                      <div className={cn(
-                        "w-px flex-1 my-1",
-                        isWarning ? "bg-warning/20" : "bg-primary/20"
-                      )} />
-                    )}
                   </div>
-
-                  {/* Right: card */}
-                  <div className={cn(
-                    "rounded-[11px] p-4 mb-3 flex-1",
-                    isPositive && "bg-primary/[0.05] border border-primary/20",
-                    isWarning  && "bg-warning/[0.05] border border-warning/20",
-                    !isPositive && !isWarning && "surface",
-                  )}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={cn(
-                        "w-6 h-6 rounded-md flex items-center justify-center",
-                        isWarning ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
-                      )}>
-                        <Icon className="w-3 h-3" />
-                      </div>
-                      <h3 className="font-display font-semibold text-[13px]">{step.title}</h3>
-                    </div>
-                    <p className="text-[12px] text-muted-foreground leading-relaxed">{step.body}</p>
-                  </div>
+                  <h3 className="font-display text-base font-semibold">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
                 </motion.div>
               );
             })}
@@ -455,122 +293,181 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Reputation becomes capital */}
-      <section className="border-t border-border/35 py-20 overflow-hidden relative">
-        <div className="pointer-events-none absolute top-0 right-0 h-[420px] w-[420px] rounded-full bg-primary/[0.06] blur-[100px]" />
-        <div className="container relative">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+      {/* 4. Stats / Credibility */}
+      <section className="border-b border-border/35 py-10">
+        <div className="container">
+          <div className="grid gap-px overflow-hidden rounded-[11px] border border-border/45 bg-border/25 md:grid-cols-4">
+            {[
+              { l: "Total TVL", v: `${fmtUSD(stats.totalTVL, { compact: true })} USDC` },
+              { l: "Live vaults", v: String(stats.totalVaults) },
+              { l: "Graduated vaults", v: String(stats.graduated) },
+              { l: "Protected capital", v: `${fmtUSD(stats.protected, { compact: true })} USDC` },
+            ].map((s, i) => (
+              <motion.div
+                key={s.l}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.06 }}
+                className="bg-background px-6 py-7"
+              >
+                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{s.l}</div>
+                <div className="font-display text-2xl font-bold tabular text-foreground">{s.v}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Left — text */}
+      {/* 5. Marketplace */}
+      <section className="border-b border-border/35 py-20">
+        <div className="container">
+          <div className="mb-8 flex items-end justify-between gap-6">
+            <div>
+              <h2 className="font-display type-h2 font-semibold">Verified traders. Live capital.</h2>
+              <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                Explore graduated vaults with visible buffers, capital, performance, and activity before making a decision.
+              </p>
+            </div>
+            <Button asChild variant="ghost" size="sm" className="hidden shrink-0 text-muted-foreground hover:text-foreground sm:flex">
+              <Link to="/vaults">
+                View all
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+
+          {featuredVaults.length > 0 ? (
+            <div className="grid gap-5 md:grid-cols-3">
+              {featuredVaults.map((vault) => (
+                <VaultCard key={vault.id} vault={vault} />
+              ))}
+            </div>
+          ) : (
+            <div className="surface rounded-[11px] p-10 text-center text-muted-foreground">
+              No active vaults yet. Connect your wallet and create the first one.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 6. Reputation Layer */}
+      <section className="relative overflow-hidden border-b border-border/35 py-20">
+        <div className="pointer-events-none absolute right-0 top-0 h-[420px] w-[420px] rounded-full bg-primary/[0.06] blur-[100px]" />
+        <div className="container relative">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
             <motion.div
-              initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             >
               <h2
-                className="font-display font-semibold text-foreground/95 leading-[1.08] tracking-[-0.022em] mb-6"
+                className="mb-6 font-display font-semibold leading-[1.08] tracking-[-0.022em] text-foreground/95"
                 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)" }}
               >
                 Reputation becomes
                 <br />
                 <span className="text-gradient-signal">capital.</span>
               </h2>
-              <p className="text-[1rem] leading-[1.7] text-foreground/68 mb-4">
-                Arcadia turns trading performance into an on-chain reputation layer.
+              <p className="max-w-xl text-[1rem] leading-[1.7] text-foreground/68">
+                Arcadia turns verified performance into visibility. Traders who build consistent records earn stronger placement, deeper trust, and a clearer path to capital access.
               </p>
-              <p className="text-[1rem] leading-[1.7] text-foreground/68">
-                As traders build verified track records, they unlock more investor capital, stronger visibility, and deeper protocol access — creating a merit-based capital network native to Solana.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button asChild size="sm" className="h-9 bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold">
-                  <Link to="/traders">View traders <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-9 font-display font-semibold border-border/60 hover:bg-secondary/60">
-                  <Link to="/manager">Launch Vault</Link>
-                </Button>
-              </div>
             </motion.div>
 
-            {/* Right — tier cards */}
             <div className="flex flex-col gap-3">
               {[
-                { tier: "Paper",       desc: "Build your track record. No investor capital yet.",             color: "text-muted-foreground", border: "border-border/50",      num: "01" },
-                { tier: "Established", desc: "First investors join. Junior buffer fully visible on-chain.",   color: "text-foreground",       border: "border-border/60",      num: "02" },
-                { tier: "Veteran",     desc: "Proven over multiple market cycles. Larger capital access.",    color: "text-primary",          border: "border-primary/30",     num: "03" },
-                { tier: "Elite",       desc: "Protocol-native reputation. Maximum visibility and capital.",   color: "text-primary",          border: "border-primary/50",     num: "04" },
+                { tier: "Paper", desc: "Build a record before investor deposits.", num: "01" },
+                { tier: "Graduated", desc: "Open to capital with verified history.", num: "02" },
+                { tier: "Proven", desc: "Earn visibility through consistent outcomes.", num: "03" },
+                { tier: "Institutional", desc: "Scale access through durable performance.", num: "04" },
               ].map((row, i) => (
                 <motion.div
                   key={row.tier}
-                  initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }} transition={{ duration: 0.45, delay: i * 0.09, ease: [0.22, 1, 0.36, 1] }}
-                  className={`surface rounded-[10px] border ${row.border} px-5 py-4 flex items-center gap-4 group hover:border-primary/30 transition-[border-color]`}
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.45, delay: i * 0.09, ease: [0.22, 1, 0.36, 1] }}
+                  className="surface flex items-center gap-4 rounded-[10px] border border-border/60 px-5 py-4 transition-[border-color] hover:border-primary/30"
                 >
-                  <span className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground/60 shrink-0">{row.num}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-display font-semibold text-[13px] mb-0.5 ${row.color}`}>{row.tier}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground leading-snug">{row.desc}</div>
+                  <span className="shrink-0 font-mono text-[10px] tracking-[0.14em] text-muted-foreground/60">{row.num}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 font-display text-[13px] font-semibold text-foreground">{row.tier}</div>
+                    <div className="font-mono text-[11px] leading-snug text-muted-foreground">{row.desc}</div>
                   </div>
-                  {i === 3 && (
-                    <div className="shrink-0 w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
-                  )}
                 </motion.div>
               ))}
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* 7. Projected Outcomes */}
+      <VaultCalculator />
+
+      {/* 8. Integrations */}
+      <InfiniteSlider />
+
+      {/* 9. FAQ */}
       <section id="faq" className="border-t border-border/35 py-20 scroll-mt-16">
         <div className="container max-w-3xl">
           <motion.div
-            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }} transition={{ duration: 0.5 }}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
             className="mb-10"
           >
             <h2 className="font-display type-h2 font-semibold">Frequently asked questions</h2>
-            <p className="text-muted-foreground mt-2 text-[14px]">
-              Everything investors and traders need to know before getting started.
-            </p>
+            <p className="mt-2 text-[14px] text-muted-foreground">Concise answers for investors and traders evaluating Arcadia.</p>
           </motion.div>
 
           <Accordion type="single" collapsible className="space-y-2">
             {FAQ_ITEMS.map((item, i) => (
               <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.35, delay: i * 0.04 }}
+                key={item.q}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, delay: i * 0.04 }}
               >
                 <AccordionItem
                   value={`faq-${i}`}
-                  className="surface rounded-[11px] border border-border/50 px-5 data-[state=open]:border-primary/25 transition-[border-color] overflow-hidden"
+                  className="surface overflow-hidden rounded-[11px] border border-border/50 px-5 transition-[border-color] data-[state=open]:border-primary/25"
                 >
-                  <AccordionTrigger className="font-display font-semibold text-[14px] text-left py-4 hover:no-underline hover:text-primary transition-colors [&[data-state=open]]:text-primary">
+                  <AccordionTrigger className="py-4 text-left font-display text-[14px] font-semibold transition-colors hover:text-primary hover:no-underline [&[data-state=open]]:text-primary">
                     {item.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-[13px] text-foreground/75 leading-relaxed pb-4">
+                  <AccordionContent className="pb-4 text-[13px] leading-relaxed text-foreground/75">
                     {item.a}
                   </AccordionContent>
                 </AccordionItem>
               </motion.div>
             ))}
           </Accordion>
+        </div>
+      </section>
 
-          <motion.div
-            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }}
-            viewport={{ once: true }} transition={{ duration: 0.4, delay: 0.3 }}
-            className="mt-8 flex flex-wrap gap-3 justify-center"
-          >
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary-glow border-0 font-display font-semibold">
-              <Link to="/vaults">
-                Explore Vaults <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/traders">Explore traders</Link>
-            </Button>
-          </motion.div>
+      {/* 10. Final CTA */}
+      <section className="border-t border-border/35 py-20">
+        <div className="container">
+          <div className="surface-elevated mx-auto max-w-3xl rounded-[11px] p-8 text-center md:p-12">
+            <h2 className="font-display type-h2 font-semibold">Start exploring performance-based capital.</h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+              Review live vaults or launch a vault to begin building a verified record.
+            </p>
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button asChild size="lg" className="border-0 bg-primary font-display font-semibold text-primary-foreground hover:bg-primary-glow">
+                <Link to="/vaults">
+                  Explore Vaults
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="font-display font-semibold">
+                <Link to="/manager/create">Launch Vault</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
     </Layout>
