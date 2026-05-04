@@ -1,17 +1,16 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Sequence,
-  useCurrentFrame,
-  interpolate,
-  spring,
-} from "remotion";
+import { AbsoluteFill } from "remotion";
+import { TransitionSeries, springTiming, linearTiming } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { slide } from "@remotion/transitions/slide";
 import { BRAND, FONT, secondsToFrames } from "../constants";
 import { HookScene } from "../scenes/HookScene";
 import { MechanicScene } from "../scenes/MechanicScene";
 import { ProductScene } from "../scenes/ProductScene";
 import { CloseScene } from "../scenes/CloseScene";
 import { CTAScene } from "../scenes/CTAScene";
+
+const TRANSITION_DURATION = 18;
 
 export const TwitterClip: React.FC = () => {
   return (
@@ -22,30 +21,55 @@ export const TwitterClip: React.FC = () => {
         overflow: "hidden",
       }}
     >
-      {/* Scene 1: Hook (0-3s) */}
-      <Sequence from={0} durationInFrames={secondsToFrames(3)}>
-        <HookScene />
-      </Sequence>
+      <TransitionSeries>
+        {/* Scene 1: Hook — 5s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(5)}>
+          <HookScene />
+        </TransitionSeries.Sequence>
 
-      {/* Scene 2: Core Mechanic (3-12s) */}
-      <Sequence from={secondsToFrames(3)} durationInFrames={secondsToFrames(9)}>
-        <MechanicScene />
-      </Sequence>
+        <TransitionSeries.Transition
+          presentation={fade()}
+          timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+        />
 
-      {/* Scene 3: Product (12-20s) */}
-      <Sequence from={secondsToFrames(12)} durationInFrames={secondsToFrames(8)}>
-        <ProductScene />
-      </Sequence>
+        {/* Scene 2: Mechanic — 10s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(10)}>
+          <MechanicScene />
+        </TransitionSeries.Sequence>
 
-      {/* Scene 4: Close (20-27s) */}
-      <Sequence from={secondsToFrames(20)} durationInFrames={secondsToFrames(7)}>
-        <CloseScene />
-      </Sequence>
+        <TransitionSeries.Transition
+          presentation={slide({ direction: "from-right" })}
+          timing={springTiming({
+            config: { damping: 200, mass: 1 },
+            durationRestThreshold: 0.001,
+          })}
+        />
 
-      {/* Scene 5: CTA (27-30s) */}
-      <Sequence from={secondsToFrames(27)} durationInFrames={secondsToFrames(3)}>
-        <CTAScene />
-      </Sequence>
+        {/* Scene 3: Product — 7s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(7)}>
+          <ProductScene />
+        </TransitionSeries.Sequence>
+
+        <TransitionSeries.Transition
+          presentation={fade()}
+          timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+        />
+
+        {/* Scene 4: Close — 5s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(5)}>
+          <CloseScene />
+        </TransitionSeries.Sequence>
+
+        <TransitionSeries.Transition
+          presentation={fade()}
+          timing={linearTiming({ durationInFrames: TRANSITION_DURATION })}
+        />
+
+        {/* Scene 5: CTA — 3s */}
+        <TransitionSeries.Sequence durationInFrames={secondsToFrames(3)}>
+          <CTAScene />
+        </TransitionSeries.Sequence>
+      </TransitionSeries>
     </AbsoluteFill>
   );
 };
