@@ -158,8 +158,6 @@ const Landing = () => {
               className="mt-6 max-w-lg text-[1.05rem] leading-[1.65] text-foreground/72"
             >
               Arcadia is a Proof-of-Performance protocol where traders earn access to investor capital through verified on-chain performance.
-              <br /><br />
-              Every vault is backed by first-loss protection, transparent track records, and protocol-enforced risk controls.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
@@ -224,8 +222,7 @@ const Landing = () => {
       <section className="py-16 border-b border-border/35 overflow-hidden">
         <div className="container mb-8 flex items-end justify-between">
           <div>
-            <span className="page-header-label">Marketplace</span>
-            <h2 className="font-display type-h2 font-semibold mt-3">Featured vaults</h2>
+            <h2 className="font-display type-h2 font-semibold">Featured vaults</h2>
             <p className="text-muted-foreground mt-1 text-[14px]">Verified traders with live investor capital and protocol-enforced first-loss protection.</p>
           </div>
           <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hidden sm:flex shrink-0">

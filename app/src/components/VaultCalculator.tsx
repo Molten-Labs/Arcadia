@@ -32,10 +32,7 @@ export const VaultCalculator = () => {
       {/* Header */}
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="page-header-label">
-            <Calculator className="w-3 h-3" /> Returns estimator
-          </span>
-          <h2 className="font-display type-h2 font-semibold mt-3">
+          <h2 className="font-display type-h2 font-semibold">
             Estimate potential <span className="text-gradient-signal">vault performance</span>
           </h2>
         </div>
