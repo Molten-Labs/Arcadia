@@ -3,7 +3,7 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { fmtUSD } from "@/lib/format";
-import { ArrowRight, Calculator } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tier = "established" | "veteran" | "elite";
@@ -33,11 +33,14 @@ export const VaultCalculator = () => {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-display type-h2 font-semibold">
-            Estimate potential <span className="text-gradient-signal">vault performance</span>
+            Projected <span className="text-gradient-signal">Outcomes</span>
           </h2>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Model potential results across capital size, time horizon, and trader tier.
+          </p>
         </div>
         <p className="font-mono text-[11px] text-muted-foreground max-w-xs text-right leading-relaxed hidden sm:block">
-          Illustrative scenarios · not guaranteed returns
+          Planning scenarios · not guaranteed returns
         </p>
       </div>
 
@@ -105,7 +108,7 @@ export const VaultCalculator = () => {
               ))}
             </div>
             <div className="mt-2 font-mono text-[10px] text-muted-foreground">
-              Historical performance simulation · {tierApy[tier].conservative}–{tierApy[tier].optimistic}% range
+              Scenario range · {tierApy[tier].conservative}–{tierApy[tier].optimistic}% APY
             </div>
           </div>
         </div>
@@ -114,7 +117,7 @@ export const VaultCalculator = () => {
         <div className="grid grid-cols-3 divide-x divide-border/50 border-t border-border/50">
           {[
             { label: "Conservative", value: conservativeOut, apy: conservative, muted: true  },
-            { label: "Expected",     value: expectedOut,     apy: expected,     muted: false },
+            { label: "Base case",    value: expectedOut,     apy: expected,     muted: false },
             { label: "Optimistic",   value: optimisticOut,   apy: optimistic,   muted: true  },
           ].map(s => (
             <div
@@ -141,7 +144,7 @@ export const VaultCalculator = () => {
         {/* Footer */}
         <div className="flex items-center justify-between gap-4 px-5 py-3 border-t border-border/50 bg-secondary/20">
           <p className="font-mono text-[10px] text-muted-foreground">
-            Net of {label.toLowerCase()} performance fees. Junior buffer absorbs losses before senior capital.
+            Illustrative only. Net of {label.toLowerCase()} performance fees above the high-water mark.
           </p>
           <Button asChild size="sm" className="h-8 shrink-0 bg-primary text-primary-foreground hover:bg-primary-glow border-0 text-[12px] font-semibold">
             <Link to="/vaults">Browse vaults <ArrowRight className="w-3.5 h-3.5 ml-1.5" /></Link>
