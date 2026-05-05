@@ -1,14 +1,34 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-import { colors } from '../../src/lib/theme';
+import { Text, View, StyleSheet } from 'react-native';
+import { colors, radius } from '../../src/lib/theme';
 
-function Icon({ glyph, focused }: { glyph: string; focused: boolean }) {
+function TabIcon({ glyph, focused }: { glyph: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.35, color: focused ? colors.signal : colors.textMuted }}>
-      {glyph}
-    </Text>
+    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+      <Text style={[styles.icon, focused && styles.iconActive]}>{glyph}</Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  iconWrap: {
+    width: 36,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  iconWrapActive: {
+    backgroundColor: 'rgba(163,230,53,0.12)',
+  },
+  icon: {
+    fontSize: 18,
+    color: colors.textQuiet,
+  },
+  iconActive: {
+    color: colors.signal,
+  },
+});
 
 export default function TabLayout() {
   return (
@@ -19,17 +39,18 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 72,
-          paddingBottom: 12,
-          paddingTop: 6,
+          height: 74,
+          paddingBottom: 14,
+          paddingTop: 8,
         },
         tabBarActiveTintColor: colors.signal,
         tabBarInactiveTintColor: colors.textQuiet,
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: '700',
-          letterSpacing: 0.5,
+          letterSpacing: 0.6,
           textTransform: 'uppercase',
+          fontFamily: 'Courier',
         },
       }}
     >
@@ -37,28 +58,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Vaults',
-          tabBarIcon: ({ focused }) => <Icon glyph="⬡" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="⬡" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ focused }) => <Icon glyph="◈" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="◈" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="traders"
         options={{
           title: 'Traders',
-          tabBarIcon: ({ focused }) => <Icon glyph="◎" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="◎" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => <Icon glyph="◉" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon glyph="◉" focused={focused} />,
         }}
       />
     </Tabs>

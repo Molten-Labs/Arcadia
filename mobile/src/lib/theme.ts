@@ -1,33 +1,33 @@
 export const colors = {
-  bg: '#050C0F',
-  surface: '#0D1B22',
-  surfaceElevated: '#142530',
-  surfaceHigh: '#1C3344',
-  border: '#1E3340',
-  borderStrong: '#2A4A5E',
+  bg: '#0C0C0E',
+  surface: '#18181B',
+  surfaceElevated: '#1C1C1F',
+  surfaceHigh: '#27272A',
+  border: '#27272A',
+  borderStrong: '#3F3F46',
 
   text: '#FFFFFF',
-  textMuted: '#8AABB5',
-  textQuiet: '#4A7080',
+  textMuted: '#A1A1AA',
+  textQuiet: '#52525B',
 
-  signal: '#00B5A4',
-  signalDeep: '#007A6E',
-  signalDim: 'rgba(0,181,164,0.12)',
-  signalGlow: 'rgba(0,181,164,0.24)',
+  signal: '#A3E635',
+  signalDeep: '#84CC16',
+  signalDim: 'rgba(163,230,53,0.10)',
+  signalGlow: 'rgba(163,230,53,0.22)',
 
-  danger: '#FB2C36',
-  dangerDim: 'rgba(251,44,54,0.12)',
+  danger: '#EF4444',
+  dangerDim: 'rgba(239,68,68,0.12)',
 
-  warning: '#EDB200',
-  warningDim: 'rgba(237,178,0,0.12)',
+  warning: '#F59E0B',
+  warningDim: 'rgba(245,158,11,0.12)',
 
-  success: '#00B5A4',
+  success: '#A3E635',
 
-  statusPaper: '#6BA3B0',
-  statusActive: '#00B5A4',
-  statusCooldown: '#EDB200',
-  statusFrozen: '#FB2C36',
-  statusClosed: '#555',
+  statusPaper: '#71717A',
+  statusActive: '#A3E635',
+  statusCooldown: '#F59E0B',
+  statusFrozen: '#EF4444',
+  statusClosed: '#3F3F46',
 };
 
 export const spacing = {
@@ -40,10 +40,12 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 20,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  card: 24,
+  pill: 9999,
   full: 9999,
 };
 
@@ -54,16 +56,17 @@ export const font = {
 
 export const textStyles = {
   display: {
-    fontSize: 28,
-    fontWeight: '700' as const,
+    fontSize: 40,
+    fontWeight: '500' as const,
     color: colors.text,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    fontFamily: 'System',
   },
   heading: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '600' as const,
     color: colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subheading: {
     fontSize: 15,
@@ -74,22 +77,26 @@ export const textStyles = {
     fontSize: 14,
     fontWeight: '400' as const,
     color: colors.text,
+    lineHeight: 22,
   },
   caption: {
     fontSize: 11,
-    fontWeight: '500' as const,
+    fontWeight: '600' as const,
     color: colors.textMuted,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.8,
+    fontFamily: 'Courier',
   },
   mono: {
     fontSize: 14,
     fontFamily: 'Courier',
+    fontWeight: '600' as const,
     color: colors.text,
   },
   monoSm: {
     fontSize: 11,
     fontFamily: 'Courier',
+    fontWeight: '600' as const,
     color: colors.textMuted,
   },
 };

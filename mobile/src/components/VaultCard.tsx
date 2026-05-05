@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing } from '../lib/theme';
 import { VaultView } from '../lib/mockData';
 import { StatusBadge } from './StatusBadge';
-import { HealthMeter } from './HealthMeter';
 import { NavSparkline } from './NavSparkline';
 import { formatUSD, formatBps, formatNav } from '../lib/format';
 
@@ -17,6 +16,8 @@ interface Props {
 export function VaultCard({ vault, onPress, sparkData }: Props) {
   const navChange = vault.currentNav - 1;
   const navPositive = navChange >= 0;
+  const hColor = vault.juniorHealth >= 0.8 ? colors.signal
+    : vault.juniorHealth >= 0.6 ? colors.warning : colors.danger;
 
   return (
     <Pressable
@@ -25,67 +26,66 @@ export function VaultCard({ vault, onPress, sparkData }: Props) {
     >
       {vault.status === 'active' && (
         <LinearGradient
-          colors={['rgba(0,181,164,0.08)', 'transparent']}
-          style={styles.glowOverlay}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['rgba(163,230,53,0.06)', 'transparent']}
+          style={StyleSheet.absoluteFillObject}
         />
       )}
 
+      {/* Top row */}
       <View style={styles.top}>
-        <View style={styles.topLeft}>
-          <View style={styles.hexIcon}>
-            <Text style={styles.hexInitial}>{vault.name.charAt(0)}</Text>
-          </View>
-          <View style={styles.nameBlock}>
-            <Text style={styles.name} numberOfLines={1}>{vault.name}</Text>
-            <StatusBadge status={vault.status} size="sm" />
+        <View style={styles.iconCol}>
+          <View style={styles.icon}>
+            <Text style={styles.iconInitial}>{vault.name.charAt(0)}</Text>
           </View>
         </View>
 
-        <View style={styles.navBlock}>
+        <View style={styles.nameCol}>
+          <Text style={styles.name} numberOfLines={1}>{vault.name}</Text>
+          <StatusBadge status={vault.status} size="sm" />
+        </View>
+
+        <View style={styles.navCol}>
           {sparkData && sparkData.length > 2 && (
-            <View style={styles.sparkWrap}>
-              <NavSparkline data={sparkData} width={60} height={28} positive={navPositive} />
-            </View>
+            <NavSparkline data={sparkData} width={56} height={24} positive={navPositive} />
           )}
           <Text style={styles.navValue}>{formatNav(vault.currentNav)}</Text>
-          <Text style={[styles.navChange, { color: navPositive ? colors.signal : colors.danger }]}>
+          <Text style={[styles.navDelta, { color: navPositive ? colors.signal : colors.danger }]}>
             {navPositive ? '▲' : '▼'} {Math.abs(navChange * 100).toFixed(2)}%
           </Text>
         </View>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>TVL</Text>
-          <Text style={styles.statValue}>{formatUSD(vault.tvl, true)}</Text>
+      {/* Bento stats */}
+      <View style={styles.bentoRow}>
+        <View style={styles.bentoCell}>
+          <Text style={styles.bentoLabel}>TVL</Text>
+          <Text style={styles.bentoValue}>{formatUSD(vault.tvl, true)}</Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>FEE</Text>
-          <Text style={styles.statValue}>{formatBps(vault.feeBps)}</Text>
+        <View style={styles.bentoCell}>
+          <Text style={styles.bentoLabel}>FEE</Text>
+          <Text style={styles.bentoValue}>{formatBps(vault.feeBps)}</Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>EXIT</Text>
-          <Text style={[styles.statValue, { color: vault.instantExit ? colors.signal : colors.textMuted }]}>
-            {vault.instantExit ? '⚡ Instant' : '⏳ Cool'}
+        <View style={styles.bentoCell}>
+          <Text style={styles.bentoLabel}>HEALTH</Text>
+          <Text style={[styles.bentoValue, { color: hColor }]}>
+            {(vault.juniorHealth * 100).toFixed(0)}%
           </Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>JR. HEALTH</Text>
-          <Text style={[styles.statValue, {
-            color: vault.juniorHealth >= 0.8 ? colors.signal
-              : vault.juniorHealth >= 0.6 ? colors.warning : colors.danger
-          }]}>
-            {(vault.juniorHealth * 100).toFixed(0)}%
+        <View style={styles.bentoCell}>
+          <Text style={styles.bentoLabel}>EXIT</Text>
+          <Text style={[styles.bentoValue, { color: vault.instantExit ? colors.signal : colors.textMuted }]}>
+            {vault.instantExit ? '⚡' : '⏳'}
           </Text>
         </View>
       </View>
 
-      <HealthMeter health={vault.juniorHealth} showLabel={false} height={3} />
+      {/* Health bar */}
+      <View style={styles.healthBar}>
+        <View style={[styles.healthFill, {
+          width: `${vault.juniorHealth * 100}%`,
+          backgroundColor: hColor,
+        }]} />
+      </View>
     </Pressable>
   );
 }
@@ -93,102 +93,82 @@ export function VaultCard({ vault, onPress, sparkData }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     gap: 14,
     overflow: 'hidden',
-    position: 'relative',
   },
-  pressed: {
-    opacity: 0.82,
-    borderColor: colors.signal + '66',
-  },
-  glowOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.lg,
-  },
-  top: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  topLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    flex: 1,
-  },
-  hexIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  pressed: { opacity: 0.78, borderColor: colors.signal + '50' },
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  iconCol: { paddingTop: 2 },
+  icon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     backgroundColor: colors.signalDim,
     borderWidth: 1,
-    borderColor: colors.signal + '44',
+    borderColor: colors.signal + '30',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hexInitial: {
+  iconInitial: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.signal,
     fontFamily: 'Courier',
   },
-  nameBlock: {
-    gap: 5,
-    flex: 1,
-  },
+  nameCol: { flex: 1, gap: 6 },
   name: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.text,
     letterSpacing: -0.2,
   },
-  navBlock: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  sparkWrap: {
-    marginBottom: 2,
-  },
+  navCol: { alignItems: 'flex-end', gap: 1 },
   navValue: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text,
     fontFamily: 'Courier',
   },
-  navChange: {
+  navDelta: {
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Courier',
   },
-  statsRow: {
+  bentoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
-  stat: {
+  bentoCell: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 10,
     gap: 2,
   },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: colors.border,
-  },
-  statLabel: {
+  bentoLabel: {
     fontSize: 8,
+    fontWeight: '700',
     color: colors.textQuiet,
-    letterSpacing: 0.7,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    fontWeight: '600',
+    fontFamily: 'Courier',
   },
-  statValue: {
+  bentoValue: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
     fontFamily: 'Courier',
   },
+  healthBar: {
+    height: 3,
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+  },
+  healthFill: { height: 3, borderRadius: radius.full },
 });

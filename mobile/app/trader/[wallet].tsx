@@ -35,35 +35,46 @@ export default function TraderProfileScreen() {
   const avgNav = manager.vaults.length > 0
     ? manager.vaults.reduce((s, v) => s + v.currentNav, 0) / manager.vaults.length : 1;
   const hColor = avgHealth >= 0.8 ? colors.signal : avgHealth >= 0.6 ? colors.warning : colors.danger;
-
-  const tier = totalTvl > 100_000 ? '★ Proven' : totalTvl > 50_000 ? '◆ Active' : '● New';
+  const tier = totalTvl > 100_000 ? { label: '★ Proven', color: colors.signal }
+    : totalTvl > 50_000 ? { label: '◆ Active', color: colors.warning }
+    : { label: '● New', color: colors.textMuted };
   const initial = manager.owner.slice(0, 2).toUpperCase();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
       {/* Profile hero */}
-      <LinearGradient colors={[colors.signalDeep + '28', colors.bg]} style={styles.hero}>
+      <View style={styles.profileCard}>
+        <LinearGradient
+          colors={['rgba(163,230,53,0.08)', 'transparent']}
+          style={StyleSheet.absoluteFillObject}
+        />
         <View style={styles.profileRow}>
-          <LinearGradient colors={[colors.signal, colors.signalDeep]} style={styles.avatarGrad}>
+          <LinearGradient
+            colors={[colors.signal, colors.signalDeep]}
+            style={styles.avatar}
+          >
             <Text style={styles.avatarText}>{initial}</Text>
           </LinearGradient>
+
           <View style={styles.profileInfo}>
-            <Text style={styles.profileAddr}>{truncateAddress(manager.owner, 10)}</Text>
+            <Text style={styles.profileAddr}>{truncateAddress(manager.owner, 12)}</Text>
             <Text style={styles.profileSince}>Active {formatAge(manager.createdAt)} ago</Text>
           </View>
-          <View style={styles.tierBadge}>
-            <Text style={styles.tierText}>{tier}</Text>
+
+          <View style={[styles.tierBadge, { borderColor: tier.color + '40', backgroundColor: tier.color + '14' }]}>
+            <Text style={[styles.tierText, { color: tier.color }]}>{tier.label}</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
-      {/* Stats */}
+      {/* Stats grid — bento layout */}
       <View style={styles.statsGrid}>
-        <StatCard label="Total TVL" value={formatUSD(totalTvl, true)} flex={1} />
+        <StatCard label="Total TVL" value={formatUSD(totalTvl, true)} flex={1} accent />
         <StatCard label="Avg NAV" value={formatNav(avgNav)} flex={1} />
       </View>
       <View style={styles.statsGrid}>
-        <StatCard label="Avg Jr. Health" value={`${(avgHealth * 100).toFixed(0)}%`} valueColor={hColor} flex={1} />
+        <StatCard label="Jr. Health" value={`${(avgHealth * 100).toFixed(0)}%`} valueColor={hColor} flex={1} />
         <StatCard label="Jr. Posted" value={formatUSD(manager.totalJuniorDeposited, true)} flex={1} />
       </View>
       <View style={styles.statsGrid}>
@@ -71,12 +82,12 @@ export default function TraderProfileScreen() {
         <StatCard label="Active" value={String(manager.activeVaults)} valueColor={colors.signal} flex={1} />
       </View>
 
-      {/* Profile details */}
+      {/* Profile detail card */}
       <View style={styles.detailCard}>
         <Text style={styles.detailTitle}>PROFILE</Text>
         {([
-          ['Owner', truncateAddress(manager.owner, 10)],
-          ['Manager PDA', truncateAddress(manager.pubkey, 10)],
+          ['Owner', truncateAddress(manager.owner, 12)],
+          ['Manager PDA', truncateAddress(manager.pubkey, 12)],
           ['Member Since', formatAge(manager.createdAt) + ' ago'],
         ] as [string, string][]).map(([k, v]) => (
           <View key={k} style={styles.detailRow}>
@@ -89,10 +100,9 @@ export default function TraderProfileScreen() {
       {/* Vaults */}
       <Text style={styles.sectionTitle}>Vaults ({manager.vaults.length})</Text>
 
-      {manager.vaults.length === 0 ? (
-        <EmptyState icon="⬡" title="No vaults yet" subtitle="This manager hasn't created any vaults" />
-      ) : (
-        manager.vaults.map((vault: VaultView) => (
+      {manager.vaults.length === 0
+        ? <EmptyState icon="⬡" title="No vaults" subtitle="This manager hasn't created any vaults yet" />
+        : manager.vaults.map((vault: VaultView) => (
           <VaultCard
             key={vault.id}
             vault={vault}
@@ -100,40 +110,83 @@ export default function TraderProfileScreen() {
             sparkData={mockNavHistory(vault.configPubkey).map(p => p.nav)}
           />
         ))
-      )}
+      }
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  scroll: { gap: spacing.sm, paddingBottom: 60 },
+  scroll: { gap: 10, paddingBottom: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  hero: { padding: spacing.md, paddingTop: 8, paddingBottom: 20 },
-  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatarGrad: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 20, fontWeight: '800', color: colors.bg, fontFamily: 'Courier' },
-  profileInfo: { flex: 1, gap: 3 },
-  profileAddr: { fontSize: 15, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  profileSince: { fontSize: 12, color: colors.textQuiet },
-  tierBadge: {
-    paddingHorizontal: 11, paddingVertical: 5, borderRadius: radius.full,
-    backgroundColor: colors.signalDim, borderWidth: 1, borderColor: colors.signal + '55',
-  },
-  tierText: { fontSize: 12, fontWeight: '700', color: colors.signal },
-  statsGrid: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md },
-  detailCard: {
-    marginHorizontal: spacing.md,
+
+  profileCard: {
+    margin: spacing.md,
+    marginBottom: 0,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    gap: 2,
+    overflow: 'hidden',
   },
-  detailTitle: { fontSize: 10, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 10 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
+  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: 18, fontWeight: '700', color: colors.bg, fontFamily: 'Courier' },
+  profileInfo: { flex: 1, gap: 3 },
+  profileAddr: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+  profileSince: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+  tierBadge: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  tierText: { fontSize: 11, fontWeight: '700', fontFamily: 'Courier' },
+
+  statsGrid: { flexDirection: 'row', gap: 10, marginHorizontal: spacing.md },
+
+  detailCard: {
+    marginHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  detailTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontFamily: 'Courier',
+    marginBottom: 10,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   detailKey: { fontSize: 13, color: colors.textMuted },
   detailVal: { fontSize: 12, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
-  sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginHorizontal: spacing.md, marginTop: 4 },
+
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Courier',
+    marginHorizontal: spacing.md,
+    marginTop: 4,
+  },
 });

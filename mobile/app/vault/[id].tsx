@@ -57,7 +57,6 @@ export default function VaultDetailScreen() {
   const navChange = vault.currentNav - 1;
   const navPositive = navChange >= 0;
   const canDeposit = connected && role === 'investor' && vault.status === 'active';
-  const canWithdraw = connected && role === 'investor';
 
   const navPts = navHistory ?? [];
   const minNav = Math.min(...navPts.map(p => p.nav), vault.currentNav);
@@ -67,9 +66,8 @@ export default function VaultDetailScreen() {
   async function handleDeposit() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) { Alert.alert('Invalid Amount', 'Enter a positive number.'); return; }
+    if (!parsed || parsed <= 0) { Alert.alert('Invalid Amount'); return; }
     if (!connected) { connect(); return; }
-
     try {
       setTxState({ type: 'building' });
       const usdcUnits = BigInt(Math.floor(parsed * 1_000_000));
@@ -77,25 +75,23 @@ export default function VaultDetailScreen() {
       setTxState({ type: 'signing' });
       const result = await depositSenior(configKey, usdcUnits);
       setTxState({ type: 'confirming' });
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 400));
       setTxState({ type: 'success', sig: result.sig, demo: result.demo });
       setAmount('');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       setTxState({ type: 'error', message: err?.message ?? 'Unknown error' });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   }
 
   async function handleWithdraw() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) { Alert.alert('Invalid Amount', 'Enter a positive number.'); return; }
+    if (!parsed || parsed <= 0) { Alert.alert('Invalid Amount'); return; }
     if (!connected) { connect(); return; }
-
     Alert.alert(
       'Confirm Withdrawal',
-      `Withdraw ${formatUSD(parsed)} from ${vault!.name}?\n\nExit type: ${vault!.instantExit ? 'Instant' : 'Cooldown (pro-rata)'}`,
+      `Withdraw ${formatUSD(parsed)} from ${vault!.name}?\nExit: ${vault!.instantExit ? 'Instant' : 'Cooldown'}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -105,11 +101,11 @@ export default function VaultDetailScreen() {
               setTxState({ type: 'building' });
               const usdcUnits = BigInt(Math.floor(parsed * 1_000_000));
               const configKey = new PublicKey(vault!.configPubkey);
-              const dummyPriceAccount = new PublicKey('11111111111111111111111111111111');
+              const dummy = new PublicKey('11111111111111111111111111111111');
               setTxState({ type: 'signing' });
-              const result = await withdrawSenior(configKey, usdcUnits, dummyPriceAccount, dummyPriceAccount);
+              const result = await withdrawSenior(configKey, usdcUnits, dummy, dummy);
               setTxState({ type: 'confirming' });
-              await new Promise(r => setTimeout(r, 500));
+              await new Promise(r => setTimeout(r, 400));
               setTxState({ type: 'success', sig: result.sig, demo: result.demo });
               setAmount('');
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -128,12 +124,13 @@ export default function VaultDetailScreen() {
 
       <ScrollView style={styles.screen} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Hero */}
-        <LinearGradient
-          colors={[colors.signalDeep + '28', colors.bg]}
-          style={styles.heroGrad}
-        >
-          <View style={styles.heroHeader}>
+        {/* Hero card */}
+        <View style={styles.heroCard}>
+          <LinearGradient
+            colors={['rgba(163,230,53,0.08)', 'transparent']}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.heroTop}>
             <StatusBadge status={vault.status} />
             <View style={styles.navBlock}>
               <Text style={styles.navLabel}>NAV</Text>
@@ -144,23 +141,21 @@ export default function VaultDetailScreen() {
             </View>
           </View>
           <Text style={styles.heroName}>{vault.name}</Text>
-          <Text style={styles.heroManager}>
-            Manager · {truncateAddress(vault.managerPubkey, 8)}
-          </Text>
-        </LinearGradient>
+          <Text style={styles.heroSub}>Manager · {truncateAddress(vault.managerPubkey, 10)}</Text>
+        </View>
 
-        {/* NAV Chart */}
+        {/* NAV chart */}
         {navPts.length > 1 && (
           <View style={styles.chartCard}>
-            <View style={styles.chartRow}>
-              <Text style={styles.chartTitle}>NAV HISTORY · 30D</Text>
+            <View style={styles.chartHeader}>
+              <Text style={styles.chartTitle}>NAV · 30 DAYS</Text>
               <Text style={styles.chartRange}>
                 {formatNav(minNav)} — {formatNav(maxNav)}
               </Text>
             </View>
             <View style={styles.chartBars}>
               {navPts.map((p, i) => {
-                const h = Math.max(4, ((p.nav - minNav) / navRange) * 72);
+                const h = Math.max(4, ((p.nav - minNav) / navRange) * 80);
                 const isLast = i === navPts.length - 1;
                 return (
                   <View key={i} style={styles.barWrap}>
@@ -169,7 +164,7 @@ export default function VaultDetailScreen() {
                       {
                         height: h,
                         backgroundColor: isLast ? colors.signal
-                          : p.nav >= 1 ? colors.signalDeep
+                          : p.nav >= 1 ? colors.signalDeep + 'CC'
                           : colors.surfaceHigh,
                       }
                     ]} />
@@ -184,10 +179,10 @@ export default function VaultDetailScreen() {
           </View>
         )}
 
-        {/* Stats grid */}
+        {/* Stats bento */}
         <View style={styles.statsGrid}>
           <StatCard label="TVL" value={formatUSD(vault.tvl, true)} flex={1} />
-          <StatCard label="Manager Fee" value={formatBps(vault.feeBps)} flex={1} />
+          <StatCard label="Fee" value={formatBps(vault.feeBps)} flex={1} />
         </View>
         <View style={styles.statsGrid}>
           <StatCard
@@ -204,21 +199,18 @@ export default function VaultDetailScreen() {
           />
         </View>
 
-        {/* Health + Capital */}
         <View style={styles.card}><HealthMeter health={vault.juniorHealth} /></View>
-        <View style={styles.card}>
-          <CapitalStack juniorCapital={vault.juniorCapital} seniorCapital={vault.seniorCapital} />
-        </View>
+        <View style={styles.card}><CapitalStack juniorCapital={vault.juniorCapital} seniorCapital={vault.seniorCapital} /></View>
 
-        {/* Risk params */}
+        {/* Risk detail */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>RISK PARAMETERS</Text>
+          <Text style={styles.cardTitle}>PARAMETERS</Text>
           {([
             ['Max Slippage', formatBps(vault.maxSlippageBps)],
             ['High Water Mark', formatNav(vault.highWaterMark)],
             ['Exit Type', vault.instantExit ? '⚡ Instant' : '⏳ Cooldown'],
             ['Paper Trades', `${vault.paperTradeCount} / ${vault.minQualifyingTrades}`],
-            ['Created', formatAge(vault.createdAt) + ' ago'],
+            ['Vault Age', formatAge(vault.createdAt) + ' ago'],
             ['Graduated', vault.graduatedAt ? formatAge(vault.graduatedAt) + ' ago' : '—'],
           ] as [string, string][]).map(([k, v]) => (
             <View key={k} style={styles.paramRow}>
@@ -228,8 +220,9 @@ export default function VaultDetailScreen() {
           ))}
         </View>
 
-        {/* Action tabs */}
-        <View style={styles.txCard}>
+        {/* Action card */}
+        <View style={styles.actionCard}>
+          {/* Tab strip */}
           <View style={styles.tabs}>
             {(['overview', 'deposit', 'withdraw'] as Tab[]).map(t => (
               <Pressable
@@ -244,97 +237,102 @@ export default function VaultDetailScreen() {
             ))}
           </View>
 
-          <View style={styles.txBody}>
+          <View style={styles.tabBody}>
             {tab === 'overview' && (
               <Text style={styles.infoText}>
-                {vault.status === 'paper' ? 'This vault is in paper trading mode. It has not yet graduated and cannot accept senior capital.' :
-                 vault.status === 'active' ? 'This vault is active and accepting senior capital deposits. The manager has proven their strategy through qualifying trades.' :
-                 vault.status === 'cooldown' ? 'This vault is in cooldown. Deposits are paused while the manager recovers from drawdown.' :
-                 vault.status === 'frozen' ? 'This vault is frozen due to excessive drawdown. Withdrawals only.' :
-                 'This vault has been closed.'}
+                {vault.status === 'paper'
+                  ? 'This vault is in paper trading mode. The manager is building a qualifying track record before it can accept senior capital.'
+                  : vault.status === 'active'
+                  ? 'Active and accepting senior capital. The manager has graduated by proving performance with their own junior stake.'
+                  : vault.status === 'cooldown'
+                  ? 'In cooldown due to drawdown. Deposits are paused while the manager recovers to the high-water mark.'
+                  : vault.status === 'frozen'
+                  ? 'Frozen due to excessive drawdown. Withdrawals only — no new deposits.'
+                  : 'This vault has been closed permanently.'}
               </Text>
             )}
 
             {(tab === 'deposit' || tab === 'withdraw') && (
-              <>
-                {!connected ? (
-                  <View style={styles.gate}>
-                    <Text style={styles.gateText}>Connect your wallet to {tab}.</Text>
-                    <Pressable style={styles.connectBtn} onPress={connect}>
-                      <Text style={styles.connectBtnText}>Connect Wallet</Text>
-                    </Pressable>
-                  </View>
-                ) : tab === 'deposit' && !canDeposit ? (
-                  <Text style={styles.gateText}>
-                    {role !== 'investor' ? 'Switch to Investor role in Settings.' : `Deposits unavailable — vault is ${vault.status}.`}
-                  </Text>
-                ) : (
-                  <>
-                    {balance && (
-                      <View style={styles.balanceRow}>
-                        <Text style={styles.balanceLabel}>Your USDC balance</Text>
-                        <Text style={styles.balanceValue}>
-                          {formatUSD(balance.usdc)}
-                          {isDemoWallet && <Text style={styles.demoTag}> (demo)</Text>}
-                        </Text>
-                      </View>
-                    )}
-
-                    <Text style={styles.inputLabel}>USDC Amount</Text>
-                    <View style={styles.inputWrap}>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        placeholderTextColor={colors.textQuiet}
-                        value={amount}
-                        onChangeText={setAmount}
-                        keyboardType="decimal-pad"
-                        returnKeyType="done"
-                      />
-                      <Text style={styles.inputUnit}>USDC</Text>
-                      {balance && balance.usdc > 0 && (
-                        <Pressable
-                          style={styles.maxBtn}
-                          onPress={() => setAmount(balance.usdc.toFixed(2))}
-                        >
-                          <Text style={styles.maxBtnText}>MAX</Text>
-                        </Pressable>
-                      )}
-                    </View>
-
-                    {tab === 'withdraw' && (
-                      <View style={styles.exitBadge}>
-                        <Text style={styles.exitBadgeText}>
-                          {vault.instantExit ? '⚡ Instant exit enabled' : '⏳ Cooldown-based exit'}
-                        </Text>
-                      </View>
-                    )}
-
-                    <Pressable
-                      style={[
-                        styles.actionBtn,
-                        tab === 'withdraw' && styles.actionBtnWithdraw,
-                        (!amount || parseFloat(amount) <= 0) && styles.actionBtnDisabled,
-                      ]}
-                      onPress={tab === 'deposit' ? handleDeposit : handleWithdraw}
-                      disabled={!amount || parseFloat(amount) <= 0}
+              !connected ? (
+                <View style={styles.gate}>
+                  <Text style={styles.gateText}>Connect your wallet to continue</Text>
+                  <Pressable style={styles.gateBtn} onPress={connect}>
+                    <LinearGradient
+                      colors={[colors.signal, colors.signalDeep]}
+                      style={styles.gateBtnGrad}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                     >
-                      <LinearGradient
-                        colors={tab === 'deposit'
-                          ? [colors.signal, colors.signalDeep]
-                          : [colors.surfaceHigh, colors.surface]}
-                        style={styles.actionBtnGrad}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
+                      <Text style={styles.gateBtnText}>Connect Wallet</Text>
+                    </LinearGradient>
+                  </Pressable>
+                </View>
+              ) : tab === 'deposit' && !canDeposit ? (
+                <Text style={styles.gateText}>
+                  {role !== 'investor'
+                    ? 'Switch to Investor role in Settings to deposit.'
+                    : `Deposits are unavailable — vault is ${vault.status}.`}
+                </Text>
+              ) : (
+                <>
+                  {balance && (
+                    <View style={styles.balanceRow}>
+                      <Text style={styles.balanceLabelSm}>USDC balance</Text>
+                      <Text style={styles.balanceAmt}>
+                        {formatUSD(balance.usdc)}
+                        {isDemoWallet && <Text style={{ color: colors.warning, fontSize: 11 }}> demo</Text>}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.amtWrap}>
+                    <TextInput
+                      style={styles.amtInput}
+                      placeholder="0.00"
+                      placeholderTextColor={colors.textQuiet}
+                      value={amount}
+                      onChangeText={setAmount}
+                      keyboardType="decimal-pad"
+                      returnKeyType="done"
+                    />
+                    <Text style={styles.amtUnit}>USDC</Text>
+                    {balance && balance.usdc > 0 && (
+                      <Pressable
+                        style={styles.maxChip}
+                        onPress={() => setAmount(balance.usdc.toFixed(2))}
                       >
-                        <Text style={[styles.actionBtnText, tab === 'withdraw' && { color: colors.textMuted }]}>
-                          {tab === 'deposit' ? 'Deposit Senior Capital' : 'Withdraw Senior Capital'}
-                        </Text>
-                      </LinearGradient>
-                    </Pressable>
-                  </>
-                )}
-              </>
+                        <Text style={styles.maxChipText}>MAX</Text>
+                      </Pressable>
+                    )}
+                  </View>
+
+                  {tab === 'withdraw' && (
+                    <View style={styles.exitNote}>
+                      <Text style={styles.exitNoteText}>
+                        {vault.instantExit ? '⚡ Instant exit — no cooldown' : '⏳ Pro-rata cooldown exit'}
+                      </Text>
+                    </View>
+                  )}
+
+                  <Pressable
+                    style={[styles.submitBtn, (!amount || parseFloat(amount) <= 0) && { opacity: 0.4 }]}
+                    onPress={tab === 'deposit' ? handleDeposit : handleWithdraw}
+                    disabled={!amount || parseFloat(amount) <= 0}
+                  >
+                    <LinearGradient
+                      colors={tab === 'deposit' ? [colors.signal, colors.signalDeep] : [colors.surfaceHigh, colors.surfaceElevated]}
+                      style={styles.submitBtnGrad}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={[
+                        styles.submitBtnText,
+                        tab === 'withdraw' && { color: colors.textMuted },
+                      ]}>
+                        {tab === 'deposit' ? 'Deposit Senior Capital' : 'Withdraw'}
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </>
+              )
             )}
           </View>
         </View>
@@ -345,105 +343,143 @@ export default function VaultDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  scroll: { gap: spacing.sm, paddingBottom: 60 },
+  scroll: { gap: 10, paddingBottom: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  heroGrad: { padding: spacing.md, paddingTop: 8, gap: 6 },
-  heroHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
+
+  heroCard: {
+    margin: spacing.md,
+    marginBottom: 0,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: 6,
+    overflow: 'hidden',
+  },
+  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
   navBlock: { alignItems: 'flex-end' },
-  navLabel: { fontSize: 9, color: colors.textQuiet, letterSpacing: 0.6, textTransform: 'uppercase' },
-  navVal: { fontSize: 24, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  navDelta: { fontSize: 13, fontWeight: '700', fontFamily: 'Courier' },
-  heroName: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  heroManager: { fontSize: 12, color: colors.textQuiet, fontFamily: 'Courier' },
+  navLabel: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier', letterSpacing: 0.5, textTransform: 'uppercase' },
+  navVal: { fontSize: 26, fontWeight: '600', color: colors.text, fontFamily: 'Courier', letterSpacing: -0.5 },
+  navDelta: { fontSize: 12, fontWeight: '700', fontFamily: 'Courier' },
+  heroName: { fontSize: 26, fontWeight: '600', color: colors.text, letterSpacing: -0.4 },
+  heroSub: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+
   chartCard: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
     gap: 10,
   },
-  chartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chartTitle: { fontSize: 10, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase' },
-  chartRange: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier' },
-  chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 80, gap: 1 },
+  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  chartTitle: { fontSize: 9, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Courier' },
+  chartRange: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier' },
+  chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 88, gap: 1.5 },
   barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
-  bar: { width: '100%', borderRadius: 2 },
+  bar: { width: '100%', borderRadius: 3 },
   chartFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   chartLabel: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier' },
-  statsGrid: { flexDirection: 'row', gap: spacing.sm, marginHorizontal: spacing.md },
+
+  statsGrid: { flexDirection: 'row', gap: 10, marginHorizontal: spacing.md },
   card: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
   },
-  cardTitle: { fontSize: 10, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12 },
-  paramRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border },
+  cardTitle: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontFamily: 'Courier',
+    marginBottom: 12,
+  },
+  paramRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   paramKey: { fontSize: 13, color: colors.textMuted },
-  paramVal: { fontSize: 13, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
-  txCard: {
+  paramVal: { fontSize: 12, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+
+  actionCard: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
-  tabBtn: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive: { borderBottomColor: colors.signal, backgroundColor: colors.signalDim },
-  tabText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabBtnActive: { borderBottomColor: colors.signal },
+  tabText: { fontSize: 12, fontWeight: '600', color: colors.textMuted, fontFamily: 'Courier' },
   tabTextActive: { color: colors.signal },
-  txBody: { padding: spacing.md, gap: 12 },
-  infoText: { fontSize: 13, color: colors.textMuted, lineHeight: 21 },
+  tabBody: { padding: spacing.md, gap: 14 },
+
+  infoText: { fontSize: 13, color: colors.textMuted, lineHeight: 22 },
   gate: { gap: 14, alignItems: 'center', paddingVertical: 8 },
   gateText: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
-  connectBtn: { backgroundColor: colors.signal, borderRadius: radius.md, paddingVertical: 13, paddingHorizontal: 28 },
-  connectBtnText: { color: colors.bg, fontWeight: '700', fontSize: 15 },
+  gateBtn: { borderRadius: radius.full, overflow: 'hidden', width: '100%' },
+  gateBtnGrad: { paddingVertical: 14, alignItems: 'center' },
+  gateBtnText: { fontSize: 15, fontWeight: '700', color: colors.bg },
+
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  balanceLabel: { fontSize: 12, color: colors.textQuiet },
-  balanceValue: { fontSize: 13, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  demoTag: { color: colors.warning, fontSize: 11 },
-  inputLabel: { fontSize: 10, fontWeight: '600', color: colors.textMuted, letterSpacing: 0.6, textTransform: 'uppercase' },
-  inputWrap: {
+  balanceLabelSm: { fontSize: 10, fontWeight: '600', color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Courier' },
+  balanceAmt: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+
+  amtWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     paddingHorizontal: spacing.md,
   },
-  input: { flex: 1, height: 52, fontSize: 20, color: colors.text, fontFamily: 'Courier', fontWeight: '700' },
-  inputUnit: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
-  maxBtn: {
+  amtInput: {
+    flex: 1,
+    height: 56,
+    fontSize: 22,
+    color: colors.text,
+    fontFamily: 'Courier',
+    fontWeight: '600',
+  },
+  amtUnit: { fontSize: 12, color: colors.textMuted, fontWeight: '600', fontFamily: 'Courier' },
+  maxChip: {
     marginLeft: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     backgroundColor: colors.signalDim,
     borderWidth: 1,
-    borderColor: colors.signal + '55',
+    borderColor: colors.signal + '40',
   },
-  maxBtnText: { fontSize: 10, fontWeight: '700', color: colors.signal, letterSpacing: 0.4 },
-  exitBadge: {
+  maxChipText: { fontSize: 9, fontWeight: '700', color: colors.signal, letterSpacing: 0.5, fontFamily: 'Courier' },
+  exitNote: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.sm,
-    padding: 8,
+    borderRadius: radius.lg,
+    padding: 10,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  exitBadgeText: { fontSize: 12, color: colors.textMuted },
-  actionBtn: {
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  actionBtnWithdraw: {},
-  actionBtnDisabled: { opacity: 0.45 },
-  actionBtnGrad: { paddingVertical: 16, alignItems: 'center', borderRadius: radius.md },
-  actionBtnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
+  exitNoteText: { fontSize: 12, color: colors.textMuted, fontFamily: 'Courier' },
+  submitBtn: { borderRadius: radius.full, overflow: 'hidden' },
+  submitBtnGrad: { paddingVertical: 16, alignItems: 'center', borderRadius: radius.full },
+  submitBtnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
 });

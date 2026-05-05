@@ -15,38 +15,28 @@ export function CapitalStack({ juniorCapital, seniorCapital }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.labelRow}>
-        <Text style={styles.sectionLabel}>CAPITAL STACK</Text>
-        <Text style={styles.totalValue}>{formatUSD(total, true)} TVL</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.label}>CAPITAL STACK</Text>
+        <Text style={styles.total}>{formatUSD(total, true)} TVL</Text>
       </View>
 
       <View style={styles.track}>
-        <View
-          style={[
-            styles.jrBar,
-            { flex: jrPct, backgroundColor: colors.signalDeep },
-          ]}
-        />
-        <View
-          style={[
-            styles.srBar,
-            { flex: srPct, backgroundColor: colors.surfaceHigh },
-          ]}
-        />
+        <View style={[styles.bar, styles.jrBar, { flex: jrPct }]} />
+        <View style={[styles.bar, styles.srBar, { flex: srPct }]} />
       </View>
 
-      <View style={styles.legendRow}>
+      <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.signalDeep }]} />
-          <Text style={styles.legendLabel}>Junior</Text>
-          <Text style={styles.legendValue}>{formatUSD(juniorCapital, true)}</Text>
-          <Text style={styles.legendPct}>({(jrPct * 100).toFixed(0)}%)</Text>
+          <View style={[styles.legendDot, { backgroundColor: colors.signal }]} />
+          <Text style={styles.legendKey}>First-loss</Text>
+          <Text style={styles.legendVal}>{formatUSD(juniorCapital, true)}</Text>
+          <Text style={styles.legendPct}>{(jrPct * 100).toFixed(0)}%</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: colors.surfaceHigh }]} />
-          <Text style={styles.legendLabel}>Senior</Text>
-          <Text style={styles.legendValue}>{formatUSD(seniorCapital, true)}</Text>
-          <Text style={styles.legendPct}>({(srPct * 100).toFixed(0)}%)</Text>
+          <Text style={styles.legendKey}>Senior</Text>
+          <Text style={styles.legendVal}>{formatUSD(seniorCapital, true)}</Text>
+          <Text style={styles.legendPct}>{(srPct * 100).toFixed(0)}%</Text>
         </View>
       </View>
     </View>
@@ -54,22 +44,21 @@ export function CapitalStack({ juniorCapital, seniorCapital }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 10,
-  },
-  labelRow: {
+  container: { gap: 12 },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  sectionLabel: {
+  label: {
     fontSize: 10,
     fontWeight: '600',
     color: colors.textMuted,
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
+    fontFamily: 'Courier',
   },
-  totalValue: {
+  total: {
     fontSize: 12,
     fontWeight: '700',
     color: colors.text,
@@ -77,43 +66,19 @@ const styles = StyleSheet.create({
   },
   track: {
     flexDirection: 'row',
-    height: 10,
+    height: 8,
     borderRadius: radius.full,
     overflow: 'hidden',
     gap: 2,
+    backgroundColor: colors.surfaceHigh,
   },
-  jrBar: {
-    borderRadius: radius.full,
-  },
-  srBar: {
-    borderRadius: radius.full,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendLabel: {
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  legendValue: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'Courier',
-  },
-  legendPct: {
-    fontSize: 10,
-    color: colors.textQuiet,
-  },
+  bar: { borderRadius: radius.full },
+  jrBar: { backgroundColor: colors.signal },
+  srBar: { backgroundColor: colors.borderStrong },
+  legend: { flexDirection: 'row', gap: 20 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 7, height: 7, borderRadius: 4 },
+  legendKey: { fontSize: 11, color: colors.textMuted },
+  legendVal: { fontSize: 11, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+  legendPct: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier' },
 });

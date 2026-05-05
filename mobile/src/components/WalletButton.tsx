@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius } from '../lib/theme';
 import { useWallet } from '../lib/wallet';
 import { truncateAddress } from '../lib/format';
@@ -16,27 +17,44 @@ export function WalletButton({ onPress }: Props) {
     if (!connected && !connecting) connect();
   };
 
+  if (connected && publicKey) {
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.connectedBtn, pressed && { opacity: 0.7 }]}
+        onPress={handlePress}
+      >
+        <View style={[styles.statusDot, { backgroundColor: isDemoWallet ? colors.warning : colors.signal }]} />
+        <Text style={styles.connectedAddr}>
+          {truncateAddress(publicKey, 4)}
+          {isDemoWallet ? ' ◐' : ''}
+        </Text>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable
-      style={({ pressed }) => [styles.btn, connected && styles.connected, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.connectBtn, pressed && { opacity: 0.85 }]}
       onPress={handlePress}
+      disabled={connecting}
     >
-      {connecting ? (
-        <ActivityIndicator size="small" color={colors.signal} />
-      ) : (
-        <View style={[styles.dot, { backgroundColor: connected ? colors.signal : colors.textQuiet }]} />
-      )}
-      <Text style={[styles.label, connected && styles.labelConnected]}>
-        {connecting ? 'Connecting…' : connected && publicKey
-          ? truncateAddress(publicKey, 4) + (isDemoWallet ? ' ◐' : '')
-          : 'Connect Wallet'}
-      </Text>
+      <LinearGradient
+        colors={[colors.signal, colors.signalDeep]}
+        style={styles.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        {connecting
+          ? <ActivityIndicator size="small" color={colors.bg} />
+          : <Text style={styles.connectText}>Connect</Text>
+        }
+      </LinearGradient>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: {
+  connectedBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -47,25 +65,31 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  connected: {
-    borderColor: colors.signal + '55',
-    backgroundColor: colors.signalDim,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  dot: {
+  statusDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
   },
-  label: {
-    fontSize: 13,
+  connectedAddr: {
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
     fontFamily: 'Courier',
   },
-  labelConnected: {
-    color: colors.signal,
+  connectBtn: {
+    borderRadius: radius.full,
+    overflow: 'hidden',
+  },
+  gradient: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  connectText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.bg,
   },
 });

@@ -39,6 +39,9 @@ export default function VaultsScreen() {
 
   const totalTvl = (vaults ?? []).reduce((s, v) => s + v.tvl, 0);
   const activeCount = (vaults ?? []).filter(v => v.status === 'active').length;
+  const avgNav = vaults?.length
+    ? (vaults.reduce((s, v) => s + v.currentNav, 0) / vaults.length).toFixed(4)
+    : '—';
 
   function handleVaultPress(vault: VaultView) {
     router.push(`/vault/${vault.configPubkey}`);
@@ -46,46 +49,46 @@ export default function VaultsScreen() {
 
   const Header = () => (
     <>
-      <LinearGradient
-        colors={[colors.signalDeep + '22', colors.bg, colors.bg]}
-        style={[styles.hero, { paddingTop: insets.top + 16 }]}
-      >
-        <View style={styles.heroRow}>
-          <View>
-            <Text style={styles.wordmark}>ARCADIA</Text>
-            <Text style={styles.tagline}>Proof-gated capital protocol</Text>
-          </View>
-          <WalletButton />
+      {/* Nav bar */}
+      <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
+        <View>
+          <Text style={styles.wordmark}>ARCADIA</Text>
+          <Text style={styles.tagline}>First-loss managed vaults</Text>
         </View>
+        <WalletButton />
+      </View>
 
-        <View style={styles.metricsRow}>
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>{formatUSD(totalTvl, true)}</Text>
-            <Text style={styles.metricLabel}>Total TVL</Text>
+      {/* Balance hero card */}
+      <View style={styles.heroCard}>
+        <LinearGradient
+          colors={['rgba(163,230,53,0.10)', 'rgba(163,230,53,0.02)', 'transparent']}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        />
+        <Text style={styles.heroLabel}>Total Protocol TVL</Text>
+        <Text style={styles.heroBalance}>{formatUSD(totalTvl)}</Text>
+
+        {/* Mini bento metrics */}
+        <View style={styles.heroBento}>
+          <View style={styles.heroBentoCell}>
+            <Text style={styles.heroBentoValue}>{activeCount}</Text>
+            <Text style={styles.heroBentoLabel}>Active Vaults</Text>
           </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metric}>
-            <Text style={[styles.metricValue, { color: colors.signal }]}>{activeCount}</Text>
-            <Text style={styles.metricLabel}>Active</Text>
+          <View style={styles.heroBentoDivider} />
+          <View style={styles.heroBentoCell}>
+            <Text style={styles.heroBentoValue}>{(vaults ?? []).length}</Text>
+            <Text style={styles.heroBentoLabel}>Total Vaults</Text>
           </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>{(vaults ?? []).length}</Text>
-            <Text style={styles.metricLabel}>Vaults</Text>
-          </View>
-          <View style={styles.metricDivider} />
-          <View style={styles.metric}>
-            <Text style={styles.metricValue}>
-              {(vaults ?? []).length > 0
-                ? ((vaults ?? []).reduce((s, v) => s + v.currentNav, 0) / (vaults ?? []).length).toFixed(4)
-                : '–'}
-            </Text>
-            <Text style={styles.metricLabel}>Avg NAV</Text>
+          <View style={styles.heroBentoDivider} />
+          <View style={styles.heroBentoCell}>
+            <Text style={[styles.heroBentoValue, { color: colors.signal }]}>{avgNav}</Text>
+            <Text style={styles.heroBentoLabel}>Avg NAV</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
-      <View style={styles.filterBar}>
+      {/* Filter pills */}
+      <View style={styles.filterRow}>
         {FILTERS.map(f => (
           <Pressable
             key={f.key}
@@ -98,6 +101,10 @@ export default function VaultsScreen() {
           </Pressable>
         ))}
       </View>
+
+      <Text style={styles.sectionHeader}>
+        {filtered.length} vault{filtered.length !== 1 ? 's' : ''}
+      </Text>
     </>
   );
 
@@ -123,9 +130,9 @@ export default function VaultsScreen() {
         )}
         ListHeaderComponent={Header}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListEmptyComponent={
-          <EmptyState icon="⬡" title="No vaults found" subtitle="Try a different filter" />
+          <EmptyState icon="⬡" title="No vaults" subtitle="Try a different filter" />
         }
         refreshControl={
           <RefreshControl
@@ -143,77 +150,113 @@ export default function VaultsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   center: { alignItems: 'center', justifyContent: 'center' },
-  hero: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: 20,
-    gap: 20,
-  },
-  heroRow: {
+  list: { paddingHorizontal: spacing.md, paddingBottom: 48 },
+
+  navbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingBottom: 16,
   },
   wordmark: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
     letterSpacing: 4,
     fontFamily: 'Courier',
   },
   tagline: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textQuiet,
     marginTop: 2,
-    letterSpacing: 0.3,
+    fontFamily: 'Courier',
   },
-  metricsRow: {
-    flexDirection: 'row',
+
+  heroCard: {
+    marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
+    padding: spacing.lg,
+    gap: 8,
+    overflow: 'hidden',
+    marginBottom: 14,
   },
-  metric: { flex: 1, alignItems: 'center', gap: 3 },
-  metricValue: {
-    fontSize: 15,
-    fontWeight: '700',
+  heroLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Courier',
+  },
+  heroBalance: {
+    fontSize: 40,
+    fontWeight: '500',
+    color: colors.text,
+    letterSpacing: -1.5,
+    fontFamily: 'Courier',
+  },
+  heroBento: {
+    flexDirection: 'row',
+    marginTop: 6,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  heroBentoCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 2 },
+  heroBentoDivider: { width: 1, backgroundColor: colors.border },
+  heroBentoValue: {
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text,
     fontFamily: 'Courier',
   },
-  metricLabel: {
+  heroBentoLabel: {
     fontSize: 9,
     color: colors.textQuiet,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    fontWeight: '600',
+    fontFamily: 'Courier',
   },
-  metricDivider: { width: 1, backgroundColor: colors.border },
-  filterBar: {
+
+  filterRow: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: spacing.md,
     paddingBottom: 12,
-    paddingTop: 4,
+    paddingTop: 2,
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   chipActive: {
-    borderColor: colors.signal,
+    borderColor: colors.signal + '60',
     backgroundColor: colors.signalDim,
   },
   chipText: {
     fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
+    fontFamily: 'Courier',
   },
   chipTextActive: { color: colors.signal },
-  list: { paddingHorizontal: spacing.md, paddingBottom: 40 },
+
+  sectionHeader: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textQuiet,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Courier',
+    paddingHorizontal: spacing.md,
+    marginBottom: 6,
+  },
 });

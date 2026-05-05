@@ -7,7 +7,7 @@ type Status = 'paper' | 'active' | 'cooldown' | 'frozen' | 'closed';
 const STATUS_LABELS: Record<Status, string> = {
   paper: 'PAPER',
   active: 'ACTIVE',
-  cooldown: 'COOLDOWN',
+  cooldown: 'COOL',
   frozen: 'FROZEN',
   closed: 'CLOSED',
 };
@@ -27,13 +27,18 @@ interface Props {
 
 export function StatusBadge({ status, size = 'md' }: Props) {
   const color = STATUS_COLORS[status];
-  const label = STATUS_LABELS[status];
   const small = size === 'sm';
 
   return (
-    <View style={[styles.badge, { borderColor: color + '55', backgroundColor: color + '18' }]}>
+    <View style={[
+      styles.badge,
+      { borderColor: color + '40', backgroundColor: color + '14' },
+      small && styles.badgeSm,
+    ]}>
       <View style={[styles.dot, { backgroundColor: color }, small && styles.dotSm]} />
-      <Text style={[styles.label, { color }, small && styles.labelSm]}>{label}</Text>
+      <Text style={[styles.label, { color }, small && styles.labelSm]}>
+        {STATUS_LABELS[status]}
+      </Text>
     </View>
   );
 }
@@ -42,28 +47,28 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: radius.full,
     borderWidth: 1,
     gap: 5,
     alignSelf: 'flex-start',
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  badgeSm: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  dotSm: {
+  dot: {
     width: 5,
     height: 5,
+    borderRadius: 3,
   },
+  dotSm: { width: 4, height: 4 },
   label: {
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
+    fontFamily: 'Courier',
   },
-  labelSm: {
-    fontSize: 9,
-  },
+  labelSm: { fontSize: 9 },
 });

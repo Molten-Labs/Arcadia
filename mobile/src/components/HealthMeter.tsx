@@ -28,26 +28,14 @@ export function HealthMeter({ health, showLabel = true, height = 6 }: Props) {
         </View>
       )}
       <View style={[styles.track, { height }]}>
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${pct * 100}%`,
-              backgroundColor: color,
-              height,
-              borderRadius: radius.full,
-            },
-          ]}
-        />
+        <View style={[styles.fill, { width: `${pct * 100}%`, backgroundColor: color, height }]} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: 5,
-  },
+  container: { gap: 6 },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -57,11 +45,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: colors.textMuted,
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
+    fontFamily: 'Courier',
   },
   valueText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Courier',
   },
@@ -70,5 +59,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     overflow: 'hidden',
   },
-  fill: {},
+  fill: { borderRadius: radius.full },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import Svg, { Polyline, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import { View } from 'react-native';
+import Svg, { Polyline, Defs, LinearGradient as SvgGradient, Stop, Polygon } from 'react-native-svg';
 import { colors } from '../lib/theme';
 
 interface Props {
@@ -19,26 +19,30 @@ export function NavSparkline({ data, width, height, positive = true }: Props) {
 
   const pts = data.map((v, i) => {
     const x = (i / (data.length - 1)) * width;
-    const y = height - ((v - min) / range) * (height - 4) - 2;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
+    const y = height - 2 - ((v - min) / range) * (height - 4);
+    return { x, y };
   });
-  const polyline = pts.join(' ');
+
+  const polyline = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+  // Build fill polygon: line + baseline
+  const fill = [
+    ...pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`),
+    `${width},${height}`,
+    `0,${height}`,
+  ].join(' ');
 
   const color = positive ? colors.signal : colors.danger;
 
   return (
     <Svg width={width} height={height}>
       <Defs>
-        <LinearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity="0.3" />
+        <SvgGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={color} stopOpacity="0.25" />
           <Stop offset="1" stopColor={color} stopOpacity="0" />
-        </LinearGradient>
+        </SvgGradient>
       </Defs>
-      <Rect
-        x="0" y="0" width={width} height={height}
-        fill="url(#sparkGrad)"
-        opacity={0.4}
-      />
+      <Polygon points={fill} fill="url(#sg)" />
       <Polyline
         points={polyline}
         fill="none"
@@ -50,5 +54,3 @@ export function NavSparkline({ data, width, height, positive = true }: Props) {
     </Svg>
   );
 }
-
-const styles = StyleSheet.create({});

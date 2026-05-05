@@ -21,11 +21,31 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { WalletButton } from '../../src/components/WalletButton';
 import { formatUSD, formatPnL, pnlColor, formatAge } from '../../src/lib/format';
 
+function ActivityRow({
+  label, sub, value, positive, onPress,
+}: { label: string; sub: string; value: string; positive: boolean; onPress: () => void }) {
+  return (
+    <Pressable style={({ pressed }) => [styles.actRow, pressed && { opacity: 0.7 }]} onPress={onPress}>
+      <View style={[styles.actDot, { backgroundColor: positive ? colors.signalDim : colors.dangerDim }]}>
+        <Text style={{ fontSize: 14, color: positive ? colors.signal : colors.danger }}>
+          {positive ? '↑' : '↓'}
+        </Text>
+      </View>
+      <View style={styles.actInfo}>
+        <Text style={styles.actLabel}>{label}</Text>
+        <Text style={styles.actSub}>{sub}</Text>
+      </View>
+      <Text style={[styles.actValue, { color: positive ? colors.signal : colors.danger }]}>
+        {value}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function PortfolioScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { connected, connect, isDemoWallet } = useWallet();
-  const { publicKey } = useWallet();
+  const { connected, connect, isDemoWallet, publicKey } = useWallet();
   const { data: positions, isLoading, refetch, isRefetching } = usePositions(publicKey);
   const { data: balance } = useBalance();
 
@@ -33,22 +53,20 @@ export default function PortfolioScreen() {
   const totalCurrent = (positions ?? []).reduce((s, p) => s + p.currentValue, 0);
   const totalPnL = totalCurrent - totalDeposited;
   const pnlC = pnlColor(totalDeposited, totalCurrent, colors);
-  const pnlPct = totalDeposited > 0 ? ((totalPnL / totalDeposited) * 100).toFixed(2) : '0.00';
+  const pnlPct = totalDeposited > 0
+    ? ((totalPnL / totalDeposited) * 100).toFixed(2) : '0.00';
 
   if (!connected) {
     return (
       <View style={[styles.screen]}>
-        <LinearGradient
-          colors={[colors.signalDeep + '22', colors.bg]}
-          style={[styles.disconnectedHero, { paddingTop: insets.top + 20 }]}
-        >
-          <Text style={styles.disconnectedTitle}>ARCADIA</Text>
-          <Text style={styles.disconnectedSub}>Your investment portfolio</Text>
-        </LinearGradient>
+        <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
+          <Text style={styles.pageTitle}>Portfolio</Text>
+          <WalletButton />
+        </View>
         <EmptyState
           icon="◈"
           title="Connect your wallet"
-          subtitle="Connect to view positions, P&L, and manage your senior capital"
+          subtitle="View positions, P&L, and manage your capital"
         />
         <View style={[styles.connectWrap, { paddingBottom: insets.bottom + 20 }]}>
           <Pressable style={styles.connectBtn} onPress={connect}>
@@ -68,85 +86,98 @@ export default function PortfolioScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.signal} />
         }
       >
-        {/* Header */}
-        <LinearGradient
-          colors={[colors.signalDeep + '22', colors.bg]}
-          style={[styles.header, { paddingTop: insets.top + 16 }]}
-        >
-          <View style={styles.headerRow}>
-            <Text style={styles.headerTitle}>Portfolio</Text>
-            <WalletButton />
-          </View>
+        {/* Nav */}
+        <View style={styles.navbar}>
+          <Text style={styles.pageTitle}>Portfolio</Text>
+          <WalletButton />
+        </View>
 
-          {isDemoWallet && (
-            <View style={styles.demoBanner}>
-              <Text style={styles.demoBannerText}>
-                ◈ Demo wallet — balances are simulated
+        {isDemoWallet && (
+          <View style={[styles.demoBanner, { marginHorizontal: spacing.md }]}>
+            <Text style={styles.demoBannerText}>◐ Demo wallet — simulated data</Text>
+          </View>
+        )}
+
+        {/* Total balance hero */}
+        <View style={styles.balanceHero}>
+          <LinearGradient
+            colors={[colors.signalDim, 'transparent']}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.balanceTop}>
+            <View>
+              <Text style={styles.balanceLabel}>Total Balance</Text>
+              <Text style={styles.balanceBig}>{formatUSD(totalCurrent)}</Text>
+            </View>
+            <View style={[
+              styles.pnlPill,
+              { backgroundColor: totalPnL >= 0 ? colors.signalDim : colors.dangerDim }
+            ]}>
+              <Text style={[styles.pnlPillText, { color: totalPnL >= 0 ? colors.signal : colors.danger }]}>
+                {totalPnL >= 0 ? '+' : ''}{pnlPct}%
               </Text>
             </View>
+          </View>
+
+          {/* Wallet balances */}
+          {balance && (
+            <View style={styles.walletTokens}>
+              <View style={styles.tokenRow}>
+                <View style={styles.tokenIcon}><Text style={styles.tokenIconText}>◎</Text></View>
+                <View style={styles.tokenInfo}>
+                  <Text style={styles.tokenName}>SOL</Text>
+                  <Text style={styles.tokenSub}>Solana</Text>
+                </View>
+                <Text style={styles.tokenAmount}>{balance.sol.toFixed(4)}</Text>
+              </View>
+              <View style={styles.tokenDivider} />
+              <View style={styles.tokenRow}>
+                <View style={[styles.tokenIcon, { backgroundColor: colors.surfaceHigh }]}>
+                  <Text style={styles.tokenIconText}>$</Text>
+                </View>
+                <View style={styles.tokenInfo}>
+                  <Text style={styles.tokenName}>USDC</Text>
+                  <Text style={styles.tokenSub}>USD Coin</Text>
+                </View>
+                <Text style={styles.tokenAmount}>{formatUSD(balance.usdc)}</Text>
+              </View>
+            </View>
           )}
-        </LinearGradient>
+        </View>
 
-        {/* Wallet balances */}
-        {balance && (
-          <View style={styles.balanceCard}>
-            <Text style={styles.sectionLabel}>Wallet Balances</Text>
-            <View style={styles.balanceRow}>
-              <View style={styles.balanceItem}>
-                <Text style={styles.balanceLabel}>SOL</Text>
-                <Text style={styles.balanceValue}>{balance.sol.toFixed(4)}</Text>
-              </View>
-              <View style={styles.balanceDivider} />
-              <View style={styles.balanceItem}>
-                <Text style={styles.balanceLabel}>USDC</Text>
-                <Text style={styles.balanceValue}>{formatUSD(balance.usdc)}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Summary card */}
+        {/* P&L strip */}
         {(positions ?? []).length > 0 && (
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Position Value</Text>
-            <Text style={styles.summaryBig}>{formatUSD(totalCurrent)}</Text>
-            <View style={styles.summaryStats}>
-              <View>
-                <Text style={styles.statLabel}>DEPOSITED</Text>
-                <Text style={styles.statMono}>{formatUSD(totalDeposited, true)}</Text>
-              </View>
-              <View style={styles.summaryCenter}>
-                <Text style={styles.statLabel}>TOTAL P&L</Text>
-                <Text style={[styles.statMono, { color: pnlC }]}>
-                  {formatPnL(totalDeposited, totalCurrent)}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.statLabel}>RETURN</Text>
-                <Text style={[styles.statMono, { color: pnlC }]}>
-                  {totalPnL >= 0 ? '+' : ''}{pnlPct}%
-                </Text>
-              </View>
+          <View style={styles.pnlStrip}>
+            <View style={styles.pnlCell}>
+              <Text style={styles.pnlLabel}>DEPOSITED</Text>
+              <Text style={styles.pnlValue}>{formatUSD(totalDeposited, true)}</Text>
             </View>
-            {totalDeposited > 0 && (
-              <View style={styles.pnlBar}>
-                <View style={[styles.pnlFill, {
-                  width: `${Math.min(100, Math.max(0, ((totalCurrent / totalDeposited)) * 50))}%`,
-                  backgroundColor: totalPnL >= 0 ? colors.signal : colors.danger,
-                }]} />
-              </View>
-            )}
+            <View style={styles.pnlDivider} />
+            <View style={styles.pnlCell}>
+              <Text style={styles.pnlLabel}>TOTAL P&L</Text>
+              <Text style={[styles.pnlValue, { color: pnlC }]}>
+                {formatPnL(totalDeposited, totalCurrent)}
+              </Text>
+            </View>
+            <View style={styles.pnlDivider} />
+            <View style={styles.pnlCell}>
+              <Text style={styles.pnlLabel}>POSITIONS</Text>
+              <Text style={styles.pnlValue}>{(positions ?? []).length}</Text>
+            </View>
           </View>
         )}
+
+        {/* Activity log header */}
+        <Text style={styles.sectionTitle}>Active Positions</Text>
 
         {isLoading ? (
-          <ActivityIndicator color={colors.signal} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.signal} style={{ marginTop: 24 }} />
         ) : (positions ?? []).length === 0 ? (
           <EmptyState
             icon="◈"
@@ -154,52 +185,36 @@ export default function PortfolioScreen() {
             subtitle="Deposit into a graduated vault to start earning"
           />
         ) : (
-          <>
-            <Text style={styles.sectionTitle}>Open Positions</Text>
-            {(positions ?? []).map(pos => {
-              const pc = pnlColor(pos.totalDeposited, pos.currentValue, colors);
+          <View style={styles.activityCard}>
+            {(positions ?? []).map((pos, i) => {
+              const positive = pos.currentValue >= pos.totalDeposited;
+              const pnlStr = formatPnL(pos.totalDeposited, pos.currentValue);
               const ret = pos.totalDeposited > 0
-                ? (((pos.currentValue - pos.totalDeposited) / pos.totalDeposited) * 100).toFixed(2)
+                ? ((pos.currentValue - pos.totalDeposited) / pos.totalDeposited * 100).toFixed(2)
                 : '0.00';
               return (
-                <Pressable
-                  key={pos.pubkey}
-                  style={({ pressed }) => [styles.posCard, pressed && styles.posCardPressed]}
-                  onPress={() => router.push(`/vault/${pos.vaultConfigPubkey}`)}
-                >
-                  <View style={styles.posHeader}>
-                    <View style={styles.posLeft}>
-                      <Text style={styles.posName}>{pos.vault?.name ?? 'Unknown Vault'}</Text>
-                      {pos.vault && <StatusBadge status={pos.vault.status} size="sm" />}
+                <React.Fragment key={pos.pubkey}>
+                  {i > 0 && <View style={styles.actDivider} />}
+                  <ActivityRow
+                    label={pos.vault?.name ?? 'Unknown Vault'}
+                    sub={`${formatAge(pos.depositedAt)} ago · ${pos.seniorShares.toLocaleString()} shares`}
+                    value={`${pnlStr} (${ret}%)`}
+                    positive={positive}
+                    onPress={() => router.push(`/vault/${pos.vaultConfigPubkey}`)}
+                  />
+                  {pos.vault && (
+                    <View style={styles.actHealth}>
+                      <StatusBadge status={pos.vault.status} size="sm" />
+                      <View style={{ flex: 1 }}>
+                        <HealthMeter health={pos.vault.juniorHealth} showLabel={false} height={3} />
+                      </View>
+                      <Text style={styles.actPositionVal}>{formatUSD(pos.currentValue, true)}</Text>
                     </View>
-                    <View style={styles.posRight}>
-                      <Text style={styles.posValue}>{formatUSD(pos.currentValue)}</Text>
-                      <Text style={[styles.posPnL, { color: pc }]}>
-                        {formatPnL(pos.totalDeposited, pos.currentValue)} ({ret}%)
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.posStats}>
-                    <View>
-                      <Text style={styles.posStatLabel}>DEPOSITED</Text>
-                      <Text style={styles.posStatVal}>{formatUSD(pos.totalDeposited, true)}</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.posStatLabel}>SHARES</Text>
-                      <Text style={styles.posStatVal}>{pos.seniorShares.toLocaleString()}</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.posStatLabel}>AGE</Text>
-                      <Text style={styles.posStatVal}>{formatAge(pos.depositedAt)} ago</Text>
-                    </View>
-                  </View>
-
-                  {pos.vault && <HealthMeter health={pos.vault.juniorHealth} showLabel={false} height={3} />}
-                </Pressable>
+                  )}
+                </React.Fragment>
               );
             })}
-          </>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -209,75 +224,156 @@ export default function PortfolioScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   scroll: { gap: spacing.sm, paddingBottom: 48 },
-  disconnectedHero: { padding: spacing.md, paddingBottom: 24, alignItems: 'center', gap: 6 },
-  disconnectedTitle: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: 4, fontFamily: 'Courier' },
-  disconnectedSub: { fontSize: 13, color: colors.textQuiet },
-  connectWrap: { position: 'absolute', bottom: 0, left: spacing.md, right: spacing.md },
-  connectBtn: { borderRadius: radius.lg, overflow: 'hidden' },
-  connectBtnGrad: { paddingVertical: 16, alignItems: 'center' },
-  connectBtnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
-  header: { paddingHorizontal: spacing.md, paddingBottom: 16, gap: 12 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  navbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingBottom: 14,
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: -0.6,
+  },
   demoBanner: {
     backgroundColor: colors.warningDim,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    alignSelf: 'flex-start',
+  },
+  demoBannerText: { fontSize: 11, color: colors.warning, fontWeight: '600', fontFamily: 'Courier' },
+  connectWrap: { paddingHorizontal: spacing.md },
+  connectBtn: { borderRadius: radius.full, overflow: 'hidden' },
+  connectBtnGrad: { paddingVertical: 16, alignItems: 'center' },
+  connectBtnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
+
+  balanceHero: {
+    marginHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: 16,
+    overflow: 'hidden',
+  },
+  balanceTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  balanceLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Courier',
+  },
+  balanceBig: {
+    fontSize: 40,
+    fontWeight: '500',
+    color: colors.text,
+    letterSpacing: -1.5,
+    fontFamily: 'Courier',
+  },
+  pnlPill: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.warning + '44',
+    borderRadius: radius.full,
+    marginTop: 6,
   },
-  demoBannerText: { fontSize: 11, color: colors.warning, fontWeight: '600' },
-  balanceCard: {
+  pnlPillText: { fontSize: 13, fontWeight: '700', fontFamily: 'Courier' },
+
+  walletTokens: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  tokenRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  tokenDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 14 },
+  tokenIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.signalDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tokenIconText: { fontSize: 15, color: colors.signal, fontWeight: '700' },
+  tokenInfo: { flex: 1 },
+  tokenName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  tokenSub: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+  tokenAmount: { fontSize: 15, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+
+  pnlStrip: {
     marginHorizontal: spacing.md,
+    flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  pnlCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 2 },
+  pnlDivider: { width: 1, backgroundColor: colors.border },
+  pnlLabel: {
+    fontSize: 8,
+    fontWeight: '600',
+    color: colors.textQuiet,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Courier',
+  },
+  pnlValue: { fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Courier',
+    paddingHorizontal: spacing.md,
+  },
+  activityCard: {
+    marginHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  actDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
+  actRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     padding: spacing.md,
+  },
+  actDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actInfo: { flex: 1 },
+  actLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
+  actSub: { fontSize: 11, color: colors.textQuiet, marginTop: 1, fontFamily: 'Courier' },
+  actValue: { fontSize: 14, fontWeight: '700', fontFamily: 'Courier' },
+  actHealth: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 12,
   },
-  sectionLabel: { fontSize: 10, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.7 },
-  balanceRow: { flexDirection: 'row', alignItems: 'center' },
-  balanceItem: { flex: 1, alignItems: 'center', gap: 3 },
-  balanceDivider: { width: 1, height: 32, backgroundColor: colors.border },
-  balanceLabel: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '600' },
-  balanceValue: { fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  summaryCard: {
-    marginHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.signal + '33',
-    padding: spacing.md,
-    gap: 12,
+  actPositionVal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    fontFamily: 'Courier',
   },
-  summaryLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.7 },
-  summaryBig: { fontSize: 36, fontWeight: '800', color: colors.text, fontFamily: 'Courier', letterSpacing: -1 },
-  summaryStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  summaryCenter: { alignItems: 'center' },
-  statLabel: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '600' },
-  statMono: { fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  pnlBar: { height: 3, backgroundColor: colors.surfaceHigh, borderRadius: radius.full, overflow: 'hidden' },
-  pnlFill: { height: 3, borderRadius: radius.full },
-  sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginHorizontal: spacing.md, marginTop: 4 },
-  posCard: {
-    marginHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: 12,
-  },
-  posCardPressed: { opacity: 0.78, borderColor: colors.signal + '55' },
-  posHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  posLeft: { gap: 5, flex: 1 },
-  posName: { fontSize: 16, fontWeight: '700', color: colors.text },
-  posRight: { alignItems: 'flex-end' },
-  posValue: { fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  posPnL: { fontSize: 12, fontWeight: '600', fontFamily: 'Courier' },
-  posStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  posStatLabel: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: '600' },
-  posStatVal: { fontSize: 13, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
 });
