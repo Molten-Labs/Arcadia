@@ -2,29 +2,28 @@
 
 _Status: active_
 
-Arcadia is a dark institutional-fintech interface for proof-gated Solana vaults. Traders earn allocation only after proving performance with first-loss capital; investors see risk buffers before depositing.
+Arcadia is a proof-gated Solana capital protocol with an Apex-light primary website theme and a retained dark operational mode. Traders earn allocation only after proving performance with first-loss capital; investors see risk buffers before depositing.
 
 ## Palette
 
-- Background primary: `#050816`
-- Background secondary: `#0B1120`
-- Surface: `#111827`
-- Surface elevated: `#17171D`
-- Signal primary: `#00FFB2`
-- Signal hover: `#5FFFC0`
-- Signal deep: `#16C784`
-- Text primary: `#F5F7FA`
-- Text secondary: `#B0B0B0`
-- Text muted: `#7C7C84`
-- Danger: `#FF4D6D`
-- Warning: `#C8A75B`
+- Light background: `#FFFFFF`
+- Light surface: `#F4FAFA`
+- Light surface elevated: `#E2F0EE`
+- Text primary: `#002B3D`
+- Text muted: `#4A7080`
+- Text quiet: `#8AABB5`
+- Signal primary: `#007A6E`
+- Signal glow: `#00B5A4`
+- Signal deep: `#005A52`
+- Danger: `#FB2C36`
+- Warning: `#EDB200`
 
 ## Typography
 
-- Display and hero: `Outfit`
-- UI/body: `Poppins`
-- Numbers and operational labels: `IBM Plex Mono`
+- Protocol wordmark only: `Blackout Oldskull`
+- Display, UI, and body: `Space Grotesk`
+- Numbers and operational labels: `JetBrains Mono`
 
 ## Voice
 
-Precise, calm, and risk-aware. Prefer concrete language about proof, allocation, vaults, buffers, and non-custodial control. Avoid hype.
+Precise, calm, proof-first, and non-hype. Prefer concrete language about proof, allocation, vaults, buffers, and non-custodial control.

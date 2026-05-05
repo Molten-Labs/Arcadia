@@ -12,6 +12,7 @@ interface Props {
 export const CapitalStack = ({ junior, senior, health }: Props) => {
   const total = junior + senior;
   const juniorPct = total > 0 ? (junior / total) * 100 : 0;
+  const seniorPct = total > 0 ? (senior / total) * 100 : 0;
 
   // Generate historical chart data
   const data = Array.from({ length: 12 }, (_, i) => ({
@@ -36,7 +37,22 @@ export const CapitalStack = ({ junior, senior, health }: Props) => {
         </TooltipProvider>
       </div>
 
-      <div className="surface-elevated rounded-lg p-4 space-y-4">
+      <div className="surface-elevated rounded-2xl p-4 space-y-4">
+        <div className="overflow-hidden rounded-2xl border border-border/55 bg-background/75">
+          <div
+            className="flex min-h-20 items-center justify-center bg-gradient-senior px-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-primary-foreground dark:text-foreground"
+            style={{ height: `${Math.max(44, seniorPct)}%` }}
+          >
+            Investor layer
+          </div>
+          <div
+            className="flex min-h-12 items-center justify-center bg-gradient-junior px-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-primary-foreground"
+            style={{ height: `${Math.max(36, juniorPct)}%` }}
+          >
+            Trader first-loss layer
+          </div>
+        </div>
+
         {/* Chart */}
         <div className="h-40">
           <ResponsiveContainer width="100%" height="100%">

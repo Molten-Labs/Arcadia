@@ -11,7 +11,8 @@ export const ThemeToggle = ({ className }: { className?: string }) => {
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
         "relative h-9 w-9 inline-flex items-center justify-center rounded-lg",
-        "text-muted-foreground hover:text-foreground hover:bg-secondary/60",
+        "border border-border/45 bg-card/50 text-muted-foreground shadow-card",
+        "hover:border-primary/30 hover:bg-secondary/70 hover:text-foreground",
         "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className
       )}

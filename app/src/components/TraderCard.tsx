@@ -5,11 +5,11 @@ import { ArrowUpRight, BadgeCheck } from "lucide-react";
 import { shortAddr } from "@/lib/wallet";
 
 const AVATAR_GRADIENTS = [
-  "from-emerald-500 to-teal-600",
-  "from-violet-500 to-purple-600",
-  "from-sky-500 to-blue-600",
-  "from-amber-500 to-orange-600",
-  "from-rose-500 to-pink-600",
+  "from-primary to-primary-glow",
+  "from-primary-deep to-primary",
+  "from-foreground to-primary",
+  "from-primary-glow to-primary",
+  "from-primary-deep to-primary-glow",
 ];
 
 export const TraderCard = ({ manager }: { manager: ManagerView }) => {
@@ -20,7 +20,7 @@ export const TraderCard = ({ manager }: { manager: ManagerView }) => {
   return (
     <Link
       to={`/trader/${manager.owner}`}
-      className="relative group surface rounded-[11px] p-5 flex flex-col gap-4 hover:border-border-strong hover:-translate-y-0.5 hover:shadow-[0_12px_40px_hsl(var(--background)/0.55)] transition-all duration-200"
+      className="apex-lift relative group surface rounded-2xl p-5 flex flex-col gap-4"
     >
       {/* Avatar + identity */}
       <div className="flex items-start gap-3.5">
@@ -47,7 +47,7 @@ export const TraderCard = ({ manager }: { manager: ManagerView }) => {
           { label: "Active", value: manager.activeVaults },
           { label: "Junior", value: fmtUSD(manager.totalJuniorDeposited, { compact: true }) },
         ].map((s) => (
-          <div key={s.label} className="bg-secondary/50 rounded-lg px-2.5 py-2">
+          <div key={s.label} className="rounded-lg border border-border/45 bg-background/75 px-2.5 py-2 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.03)]">
             <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground mb-0.5">
               {s.label}
             </div>

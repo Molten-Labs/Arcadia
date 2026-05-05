@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.cdnfonts.com/css/blackout-oldskull');
 
 @tailwind base;
 @tailwind components;
@@ -7,83 +8,83 @@
 @layer base {
   /* ── Light mode (default) ─────────────────────── */
   :root {
-    --signal-primary: #34D399;
-    --signal-hover: #059669;
-    --signal-deep: #047857;
-    --glow-primary: rgba(52,211,153,0.22);
+    --signal-primary: #007a6e;
+    --signal-hover: #00b5a4;
+    --signal-deep: #005a52;
+    --glow-primary: rgba(0,181,164,0.22);
 
-    --background: 0 0% 98%;
-    --background-secondary: 220 14% 95%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 100%;
+    --background-secondary: 180 38% 97%;
+    --foreground: 198 100% 12%;
 
-    --card: 0 0% 100%;
-    --card-elevated: 220 14% 97%;
-    --card-foreground: 222 47% 11%;
+    --card: 180 38% 97%;
+    --card-elevated: 171 32% 91%;
+    --card-foreground: 198 100% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 198 100% 12%;
 
-    --primary: 158 64% 38%;
+    --primary: 174 100% 24%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 157 76% 48%;
-    --primary-deep: 160 84% 30%;
+    --primary-glow: 174 100% 36%;
+    --primary-deep: 175 100% 18%;
 
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 171 32% 91%;
+    --secondary-foreground: 198 100% 12%;
 
-    --muted: 220 14% 93%;
-    --muted-foreground: 215 16% 42%;
+    --muted: 171 32% 91%;
+    --muted-foreground: 198 27% 40%;
 
-    --accent: 160 84% 30%;
+    --accent: 175 100% 18%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 343 96% 50%;
+    --destructive: 357 96% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 158 64% 38%;
+    --success: 174 100% 24%;
     --success-foreground: 0 0% 100%;
-    --warning-hsl: 38 92% 44%;
+    --warning-hsl: 45 100% 47%;
     --warning-foreground: 0 0% 100%;
-    --info: 158 64% 38%;
+    --info: 174 100% 24%;
     --info-foreground: 0 0% 100%;
 
-    --border: 220 14% 87%;
-    --border-strong: 220 14% 76%;
-    --input: 220 14% 93%;
-    --ring: 158 64% 38%;
+    --border: 174 26% 78%;
+    --border-strong: 174 34% 54%;
+    --input: 171 32% 91%;
+    --ring: 174 100% 24%;
 
     --radius: 0.6875rem;
 
-    --status-paper: 215 16% 55%;
-    --status-active: 158 64% 38%;
-    --status-cooldown: 38 92% 44%;
-    --status-frozen: 343 96% 50%;
+    --status-paper: 194 23% 63%;
+    --status-active: 174 100% 24%;
+    --status-cooldown: 45 100% 47%;
+    --status-frozen: 357 96% 58%;
     --status-closed: 0 0% 60%;
 
     --tier-novice: 0 0% 55%;
-    --tier-proven: 158 64% 38%;
-    --tier-established: 160 84% 30%;
-    --tier-veteran: 38 92% 44%;
-    --tier-elite: 157 76% 40%;
+    --tier-proven: 174 100% 24%;
+    --tier-established: 175 100% 18%;
+    --tier-veteran: 45 100% 47%;
+    --tier-elite: 174 100% 36%;
 
     --gradient-signal: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-deep)) 100%);
     --gradient-surface: linear-gradient(180deg, hsl(var(--card-elevated)) 0%, hsl(var(--card)) 100%);
-    --gradient-radial: radial-gradient(ellipse at top, hsl(var(--primary) / 0.08), transparent 62%);
-    --gradient-junior: linear-gradient(90deg, hsl(var(--primary-deep)), hsl(var(--primary)));
-    --gradient-senior: linear-gradient(90deg, hsl(var(--card-elevated)), hsl(var(--card)));
+    --gradient-radial: radial-gradient(ellipse at top, hsl(var(--primary-glow) / 0.12), transparent 62%);
+    --gradient-junior: linear-gradient(90deg, hsl(var(--primary-deep)), hsl(var(--primary-glow)));
+    --gradient-senior: linear-gradient(180deg, hsl(var(--foreground)), hsl(var(--primary-glow)));
 
-    --shadow-elegant: 0 24px 80px -36px hsl(var(--foreground) / 0.08);
-    --shadow-signal: 0 0 24px hsl(var(--primary) / 0.14), 0 0 60px hsl(var(--primary-deep) / 0.08);
-    --shadow-card: 0 1px 0 hsl(var(--foreground) / 0.06) inset, 0 4px 24px -6px hsl(var(--foreground) / 0.08);
+    --shadow-elegant: 0 24px 80px -36px hsl(var(--foreground) / 0.16);
+    --shadow-signal: 0 0 20px hsl(var(--primary-glow) / 0.24), 0 0 52px hsl(var(--primary) / 0.10);
+    --shadow-card: 0 1px 0 hsl(0 0% 100% / 0.70) inset, 0 18px 58px -36px hsl(var(--foreground) / 0.20);
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 158 64% 38%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 198 100% 12%;
+    --sidebar-primary: 174 100% 24%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 93%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 14% 87%;
-    --sidebar-ring: 158 64% 38%;
+    --sidebar-accent: 171 32% 91%;
+    --sidebar-accent-foreground: 198 100% 12%;
+    --sidebar-border: 174 26% 78%;
+    --sidebar-ring: 174 100% 24%;
   }
 
   /* ── Dark mode ────────────────────────────────── */
@@ -173,8 +174,9 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Space Grotesk', system-ui, sans-serif;
     background:
-      radial-gradient(circle at 50% -10%, hsl(var(--primary) / 0.06), transparent 28rem),
-      radial-gradient(circle at 86% 8%, hsl(var(--primary-deep) / 0.05), transparent 22rem),
+      radial-gradient(circle at 8% -10%, hsl(var(--foreground) / 0.06), transparent 28rem),
+      radial-gradient(circle at 88% 4%, hsl(var(--primary-glow) / 0.10), transparent 24rem),
+      radial-gradient(circle at 8% 94%, hsl(var(--primary) / 0.06), transparent 24rem),
       hsl(var(--background));
     background-attachment: fixed;
   }
@@ -186,13 +188,19 @@
     background-attachment: fixed;
   }
   h1, h2, h3, h4, h5 {
-    font-family: 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.01em;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.025em;
     text-wrap: balance;
   }
-  p { line-height: 1.6; text-wrap: pretty; font-family: 'Inter', system-ui, sans-serif; }
-  .font-display, .font-hero { font-family: 'Inter', system-ui, sans-serif; }
-  .font-body { font-family: 'Inter', system-ui, sans-serif; }
+  p { line-height: 1.6; text-wrap: pretty; font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .font-display, .font-hero, .font-body { font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .font-brand, .apex-wordmark {
+    font-family: 'Blackout Oldskull', 'Brush Script MT', cursive;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 0.82;
+    text-rendering: geometricPrecision;
+  }
   .font-mono, .tabular {
     font-family: 'JetBrains Mono', monospace;
     font-variant-numeric: tabular-nums;
@@ -228,7 +236,7 @@
   }
 
   .text-gradient-signal {
-    background: var(--gradient-signal);
+    background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--primary)) 46%, hsl(var(--primary-glow)) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -241,27 +249,30 @@
   .shadow-card { box-shadow: var(--shadow-card); }
 
   .surface {
-    background: hsl(var(--card) / 0.85);
-    border: 1px solid hsl(var(--border) / 0.72);
+    background: hsl(var(--card) / 0.86);
+    border: 1px solid hsl(var(--border-strong) / 0.34);
     box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
   }
   .surface-elevated,
   .matte-panel {
     background:
-      linear-gradient(180deg, hsl(var(--card-elevated) / 0.72), hsl(var(--card) / 0.88)),
-      radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.04), transparent 55%);
-    border: 1px solid hsl(var(--border) / 0.55);
+      linear-gradient(180deg, hsl(var(--card-elevated) / 0.76), hsl(var(--card) / 0.90)),
+      radial-gradient(circle at 50% 0%, hsl(var(--primary-glow) / 0.09), transparent 58%);
+    border: 1px solid hsl(var(--border-strong) / 0.38);
     box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
   }
   .arcadia-glow {
     background:
-      radial-gradient(circle at 52% 16%, hsl(var(--primary) / 0.12), transparent 22rem),
-      radial-gradient(circle at 50% 42%, hsl(var(--primary-deep) / 0.12), transparent 32rem);
+      radial-gradient(circle at 52% 16%, hsl(var(--primary-glow) / 0.14), transparent 22rem),
+      radial-gradient(circle at 10% 88%, hsl(var(--foreground) / 0.055), transparent 25rem),
+      radial-gradient(circle at 50% 42%, hsl(var(--primary) / 0.10), transparent 32rem);
   }
   .hairline-grid {
     background-image:
-      linear-gradient(hsl(var(--border) / 0.20) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border) / 0.20) 1px, transparent 1px);
+      linear-gradient(hsl(var(--primary) / 0.10) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.10) 1px, transparent 1px);
     background-size: 48px 48px;
   }
   .borderless-tabs {
@@ -271,8 +282,8 @@
   }
   .grid-bg {
     background-image:
-      linear-gradient(hsl(var(--border) / 0.18) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border) / 0.18) 1px, transparent 1px);
+      linear-gradient(hsl(var(--primary) / 0.10) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.10) 1px, transparent 1px);
     background-size: 48px 48px;
   }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -284,6 +295,28 @@
     font-family: 'JetBrains Mono', monospace;
     @apply inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/80;
     @apply mb-3 px-2.5 py-1.5 rounded-md border border-primary/20 bg-primary/[0.08];
+  }
+  .apex-panel {
+    background: hsl(var(--card) / 0.86);
+    border: 1px solid hsl(var(--border-strong) / 0.34);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
+  }
+  .apex-lift {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35;
+  }
+  .apex-terminal {
+    overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid hsl(var(--primary) / 0.25);
+    background: hsl(var(--card) / 0.80);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
+  }
+  .apex-chevron-mark {
+    color: hsl(var(--primary));
+    filter: drop-shadow(0 0 8px hsl(var(--primary-glow) / 0.26));
   }
 }
 
@@ -316,8 +349,8 @@
 }
 .grid-bg-animated {
   background-image:
-    linear-gradient(hsl(var(--border) / 0.28) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--border) / 0.28) 1px, transparent 1px);
+    linear-gradient(hsl(var(--primary) / 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--primary) / 0.12) 1px, transparent 1px);
   background-size: 32px 32px;
   animation: grid-drift 18s linear infinite;
 }
@@ -415,13 +448,13 @@
 .vc-av {
   width: 38px; height: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 15px; font-weight: 700; flex-shrink: 0;
   color: hsl(var(--card-foreground));
 }
 .vc-info { flex: 1; min-width: 0; }
 .vc-name {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 13px; font-weight: 700;
   color: hsl(var(--foreground));
   margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -441,7 +474,7 @@
 .t-new { background: hsl(var(--warning-hsl) / 0.08); color: hsl(var(--warning-hsl)); border: 1px solid hsl(var(--warning-hsl) / 0.18); }
 .vc-pnl-wrap { text-align: right; flex-shrink: 0; }
 .vc-pnl {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 19px; font-weight: 800; line-height: 1;
 }
 .vc-pnl-lbl {
@@ -473,7 +506,7 @@
   background: linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.08));
   border: 1px solid hsl(var(--primary) / 0.28);
   border-radius: 9px;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
   color: hsl(var(--primary-glow));
   cursor: pointer;
@@ -529,7 +562,7 @@
 .mb { padding: 11px 15px; border-right: 1px solid hsl(var(--border)); position: relative; overflow: hidden; }
 .mb:last-child { border-right: none; }
 .mb-l { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: hsl(var(--muted-foreground)); letter-spacing: 0.07em; margin-bottom: 4px; }
-.mb-v { font-family: 'Inter', system-ui, sans-serif; font-size: 16px; font-weight: 600; color: hsl(var(--foreground)); }
+.mb-v { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 16px; font-weight: 600; color: hsl(var(--foreground)); }
 .mb-s { font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-top: 2px; }
 .mb-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
 
@@ -537,7 +570,7 @@
 .chart-sec { flex: 1; padding: 13px 15px 0; display: flex; flex-direction: column; min-height: 0; }
 .chart-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
 .ch-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: hsl(var(--muted-foreground)); letter-spacing: 0.07em; margin-bottom: 3px; }
-.ch-nav { font-family: 'Inter', system-ui, sans-serif; font-size: 28px; font-weight: 700; color: hsl(var(--foreground)); letter-spacing: -0.02em; line-height: 1; }
+.ch-nav { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 28px; font-weight: 700; color: hsl(var(--foreground)); letter-spacing: -0.02em; line-height: 1; }
 .ch-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .ch-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
 .ch-abs { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: hsl(var(--muted-foreground)); }
@@ -558,7 +591,7 @@
 .rp { border-left: 1px solid hsl(var(--border)); display: flex; flex-direction: column; overflow: hidden; background: hsl(var(--card)); }
 .vh { padding: 12px 13px; border-bottom: 1px solid hsl(var(--border)); }
 .vh-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
-.vh-name { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 700; color: hsl(var(--foreground)); }
+.vh-name { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 13px; font-weight: 700; color: hsl(var(--foreground)); }
 .vh-badge {
   font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 2px 7px; border-radius: 3px;
   background: hsl(var(--warning-hsl) / 0.08); color: hsl(var(--warning-hsl)); border: 1px solid hsl(var(--warning-hsl) / 0.18);

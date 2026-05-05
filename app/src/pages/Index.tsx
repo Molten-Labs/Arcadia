@@ -119,9 +119,9 @@ const Landing = () => {
   return (
     <Layout>
       {/* 1. Hero */}
-      <section className="relative min-h-[calc(100dvh-3.75rem)] overflow-hidden border-b border-border/35">
+      <section className="grid-bg relative min-h-[calc(100dvh-3.75rem)] overflow-hidden border-b border-border/40">
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.54] saturate-[0.75]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-0 saturate-[0.75] dark:opacity-[0.54]"
           src={HERO_VIDEO}
           autoPlay
           muted
@@ -130,10 +130,12 @@ const Landing = () => {
           preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.62)_0%,hsl(var(--background)/0.30)_40%,hsl(var(--background)/0.90)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.94)_0%,hsl(var(--background)/0.72)_34%,hsl(var(--background)/0.18)_64%,hsl(var(--background)/0.74)_100%)]" />
-        <div className="absolute inset-0 arcadia-glow opacity-50" />
-        <div className="absolute inset-0 hairline-grid opacity-[0.08]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_68%_54%_at_52%_22%,hsl(var(--primary-glow)/0.12),transparent_68%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.30)_0%,hsl(var(--background)/0.82)_78%,hsl(var(--background))_100%)] dark:bg-[linear-gradient(180deg,hsl(var(--background)/0.62)_0%,hsl(var(--background)/0.30)_40%,hsl(var(--background)/0.90)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.90)_0%,hsl(var(--background)/0.66)_42%,hsl(var(--background)/0.34)_100%)] dark:bg-[linear-gradient(90deg,hsl(var(--background)/0.94)_0%,hsl(var(--background)/0.72)_34%,hsl(var(--background)/0.18)_64%,hsl(var(--background)/0.74)_100%)]" />
+        <div className="absolute inset-0 arcadia-glow opacity-70 dark:opacity-50" />
+        <div className="absolute right-[12%] top-[15%] h-24 w-24 bg-[linear-gradient(135deg,hsl(var(--foreground)/0.11),hsl(var(--primary-glow)/0.12))] opacity-40 [clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]" />
+        <div className="absolute bottom-[18%] left-[12%] h-12 w-12 bg-[linear-gradient(135deg,hsl(var(--primary-glow)/0.16),hsl(var(--foreground)/0.08))] opacity-40 [clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
         <div className="container relative flex min-h-[calc(100dvh-3.75rem)] flex-col justify-center py-16 md:py-24">
@@ -162,20 +164,20 @@ const Landing = () => {
             <motion.h1
               variants={fadeUp}
               custom={1}
-              className="font-display font-semibold leading-[1.04] tracking-[-0.025em] text-foreground/95"
-              style={{ fontSize: "clamp(2.35rem, 5.5vw, 3.85rem)" }}
+              className="max-w-[960px] font-display font-bold leading-[0.92] tracking-[-0.055em] text-foreground/95"
+              style={{ fontSize: "clamp(3.35rem, 8.2vw, 7rem)" }}
             >
-              Proof-of-Performance
+              Back traders by proof,
               <br />
-              Capital Protocol
+              <span className="text-gradient-signal">not promises.</span>
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               custom={2}
-              className="mt-6 max-w-xl text-[1.05rem] leading-[1.65] text-foreground/72"
+              className="mt-7 max-w-2xl text-[1.1rem] leading-[1.65] text-foreground/72 md:text-[1.25rem]"
             >
-              Arcadia helps traders earn allocation through verified on-chain performance while investors evaluate capital, risk, and liquidity before connecting.
+              Arcadia gives skilled traders a path from their own capital to investor allocation, while investors get visible performance, automatic protection, and orderly exits.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
@@ -188,6 +190,25 @@ const Landing = () => {
               <Button asChild size="lg" variant="outline" className="h-11 border-border/60 font-display font-semibold hover:bg-secondary/60">
                 <Link to="/manager/create">Launch Vault</Link>
               </Button>
+            </motion.div>
+
+            <motion.div variants={fadeUp} custom={4} className="apex-terminal mt-9 max-w-3xl">
+              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <span>&gt; arcadia.flow</span>
+                <span>proof mode active</span>
+              </div>
+              <div className="grid divide-y divide-border/60 bg-border/40 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                {[
+                  { label: "Trader proves", value: "01" },
+                  { label: "Vault opens", value: "02" },
+                  { label: "Capital allocates", value: "03" },
+                ].map((item) => (
+                  <div key={item.label} className="bg-background px-5 py-5">
+                    <div className="font-display text-3xl font-bold leading-none tracking-[-0.04em] text-primary">{item.value}</div>
+                    <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{item.label}</div>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           </motion.div>
 

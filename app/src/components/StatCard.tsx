@@ -12,8 +12,7 @@ interface Props {
 
 export const StatCard = ({ label, value, hint, trend, className }: Props) => (
   <div className={cn(
-    "surface rounded-lg p-4 flex flex-col gap-1",
-    "hover:border-border-strong transition-[border-color] duration-200",
+    "surface apex-lift rounded-2xl p-4 flex flex-col gap-1",
     className
   )}>
     <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.13em] text-muted-foreground">

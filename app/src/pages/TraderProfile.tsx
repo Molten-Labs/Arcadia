@@ -9,11 +9,11 @@ import { shortAddr } from "@/lib/wallet";
 import { ArrowLeft, BadgeCheck, Loader2 } from "lucide-react";
 
 const AVATAR_GRADIENTS = [
-  "from-emerald-500 to-teal-600",
-  "from-violet-500 to-purple-600",
-  "from-sky-500 to-blue-600",
-  "from-amber-500 to-orange-600",
-  "from-rose-500 to-pink-600",
+  "from-primary to-primary-glow",
+  "from-primary-deep to-primary",
+  "from-foreground to-primary",
+  "from-primary-glow to-primary",
+  "from-primary-deep to-primary-glow",
 ];
 
 const TraderProfile = () => {
@@ -59,7 +59,7 @@ const TraderProfile = () => {
         </Link>
 
         {/* Profile hero */}
-        <div className="surface-elevated rounded-[11px] p-6 md:p-8 mb-6 relative overflow-hidden">
+        <div className="surface-elevated rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
           <div className="flex flex-wrap gap-5 items-start">
             <div className={`w-[72px] h-[72px] rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-display font-bold text-2xl shadow-signal shrink-0`}>

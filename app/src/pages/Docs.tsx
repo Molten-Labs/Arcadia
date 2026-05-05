@@ -56,7 +56,7 @@ const Docs = () => (
         ))}
       </div>
 
-      <div className="mt-12 surface rounded-lg p-8 prose prose-invert max-w-none">
+      <div className="mt-12 surface rounded-lg p-8 prose max-w-none prose-headings:text-foreground prose-p:text-foreground/80 dark:prose-invert">
         <h2 className="font-display type-h3 font-semibold mb-4">Core concepts</h2>
         <h3 className="font-semibold mt-6 mb-2">Junior capital</h3>
         <p className="text-foreground/80 text-sm">Trader-posted first-loss capital. Required at all times to maintain a minimum ratio against TVL.</p>

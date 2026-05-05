@@ -122,7 +122,10 @@ function NavLineChart({ history }: { history: number[] }) {
         const yp = (v: number) => H - ((v - mn) / (mx - mn)) * (H - 20) - 8;
 
         // Grid lines
-        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        const css = getComputedStyle(document.documentElement);
+        const border = css.getPropertyValue("--border").trim();
+        const muted = css.getPropertyValue("--muted-foreground").trim();
+        ctx.strokeStyle = `hsl(${border} / 0.26)`;
         ctx.lineWidth = 0.5;
         for (let i = 1; i < 4; i++) {
             const y = 8 + (i / 4) * (H - 20);
@@ -130,8 +133,8 @@ function NavLineChart({ history }: { history: number[] }) {
         }
 
         // Y-axis labels
-        ctx.font = "9px monospace";
-        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        ctx.font = "9px JetBrains Mono, monospace";
+        ctx.fillStyle = `hsl(${muted} / 0.72)`;
         ctx.textAlign = "right";
         [mn, (mn + mx) / 2, mx].forEach(v => {
             const y = yp(v);
@@ -139,7 +142,7 @@ function NavLineChart({ history }: { history: number[] }) {
         });
 
         // Derive line color from CSS var
-        const raw    = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+        const raw    = css.getPropertyValue("--primary").trim();
         const line   = `hsl(${raw})`;
         const fill0  = `hsl(${raw} / 0.18)`;
         const fill1  = `hsl(${raw} / 0)`;

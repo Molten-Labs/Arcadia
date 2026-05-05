@@ -1,20 +1,18 @@
 import { Link } from "react-router-dom";
-import { ArcadiaLogo } from "@/components/ArcadiaLogo";
+import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 
 type FooterLink = { to: string; label: string; external?: boolean };
 
 export const Footer = () => (
-    <footer className="mt-16 border-t border-border/35 bg-card/25 backdrop-blur-sm">
+    <footer className="mt-16 border-t border-border/40 bg-card/55 backdrop-blur-sm">
         <div className="container py-8 grid grid-cols-2 md:grid-cols-5 gap-5 lg:gap-8">
             <div className="col-span-2">
                 <Link to="/" className="flex items-center gap-2 mb-3 w-fit">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-                        <ArcadiaLogo className="h-[18px] w-[18px]" />
-                    </div>
-                    <span className="font-display font-semibold text-[14px] tracking-tight">Arcadia</span>
+                    <ArcadiaLogo className="h-6 w-6" />
+                    <ArcadiaWordmark className="text-[32px]" />
                 </Link>
                 <p className="text-[13px] text-muted-foreground leading-relaxed max-w-xs">
-                    Performance-verified capital allocation on Solana.
+                    Back traders by proof, not promises. Performance-verified capital allocation on Solana.
                 </p>
             </div>
 

@@ -16,11 +16,11 @@ const logos: Logo[] = [
 
 export const InfiniteSlider = () => {
   return (
-    <section className="border-y border-border bg-background-secondary/40 backdrop-blur-sm py-8">
+    <section className="border-y border-border/50 bg-card/55 backdrop-blur-sm py-8">
       <div className="container">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="md:border-r md:border-border md:pr-8 shrink-0">
-            <div className="text-xs uppercase tracking-widest text-muted-foreground">Powered by</div>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-primary/80">// powered by</div>
             <div className="text-sm font-display mt-1">Best-in-class infrastructure</div>
           </div>
           <div className="flex-1 overflow-hidden relative [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]">

@@ -82,7 +82,7 @@ const VaultAvatar = ({ name, isTop }: { name: string; isTop: boolean }) => {
         "font-display font-bold text-[13px] border",
         isTop
           ? "bg-primary/15 text-primary border-primary/25"
-          : "bg-secondary text-muted-foreground border-border/60"
+          : "bg-background/75 text-muted-foreground border-border/60"
       )}
     >
       {initials}
@@ -117,9 +117,7 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
       to={`/vault/${vault.id}`}
       className={cn(
         "relative group surface rounded-[13px] overflow-hidden flex flex-col",
-        "hover:border-border-strong",
-        "hover:shadow-[0_8px_32px_hsl(var(--background)/0.6),0_0_24px_hsl(var(--primary)/0.07)]",
-        "hover:-translate-y-[2px] transition-all duration-200",
+        "apex-lift",
         isTop && "border-primary/25"
       )}
     >
@@ -260,7 +258,7 @@ export const VaultCard = ({ vault }: { vault: VaultView }) => {
             "transition-all duration-200",
             isTop
               ? "bg-primary/10 border-primary/30 text-primary group-hover:bg-primary/[0.15] group-hover:border-primary/50"
-              : "bg-secondary/40 border-border/50 text-muted-foreground group-hover:text-foreground group-hover:border-border-strong"
+              : "bg-background/70 border-border/50 text-muted-foreground group-hover:text-foreground group-hover:border-primary/30"
           )}
         >
           View vault →

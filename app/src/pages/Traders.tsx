@@ -42,11 +42,11 @@ type SortDir = "asc" | "desc";
 const TIER_ORDER: TraderTier[] = ["elite", "veteran", "established", "proven", "novice"];
 
 const AVATAR_SEEDS = [
-    "from-emerald-500 to-teal-600",
-    "from-violet-500 to-purple-600",
-    "from-sky-500 to-blue-600",
-    "from-amber-500 to-orange-600",
-    "from-rose-500 to-pink-600",
+    "from-primary to-primary-glow",
+    "from-primary-deep to-primary",
+    "from-foreground to-primary",
+    "from-primary-glow to-primary",
+    "from-primary-deep to-primary-glow",
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

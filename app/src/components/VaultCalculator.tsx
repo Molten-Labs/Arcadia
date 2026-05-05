@@ -44,7 +44,7 @@ export const VaultCalculator = () => {
         </p>
       </div>
 
-      <div className="surface rounded-[11px] overflow-hidden">
+      <div className="surface rounded-2xl overflow-hidden">
         {/* Controls row */}
         <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
 
@@ -52,7 +52,7 @@ export const VaultCalculator = () => {
           <div className="p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="font-mono text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Deposit</span>
-              <span className="font-display font-bold text-[17px] text-primary tabular">${fmtUSD(deposit, { compact: true })}</span>
+                  <span className="font-display font-bold text-[17px] text-primary tabular">${fmtUSD(deposit, { compact: true })}</span>
             </div>
             <Slider value={[deposit]} onValueChange={([v]) => setDeposit(v)} min={500} max={250_000} step={500} className="mb-2" />
             <div className="flex gap-1.5 mt-3">
@@ -62,7 +62,7 @@ export const VaultCalculator = () => {
                   onClick={() => setDeposit(v)}
                   className={cn(
                     "flex-1 h-7 text-[11px] font-mono rounded border transition-colors",
-                    deposit === v ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/60 text-muted-foreground hover:text-foreground"
+                    deposit === v ? "border-primary bg-primary/10 text-primary" : "border-border bg-background/70 text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
                   ${v >= 1000 ? `${v / 1000}k` : v}
@@ -81,7 +81,7 @@ export const VaultCalculator = () => {
                   onClick={() => setHorizon(h)}
                   className={cn(
                     "py-2.5 rounded-lg border text-[12px] font-display font-semibold transition-colors",
-                    horizon === h ? "border-primary bg-primary/10 text-primary" : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground"
+                    horizon === h ? "border-primary bg-primary/10 text-primary" : "border-border/60 bg-background/70 text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
                   {h === 365 ? "1yr" : `${h}d`}
@@ -100,7 +100,7 @@ export const VaultCalculator = () => {
                   onClick={() => setTier(t)}
                   className={cn(
                     "flex-1 py-2.5 rounded-lg border text-[12px] font-display font-semibold transition-colors",
-                    tier === t ? "border-primary bg-primary/10 text-primary" : "border-border/60 bg-secondary/40 text-muted-foreground hover:text-foreground"
+                    tier === t ? "border-primary bg-primary/10 text-primary" : "border-border/60 bg-background/70 text-muted-foreground hover:border-primary/30 hover:text-foreground"
                   )}
                 >
                   {tierApy[t].label}
@@ -142,7 +142,7 @@ export const VaultCalculator = () => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-4 px-5 py-3 border-t border-border/50 bg-secondary/20">
+        <div className="flex items-center justify-between gap-4 px-5 py-3 border-t border-border/50 bg-background/55">
           <p className="font-mono text-[10px] text-muted-foreground">
             Illustrative only. Net of {label.toLowerCase()} performance fees above the high-water mark.
           </p>
