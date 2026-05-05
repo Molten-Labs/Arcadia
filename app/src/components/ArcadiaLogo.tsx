@@ -15,7 +15,7 @@ export const ArcadiaLogo = ({ className }: { className?: string }) => (
 );
 
 export const ArcadiaWordmark = ({ className }: { className?: string }) => (
-    <span className={cn("apex-wordmark text-foreground sm:text-[38px] hidden sm:inline-block md:text-[34px] text-[22px]", className)}>
+    <span className={cn("apex-wordmark text-foreground sm:text-[38px] hidden sm:inline-block md:text-[34px] text-[20px] text-left", className)}>
         Arcadia Protocol
     </span>
 );
