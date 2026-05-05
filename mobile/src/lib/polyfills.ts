@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer';
 
-// react-native-get-random-values patches crypto on native (iOS/Android).
-// On web, browsers already have window.crypto.getRandomValues natively.
-if (typeof document === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+// react-native-get-random-values patches crypto.getRandomValues on native.
+// On web, browsers already provide window.crypto.getRandomValues natively.
+const isWeb = typeof document !== 'undefined';
+if (!isWeb) {
   require('react-native-get-random-values');
 }
 

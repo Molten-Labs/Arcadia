@@ -79,13 +79,21 @@ cargo run --manifest-path server-rs/Cargo.toml
 
 ## Workflow (Replit Run button)
 
-The **"Start application"** workflow runs:
+The **"Start application"** workflow now runs:
 
 ```bash
-bash dev.sh
+bash mobile-dev.sh
 ```
 
-This handles auto-install + Vite startup in a single step.
+This serves the **Expo mobile web build** (static export) on port 5000.  
+The build artifacts live in `mobile/dist/`. The script skips the Expo export step if `dist/index.html` already exists.
+
+To rebuild after code changes:
+```bash
+rm -rf mobile/dist && bash mobile-dev.sh
+```
+
+To run the **Vite web frontend** instead, change the workflow command back to `bash dev.sh`.
 
 ---
 

@@ -8,4 +8,7 @@ config.resolver.extraNodeModules = {
   events: require.resolve('events'),
 };
 
+// Resolve react-native-web aliases for web platform
+config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+
 module.exports = config;
