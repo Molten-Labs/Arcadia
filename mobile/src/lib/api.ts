@@ -1,6 +1,6 @@
 import { VaultView, ManagerView, PositionView, NavPoint } from './mockData';
 
-const API_BASE = process.env.EXPO_PUBLIC_KILN_API_URL ?? '';
+export const API_BASE = process.env.EXPO_PUBLIC_KILN_API_URL ?? '';
 
 async function get<T>(path: string): Promise<T | null> {
   if (!API_BASE) return null;

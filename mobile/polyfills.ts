@@ -5,6 +5,6 @@ if (typeof global.Buffer === 'undefined') {
   global.Buffer = Buffer;
 }
 
-if (typeof global.process === 'undefined') {
-  global.process = { env: {} } as typeof process;
+if (typeof (global as any).process === 'undefined') {
+  (global as any).process = { env: {} };
 }

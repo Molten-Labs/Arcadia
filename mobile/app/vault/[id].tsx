@@ -25,6 +25,7 @@ import { StatCard } from '../../src/components/StatCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { TxModal, TxState } from '../../src/components/TxModal';
 import { formatUSD, formatBps, formatNav, formatAge, truncateAddress } from '../../src/lib/format';
+import { parseUsdcToUnits } from '../../src/lib/amounts';
 
 type Tab = 'overview' | 'deposit' | 'withdraw';
 
@@ -62,16 +63,30 @@ export default function VaultDetailScreen() {
   const minNav = Math.min(...navPts.map(p => p.nav), vault.currentNav);
   const maxNav = Math.max(...navPts.map(p => p.nav), vault.currentNav);
   const navRange = maxNav - minNav || 0.01;
+  const getVaultConfigKey = () => {
+    try {
+      return new PublicKey(vault!.configPubkey);
+    } catch {
+      if (isDemoWallet) return new PublicKey('11111111111111111111111111111111');
+      throw new Error('Vault address is not a valid Solana public key');
+    }
+  };
 
   async function handleDeposit() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) { Alert.alert('Invalid Amount'); return; }
-    if (!connected) { connect(); return; }
+    const usdcUnits = parseUsdcToUnits(amount);
+    if (!usdcUnits || usdcUnits <= 0n) { Alert.alert('Invalid Amount'); return; }
+    if (!connected) {
+      try {
+        await connect();
+      } catch (err: any) {
+        Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+      }
+      return;
+    }
     try {
       setTxState({ type: 'building' });
-      const usdcUnits = BigInt(Math.floor(parsed * 1_000_000));
-      const configKey = new PublicKey(vault!.configPubkey);
+      const configKey = getVaultConfigKey();
       setTxState({ type: 'signing' });
       const result = await depositSenior(configKey, usdcUnits);
       setTxState({ type: 'confirming' });
@@ -86,12 +101,19 @@ export default function VaultDetailScreen() {
 
   async function handleWithdraw() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0) { Alert.alert('Invalid Amount'); return; }
-    if (!connected) { connect(); return; }
+    const usdcUnits = parseUsdcToUnits(amount);
+    if (!usdcUnits || usdcUnits <= 0n) { Alert.alert('Invalid Amount'); return; }
+    if (!connected) {
+      try {
+        await connect();
+      } catch (err: any) {
+        Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+      }
+      return;
+    }
     Alert.alert(
       'Confirm Withdrawal',
-      `Withdraw ${formatUSD(parsed)} from ${vault!.name}?\nExit: ${vault!.instantExit ? 'Instant' : 'Cooldown'}`,
+      `Withdraw ${formatUSD(Number(usdcUnits) / 1_000_000)} from ${vault!.name}?\nExit: ${vault!.instantExit ? 'Instant' : 'Cooldown'}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -99,11 +121,9 @@ export default function VaultDetailScreen() {
           onPress: async () => {
             try {
               setTxState({ type: 'building' });
-              const usdcUnits = BigInt(Math.floor(parsed * 1_000_000));
-              const configKey = new PublicKey(vault!.configPubkey);
-              const dummy = new PublicKey('11111111111111111111111111111111');
+              const configKey = getVaultConfigKey();
               setTxState({ type: 'signing' });
-              const result = await withdrawSenior(configKey, usdcUnits, dummy, dummy);
+              const result = await withdrawSenior(configKey, usdcUnits);
               setTxState({ type: 'confirming' });
               await new Promise(r => setTimeout(r, 400));
               setTxState({ type: 'success', sig: result.sig, demo: result.demo });
@@ -256,7 +276,10 @@ export default function VaultDetailScreen() {
               !connected ? (
                 <View style={styles.gate}>
                   <Text style={styles.gateText}>Connect your wallet to continue</Text>
-                  <Pressable style={styles.gateBtn} onPress={connect}>
+                  <Pressable
+                    style={styles.gateBtn}
+                    onPress={() => connect().catch((err: any) => Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet'))}
+                  >
                     <LinearGradient
                       colors={[colors.signal, colors.signalDeep]}
                       style={styles.gateBtnGrad}

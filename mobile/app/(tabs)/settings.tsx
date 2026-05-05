@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -10,6 +10,14 @@ import { useBalance } from '../../src/hooks/useBalance';
 import { useArcadiaTransactions } from '../../src/hooks/useTransactions';
 import { truncateAddress, formatUSD } from '../../src/lib/format';
 import { TxModal, TxState } from '../../src/components/TxModal';
+import {
+  JUPITER_API_URL,
+  PROGRAM_ID,
+  PYTH_SOL_USD_ACCOUNT,
+  PYTH_USDC_USD_ACCOUNT,
+  RPC_URL,
+} from '../../src/lib/constants';
+import { API_BASE } from '../../src/lib/api';
 
 function SettingRow({ label, right, onPress }: {
   label: string;
@@ -28,11 +36,31 @@ function SettingRow({ label, right, onPress }: {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { connected, publicKey, connect, disconnect, role, setRole, isDemoWallet } = useWallet();
+  const {
+    connected,
+    publicKey,
+    connect,
+    disconnect,
+    role,
+    setRole,
+    isDemoWallet,
+    cluster,
+    walletLabel,
+    pendingRequest,
+    isMwaAvailable,
+    authToken,
+  } = useWallet();
   const { data: balance } = useBalance();
   const { initManager } = useArcadiaTransactions();
-  const [devnet, setDevnet] = useState(true);
   const [txState, setTxState] = useState<TxState>({ type: 'idle' });
+
+  async function handleConnect() {
+    try {
+      await connect();
+    } catch (err: any) {
+      Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+    }
+  }
 
   async function copyAddress() {
     if (!publicKey) return;
@@ -95,6 +123,8 @@ export default function SettingsScreen() {
                 <Text style={styles.walletStatus}>
                   {connected ? (isDemoWallet ? 'Demo Wallet' : 'Connected') : 'Disconnected'}
                 </Text>
+                {walletLabel && <Text style={styles.walletLabel}>{walletLabel}</Text>}
+                {pendingRequest && <Text style={styles.walletLabel}>{pendingRequest}</Text>}
               </View>
               {connected && publicKey && (
                 <Pressable onPress={copyAddress}>
@@ -105,7 +135,7 @@ export default function SettingsScreen() {
 
             <Pressable
               style={[styles.walletAction, connected && styles.walletActionDanger]}
-              onPress={connected ? disconnect : connect}
+              onPress={connected ? disconnect : handleConnect}
             >
               <Text style={[styles.walletActionText, connected && { color: colors.danger }]}>
                 {connected ? 'Disconnect' : 'Connect'}
@@ -186,22 +216,15 @@ export default function SettingsScreen() {
           <Text style={styles.sectionLabel}>NETWORK</Text>
           <View style={styles.card}>
             <SettingRow
-              label="Devnet"
-              right={
-                <Switch
-                  value={devnet}
-                  onValueChange={setDevnet}
-                  trackColor={{ false: colors.border, true: colors.signalDeep }}
-                  thumbColor={devnet ? colors.signal : colors.textQuiet}
-                />
-              }
+              label="MWA available"
+              right={<Text style={styles.monoText}>{isMwaAvailable ? 'Android yes' : 'Read-only platform'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="RPC Endpoint"
               right={
                 <Text style={styles.monoText}>
-                  {devnet ? 'devnet.solana.com' : 'mainnet.solana.com'}
+                  {shortUrl(RPC_URL)}
                 </Text>
               }
             />
@@ -210,14 +233,34 @@ export default function SettingsScreen() {
               label="Cluster"
               right={
                 <View style={[styles.clusterChip, {
-                  borderColor: devnet ? colors.warning + '50' : colors.signal + '50',
-                  backgroundColor: devnet ? colors.warningDim : colors.signalDim,
+                  borderColor: cluster === 'devnet' ? colors.warning + '50' : colors.signal + '50',
+                  backgroundColor: cluster === 'devnet' ? colors.warningDim : colors.signalDim,
                 }]}>
-                  <Text style={[styles.clusterText, { color: devnet ? colors.warning : colors.signal }]}>
-                    {devnet ? 'DEVNET' : 'MAINNET'}
+                  <Text style={[styles.clusterText, { color: cluster === 'devnet' ? colors.warning : colors.signal }]}>
+                    {cluster === 'devnet' ? 'DEVNET' : 'MAINNET'}
                   </Text>
                 </View>
               }
+            />
+            <View style={styles.divider} />
+            <SettingRow
+              label="Auth token"
+              right={<Text style={styles.monoText}>{authToken ? 'Stored' : 'None'}</Text>}
+            />
+            <View style={styles.divider} />
+            <SettingRow
+              label="API"
+              right={<Text style={styles.monoText}>{API_BASE ? shortUrl(API_BASE) : 'Mock fallback'}</Text>}
+            />
+            <View style={styles.divider} />
+            <SettingRow
+              label="Pyth feeds"
+              right={<Text style={styles.monoText}>{PYTH_SOL_USD_ACCOUNT && PYTH_USDC_USD_ACCOUNT ? 'Configured' : 'Missing'}</Text>}
+            />
+            <View style={styles.divider} />
+            <SettingRow
+              label="Jupiter"
+              right={<Text style={styles.monoText}>{shortUrl(JUPITER_API_URL)}</Text>}
             />
           </View>
         </View>
@@ -228,7 +271,7 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <SettingRow label="Version" right={<Text style={styles.monoText}>1.0.0</Text>} />
             <View style={styles.divider} />
-            <SettingRow label="Program" right={<Text style={styles.monoText}>WMzh…w6RB</Text>} />
+            <SettingRow label="Program" right={<Text style={styles.monoText}>{truncateAddress(PROGRAM_ID.toBase58(), 5)}</Text>} />
             <View style={styles.divider} />
             <SettingRow label="Protocol" right={<Text style={styles.monoText}>Arcadia</Text>} />
           </View>
@@ -242,6 +285,13 @@ export default function SettingsScreen() {
       </ScrollView>
     </>
   );
+}
+
+function shortUrl(value: string): string {
+  return value
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+    .slice(0, 28);
 }
 
 const styles = StyleSheet.create({
@@ -289,6 +339,7 @@ const styles = StyleSheet.create({
   walletStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   walletStatus: { fontSize: 14, fontWeight: '600', color: colors.text },
+  walletLabel: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier' },
   walletAddr: { fontSize: 11, color: colors.signal, fontFamily: 'Courier' },
   walletAction: {
     paddingHorizontal: 14,
