@@ -136,6 +136,20 @@ describe("VaultDetail investor withdrawal", () => {
     ];
   });
 
+  it("deposits senior capital by requested USDC amount", async () => {
+    renderPage();
+
+    fireEvent.change(screen.getByLabelText(/^amount$/i), {
+      target: { value: "1.25" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /deposit usdc/i }));
+
+    await waitFor(() => expect(mocks.depositSenior).toHaveBeenCalled());
+    const [vaultConfig, amountUsdc] = mocks.depositSenior.mock.calls[0];
+    expect(vaultConfig.toBase58()).toBe(configPubkey);
+    expect(amountUsdc).toBe(1_250_000n);
+  });
+
   it("withdraws senior capital by requested USDC amount", async () => {
     renderPage();
 

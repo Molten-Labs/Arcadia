@@ -14,8 +14,8 @@
     "media:render:social30": "node media/scripts/render-video.mjs social30",
     "media:render": "node media/scripts/render-video.mjs all",
     "media:all": "pnpm media:capture && pnpm media:deck && pnpm media:render",
-    "codegen:shank": "shank idl --crate-root Kiln_program/program/src/lib.rs --out-dir idl",
-    "codegen:codama": "pnpm --dir clients/ts/kiln codama run --all",
+    "codegen:shank": "shank idl --crate-root Arcadia_program/program/src/lib.rs --out-dir clients/idl",
+    "codegen:codama": "pnpm --dir clients generate",
     "codegen": "pnpm codegen:shank && pnpm codegen:codama"
   }
 }

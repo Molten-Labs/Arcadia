@@ -1314,6 +1314,7 @@ dependencies = [
  "litesvm",
  "litesvm-token",
  "pinocchio",
+ "solana-clock",
  "solana-instruction",
  "solana-keypair",
  "solana-native-token",

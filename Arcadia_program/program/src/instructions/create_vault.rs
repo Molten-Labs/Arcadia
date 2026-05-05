@@ -74,6 +74,9 @@ pub fn create_vault(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         if manager_snapshot.owner != *manager.key() {
             return Err(KilnError::ManagerMismatch.into());
         }
+        if manager_snapshot.total_vaults != 0 {
+            return Err(KilnError::InvalidVaultConfiguration.into());
+        }
         manager_snapshot.total_vaults
     };
     let index_bytes = vault_index.to_le_bytes();

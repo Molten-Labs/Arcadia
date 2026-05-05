@@ -1,17 +1,13 @@
 use wincode::deserialize_exact;
 
 use pinocchio::{
-    account_info::AccountInfo,
-    instruction::{Seed, Signer},
-    program_error::ProgramError,
-    sysvars::clock::Clock,
-    ProgramResult,
+    account_info::AccountInfo, program_error::ProgramError, sysvars::clock::Clock, ProgramResult,
 };
 use wincode::SchemaRead;
 
 use crate::{
     errors::KilnError,
-    states::{ManagerProfile, VaultConfig, VaultState, TREASURY_SEED},
+    states::{ManagerProfile, VaultConfig, VaultState},
 };
 
 #[repr(C)]
@@ -96,19 +92,31 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if config.treasury != *treasury.key() {
         return Err(KilnError::TreasuryMismatch.into());
     }
+    if !treasury.is_owned_by(&crate::ID) {
+        return Err(ProgramError::IllegalOwner);
+    }
     if state.junior_shares_outstanding == 0 {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
 
     let withdrawal_amount = args.amount_usdc;
-    if withdrawal_amount > state.junior_capital {
+    let manager_withdrawable = if state.senior_capital == 0 {
+        state.current_nav
+    } else {
+        state.junior_capital
+    };
+    if withdrawal_amount > manager_withdrawable {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
-    let principal_to_reduce = principal_for_claim(
-        withdrawal_amount,
-        state.junior_capital,
-        state.junior_shares_outstanding,
-    )?;
+    let principal_to_reduce = if withdrawal_amount >= state.junior_capital {
+        state.junior_shares_outstanding
+    } else {
+        principal_for_claim(
+            withdrawal_amount,
+            state.junior_capital,
+            state.junior_shares_outstanding,
+        )?
+    };
 
     // If vault is graduated and has senior capital, check ratio stays valid
     if state.is_graduated != 0 && state.senior_capital > 0 {
@@ -149,29 +157,11 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     drop(state);
 
-    // Transfer from treasury to manager
-    let treasury_bump = config.treasury_bump;
-    let treasury_bump_seed = [treasury_bump];
-    let treasury_signer_seeds = [
-        Seed::from(TREASURY_SEED),
-        Seed::from(vault_config.key().as_ref()),
-        Seed::from(&treasury_bump_seed[..]),
-    ];
-    let treasury_signers = [Signer::from(&treasury_signer_seeds[..])];
-
-    pinocchio_system::instructions::Transfer {
-        from: treasury,
-        to: manager,
-        lamports: withdrawal_amount,
-    }
-    .invoke_signed(&treasury_signers)?;
+    transfer_program_owned_lamports(treasury, manager, withdrawal_amount)?;
 
     // Update vault state
     let mut state = VaultState::load_mut(vault_state)?;
-    state.junior_capital = state
-        .junior_capital
-        .checked_sub(withdrawal_amount)
-        .ok_or(KilnError::MathOverflow)?;
+    state.junior_capital = state.junior_capital.saturating_sub(withdrawal_amount);
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
         .checked_sub(principal_to_reduce)
@@ -182,6 +172,34 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .ok_or(KilnError::MathOverflow)?;
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
+
+    Ok(())
+}
+
+fn transfer_program_owned_lamports(
+    from: &AccountInfo,
+    to: &AccountInfo,
+    lamports: u64,
+) -> ProgramResult {
+    if !from.is_writable() || !to.is_writable() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    if !from.is_owned_by(&crate::ID) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    {
+        let mut from_lamports = from.try_borrow_mut_lamports()?;
+        *from_lamports = from_lamports
+            .checked_sub(lamports)
+            .ok_or(KilnError::TreasuryAccountingMismatch)?;
+    }
+    {
+        let mut to_lamports = to.try_borrow_mut_lamports()?;
+        *to_lamports = to_lamports
+            .checked_add(lamports)
+            .ok_or(KilnError::MathOverflow)?;
+    }
 
     Ok(())
 }
@@ -199,18 +217,8 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 /// 7: token_program
 /// 8: clock
 fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [
-        manager,
-        manager_profile,
-        vault_config,
-        vault_state,
-        treasury,
-        vault_usdc,
-        manager_usdc,
-        token_program,
-        clock_sysvar,
-        ..
-    ] = accounts
+    let [manager, manager_profile, vault_config, vault_state, treasury, vault_usdc, manager_usdc, token_program, clock_sysvar, ..] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -264,14 +272,23 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     }
 
     let withdrawal_amount = args.amount_usdc;
-    if withdrawal_amount > state.junior_capital {
+    let manager_withdrawable = if state.senior_capital == 0 {
+        state.current_nav
+    } else {
+        state.junior_capital
+    };
+    if withdrawal_amount > manager_withdrawable {
         return Err(KilnError::InsufficientJuniorCapital.into());
     }
-    let principal_to_reduce = principal_for_claim(
-        withdrawal_amount,
-        state.junior_capital,
-        state.junior_shares_outstanding,
-    )?;
+    let principal_to_reduce = if withdrawal_amount >= state.junior_capital {
+        state.junior_shares_outstanding
+    } else {
+        principal_for_claim(
+            withdrawal_amount,
+            state.junior_capital,
+            state.junior_shares_outstanding,
+        )?
+    };
     if vault_usdc_snapshot.amount < withdrawal_amount {
         return Err(KilnError::InsufficientLiquidity.into());
     }
@@ -314,10 +331,7 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     )?;
 
     let mut state = VaultState::load_mut(vault_state)?;
-    state.junior_capital = state
-        .junior_capital
-        .checked_sub(withdrawal_amount)
-        .ok_or(KilnError::MathOverflow)?;
+    state.junior_capital = state.junior_capital.saturating_sub(withdrawal_amount);
     state.junior_shares_outstanding = state
         .junior_shares_outstanding
         .checked_sub(principal_to_reduce)

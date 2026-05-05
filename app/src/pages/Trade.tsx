@@ -233,12 +233,12 @@ function SwapPanel({
         if (amtInNum > maxTrade) { toast.error(`Max trade: ${maxTrade.toLocaleString()} USDC`); return; }
         if (amtInNum <= 0)     { toast.error("Enter an amount"); return; }
         setPending(true);
-        toast.loading("Simulating Jupiter CPI…", { id: "swap" });
+        toast.loading("Simulating guarded quote…", { id: "swap" });
         setTimeout(() => {
             const pnl = (Math.random() - 0.43) * amtInNum * 0.07;
             onExecute(`USDC → ${tokenOut}`, amtInNum, pnl);
             setPending(false);
-            toast.success("Swap executed", {
+            toast.success("Simulation complete", {
                 id: "swap",
                 description: `${amtInNum.toLocaleString()} USDC → ${amtOut.toFixed(4)} ${tokenOut}`,
             });
@@ -340,7 +340,7 @@ function SwapPanel({
                     "transition-all duration-150"
                 )}
             >
-                {pending ? "Simulating Jupiter CPI…" : "Get Quote & Execute"}
+                {pending ? "Simulating guarded quote…" : "Simulate guarded quote"}
             </button>
         </div>
     );

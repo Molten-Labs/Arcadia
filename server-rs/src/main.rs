@@ -1797,4 +1797,22 @@ mod tests {
         assert_eq!(status, StatusCode::CONFLICT);
         assert_eq!(body["mode"], "mock");
     }
+
+    #[tokio::test]
+    async fn jupiter_devnet_swap_instructions_returns_guard_message() {
+        let app = test_app(None);
+        let payload = json!({
+            "cluster": "devnet",
+            "userPublicKey": "11111111111111111111111111111111",
+            "quoteResponse": {
+                "inputMint": "So11111111111111111111111111111111111111112",
+                "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            }
+        });
+
+        let (status, body) =
+            json_request(app, Method::POST, "/jupiter/swap-instructions", payload).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(body["mode"], "mock");
+    }
 }

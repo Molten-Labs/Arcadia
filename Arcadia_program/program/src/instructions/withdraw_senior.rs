@@ -3,17 +3,13 @@ use core::convert::TryInto;
 use wincode::deserialize_exact;
 
 use pinocchio::{
-    account_info::AccountInfo,
-    instruction::{Seed, Signer},
-    program_error::ProgramError,
-    sysvars::clock::Clock,
-    ProgramResult,
+    account_info::AccountInfo, program_error::ProgramError, sysvars::clock::Clock, ProgramResult,
 };
 use wincode::SchemaRead;
 
 use crate::{
     errors::KilnError,
-    states::{InvestorPosition, VaultConfig, VaultState, TREASURY_SEED},
+    states::{InvestorPosition, VaultConfig, VaultState},
 };
 
 #[repr(C)]
@@ -84,6 +80,9 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     if config.treasury != *treasury.key() {
         return Err(KilnError::TreasuryMismatch.into());
     }
+    if !treasury.is_owned_by(&crate::ID) {
+        return Err(ProgramError::IllegalOwner);
+    }
 
     // Cooldown check: 24h unless junior buffer is dangerously low
     let total_capital = state
@@ -146,22 +145,7 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 
     drop(state);
 
-    // Transfer from treasury to investor using PDA signature
-    let treasury_bump = config.treasury_bump;
-    let treasury_bump_seed = [treasury_bump];
-    let treasury_signer_seeds = [
-        Seed::from(TREASURY_SEED),
-        Seed::from(vault_config.key().as_ref()),
-        Seed::from(&treasury_bump_seed[..]),
-    ];
-    let treasury_signers = [Signer::from(&treasury_signer_seeds[..])];
-
-    pinocchio_system::instructions::Transfer {
-        from: treasury,
-        to: investor,
-        lamports: withdrawal_amount,
-    }
-    .invoke_signed(&treasury_signers)?;
+    transfer_program_owned_lamports(treasury, investor, withdrawal_amount)?;
 
     // Update vault state
     let mut state = VaultState::load_mut(vault_state)?;
@@ -191,6 +175,34 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     Ok(())
 }
 
+fn transfer_program_owned_lamports(
+    from: &AccountInfo,
+    to: &AccountInfo,
+    lamports: u64,
+) -> ProgramResult {
+    if !from.is_writable() || !to.is_writable() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    if !from.is_owned_by(&crate::ID) {
+        return Err(ProgramError::IllegalOwner);
+    }
+
+    {
+        let mut from_lamports = from.try_borrow_mut_lamports()?;
+        *from_lamports = from_lamports
+            .checked_sub(lamports)
+            .ok_or(KilnError::TreasuryAccountingMismatch)?;
+    }
+    {
+        let mut to_lamports = to.try_borrow_mut_lamports()?;
+        *to_lamports = to_lamports
+            .checked_add(lamports)
+            .ok_or(KilnError::MathOverflow)?;
+    }
+
+    Ok(())
+}
+
 /// USDC withdrawal path with fresh SOL/USDC NAV and optional WSOL auto-unwind.
 ///
 /// Expected accounts (in order):
@@ -215,21 +227,8 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 /// bytes 16..24: optional quote expiry unix timestamp
 /// bytes 24..: optional Jupiter instruction data for WSOL -> USDC.
 fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [
-        investor,
-        vault_config,
-        vault_state,
-        treasury,
-        investor_position,
-        vault_usdc,
-        vault_wsol,
-        investor_usdc,
-        sol_price_account,
-        usdc_price_account,
-        token_program,
-        clock_sysvar,
-        remaining @ ..,
-    ] = accounts
+    let [investor, vault_config, vault_state, treasury, investor_position, vault_usdc, vault_wsol, investor_usdc, sol_price_account, usdc_price_account, token_program, clock_sysvar, remaining @ ..] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
