@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-@import url('https://fonts.cdnfonts.com/css/blackout-oldskull');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -195,10 +194,11 @@
   p { line-height: 1.6; text-wrap: pretty; font-family: 'Space Grotesk', system-ui, sans-serif; }
   .font-display, .font-hero, .font-body { font-family: 'Space Grotesk', system-ui, sans-serif; }
   .font-brand, .apex-wordmark {
-    font-family: 'Blackout Oldskull', 'Brush Script MT', cursive;
-    font-weight: 400;
-    letter-spacing: 0.01em;
-    line-height: 0.82;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1;
     text-rendering: geometricPrecision;
   }
   .font-mono, .tabular {
