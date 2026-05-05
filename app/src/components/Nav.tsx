@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,22 +90,36 @@ export const Nav = () => {
     const [notifications, setNotifications] = useState(DEMO_NOTIFICATIONS);
     const { setVisible: openWalletModal } = useWalletModal();
     const location = useLocation();
+    const navigate = useNavigate();
 
     const unread = notifications.filter((n) => !n.read).length;
 
     const markAllRead = () =>
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
 
+    const scrollToSection = (id: string) => {
+        if (location.pathname !== "/") {
+            navigate(`/#${id}`);
+            return;
+        }
+        const el = document.getElementById(id);
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
     const publicLinks = [
         { to: "/vaults", label: "Marketplace" },
         { to: "/traders", label: "Traders" },
         { to: "/docs", label: "Docs" },
+        { action: () => scrollToSection("how-it-works"), label: "How Arcadia Works" },
+        { action: () => scrollToSection("faq"), label: "FAQ" },
     ];
 
     const investorLinks = [
         { to: "/vaults", label: "Marketplace" },
         { to: "/portfolio", label: "Portfolio" },
         { to: "/traders", label: "Traders" },
+        { action: () => scrollToSection("how-it-works"), label: "How Arcadia Works" },
+        { action: () => scrollToSection("faq"), label: "FAQ" },
     ];
 
     const traderLinks = [
@@ -113,6 +127,8 @@ export const Nav = () => {
         { to: "/trade", label: "Trade" },
         { to: "/manager/create", label: "New vault" },
         { to: "/traders", label: "Directory" },
+        { action: () => scrollToSection("how-it-works"), label: "How Arcadia Works" },
+        { action: () => scrollToSection("faq"), label: "FAQ" },
     ];
 
     const links = !connected ? publicLinks : role === "trader" ? traderLinks : investorLinks;
@@ -131,23 +147,39 @@ export const Nav = () => {
                         </Link>
 
                         <nav className="hidden md:flex items-center gap-0.5">
-                            {links.map((l) => (
-                                <Link
-                                    key={l.to}
-                                    to={l.to}
-                                    className={cn(
-                                        "relative px-3 py-2 text-[13px] font-medium rounded-lg transition-colors",
-                                        "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
-                                        "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
-                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                        isActive(l.to)
-                                            ? "text-foreground after:scale-x-100"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
-                                    )}
-                                >
-                                    {l.label}
-                                </Link>
-                            ))}
+                            {links.map((l) =>
+                                "to" in l ? (
+                                    <Link
+                                        key={l.to}
+                                        to={l.to}
+                                        className={cn(
+                                            "relative px-3 py-2 text-[13px] font-medium rounded-lg transition-colors",
+                                            "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
+                                            "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
+                                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                            isActive(l.to)
+                                                ? "text-foreground after:scale-x-100"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
+                                        )}
+                                    >
+                                        {l.label}
+                                    </Link>
+                                ) : (
+                                    <button
+                                        key={l.label}
+                                        onClick={l.action}
+                                        className={cn(
+                                            "relative px-3 py-2 text-[13px] font-medium rounded-lg transition-colors",
+                                            "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
+                                            "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
+                                            "text-muted-foreground hover:text-foreground hover:bg-secondary/70",
+                                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        )}
+                                    >
+                                        {l.label}
+                                    </button>
+                                )
+                            )}
                         </nav>
                     </div>
 
@@ -182,7 +214,6 @@ export const Nav = () => {
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-80 p-0" sideOffset={8}>
-                                    {/* Header */}
                                     <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border/40">
                                         <div className="flex items-center gap-1.5">
                                             <span className="font-display font-semibold text-[13px]">Notifications</span>
@@ -201,8 +232,6 @@ export const Nav = () => {
                                             </button>
                                         )}
                                     </div>
-
-                                    {/* Notification list */}
                                     <div className="max-h-[340px] overflow-y-auto divide-y divide-border/30">
                                         {notifications.map((n) => (
                                             <div
@@ -217,21 +246,15 @@ export const Nav = () => {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start justify-between gap-2">
-                                                        <span className={cn("text-[12px] font-medium leading-snug", !n.read ? "text-foreground" : "text-foreground/70")}>
-                                                            {n.title}
-                                                        </span>
+                                                        <span className={cn("text-[12px] font-medium leading-snug", !n.read ? "text-foreground" : "text-foreground/70")}>{n.title}</span>
                                                         <span className="shrink-0 text-[10px] font-mono text-muted-foreground/60 mt-0.5">{n.time}</span>
                                                     </div>
                                                     <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{n.body}</p>
                                                 </div>
-                                                {!n.read && (
-                                                    <div className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
-                                                )}
+                                                {!n.read && <div className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />}
                                             </div>
                                         ))}
                                     </div>
-
-                                    {/* Footer */}
                                     <div className="border-t border-border/40 px-3.5 py-2">
                                         <Link
                                             to="/alerts"
@@ -258,111 +281,75 @@ export const Nav = () => {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm" className="h-9 font-mono text-[12px] border-border/60">
                                         <span className="w-1.5 h-1.5 rounded-full bg-status-active mr-1.5 animate-pulse-glow" />
-                                        {shortAddr(address)}
-                                        <ChevronDown className="w-3 h-3 ml-1.5 text-muted-foreground" />
+                                        {shortAddr(address!)}
+                                        <ChevronDown className="w-3 h-3 ml-1.5" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    <DropdownMenuLabel className="space-y-1">
-                                        <div className="font-mono text-[11px] text-foreground">
-                                            {address?.slice(0, 18)}…
-                                        </div>
-                                        <div className="flex items-center gap-2 text-[11px] font-normal text-muted-foreground">
-                                            <span>{walletName ?? "Demo wallet"}</span>
-                                            <span>·</span>
-                                            <span className="capitalize">{network}</span>
-                                        </div>
+                                <DropdownMenuContent align="end" className="w-64">
+                                    <DropdownMenuLabel className="font-display">
+                                        {walletName ?? "Wallet"}
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuLabel className="text-[11px] text-muted-foreground">Switch role</DropdownMenuLabel>
-                                    <DropdownMenuItem
-                                        onClick={() => setRole("investor")}
-                                        className={cn("text-sm", role === "investor" && "bg-secondary")}
-                                    >
-                                        <ArrowLeftRight className="w-3.5 h-3.5 mr-2" /> Investor
+                                    <DropdownMenuItem onClick={() => setRole("investor")}>Investor view</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setRole("trader")}>Trader view</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <Link to="/portfolio">Portfolio</Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        onClick={() => setRole("trader")}
-                                        className={cn("text-sm", role === "trader" && "bg-secondary")}
-                                    >
-                                        <ArrowLeftRight className="w-3.5 h-3.5 mr-2" /> Trader
+                                    <DropdownMenuItem asChild>
+                                        <Link to="/vaults">Marketplace</Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem asChild className="text-sm">
-                                        <Link to="/settings">
-                                            <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Settings
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={disconnect} className="text-sm text-destructive">
-                                        <LogOut className="w-3.5 h-3.5 mr-2" /> Disconnect
+                                    <DropdownMenuItem onClick={disconnect} className="text-destructive focus:text-destructive">
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        Disconnect
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}
 
-                        <button
-                            onClick={() => setOpen(!open)}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden h-9 w-9 rounded-lg"
+                            onClick={() => setOpen((v) => !v)}
                             aria-label={open ? "Close menu" : "Open menu"}
-                            aria-expanded={open}
-                            className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             {open ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-                        </button>
+                        </Button>
                     </div>
                 </div>
+            </header>
 
-                {open && (
-                    <nav className="md:hidden border-t border-border/30 bg-background/95 backdrop-blur-xl">
-                        <div className="container py-3 flex flex-col gap-1">
-                            {connected && (
-                                <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg bg-card/60 border border-border/40 p-2.5 text-[11px]">
-                                    <div>
-                                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Network</div>
-                                        <div className="flex items-center gap-1.5 capitalize text-foreground font-mono">
-                                            <Globe2 className="w-3 h-3 text-primary/70" />{network}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Role</div>
-                                        <div className="flex items-center gap-1.5 capitalize text-foreground font-mono">
-                                            <ShieldCheck className="w-3 h-3 text-success/70" />{role}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            {links.map((l) => (
+            {open && (
+                <div className="md:hidden border-b border-border/40 bg-background/95 backdrop-blur-xl">
+                    <div className="container py-3 flex flex-col gap-1">
+                        {links.map((l) =>
+                            "to" in l ? (
                                 <Link
                                     key={l.to}
                                     to={l.to}
                                     onClick={() => setOpen(false)}
-                                    className={cn(
-                                        "px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
-                                        isActive(l.to)
-                                            ? "bg-primary/10 text-foreground"
-                                            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                                    )}
+                                    className="rounded-lg px-3 py-2 text-[13px] text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                                 >
                                     {l.label}
                                 </Link>
-                            ))}
-                            {!links.some((l) => l.to === "/settings") && (
-                                <Link
-                                    to="/settings"
-                                    onClick={() => setOpen(false)}
-                                    className={cn(
-                                        "px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
-                                        location.pathname === "/settings"
-                                            ? "bg-primary/10 text-foreground"
-                                            : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                                    )}
+                            ) : (
+                                <button
+                                    key={l.label}
+                                    onClick={() => {
+                                        setOpen(false);
+                                        l.action();
+                                    }}
+                                    className="rounded-lg px-3 py-2 text-left text-[13px] text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                                 >
-                                    Settings
-                                </Link>
-                            )}
-                        </div>
-                    </nav>
-                )}
-            </header>
+                                    {l.label}
+                                </button>
+                            )
+                        )}
+                    </div>
+                </div>
+            )}
         </>
     );
 };
