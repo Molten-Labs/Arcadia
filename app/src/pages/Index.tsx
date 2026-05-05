@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
 import { useDataMode } from "@/hooks/useDataMode";
 import { VaultCard } from "@/components/VaultCard";
+import { VaultCarousel } from "@/components/VaultCarousel";
 import { Switch } from "@/components/ui/switch";
 import { fmtUSD } from "@/lib/format";
 import { FAQ_ITEMS } from "@/lib/faq";
@@ -105,7 +106,7 @@ const Landing = () => {
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
 
   const featuredVaults = useMemo(
-    () => allVaults.filter((v) => v.status === "active").slice(0, 3),
+    () => allVaults.filter((v) => v.status === "active"),
     [allVaults],
   );
 
@@ -358,18 +359,18 @@ const Landing = () => {
             </Button>
           </div>
 
-          {featuredVaults.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-3">
-              {featuredVaults.map((vault) => (
-                <VaultCard key={vault.id} vault={vault} />
-              ))}
-            </div>
-          ) : (
+          {featuredVaults.length === 0 && (
             <div className="surface rounded-[11px] p-10 text-center text-muted-foreground">
               No active vaults yet. Connect your wallet and create the first one.
             </div>
           )}
         </div>
+
+        {featuredVaults.length > 0 && (
+          <div className="mt-2">
+            <VaultCarousel vaults={featuredVaults} />
+          </div>
+        )}
       </section>
 
       {/* 6. Reputation Layer */}
