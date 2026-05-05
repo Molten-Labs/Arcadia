@@ -21,7 +21,7 @@ export const Footer = () => (
                 links={[
                     { to: "/vaults", label: "Marketplace" },
                     { to: "/traders", label: "Traders" },
-                    { to: "/#how-it-works", label: "How it works" },
+                    { to: "/#how-it-works", label: "How Arcadia Works" },
                     { to: "/portfolio", label: "Portfolio" },
                 ]}
             />
@@ -30,7 +30,6 @@ export const Footer = () => (
                 links={[
                     { to: "/docs", label: "Docs" },
                     { to: "/#faq", label: "FAQ" },
-                    { to: "/#how-it-works", label: "Protocol guide" },
                 ]}
             />
             <FooterCol
