@@ -8,12 +8,14 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../src/lib/theme';
-import { VaultView } from '../../src/lib/mockData';
+import { VaultView, mockNavHistory } from '../../src/lib/mockData';
 import { useVaults } from '../../src/hooks/useVaults';
 import { VaultCard } from '../../src/components/VaultCard';
-import { ScreenHeader } from '../../src/components/ScreenHeader';
+import { WalletButton } from '../../src/components/WalletButton';
 import { EmptyState } from '../../src/components/EmptyState';
 import { formatUSD } from '../../src/lib/format';
 
@@ -27,6 +29,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 export default function VaultsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { data: vaults, isLoading, refetch, isRefetching } = useVaults();
   const [filter, setFilter] = useState<Filter>('all');
 
@@ -41,148 +44,176 @@ export default function VaultsScreen() {
     router.push(`/vault/${vault.configPubkey}`);
   }
 
-  return (
-    <View style={styles.screen}>
-      <ScreenHeader
-        title="Arcadia"
-        subtitle="Proof-gated capital protocol"
-        showWallet
-      />
+  const Header = () => (
+    <>
+      <LinearGradient
+        colors={[colors.signalDeep + '22', colors.bg, colors.bg]}
+        style={[styles.hero, { paddingTop: insets.top + 16 }]}
+      >
+        <View style={styles.heroRow}>
+          <View>
+            <Text style={styles.wordmark}>ARCADIA</Text>
+            <Text style={styles.tagline}>Proof-gated capital protocol</Text>
+          </View>
+          <WalletButton />
+        </View>
 
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>TOTAL TVL</Text>
-          <Text style={styles.summaryValue}>{formatUSD(totalTvl, true)}</Text>
+        <View style={styles.metricsRow}>
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{formatUSD(totalTvl, true)}</Text>
+            <Text style={styles.metricLabel}>Total TVL</Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metric}>
+            <Text style={[styles.metricValue, { color: colors.signal }]}>{activeCount}</Text>
+            <Text style={styles.metricLabel}>Active</Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>{(vaults ?? []).length}</Text>
+            <Text style={styles.metricLabel}>Vaults</Text>
+          </View>
+          <View style={styles.metricDivider} />
+          <View style={styles.metric}>
+            <Text style={styles.metricValue}>
+              {(vaults ?? []).length > 0
+                ? ((vaults ?? []).reduce((s, v) => s + v.currentNav, 0) / (vaults ?? []).length).toFixed(4)
+                : '–'}
+            </Text>
+            <Text style={styles.metricLabel}>Avg NAV</Text>
+          </View>
         </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>ACTIVE VAULTS</Text>
-          <Text style={styles.summaryValue}>{activeCount}</Text>
-        </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>TOTAL VAULTS</Text>
-          <Text style={styles.summaryValue}>{(vaults ?? []).length}</Text>
-        </View>
-      </View>
+      </LinearGradient>
 
-      <View style={styles.filters}>
+      <View style={styles.filterBar}>
         {FILTERS.map(f => (
           <Pressable
             key={f.key}
-            style={[styles.filterChip, filter === f.key && styles.filterActive]}
+            style={[styles.chip, filter === f.key && styles.chipActive]}
             onPress={() => setFilter(f.key)}
           >
-            <Text style={[styles.filterLabel, filter === f.key && styles.filterLabelActive]}>
+            <Text style={[styles.chipText, filter === f.key && styles.chipTextActive]}>
               {f.label}
             </Text>
           </Pressable>
         ))}
       </View>
+    </>
+  );
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.signal} size="large" />
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={v => v.id}
-          renderItem={({ item }) => (
-            <VaultCard vault={item} onPress={() => handleVaultPress(item)} />
-          )}
-          contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-          ListEmptyComponent={
-            <EmptyState
-              icon="⬡"
-              title="No vaults found"
-              subtitle="Try a different filter or check back later"
-            />
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={colors.signal}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator color={colors.signal} size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      <FlatList
+        data={filtered}
+        keyExtractor={v => v.id}
+        renderItem={({ item }) => (
+          <VaultCard
+            vault={item}
+            onPress={() => handleVaultPress(item)}
+            sparkData={mockNavHistory(item.configPubkey).map(p => p.nav)}
+          />
+        )}
+        ListHeaderComponent={Header}
+        contentContainerStyle={styles.list}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        ListEmptyComponent={
+          <EmptyState icon="⬡" title="No vaults found" subtitle="Try a different filter" />
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.signal}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  screen: { flex: 1, backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  hero: {
     paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingBottom: 20,
+    gap: 20,
   },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
+  heroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  summaryLabel: {
-    fontSize: 9,
-    fontWeight: '600',
+  wordmark: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: 4,
+    fontFamily: 'Courier',
+  },
+  tagline: {
+    fontSize: 11,
     color: colors.textQuiet,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    marginTop: 2,
+    letterSpacing: 0.3,
   },
-  summaryValue: {
-    fontSize: 16,
+  metricsRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  },
+  metric: { flex: 1, alignItems: 'center', gap: 3 },
+  metricValue: {
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
     fontFamily: 'Courier',
   },
-  summaryDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: colors.border,
+  metricLabel: {
+    fontSize: 9,
+    color: colors.textQuiet,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    fontWeight: '600',
   },
-  filters: {
+  metricDivider: { width: 1, backgroundColor: colors.border },
+  filterBar: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingBottom: 12,
+    paddingTop: 4,
   },
-  filterChip: {
+  chip: {
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  filterActive: {
+  chipActive: {
     borderColor: colors.signal,
     backgroundColor: colors.signalDim,
   },
-  filterLabel: {
+  chipText: {
     fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
   },
-  filterLabelActive: {
-    color: colors.signal,
-  },
-  list: {
-    padding: spacing.md,
-    paddingBottom: 32,
-  },
+  chipTextActive: { color: colors.signal },
+  list: { paddingHorizontal: spacing.md, paddingBottom: 40 },
 });

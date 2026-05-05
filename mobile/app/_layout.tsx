@@ -1,3 +1,4 @@
+import '../polyfills';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -26,27 +27,27 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" />
               <Stack.Screen
                 name="vault/[id]"
                 options={{
                   headerShown: true,
-                  title: 'Vault Detail',
+                  headerTitle: '',
                   headerStyle: { backgroundColor: colors.surface },
-                  headerTintColor: colors.text,
+                  headerTintColor: colors.signal,
                   headerShadowVisible: false,
-                  headerTitleStyle: { fontWeight: '700', fontSize: 16 },
+                  headerBackTitle: '',
                 }}
               />
               <Stack.Screen
                 name="trader/[wallet]"
                 options={{
                   headerShown: true,
-                  title: 'Trader',
+                  headerTitle: '',
                   headerStyle: { backgroundColor: colors.surface },
-                  headerTintColor: colors.text,
+                  headerTintColor: colors.signal,
                   headerShadowVisible: false,
-                  headerTitleStyle: { fontWeight: '700', fontSize: 16 },
+                  headerBackTitle: '',
                 }}
               />
             </Stack>

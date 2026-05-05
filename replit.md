@@ -11,10 +11,11 @@ A full-stack monorepo for a "first-loss" managed trading vault protocol on Solan
     (tabs)/                 —     Bottom tab screens: Vaults, Portfolio, Traders, Settings
     vault/[id].tsx          —     Vault detail (NAV chart, capital stack, deposit/withdraw)
     trader/[wallet].tsx     —     Trader profile
+  polyfills.ts              —   Buffer / crypto shims (must be first import in _layout.tsx)
   src/
-    lib/                    —     theme.ts, mockData.ts, api.ts, format.ts, wallet.tsx
-    hooks/                  —     useVaults, usePositions, useManagers (TanStack Query)
-    components/             —     VaultCard, HealthMeter, CapitalStack, StatusBadge, …
+    lib/                    —     theme.ts, constants.ts, pdas.ts, mockData.ts, api.ts, format.ts, wallet.tsx (MWA)
+    hooks/                  —     useVaults, usePositions, useManagers, useTransactions (on-chain), useBalance
+    components/             —     VaultCard (sparkline), TxModal (3-step), NavSparkline, HealthMeter, CapitalStack, …
 /Kiln_program/              — Cargo workspace (on-chain program + tests)
   program/                  —   SBF program crate (NO litesvm / solana 3.x deps)
     src/                    —     Rust program source (Pinocchio, no_std)
@@ -40,7 +41,7 @@ Keeping those deps **only** in `kiln-tests/` ensures they never enter the SBF de
 |-------|-----------|
 | Web Frontend | React 18, Vite 5, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion |
 | Mobile App | Expo SDK 52, Expo Router v4, React Native, TanStack Query |
-| Mobile Wallet | Demo wallet (Expo Go); upgrade to Mobile Wallet Adapter for production |
+| Mobile Wallet | Mobile Wallet Adapter (MWA) via `@solana-mobile/mobile-wallet-adapter-protocol-web3js`; graceful demo-wallet fallback |
 | Data | TanStack Query (React Query), React Router DOM v6 |
 | Solana | @solana/web3.js v1, @solana/wallet-adapter (Phantom, Solflare) |
 | Backend | Rust, Axum, SQLx, PostgreSQL, Helius webhooks |

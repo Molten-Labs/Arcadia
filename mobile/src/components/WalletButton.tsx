@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, View } from 'react-native';
+import { Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { colors, radius } from '../lib/theme';
 import { useWallet } from '../lib/wallet';
 import { truncateAddress } from '../lib/format';
@@ -9,11 +9,11 @@ interface Props {
 }
 
 export function WalletButton({ onPress }: Props) {
-  const { connected, publicKey, connect } = useWallet();
+  const { connected, connecting, publicKey, connect, isDemoWallet } = useWallet();
 
   const handlePress = () => {
     if (onPress) { onPress(); return; }
-    if (!connected) connect();
+    if (!connected && !connecting) connect();
   };
 
   return (
@@ -21,9 +21,15 @@ export function WalletButton({ onPress }: Props) {
       style={({ pressed }) => [styles.btn, connected && styles.connected, pressed && styles.pressed]}
       onPress={handlePress}
     >
-      <View style={[styles.dot, { backgroundColor: connected ? colors.signal : colors.textQuiet }]} />
+      {connecting ? (
+        <ActivityIndicator size="small" color={colors.signal} />
+      ) : (
+        <View style={[styles.dot, { backgroundColor: connected ? colors.signal : colors.textQuiet }]} />
+      )}
       <Text style={[styles.label, connected && styles.labelConnected]}>
-        {connected && publicKey ? truncateAddress(publicKey, 4) : 'Connect Wallet'}
+        {connecting ? 'Connecting…' : connected && publicKey
+          ? truncateAddress(publicKey, 4) + (isDemoWallet ? ' ◐' : '')
+          : 'Connect Wallet'}
       </Text>
     </Pressable>
   );

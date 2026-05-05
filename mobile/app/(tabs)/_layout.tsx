@@ -2,16 +2,10 @@ import { Tabs } from 'expo-router';
 import { Text } from 'react-native';
 import { colors } from '../../src/lib/theme';
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Vaults: '⬡',
-    Portfolio: '◈',
-    Traders: '◎',
-    Settings: '◉',
-  };
+function Icon({ glyph, focused }: { glyph: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.4 }}>
-      {icons[label] ?? '○'}
+    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.35, color: focused ? colors.signal : colors.textMuted }}>
+      {glyph}
     </Text>
   );
 }
@@ -25,16 +19,17 @@ export default function TabLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 70,
-          paddingBottom: 10,
+          height: 72,
+          paddingBottom: 12,
+          paddingTop: 6,
         },
         tabBarActiveTintColor: colors.signal,
         tabBarInactiveTintColor: colors.textQuiet,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '600',
-          letterSpacing: 0.4,
-          marginTop: 2,
+          fontWeight: '700',
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
         },
       }}
     >
@@ -42,28 +37,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Vaults',
-          tabBarIcon: ({ focused }) => <TabIcon label="Vaults" focused={focused} />,
+          tabBarIcon: ({ focused }) => <Icon glyph="⬡" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ focused }) => <TabIcon label="Portfolio" focused={focused} />,
+          tabBarIcon: ({ focused }) => <Icon glyph="◈" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="traders"
         options={{
           title: 'Traders',
-          tabBarIcon: ({ focused }) => <TabIcon label="Traders" focused={focused} />,
+          tabBarIcon: ({ focused }) => <Icon glyph="◎" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => <TabIcon label="Settings" focused={focused} />,
+          tabBarIcon: ({ focused }) => <Icon glyph="◉" focused={focused} />,
         }}
       />
     </Tabs>
