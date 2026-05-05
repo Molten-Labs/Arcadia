@@ -1,4 +1,4 @@
-# Logs
+# ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
 *.log
 npm-debug.log*
@@ -7,28 +7,60 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
+# ─── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
+.pnp
+.pnp.js
 
-# Build output
+# ─── Build output ─────────────────────────────────────────────────────────────
 dist/
 dist-ssr/
+app/dist/
+mobile/dist/
 target/
-kiln_program/target
+Arcadia_program/target
 
-# Env files
+# ─── Expo / React Native ──────────────────────────────────────────────────────
+mobile/.expo/
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# ─── Environment files ────────────────────────────────────────────────────────
 .env
+.env.*
+!.env.example
 *.local
 
-# Editor / OS
+# ─── Replit / Agent internals ─────────────────────────────────────────────────
+.agent/
+.agents/
+.local/
+.cache/
+.config/
+skills-lock.json
+claude-session.jsonl
+attached_assets/
+
+# ─── Editor / OS ──────────────────────────────────────────────────────────────
 .vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
+Thumbs.db
 
-# Windows
+# ─── Windows ──────────────────────────────────────────────────────────────────
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ─── Rust ─────────────────────────────────────────────────────────────────────
+**/*.rs.bk
+Arcadia_program/Cargo.lock

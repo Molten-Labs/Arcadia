@@ -16,7 +16,7 @@ A full-stack monorepo for a "first-loss" managed trading vault protocol on Solan
     lib/                    —     theme.ts, constants.ts, pdas.ts, mockData.ts, api.ts, format.ts, wallet.tsx (MWA)
     hooks/                  —     useVaults, usePositions, useManagers, useTransactions (on-chain), useBalance
     components/             —     VaultCard (sparkline), TxModal (3-step), NavSparkline, HealthMeter, CapitalStack, …
-/Kiln_program/              — Cargo workspace (on-chain program + tests)
+/Arcadia_program/           — Cargo workspace (on-chain program + tests)
   program/                  —   SBF program crate (NO litesvm / solana 3.x deps)
     src/                    —     Rust program source (Pinocchio, no_std)
     tests/unit_tests.rs     —     Unit tests (no litesvm, safe for SBF graph)
@@ -29,7 +29,7 @@ A full-stack monorepo for a "first-loss" managed trading vault protocol on Solan
 /context                    — Build plans and design context
 ```
 
-### Why two crates inside `Kiln_program/`?
+### Why two crates inside `Arcadia_program/`?
 
 The Solana SBF toolchain runs Cargo 1.84 which rejects `edition2024`.  
 `litesvm` + `solana 3.x` transitively pull in `toml_edit 0.25+` / `proc-macro-crate 3.x`, both of which require `edition2024`.  
@@ -126,8 +126,8 @@ Copy `.env.example` to `.env` in the project root and fill in:
 
 - **Frontend packages live in `app/node_modules`** (not the repo root). Always `cd app` or use the scripts above.
 - The `package-lock.json` inside `app/` is the canonical lock file for frontend deps — use `npm install` inside `app/`.
-- `vite.config.ts` is the active Vite config. `vite.config.js` is kept as a fallback.
-- `lovable-tagger` is a dev-only plugin used in `vite.config.ts`; it's excluded from `vite.config.js`.
+- `vite.config.ts` is the sole Vite config.
+- `lovable-tagger` is a dev-only plugin used in `vite.config.ts`.
 
 ---
 
@@ -140,20 +140,20 @@ npm run codegen:codama  # Re-generate TypeScript SDK from IDL
 
 ---
 
-## On-Chain Program (Kiln_program)
+## On-Chain Program (Arcadia_program)
 
 ### Build the SBF program (deploys to Solana)
 
 ```bash
 # Must be run from the program sub-crate — NOT the workspace root
-cargo build-sbf --manifest-path Kiln_program/program/Cargo.toml
-# Output: Kiln_program/target/deploy/Kiln_program.so
+cargo build-sbf --manifest-path Arcadia_program/program/Cargo.toml
+# Output: Arcadia_program/target/deploy/Arcadia_program.so
 ```
 
 ### Run unit tests (pure logic, no SBF needed)
 
 ```bash
-cargo test --manifest-path Kiln_program/program/Cargo.toml \
+cargo test --manifest-path Arcadia_program/program/Cargo.toml \
   --features test-default
 ```
 
@@ -161,16 +161,16 @@ cargo test --manifest-path Kiln_program/program/Cargo.toml \
 
 ```bash
 # 1. Build the SBF artifact
-cargo build-sbf --manifest-path Kiln_program/program/Cargo.toml
+cargo build-sbf --manifest-path Arcadia_program/program/Cargo.toml
 
 # 2. Run integration tests in the isolated test crate
-cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+cargo test --manifest-path Arcadia_program/kiln-tests/Cargo.toml
 
 # Skip the freshness check if you know the .so is up-to-date:
-KILN_SKIP_SBF_FRESHNESS_CHECK=1 cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+KILN_SKIP_SBF_FRESHNESS_CHECK=1 cargo test --manifest-path Arcadia_program/kiln-tests/Cargo.toml
 
 # Or point to a custom .so path:
-KILN_SBF_PATH=/path/to/Kiln_program.so cargo test --manifest-path Kiln_program/kiln-tests/Cargo.toml
+KILN_SBF_PATH=/path/to/Arcadia_program.so cargo test --manifest-path Arcadia_program/kiln-tests/Cargo.toml
 ```
 
 ### Dependency isolation rules
