@@ -9,13 +9,9 @@ if [ ! -d "mobile/node_modules" ]; then
   cd ..
 fi
 
-if [ ! -f "mobile/dist/index.html" ]; then
-  echo "[mobile] Building Expo web export..."
-  cd mobile && EXPO_NO_TELEMETRY=1 npx expo export --platform web --output-dir dist 2>&1
-  cd ..
-else
-  echo "[mobile] Using existing build in mobile/dist/"
-fi
+echo "[mobile] Building Expo web export..."
+cd mobile && EXPO_NO_TELEMETRY=1 npx expo export --platform web --output-dir dist 2>&1
+cd ..
 
 echo "[mobile] Starting static server on port 5000..."
 node mobile-server.js
