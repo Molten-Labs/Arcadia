@@ -18,9 +18,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      // 'auto' injects a tiny <script> into index.html that registers the SW.
-      // No virtual:pwa-register import needed in app code.
-      injectRegister: "auto",
+      // 'inline' injects registration code directly into index.html —
+      // no extra blocking <script> request in <head>.
+      injectRegister: "inline",
 
       manifest: {
         name: "Arcadia Protocol",
@@ -48,23 +48,13 @@ export default defineConfig(({ mode }) => ({
       },
 
       workbox: {
-        // Precache everything produced by the build.
-        // Content-hashed filenames mean these are safe to cache indefinitely.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,woff}"],
         globIgnores: ["**/node_modules/**"],
-
-        // SPA: serve index.html for any navigation miss (client-side routing)
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/(api|rpc)\//],
-
-        // Skip waiting so updated SW activates immediately on next page load
         skipWaiting: true,
         clientsClaim: true,
-
-        // ── Runtime caching ───────────────────────────────────────────────
         runtimeCaching: [
-          // Solana devnet / mainnet RPC — stale-while-revalidate
-          // Shows cached data instantly; refreshes in background every 30 s
           {
             urlPattern: /^https:\/\/(api\.devnet|api\.mainnet-beta)\.solana\.com\//,
             handler: "StaleWhileRevalidate",
@@ -74,7 +64,6 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // Helius RPC
           {
             urlPattern: /^https:\/\/.*helius.*\.com\//,
             handler: "StaleWhileRevalidate",
@@ -84,7 +73,6 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // External fonts — cache for 1 year
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,
             handler: "CacheFirst",
@@ -94,18 +82,7 @@ export default defineConfig(({ mode }) => ({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          // OG images
-          {
-            urlPattern: /^https:\/\/storage\.googleapis\.com\//,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "og-images",
-              expiration: { maxEntries: 10, maxAgeSeconds: 7 * 24 * 60 * 60 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
         ],
-
         disableDevLogs: true,
       },
     }),
@@ -124,8 +101,9 @@ export default defineConfig(({ mode }) => ({
   },
 
   define: {
-    "process.env": JSON.stringify({}),
+    "process.env": "{}",
     "process.env.NODE_ENV": JSON.stringify(mode),
+    "process.browser": "true",
     global: "globalThis",
   },
 
@@ -145,7 +123,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Tier 1 — critical path (loads before React renders)
+          // ── Tier 1: Critical path ────────────────────────────────────────
           if (
             id.includes("node_modules/react/") ||
             id.includes("node_modules/react-dom/") ||
@@ -157,7 +135,7 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/@remix-run/")
           ) return "vendor-router";
 
-          // Tier 2 — Solana core
+          // ── Tier 2: Solana core ──────────────────────────────────────────
           if (
             id.includes("node_modules/@solana/web3.js") ||
             id.includes("node_modules/@solana/wallet-adapter-base") ||
@@ -170,7 +148,7 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/superstruct")
           ) return "vendor-solana";
 
-          // Tier 3 — Wallet UI
+          // ── Tier 3: Wallet UI ────────────────────────────────────────────
           if (
             id.includes("node_modules/@solana/wallet-adapter-react-ui") ||
             id.includes("node_modules/@solana/wallet-adapter-wallets") ||
@@ -178,7 +156,7 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/@solflare-wallet/")
           ) return "vendor-wallet-ui";
 
-          // Tier 4 — WalletConnect / AppKit (only needed when modal opens)
+          // ── Tier 4: WalletConnect (lazy — only when modal opens) ─────────
           if (
             id.includes("node_modules/@walletconnect/") ||
             id.includes("node_modules/@reown/") ||
@@ -186,13 +164,29 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/@toruslabs/")
           ) return "vendor-walletconnect";
 
-          // Tier 5 — UI framework
+          // ── Tier 5: UI framework ─────────────────────────────────────────
           if (id.includes("node_modules/@radix-ui/")) return "vendor-radix";
           if (id.includes("node_modules/framer-motion")) return "vendor-motion";
           if (id.includes("node_modules/lucide-react")) return "vendor-icons";
           if (id.includes("node_modules/@tanstack/")) return "vendor-query";
 
-          // Tier 6 — remainder
+          // ── Tier 6: Charting (only on vault/portfolio pages) ─────────────
+          if (
+            id.includes("node_modules/recharts") ||
+            id.includes("node_modules/recharts-scale") ||
+            id.includes("node_modules/d3-") ||
+            id.includes("node_modules/victory-vendor")
+          ) return "vendor-charts";
+
+          // ── Tier 7: UI utilities ─────────────────────────────────────────
+          if (
+            id.includes("node_modules/sonner") ||
+            id.includes("node_modules/vaul") ||
+            id.includes("node_modules/cmdk") ||
+            id.includes("node_modules/embla-carousel")
+          ) return "vendor-ui-utils";
+
+          // ── Tier 8: Remainder ────────────────────────────────────────────
           if (id.includes("node_modules/")) return "vendor-misc";
         },
       },

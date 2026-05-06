@@ -19,24 +19,50 @@
     <link rel="icon" href="/arcadia-logo.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/arcadia-logo.svg" />
 
-    <!-- Open Graph -->
+    <!-- Open Graph — og:image is the branded card generated at /og.png -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Arcadia — Proof-gated Solana vaults">
-    <meta property="og:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
-    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
+    <meta property="og:title" content="Arcadia — Proof-gated Solana vaults" />
+    <meta property="og:description" content="Back traders by proof, not promises. Arcadia lets traders earn allocation only after proving performance with first-loss capital." />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1408" />
+    <meta property="og:image:height" content="768" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Arcadia — Proof-gated Solana vaults">
-    <meta name="twitter:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
-    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
+    <meta name="twitter:title" content="Arcadia — Proof-gated Solana vaults" />
+    <meta name="twitter:description" content="Back traders by proof, not promises. Arcadia lets traders earn allocation only after proving performance with first-loss capital." />
+    <meta name="twitter:image" content="/og.png" />
 
-    <!-- Preconnect to Solana RPC so first wallet call is faster -->
+    <!-- Preconnect to Solana RPC -->
     <link rel="preconnect" href="https://api.devnet.solana.com" crossorigin />
 
-    <!-- ─── Inline loading screen ────────────────────────────────────────────
-         Renders in microseconds — no JS required. Fades out once React mounts.
-         On repeat visits the SW serves chunks from cache so this is barely
-         visible, but it prevents the black-screen experience on cold loads.
+    <!-- ─── Node / browser polyfills ─────────────────────────────────────────
+         Must run synchronously before any ES module (which are deferred),
+         so put in <head> as a plain inline script.
     ────────────────────────────────────────────────────────────────────────── -->
+    <script>
+      (function () {
+        // global → window (required by many Solana/Node packages)
+        if (typeof window.global === "undefined") window.global = window;
+
+        // Buffer (belt-and-suspenders — main.tsx also polyfills via ESM)
+        if (typeof window.Buffer === "undefined" && typeof window.global.Buffer === "undefined") {
+          // Minimal Buffer shim for packages that only need .isBuffer / .from
+          var _B = { isBuffer: function() { return false; }, from: function(v) { return v; } };
+          window.Buffer = _B;
+          window.global.Buffer = _B;
+        }
+
+        // process (Solana packages check process.browser / process.env.NODE_ENV)
+        if (typeof window.process === "undefined") {
+          window.process = { env: { NODE_ENV: "production" }, browser: true, version: "" };
+        } else {
+          window.process.browser = window.process.browser || true;
+          window.process.env = window.process.env || {};
+          window.process.env.NODE_ENV = window.process.env.NODE_ENV || "production";
+        }
+      })();
+    </script>
+
+    <!-- ─── Inline loading screen ─────────────────────────────────────────── -->
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html, body, #root { height: 100%; }
@@ -56,7 +82,8 @@
         z-index: 9999;
         transition: opacity 0.3s ease;
       }
-      #app-loader.hidden { opacity: 0; pointer-events: none; }
+      #app-loader.hidden  { opacity: 0; pointer-events: none; }
+      #app-loader.errored { gap: 12px; }
 
       .loader-wordmark {
         font-size: 13px; font-weight: 700;
@@ -70,11 +97,22 @@
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
+      .loader-ring.stopped { animation: none; border-top-color: #ef4444; }
       .loader-sub {
         font-size: 11px; color: #52525B;
         letter-spacing: 0.5px;
         font-family: 'Courier New', monospace;
+        text-align: center; max-width: 280px;
       }
+      .loader-retry {
+        margin-top: 4px;
+        padding: 6px 18px;
+        background: #27272A; border: 1px solid #3f3f46;
+        color: #A3E635; border-radius: 6px;
+        font-size: 11px; cursor: pointer;
+        font-family: 'Courier New', monospace;
+      }
+      .loader-retry:hover { background: #3f3f46; }
       @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
@@ -82,7 +120,7 @@
   <body>
     <div id="app-loader">
       <span class="loader-wordmark">ARCADIA</span>
-      <div class="loader-ring"></div>
+      <div class="loader-ring" id="loader-ring"></div>
       <span class="loader-sub" id="loader-sub-text">Loading protocol…</span>
     </div>
 
@@ -90,22 +128,20 @@
 
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- ─── Loader dismiss ──────────────────────────────────────────────────
-         Watches #root for React's first child element, then fades the loader.
-         Also detects SW-served (cached) loads and updates the hint text.
-    ────────────────────────────────────────────────────────────────────────── -->
+    <!-- ─── Loader lifecycle ──────────────────────────────────────────────── -->
     <script>
       (function () {
         var root    = document.getElementById('root');
         var loader  = document.getElementById('app-loader');
+        var ring    = document.getElementById('loader-ring');
         var subText = document.getElementById('loader-sub-text');
         if (!root || !loader) return;
 
-        // Show "cached" hint when SW serves the page
+        // "Serving from cache" hint when SW is already active
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistration('/').then(function (reg) {
-            if (reg && reg.active) {
-              if (subText) subText.textContent = 'Serving from cache…';
+            if (reg && reg.active && subText) {
+              subText.textContent = 'Serving from cache…';
             }
           });
         }
@@ -117,13 +153,46 @@
           }, 350);
         }
 
+        function showError(msg) {
+          if (!loader || !ring || !subText) return;
+          ring.classList.add('stopped');
+          loader.classList.add('errored');
+          subText.textContent = msg || 'Something went wrong loading the app.';
+          subText.style.color = '#ef4444';
+          // Add a reload button
+          var btn = document.createElement('button');
+          btn.className = 'loader-retry';
+          btn.textContent = 'Reload';
+          btn.onclick = function () { window.location.reload(); };
+          loader.appendChild(btn);
+        }
+
+        // Dismiss once React adds children to #root
         var obs = new MutationObserver(function () {
           if (root.childElementCount > 0) { dismiss(); obs.disconnect(); }
         });
         obs.observe(root, { childList: true });
 
-        // Hard fallback — never leave the user stranded
-        setTimeout(function () { dismiss(); }, 10000);
+        // Catch uncaught JS errors that prevent React from mounting
+        window.addEventListener('error', function (e) {
+          // Only intercept if React hasn't mounted yet
+          if (root.childElementCount === 0) {
+            showError('JS error: ' + (e.message || 'unknown'));
+          }
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          if (root.childElementCount === 0) {
+            var msg = (e.reason && (e.reason.message || String(e.reason))) || 'Promise rejected';
+            showError('Load error: ' + msg);
+          }
+        });
+
+        // Hard fallback — after 12 s show error rather than silent blank page
+        setTimeout(function () {
+          if (root.childElementCount === 0) {
+            showError('App is taking too long. Check your connection and reload.');
+          }
+        }, 12000);
       })();
     </script>
   </body>

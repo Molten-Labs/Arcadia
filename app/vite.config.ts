@@ -15,11 +15,9 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    // PWA plugin must be present in dev too so virtual:pwa-register resolves,
-    // but SW is disabled in dev to avoid stale-cache confusion.
     VitePWA({
       registerType: "autoUpdate",
-      injectRegister: "auto",
+      injectRegister: "inline",
       devOptions: { enabled: false },
       manifest: {
         name: "Arcadia Protocol",
@@ -63,8 +61,9 @@ export default defineConfig(({ mode }) => ({
   },
 
   define: {
-    "process.env": JSON.stringify({}),
+    "process.env": "{}",
     "process.env.NODE_ENV": JSON.stringify(mode),
+    "process.browser": "true",
     global: "globalThis",
   },
 
