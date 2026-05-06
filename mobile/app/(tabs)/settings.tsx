@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -65,7 +65,7 @@ export default function SettingsScreen() {
   async function copyAddress() {
     if (!publicKey) return;
     await Clipboard.setStringAsync(publicKey);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert('Copied', 'Address copied to clipboard');
   }
 
@@ -169,7 +169,7 @@ export default function SettingsScreen() {
                 <Pressable
                   key={r}
                   style={[styles.roleBtn, active && styles.roleBtnActive]}
-                  onPress={() => { setRole(r); Haptics.selectionAsync(); }}
+                  onPress={() => { setRole(r); if (Platform.OS !== 'web') Haptics.selectionAsync(); }}
                 >
                   {active && (
                     <LinearGradient

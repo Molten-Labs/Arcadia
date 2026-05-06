@@ -60,8 +60,6 @@ export default function ManagerVaultScreen() {
     }
   }
 
-  const config = getConfigKey;
-
   return (
     <>
       <TxModal state={txState} onClose={() => setTxState({ type: 'idle' })} label="Manager Vault" />
@@ -94,18 +92,18 @@ export default function ManagerVaultScreen() {
             keyboardType="decimal-pad"
           />
           <View style={styles.actionGrid}>
-            <Action label="Deposit junior" disabled={!canUseAmount} onPress={() => run('Deposit junior', () => depositJunior(config(), amountUnits!))} />
-            <Action label="Withdraw junior" disabled={!canUseAmount} onPress={() => run('Withdraw junior', () => withdrawJunior(config(), amountUnits!))} />
-            <Action label="Guarded swap" disabled={!canUseAmount || !vault.tradingEnabled} onPress={() => run('Guarded swap', () => executeGuardedSwap(config(), amountUnits!, 0n))} />
+            <Action label="Deposit junior" disabled={!canUseAmount} onPress={() => run('Deposit junior', () => depositJunior(getConfigKey(), amountUnits!))} />
+            <Action label="Withdraw junior" disabled={!canUseAmount} onPress={() => run('Withdraw junior', () => withdrawJunior(getConfigKey(), amountUnits!))} />
+            <Action label="Guarded swap" disabled={!canUseAmount || !vault.tradingEnabled} onPress={() => run('Guarded swap', () => executeGuardedSwap(getConfigKey(), amountUnits!, 0n))} />
           </View>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.section}>Vault actions</Text>
           <View style={styles.actionGrid}>
-            <Action label="Update NAV" onPress={() => run('Update NAV', () => updateNav(config()))} />
-            <Action label="Graduate" disabled={!canGraduate} onPress={() => run('Graduate vault', () => graduateVault(config(), safeManagerKey(vault.managerPubkey, isDemoWallet)))} />
-            <Action label="Claim fees" onPress={() => run('Claim fees', () => claimFees(config()))} />
+            <Action label="Update NAV" onPress={() => run('Update NAV', () => updateNav(getConfigKey()))} />
+            <Action label="Graduate" disabled={!canGraduate} onPress={() => run('Graduate vault', () => graduateVault(getConfigKey(), safeManagerKey(vault.managerPubkey, isDemoWallet)))} />
+            <Action label="Claim fees" onPress={() => run('Claim fees', () => claimFees(getConfigKey()))} />
           </View>
           <Text style={styles.hint}>Mainnet Jupiter execution must use quote-provided route accounts. Devnet uses guard-only validation.</Text>
         </View>

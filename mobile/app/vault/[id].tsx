@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,7 +74,7 @@ export default function VaultDetailScreen() {
   };
 
   async function handleDeposit() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const usdcUnits = parseUsdcToUnits(amount);
     if (!usdcUnits || usdcUnits <= 0n) { Alert.alert('Invalid Amount'); return; }
     if (!connected) {
@@ -93,14 +94,14 @@ export default function VaultDetailScreen() {
       await new Promise(r => setTimeout(r, 400));
       setTxState({ type: 'success', sig: result.sig, demo: result.demo });
       setAmount('');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       setTxState({ type: 'error', message: err?.message ?? 'Unknown error' });
     }
   }
 
   async function handleWithdraw() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const usdcUnits = parseUsdcToUnits(amount);
     if (!usdcUnits || usdcUnits <= 0n) { Alert.alert('Invalid Amount'); return; }
     if (!connected) {
@@ -128,7 +129,7 @@ export default function VaultDetailScreen() {
               await new Promise(r => setTimeout(r, 400));
               setTxState({ type: 'success', sig: result.sig, demo: result.demo });
               setAmount('');
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (err: any) {
               setTxState({ type: 'error', message: err?.message ?? 'Unknown error' });
             }

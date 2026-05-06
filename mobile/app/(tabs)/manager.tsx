@@ -60,7 +60,7 @@ export default function ManagerScreen() {
             onPress={() => connect().catch((err: any) => Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet'))}
           >
             <LinearGradient colors={[colors.signal, colors.signalDeep]} style={styles.primaryGrad}>
-              <Text style={styles.primaryText}>Connect Android Wallet</Text>
+              <Text style={styles.primaryText}>Connect Wallet</Text>
             </LinearGradient>
           </Pressable>
         ) : role !== 'trader' ? (
