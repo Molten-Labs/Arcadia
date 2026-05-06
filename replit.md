@@ -6,6 +6,9 @@ A full-stack monorepo for a "first-loss" managed trading vault protocol on Solan
 
 ```
 /app                        — React 18 + Vite 5 frontend (Arcadia Protocol UI)
+  src/pages/                —   Index, Vaults, VaultDetail, Traders, TraderProfile, Portfolio,
+                            —   Alerts, Settings, ManagerDashboard, ManagerVault, CreateVault,
+                            —   Trade, Docs, FAQ, HowItWorks, NotFound (all 16 pages complete)
 /mobile                     — Expo SDK 52 + Expo Router v4 mobile app (iOS & Android)
   app/                      —   File-based routes (Expo Router)
     (tabs)/                 —     Bottom tab screens: Vaults, Portfolio, Traders, Settings
