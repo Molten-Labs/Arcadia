@@ -1,9 +1,4 @@
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-    sync::Mutex,
-    time::SystemTime,
-};
+use std::{env, fs, path::PathBuf, sync::Mutex};
 
 use litesvm::{types::TransactionResult, LiteSVM};
 use solana_instruction::{AccountMeta, Instruction};
@@ -27,6 +22,8 @@ use Kiln_program::{
     },
 };
 
+mod common;
+
 static CU_RESULTS: Mutex<Vec<(&str, u64)>> = Mutex::new(Vec::new());
 
 fn program_id() -> Pubkey {
@@ -41,9 +38,13 @@ fn setup() -> (LiteSVM, Keypair) {
         .expect("airdrop failed");
 
     let so_path = sbf_path();
-    assert_sbf_is_fresh(&so_path);
-    let program_data = fs::read(&so_path)
-        .unwrap_or_else(|_| panic!("missing {:?}; run cargo build-sbf in Kiln_program/program", so_path));
+    common::assert_sbf_is_fresh(&so_path);
+    let program_data = fs::read(&so_path).unwrap_or_else(|_| {
+        panic!(
+            "missing {:?}; run cargo build-sbf in Arcadia_program/program",
+            so_path
+        )
+    });
     svm.add_program(program_id(), &program_data)
         .expect("add_program failed");
 
@@ -54,39 +55,10 @@ fn sbf_path() -> PathBuf {
     env::var_os("KILN_SBF_PATH")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
-            // CARGO_MANIFEST_DIR = Kiln_program/kiln-tests/
-            // workspace target  = Kiln_program/target/
+            // CARGO_MANIFEST_DIR = Arcadia_program/kiln-tests/
+            // workspace target  = Arcadia_program/target/
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../target/deploy/Kiln_program.so")
         })
-}
-
-fn assert_sbf_is_fresh(so_path: &Path) {
-    if env::var_os("KILN_SKIP_SBF_FRESHNESS_CHECK").is_some() {
-        return;
-    }
-    let so_mtime = fs::metadata(so_path)
-        .and_then(|m| m.modified())
-        .unwrap_or(SystemTime::UNIX_EPOCH);
-    // Source files live in ../program/src/ relative to this manifest
-    for source in [
-        "../program/src/entrypoint.rs",
-        "../program/src/instructions/create_vault.rs",
-        "../program/src/instructions/deposit_junior.rs",
-        "../program/src/instructions/update_nav.rs",
-        "../program/src/instructions/execute_swap.rs",
-        "../program/src/instructions/claim_fees.rs",
-    ] {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(source);
-        let source_mtime = fs::metadata(&path)
-            .and_then(|m| m.modified())
-            .unwrap_or(SystemTime::UNIX_EPOCH);
-        assert!(
-            so_mtime >= source_mtime,
-            "{:?} is older than {:?}; run cargo build-sbf or set KILN_SBF_PATH to a fresh artifact",
-            so_path,
-            path
-        );
-    }
 }
 
 fn send_tx(
@@ -177,6 +149,19 @@ fn create_vault_ix(manager: &Keypair, vault_index: u16, args: CreateVaultArgs) -
             AccountMeta::new_readonly(system_program::id(), false),
         ],
         data,
+    }
+}
+
+fn create_args(name: &[u8], min_qualifying_trades: u16) -> CreateVaultArgs {
+    let mut fixed_name = [0_u8; 32];
+    fixed_name[..name.len()].copy_from_slice(name);
+    CreateVaultArgs {
+        paper_window_secs: 86_400,
+        min_qualifying_trades,
+        max_slippage_bps: 50,
+        manager_fee_bps: 2_000,
+        _reserved: [0; 2],
+        name: fixed_name,
     }
 }
 
@@ -307,6 +292,33 @@ fn manager_can_create_and_fund_vault() {
     assert_eq!(
         treasury_acc.lamports - vault_config.treasury_rent_lamports,
         deposit_amount
+    );
+}
+
+#[test]
+fn manager_cannot_create_second_vault_in_mvp() {
+    let (mut svm, manager) = setup();
+
+    send_tx(&mut svm, &manager, &[], init_manager_ix(&manager), "init").expect("init manager");
+    send_tx(
+        &mut svm,
+        &manager,
+        &[],
+        create_vault_ix(&manager, 0, create_args(b"First", 10)),
+        "create first vault",
+    )
+    .expect("create first vault");
+
+    assert!(
+        send_tx(
+            &mut svm,
+            &manager,
+            &[],
+            create_vault_ix(&manager, 1, create_args(b"Second", 10)),
+            "create second vault",
+        )
+        .is_err(),
+        "MVP must enforce one active vault per manager",
     );
 }
 

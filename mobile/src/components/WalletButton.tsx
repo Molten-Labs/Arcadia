@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { Alert, Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius } from '../lib/theme';
 import { useWallet } from '../lib/wallet';
@@ -12,9 +12,15 @@ interface Props {
 export function WalletButton({ onPress }: Props) {
   const { connected, connecting, publicKey, connect, isDemoWallet } = useWallet();
 
-  const handlePress = () => {
+  const handlePress = async () => {
     if (onPress) { onPress(); return; }
-    if (!connected && !connecting) connect();
+    if (!connected && !connecting) {
+      try {
+        await connect();
+      } catch (err: any) {
+        Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+      }
+    }
   };
 
   if (connected && publicKey) {

@@ -99,6 +99,9 @@ pub fn read_price(
     expected_feed: u8,
     now: i64,
 ) -> Result<PriceSnapshot, ProgramError> {
+    if !account.is_owned_by(&crate::ID) {
+        return Err(KilnError::InvalidOracleAccount.into());
+    }
     if account.data_len() < 40 {
         return Err(KilnError::InvalidPriceFeed.into());
     }
@@ -166,7 +169,11 @@ pub fn wsol_value_usdc(
         .ok_or(KilnError::MathOverflow)?
         .checked_mul(USDC_DECIMALS as u128)
         .ok_or(KilnError::MathOverflow)?
-        .checked_div((WSOL_DECIMALS as u128).checked_mul(usdc_usd_price as u128).ok_or(KilnError::MathOverflow)?)
+        .checked_div(
+            (WSOL_DECIMALS as u128)
+                .checked_mul(usdc_usd_price as u128)
+                .ok_or(KilnError::MathOverflow)?,
+        )
         .ok_or(KilnError::MathOverflow)?;
     if value > u64::MAX as u128 {
         return Err(KilnError::MathOverflow.into());

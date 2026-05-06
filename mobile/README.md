@@ -8,7 +8,8 @@ React Native / Expo mobile app for the Arcadia Protocol vault platform.
 - **React Native** with TypeScript
 - **TanStack Query** for data fetching
 - **Expo Router** (file-based navigation)
-- Mock data by default; connects to the Arcadia API when `EXPO_PUBLIC_KILN_API_URL` is set
+- **Solana Mobile Wallet Adapter** for Android wallet signing
+- Mock/API read fallback by default; connects to Arcadia API when `EXPO_PUBLIC_KILN_API_URL` is set
 
 ## Screens
 
@@ -17,8 +18,12 @@ React Native / Expo mobile app for the Arcadia Protocol vault platform.
 | Vaults | `/(tabs)/` | Marketplace — browse and filter all vaults |
 | Portfolio | `/(tabs)/portfolio` | Investor positions, P&L summary |
 | Traders | `/(tabs)/traders` | Manager leaderboard |
+| Manager | `/(tabs)/manager` | Trader console, manager stats, vault actions |
 | Settings | `/(tabs)/settings` | Wallet, role, network config |
 | Vault Detail | `/vault/[id]` | NAV chart, capital stack, deposit/withdraw |
+| Create Vault | `/manager/create` | Paper-mode vault setup |
+| Manager Vault | `/manager/vault/[id]` | Junior capital, NAV, graduation, fees |
+| Trade Terminal | `/trade` | Guarded USDC ↔ WSOL operation flow |
 | Trader Profile | `/trader/[wallet]` | Manager stats and their vaults |
 
 ## Quick Start
@@ -26,10 +31,17 @@ React Native / Expo mobile app for the Arcadia Protocol vault platform.
 ```bash
 cd mobile
 npm install
-npx expo start
+npm run start
 ```
 
-Scan the QR code with **Expo Go** (iOS or Android).
+Expo Go is fine for read-only/mock preview. Real Solana Mobile Wallet Adapter signing requires an Android custom dev build:
+
+```bash
+npm run android
+npm run start:dev-client
+```
+
+Install a compatible wallet such as Phantom, Solflare, or Mock MWA Wallet on the Android emulator/device.
 
 ## Connect to the Backend
 
@@ -43,16 +55,7 @@ Use your machine's local IP (not `localhost`) so the device can reach it.
 
 ## Production Wallet (Mobile Wallet Adapter)
 
-The current build uses a **demo wallet** (mock pubkey) that works in Expo Go.
-
-For real on-chain transactions, add `@solana-mobile/mobile-wallet-adapter-protocol-web3js`:
-
-```bash
-npm install @solana-mobile/mobile-wallet-adapter-protocol-web3js react-native-get-random-values
-npx expo run:android   # requires a custom dev build
-```
-
-Then replace the `WalletProvider` in `src/lib/wallet.tsx` with the MWA transact() flow.
+Android uses Mobile Wallet Adapter authorize/reauthorize/deauthorize state and submits transactions with `signAndSendTransactions`. iOS and Expo Go stay read-only/mock-compatible for v1 and show an Android signing requirement before real transaction submission.
 
 ## Environment Variables
 
@@ -60,3 +63,18 @@ Then replace the `WalletProvider` in `src/lib/wallet.tsx` with the MWA transact(
 |----------|---------|-------------|
 | `EXPO_PUBLIC_KILN_API_URL` | _(empty — uses mock data)_ | Arcadia indexer API base URL |
 | `EXPO_PUBLIC_RPC_URL` | `https://api.devnet.solana.com` | Solana RPC endpoint |
+| `EXPO_PUBLIC_SOLANA_CLUSTER` | inferred from RPC | `devnet` or `mainnet-beta` |
+| `EXPO_PUBLIC_ARCADIA_PROGRAM_ID` | current Arcadia program | Program id override |
+| `EXPO_PUBLIC_USDC_MINT` | cluster default | USDC mint override |
+| `EXPO_PUBLIC_PYTH_SOL_USD_ACCOUNT` | _(empty)_ | Pyth SOL/USD price account |
+| `EXPO_PUBLIC_PYTH_USDC_USD_ACCOUNT` | _(empty)_ | Pyth USDC/USD price account |
+| `EXPO_PUBLIC_JUPITER_API_URL` | `https://quote-api.jup.ag/v6` | Jupiter quote API base |
+
+## Checks
+
+```bash
+npm run typecheck
+npm run lint
+```
+
+Android device QA is still required for wallet approval, app backgrounding, and real transaction confirmation.

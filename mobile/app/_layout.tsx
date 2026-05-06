@@ -1,11 +1,14 @@
-import '../polyfills';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { WalletProvider } from '../src/lib/wallet';
 import { colors } from '../src/lib/theme';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,6 +17,10 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
@@ -33,6 +40,39 @@ export default function RootLayout() {
                 options={{
                   headerShown: true,
                   headerTitle: '',
+                  headerStyle: { backgroundColor: colors.surface },
+                  headerTintColor: colors.signal,
+                  headerShadowVisible: false,
+                  headerBackTitle: '',
+                }}
+              />
+              <Stack.Screen
+                name="manager/create"
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Launch Vault',
+                  headerStyle: { backgroundColor: colors.surface },
+                  headerTintColor: colors.signal,
+                  headerShadowVisible: false,
+                  headerBackTitle: '',
+                }}
+              />
+              <Stack.Screen
+                name="manager/vault/[id]"
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Manager Vault',
+                  headerStyle: { backgroundColor: colors.surface },
+                  headerTintColor: colors.signal,
+                  headerShadowVisible: false,
+                  headerBackTitle: '',
+                }}
+              />
+              <Stack.Screen
+                name="trade"
+                options={{
+                  headerShown: true,
+                  headerTitle: 'Trade',
                   headerStyle: { backgroundColor: colors.surface },
                   headerTintColor: colors.signal,
                   headerShadowVisible: false,

@@ -76,7 +76,8 @@ pub fn execute_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 }
 
 fn execute_guard_only_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] = accounts else {
+    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar] = accounts
+    else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
@@ -175,8 +176,7 @@ fn execute_guard_only_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResu
         }
     }
 
-    // Update HWM if NAV increased
-    if new_nav > state.high_water_mark {
+    if state.high_water_mark == 0 {
         state.high_water_mark = new_nav;
     }
 
@@ -198,21 +198,8 @@ fn execute_guard_only_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResu
 }
 
 fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [
-        manager,
-        manager_profile,
-        vault_config,
-        vault_state,
-        treasury,
-        clock_sysvar,
-        jupiter_program,
-        token_program,
-        source_token_account,
-        destination_token_account,
-        sol_price_account,
-        usdc_price_account,
-        jupiter_accounts @ ..,
-    ] = accounts
+    let [manager, manager_profile, vault_config, vault_state, treasury, clock_sysvar, jupiter_program, token_program, source_token_account, destination_token_account, sol_price_account, usdc_price_account, jupiter_accounts @ ..] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -274,12 +261,16 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     }
     match args.route {
         ROUTE_SOL_TO_USDC => {
-            if source.mint != super::custody::WSOL_MINT || destination.mint != super::custody::USDC_MINT {
+            if source.mint != super::custody::WSOL_MINT
+                || destination.mint != super::custody::USDC_MINT
+            {
                 return Err(KilnError::InvalidSwapRoute.into());
             }
         }
         ROUTE_USDC_TO_SOL => {
-            if source.mint != super::custody::USDC_MINT || destination.mint != super::custody::WSOL_MINT {
+            if source.mint != super::custody::USDC_MINT
+                || destination.mint != super::custody::WSOL_MINT
+            {
                 return Err(KilnError::InvalidSwapRoute.into());
             }
         }
@@ -335,17 +326,20 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
 
     let source_after = super::custody::read_token_account(source_token_account)?;
     let destination_after_snapshot = super::custody::read_token_account(destination_token_account)?;
+    let spent_source_amount = source
+        .amount
+        .checked_sub(source_after.amount)
+        .ok_or(KilnError::SlippageExceeded)?;
+    if spent_source_amount == 0 || spent_source_amount > args.in_amount {
+        return Err(KilnError::SlippageExceeded.into());
+    }
     let (usdc_after, wsol_after) = if args.route == ROUTE_USDC_TO_SOL {
         (source_after.amount, destination_after_snapshot.amount)
     } else {
         (destination_after_snapshot.amount, source_after.amount)
     };
-    let new_nav = super::custody::nav_usdc(
-        usdc_after,
-        wsol_after,
-        sol_price.price,
-        usdc_price.price,
-    )?;
+    let new_nav =
+        super::custody::nav_usdc(usdc_after, wsol_after, sol_price.price, usdc_price.price)?;
     if args.route == ROUTE_USDC_TO_SOL {
         vault_guard::enforce_usdc_reserve_after_swap(usdc_after, new_nav)?;
     }
@@ -376,16 +370,21 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
             state.trading_enabled = 0;
         }
     }
-    if new_nav > state.high_water_mark {
+    if state.high_water_mark == 0 {
         state.high_water_mark = new_nav;
     }
 
+    let qualifying_notional_usdc = if args.route == ROUTE_USDC_TO_SOL {
+        spent_source_amount
+    } else {
+        super::custody::wsol_value_usdc(spent_source_amount, sol_price.price, usdc_price.price)?
+    };
     vault_guard::apply_post_swap_cooldown(
         &mut state,
         old_nav,
         new_nav,
         clock.unix_timestamp,
-        args.in_amount,
+        qualifying_notional_usdc,
     );
 
     Ok(())

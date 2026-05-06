@@ -1,4 +1,4 @@
-# Arcadia
+# Arcadia protocol
 
 <img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/a9b2b319-3f83-4198-9181-05cd2529f284" />
 

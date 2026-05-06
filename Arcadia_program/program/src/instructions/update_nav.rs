@@ -134,23 +134,16 @@ pub fn update_nav(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 }
 
 fn update_nav_usdc_wsol(accounts: &[AccountInfo]) -> ProgramResult {
-    let [
-        _updater,
-        vault_config,
-        vault_state,
-        treasury,
-        vault_usdc_token,
-        vault_wsol_token,
-        sol_price_account,
-        usdc_price_account,
-        clock_sys,
-        ..,
-    ] = accounts
+    let [_updater, vault_config, vault_state, treasury, vault_usdc_token, vault_wsol_token, sol_price_account, usdc_price_account, clock_sys, ..] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
 
-    if !vault_state.is_writable() || !vault_usdc_token.is_writable() || !vault_wsol_token.is_writable() {
+    if !vault_state.is_writable()
+        || !vault_usdc_token.is_writable()
+        || !vault_wsol_token.is_writable()
+    {
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -184,18 +177,14 @@ fn update_nav_usdc_wsol(accounts: &[AccountInfo]) -> ProgramResult {
         super::custody::PRICE_FEED_USDC_USD,
         clock.unix_timestamp,
     )?;
-    let new_nav = super::custody::nav_usdc(
-        usdc.amount,
-        wsol.amount,
-        sol_price.price,
-        usdc_price.price,
-    )?;
+    let new_nav =
+        super::custody::nav_usdc(usdc.amount, wsol.amount, sol_price.price, usdc_price.price)?;
 
     let old_nav = state.current_nav;
     state.last_nav = old_nav;
     state.current_nav = new_nav;
     state.last_nav_update_at = clock.unix_timestamp;
-    if state.high_water_mark == 0 || new_nav > state.high_water_mark {
+    if state.high_water_mark == 0 {
         state.high_water_mark = new_nav;
     }
 

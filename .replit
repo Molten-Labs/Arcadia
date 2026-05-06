@@ -27,12 +27,8 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash dev.sh"
+args = "bash mobile-dev.sh"
 waitForPort = 5000
-
-[[ports]]
-localPort = 5000
-externalPort = 80
 
 [[ports]]
 localPort = 5001
@@ -44,5 +40,9 @@ externalPort = 8081
 
 [deployment]
 deploymentTarget = "static"
-build = ["bash", "-c", "cd app && node node_modules/vite/bin/vite.js build --config vite.config.js"]
+build = [
+  "bash",
+  "-c",
+  "cd app && node node_modules/vite/bin/vite.js build --config vite.config.js",
+]
 publicDir = "app/dist"

@@ -109,17 +109,15 @@ export const Nav = () => {
     const publicLinks = [
         { to: "/vaults", label: "Marketplace" },
         { to: "/traders", label: "Traders" },
+        { to: "/how-it-works", label: "How It Works" },
         { to: "/docs", label: "Docs" },
-        { action: () => scrollToSection("how-it-works"), label: "How Arcadia Works" },
-        { action: () => scrollToSection("faq"), label: "FAQ" },
     ];
 
     const investorLinks = [
         { to: "/vaults", label: "Marketplace" },
         { to: "/portfolio", label: "Portfolio" },
         { to: "/traders", label: "Traders" },
-        { action: () => scrollToSection("how-it-works"), label: "How Arcadia Works" },
-        { action: () => scrollToSection("faq"), label: "FAQ" },
+        { to: "/how-it-works", label: "How It Works" },
     ];
 
     const traderLinks = [
@@ -127,8 +125,7 @@ export const Nav = () => {
         { to: "/trade", label: "Trade" },
         { to: "/manager/create", label: "New vault" },
         { to: "/traders", label: "Directory" },
-        { action: () => scrollToSection("how-it-works"), label: "How Arcadia Works" },
-        { action: () => scrollToSection("faq"), label: "FAQ" },
+        { to: "/how-it-works", label: "How It Works" },
     ];
 
     const links = !connected ? publicLinks : role === "trader" ? traderLinks : investorLinks;

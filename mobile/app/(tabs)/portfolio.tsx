@@ -7,6 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,6 +57,14 @@ export default function PortfolioScreen() {
   const pnlPct = totalDeposited > 0
     ? ((totalPnL / totalDeposited) * 100).toFixed(2) : '0.00';
 
+  async function handleConnect() {
+    try {
+      await connect();
+    } catch (err: any) {
+      Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+    }
+  }
+
   if (!connected) {
     return (
       <View style={[styles.screen]}>
@@ -69,7 +78,7 @@ export default function PortfolioScreen() {
           subtitle="View positions, P&L, and manage your capital"
         />
         <View style={[styles.connectWrap, { paddingBottom: insets.bottom + 20 }]}>
-          <Pressable style={styles.connectBtn} onPress={connect}>
+          <Pressable style={styles.connectBtn} onPress={handleConnect}>
             <LinearGradient
               colors={[colors.signal, colors.signalDeep]}
               style={styles.connectBtnGrad}
@@ -197,7 +206,7 @@ export default function PortfolioScreen() {
                   {i > 0 && <View style={styles.actDivider} />}
                   <ActivityRow
                     label={pos.vault?.name ?? 'Unknown Vault'}
-                    sub={`${formatAge(pos.depositedAt)} ago · ${pos.seniorShares.toLocaleString()} shares`}
+                    sub={`${formatAge(pos.depositedAt)} ago · ${formatUSD(pos.currentValue, true)} current claim`}
                     value={`${pnlStr} (${ret}%)`}
                     positive={positive}
                     onPress={() => router.push(`/vault/${pos.vaultConfigPubkey}`)}

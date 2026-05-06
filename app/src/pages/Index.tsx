@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -25,10 +25,146 @@ import {
   Shield,
   TrendingUp,
   Users,
+  Copy,
+  Check,
+  ExternalLink,
+  Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
+import { toast } from "sonner";
+
+const PROGRAM_ID = "WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB";
+
+const DevnetSection = () => {
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(PROGRAM_ID);
+    setCopied(true);
+    toast.success("Program ID copied");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const steps = [
+    {
+      n: "01",
+      title: "Get devnet SOL",
+      body: "Use the Solana faucet to airdrop SOL to your wallet for gas fees.",
+      href: "https://faucet.solana.com",
+      cta: "Solana faucet →",
+    },
+    {
+      n: "02",
+      title: "Get devnet USDC",
+      body: "Mint devnet USDC from Circle's testnet faucet for vault deposits.",
+      href: "https://faucet.circle.com",
+      cta: "Circle faucet →",
+    },
+    {
+      n: "03",
+      title: "Create or deposit",
+      body: "Create a vault as a trader, or deposit into a graduated vault as an investor.",
+      href: "/vaults",
+      cta: "Open marketplace →",
+    },
+  ];
+
+  return (
+    <section className="border-b border-border/35 py-20">
+      <div className="container">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mb-10 flex flex-wrap items-end justify-between gap-6"
+        >
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground mb-4">
+              <span className="h-1.5 w-1.5 rounded-full bg-status-active animate-pulse-glow" />
+              Live on Solana Devnet
+            </span>
+            <h2 className="font-display type-h2 font-semibold">Try Arcadia on devnet</h2>
+            <p className="mt-2 text-muted-foreground max-w-xl">
+              The full protocol is deployed on Solana devnet. Get test tokens and try the complete flow — from vault creation to senior deposit.
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Program ID card */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.45 }}
+          className="surface rounded-[11px] p-5 mb-8 flex flex-wrap items-center justify-between gap-4"
+        >
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground mb-1.5">Program ID · Solana Devnet</div>
+            <div className="font-mono text-[12px] text-foreground break-all">{PROGRAM_ID}</div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={copy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-secondary/50 font-mono text-[11px] text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            >
+              {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+            <a
+              href={`https://explorer.solana.com/address/${PROGRAM_ID}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/60 bg-secondary/50 font-mono text-[11px] text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Explorer
+            </a>
+          </div>
+        </motion.div>
+
+        {/* 3-step guide */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {steps.map((step, i) => (
+            <motion.div
+              key={step.n}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.42, delay: i * 0.08 }}
+              className="surface rounded-[11px] p-5 flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary">{step.n}</span>
+                <Zap className="w-4 h-4 text-primary/40" />
+              </div>
+              <h3 className="font-display text-base font-semibold mb-2">{step.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground flex-1">{step.body}</p>
+              <div className="mt-4">
+                {step.href.startsWith("http") ? (
+                  <a
+                    href={step.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-[11px] text-primary hover:text-primary-glow transition-colors"
+                  >
+                    {step.cta}
+                  </a>
+                ) : (
+                  <Link to={step.href} className="font-mono text-[11px] text-primary hover:text-primary-glow transition-colors">
+                    {step.cta}
+                  </Link>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
 
 const HERO_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260325_094440_a3592600-bd1e-49e5-9bce-a73662061d83.mp4";
@@ -426,6 +562,9 @@ const Landing = () => {
 
       {/* 7. Projected Outcomes */}
       <VaultCalculator />
+
+      {/* 7b. Try it on Devnet */}
+      <DevnetSection />
 
       {/* 8. Integrations */}
       <InfiniteSlider />
