@@ -8,21 +8,107 @@
     <meta name="author" content="Arcadia" />
     <link rel="icon" href="/arcadia-logo.svg" type="image/svg+xml" />
 
-    
-    
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
     <meta property="og:title" content="Arcadia — Proof-gated Solana vaults">
-  <meta name="twitter:title" content="Arcadia — Proof-gated Solana vaults">
-  <meta property="og:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
-  <meta name="twitter:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
-</head>
+    <meta property="og:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
+    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Arcadia — Proof-gated Solana vaults">
+    <meta name="twitter:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
+    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
+
+    <!-- Preconnect to Solana RPC so wallet init is faster -->
+    <link rel="preconnect" href="https://api.devnet.solana.com" crossorigin />
+
+    <!-- Inline loading screen — shows instantly while JS chunks download.
+         Replaced by React as soon as #root hydrates. -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body, #root { height: 100%; }
+
+      body {
+        background: #0C0C0E;
+        color: #fff;
+        font-family: system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Shown only before React mounts */
+      #app-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #0C0C0E;
+        z-index: 9999;
+        transition: opacity 0.25s ease;
+      }
+      #app-loader.hidden { opacity: 0; pointer-events: none; }
+
+      .loader-wordmark {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 5px;
+        color: #A3E635;
+        font-family: 'Courier New', monospace;
+      }
+
+      .loader-ring {
+        width: 36px;
+        height: 36px;
+        border: 2px solid #27272A;
+        border-top-color: #A3E635;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .loader-sub {
+        font-size: 11px;
+        color: #52525B;
+        letter-spacing: 0.5px;
+        font-family: 'Courier New', monospace;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
 
   <body>
+    <!-- Instant loading UI — hidden by script below once React is ready -->
+    <div id="app-loader">
+      <span class="loader-wordmark">ARCADIA</span>
+      <div class="loader-ring"></div>
+      <span class="loader-sub">Loading protocol…</span>
+    </div>
+
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hide the loader once React has rendered into #root -->
+    <script>
+      (function () {
+        var root = document.getElementById('root');
+        var loader = document.getElementById('app-loader');
+        if (!root || !loader) return;
+        var obs = new MutationObserver(function () {
+          if (root.childElementCount > 0) {
+            loader.classList.add('hidden');
+            setTimeout(function () { loader.remove(); }, 300);
+            obs.disconnect();
+          }
+        });
+        obs.observe(root, { childList: true });
+        // Fallback: hide after 8 s even if something goes wrong
+        setTimeout(function () { loader.classList.add('hidden'); }, 8000);
+      })();
+    </script>
   </body>
 </html>
