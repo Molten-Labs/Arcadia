@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { useQueryClient } from '@tanstack/react-query';
 import { PublicKey } from '@solana/web3.js';
 import { colors, spacing, radius } from '../../src/lib/theme';
 import { useVault, useNavHistory } from '../../src/hooks/useVaults';
@@ -33,15 +35,30 @@ type Tab = 'overview' | 'deposit' | 'withdraw';
 export default function VaultDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { connected, role, connect, isDemoWallet } = useWallet();
-  const { data: vault, isLoading } = useVault(id);
-  const { data: navHistory } = useNavHistory(id);
+  const { data: vault, isLoading, refetch: refetchVault } = useVault(id);
+  const { data: navHistory, refetch: refetchNav } = useNavHistory(id);
   const { data: balance } = useBalance();
   const { depositSenior, withdrawSenior } = useArcadiaTransactions();
 
   const [tab, setTab] = useState<Tab>('overview');
   const [amount, setAmount] = useState('');
   const [txState, setTxState] = useState<TxState>({ type: 'idle' });
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchVault(),
+        refetchNav(),
+        queryClient.invalidateQueries({ queryKey: ['balance'] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useLayoutEffect(() => {
     if (vault) navigation.setOptions({ headerTitle: vault.name });
@@ -143,7 +160,19 @@ export default function VaultDetailScreen() {
     <>
       <TxModal state={txState} onClose={() => setTxState({ type: 'idle' })} label={tab === 'deposit' ? 'Deposit' : 'Withdrawal'} />
 
-      <ScrollView style={styles.screen} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.signal}
+            colors={[colors.signal]}
+          />
+        }
+      >
 
         {/* Hero card */}
         <View style={styles.heroCard}>

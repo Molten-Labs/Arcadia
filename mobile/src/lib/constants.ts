@@ -44,7 +44,8 @@ export const JUPITER_API_URL = env.EXPO_PUBLIC_JUPITER_API_URL ?? 'https://quote
 export const APP_IDENTITY = {
   name: 'Arcadia Protocol',
   uri: 'https://arcadia.protocol',
-  icon: '/icon.png',
+  // Must be an absolute URL — MWA wallets fetch this to show the app icon in their approval UI
+  icon: 'https://arcadia.protocol/icon.png',
 } as const;
 
 export const EXPLORER_BASE = 'https://explorer.solana.com';

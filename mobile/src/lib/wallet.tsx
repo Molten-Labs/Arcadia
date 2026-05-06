@@ -67,9 +67,9 @@ function normalizeWalletAddress(address: string | Uint8Array | number[]): string
   return new PublicKey(Uint8Array.from(address)).toBase58();
 }
 
-function normalizeSignature(signature: string | Uint8Array | number[]): string {
-  if (typeof signature === 'string') return signature;
-  return encodeBase58(Uint8Array.from(signature));
+function normalizeSignature(sig: string | Uint8Array | number[]): string {
+  if (typeof sig === 'string') return sig;
+  return encodeBase58(Uint8Array.from(sig));
 }
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -83,20 +83,30 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [pendingRequest, setPendingRequest] = useState<string | null>(null);
 
   const connection = useMemo(() => new Connection(RPC_URL, 'confirmed'), []);
+
+  // MWA is only available on Android — not on iOS or web
   const isMwaAvailable = Platform.OS === 'android';
 
+  // Restore persisted session on mount
   useEffect(() => {
     (async () => {
-      const storedKey = await AsyncStorage.getItem('wallet_pubkey');
-      const storedRole = await AsyncStorage.getItem('wallet_role') as Role | null;
-      const storedToken = await AsyncStorage.getItem('wallet_auth_token');
-      const storedDemo = await AsyncStorage.getItem('wallet_is_demo');
-      const storedLabel = await AsyncStorage.getItem('wallet_label');
-      if (storedKey) { setPublicKey(storedKey); setConnected(true); }
-      if (storedRole) setRoleState(storedRole);
-      if (storedToken) setAuthToken(storedToken);
-      if (storedDemo === '1') setIsDemoWallet(true);
-      if (storedLabel) setWalletLabel(storedLabel);
+      const [storedKey, storedRole, storedToken, storedDemo, storedLabel] = await AsyncStorage.multiGet([
+        'wallet_pubkey',
+        'wallet_role',
+        'wallet_auth_token',
+        'wallet_is_demo',
+        'wallet_label',
+      ]);
+      const key = storedKey[1];
+      const roleVal = storedRole[1] as Role | null;
+      const token = storedToken[1];
+      const demo = storedDemo[1];
+      const label = storedLabel[1];
+      if (key) { setPublicKey(key); setConnected(true); }
+      if (roleVal) setRoleState(roleVal);
+      if (token) setAuthToken(token);
+      if (demo === '1') setIsDemoWallet(true);
+      if (label) setWalletLabel(label);
     })();
   }, []);
 
@@ -106,10 +116,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(async () => {
+    if (connecting) return;
     setConnecting(true);
-    setPendingRequest('Opening wallet');
+    setPendingRequest('Opening wallet…');
     try {
       if (!isMwaAvailable) {
+        // Non-Android: demo/read-only preview mode
         const demo = genDemoPubkey();
         setPublicKey(demo);
         setConnected(true);
@@ -123,15 +135,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Android: use Mobile Wallet Adapter v2
       const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js');
       await transact(async (wallet: any) => {
         const { accounts, auth_token } = await wallet.authorize({
           cluster: CLUSTER,
           identity: APP_IDENTITY,
         });
-        if (accounts?.length > 0) {
+        if (accounts && accounts.length > 0) {
           const pubkey = normalizeWalletAddress(accounts[0].address);
-          const label = accounts[0].label ?? 'MWA wallet';
+          const label = accounts[0].label ?? 'MWA Wallet';
           setPublicKey(pubkey);
           setConnected(true);
           setAuthToken(auth_token);
@@ -139,7 +152,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           setWalletLabel(label);
           await AsyncStorage.multiSet([
             ['wallet_pubkey', pubkey],
-            ['wallet_auth_token', auth_token],
+            ['wallet_auth_token', auth_token ?? ''],
             ['wallet_is_demo', '0'],
             ['wallet_label', label],
           ]);
@@ -151,46 +164,82 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setConnecting(false);
       setPendingRequest(null);
     }
-  }, [isMwaAvailable]);
+  }, [isMwaAvailable, connecting]);
 
   const disconnect = useCallback(() => {
+    // Fire-and-forget deauthorize so the wallet app knows to clean up the session
+    if (isMwaAvailable && authToken && !isDemoWallet) {
+      import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
+        .then(({ transact }) =>
+          transact(async (wallet: any) => {
+            try { await wallet.deauthorize({ auth_token: authToken }); } catch { }
+          })
+        )
+        .catch(() => {});
+    }
     setConnected(false);
     setPublicKey(null);
     setAuthToken(null);
     setIsDemoWallet(false);
     setWalletLabel(null);
     AsyncStorage.multiRemove(['wallet_pubkey', 'wallet_auth_token', 'wallet_is_demo', 'wallet_label']);
-  }, []);
+  }, [isMwaAvailable, authToken, isDemoWallet]);
 
   const signAndSendTransaction = useCallback(async (tx: Transaction): Promise<string> => {
     if (!connected || !publicKey) throw new Error('Wallet not connected');
-    if (isDemoWallet || !isMwaAvailable) throw new Error('Android Mobile Wallet Adapter signing required');
+    if (isDemoWallet || !isMwaAvailable) throw new Error('Android Mobile Wallet Adapter required for signing');
 
     const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js');
-    setPendingRequest('Awaiting wallet approval');
-    return await transact(async (wallet: any) => {
-      let token = authToken;
+    setPendingRequest('Awaiting wallet approval…');
+
+    return transact(async (wallet: any) => {
+      // 1. Rotate auth token (reauthorize). If token expired, fall back to full authorize.
+      let currentToken = authToken;
       try {
         const r = await wallet.reauthorize({ auth_token: authToken, identity: APP_IDENTITY });
-        token = r.auth_token;
-        setAuthToken(token);
-        if (token) await AsyncStorage.setItem('wallet_auth_token', token);
-      } catch { }
+        currentToken = r.auth_token;
+      } catch {
+        // Token invalid or expired — request fresh authorization
+        const { accounts, auth_token } = await wallet.authorize({
+          cluster: CLUSTER,
+          identity: APP_IDENTITY,
+        });
+        currentToken = auth_token;
+        if (accounts?.length > 0) {
+          const newPubkey = normalizeWalletAddress(accounts[0].address);
+          const label = accounts[0].label ?? 'MWA Wallet';
+          setPublicKey(newPubkey);
+          setWalletLabel(label);
+          await AsyncStorage.multiSet([
+            ['wallet_pubkey', newPubkey],
+            ['wallet_label', label],
+          ]);
+        }
+      }
 
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      // Persist the rotated token
+      setAuthToken(currentToken);
+      if (currentToken) await AsyncStorage.setItem('wallet_auth_token', currentToken);
+
+      // 2. Fetch a fresh blockhash inside the transact session for minimum latency
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
       tx.recentBlockhash = blockhash;
-      tx.feePayer = new PublicKey(publicKey);
+      tx.feePayer = new PublicKey(publicKey!);
 
-      const serialized = tx.serialize({ requireAllSignatures: false });
-      const signatures = await wallet.signAndSendTransactions({
-        transactions: [serialized],
+      // 3. Pass the Transaction object directly — the MWA augmented API handles base64 encoding internally.
+      //    Do NOT pre-serialize; that would double-encode the transaction.
+      const signatures: string[] = await wallet.signAndSendTransactions({
+        transactions: [tx],
       });
+
       const sig = normalizeSignature(signatures[0]);
 
+      // 4. Confirm on-chain
       await connection.confirmTransaction(
         { signature: sig, blockhash, lastValidBlockHeight },
         'confirmed',
       );
+
       return sig;
     }).finally(() => setPendingRequest(null));
   }, [connected, publicKey, authToken, isDemoWallet, isMwaAvailable, connection]);
@@ -207,16 +256,34 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<WalletCtx>(() => ({
     connected, connecting, publicKey, authToken, role, setRole,
     cluster: CLUSTER, walletLabel, pendingRequest,
-    connection, connect, disconnect, sendArcadiaTransaction, signAndSendTransaction, isDemoWallet, isMwaAvailable,
-  }), [connected, connecting, publicKey, authToken, role, setRole, walletLabel, pendingRequest, connection, connect, disconnect, sendArcadiaTransaction, signAndSendTransaction, isDemoWallet, isMwaAvailable]);
+    connection, connect, disconnect, sendArcadiaTransaction, signAndSendTransaction,
+    isDemoWallet, isMwaAvailable,
+  }), [
+    connected, connecting, publicKey, authToken, role, setRole,
+    walletLabel, pendingRequest, connection, connect, disconnect,
+    sendArcadiaTransaction, signAndSendTransaction, isDemoWallet, isMwaAvailable,
+  ]);
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 
 function friendlyWalletError(error: any): string {
   const message = String(error?.message ?? error ?? '');
-  if (message.includes('User rejected') || message.includes('declined')) return 'Wallet request cancelled';
-  if (message.includes('timeout')) return 'Wallet did not respond. Please try again.';
-  if (message.includes('No wallet') || message.includes('Activity not found')) return 'Install an MWA wallet such as Phantom or Solflare.';
+  if (message.includes('User rejected') || message.includes('declined') || message.includes('Cancelled')) {
+    return 'Wallet request cancelled';
+  }
+  if (message.includes('timeout') || message.includes('Timeout')) {
+    return 'Wallet did not respond. Please try again.';
+  }
+  if (
+    message.includes('No wallet') ||
+    message.includes('Activity not found') ||
+    message.includes('No activity found')
+  ) {
+    return 'No MWA wallet found. Install Phantom or Solflare for Android.';
+  }
+  if (message.includes('JsonRpc') || message.includes('RPC')) {
+    return 'Network error. Check your connection and try again.';
+  }
   return message || 'Wallet connection failed';
 }
