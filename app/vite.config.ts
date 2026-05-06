@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -14,12 +15,44 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    // PWA plugin must be present in dev too so virtual:pwa-register resolves,
+    // but SW is disabled in dev to avoid stale-cache confusion.
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: "auto",
+      devOptions: { enabled: false },
+      manifest: {
+        name: "Arcadia Protocol",
+        short_name: "Arcadia",
+        description: "Proof-gated Solana vaults — back traders by proof, not promises.",
+        theme_color: "#0C0C0E",
+        background_color: "#0C0C0E",
+        display: "standalone",
+        start_url: "/",
+        scope: "/",
+        icons: [
+          { src: "/arcadia-logo.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+          { src: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
+        ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,woff}"],
+        navigateFallback: "/index.html",
+        disableDevLogs: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/(api\.devnet|api\.mainnet-beta)\.solana\.com\//,
+            handler: "StaleWhileRevalidate",
+            options: { cacheName: "solana-rpc", expiration: { maxEntries: 30, maxAgeSeconds: 30 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+        ],
+      },
+    }),
   ].filter(Boolean),
 
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Force browser-compatible polyfill — prevents "externalized for browser" crash
       buffer: path.resolve(__dirname, "node_modules/buffer/index.js"),
     },
     dedupe: [

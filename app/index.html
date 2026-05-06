@@ -6,7 +6,18 @@
     <title>Arcadia — Proof-gated Solana vaults</title>
     <meta name="description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
     <meta name="author" content="Arcadia" />
+
+    <!-- PWA / installability -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0C0C0E" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Arcadia" />
+
+    <!-- Icons -->
     <link rel="icon" href="/arcadia-logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/arcadia-logo.svg" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -18,16 +29,17 @@
     <meta name="twitter:description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/434a1eab-c677-4839-9a33-192213679871">
 
-    <!-- Preconnect to Solana RPC so wallet init is faster -->
+    <!-- Preconnect to Solana RPC so first wallet call is faster -->
     <link rel="preconnect" href="https://api.devnet.solana.com" crossorigin />
 
-    <!-- Inline loading screen — shows instantly while JS chunks download.
-         Replaced by React as soon as #root hydrates. -->
+    <!-- ─── Inline loading screen ────────────────────────────────────────────
+         Renders in microseconds — no JS required. Fades out once React mounts.
+         On repeat visits the SW serves chunks from cache so this is barely
+         visible, but it prevents the black-screen experience on cold loads.
+    ────────────────────────────────────────────────────────────────────────── -->
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
       html, body, #root { height: 100%; }
-
       body {
         background: #0C0C0E;
         color: #fff;
@@ -35,79 +47,83 @@
         -webkit-font-smoothing: antialiased;
       }
 
-      /* Shown only before React mounts */
       #app-loader {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        position: fixed; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
         gap: 20px;
         background: #0C0C0E;
         z-index: 9999;
-        transition: opacity 0.25s ease;
+        transition: opacity 0.3s ease;
       }
       #app-loader.hidden { opacity: 0; pointer-events: none; }
 
       .loader-wordmark {
-        font-size: 13px;
-        font-weight: 700;
-        letter-spacing: 5px;
-        color: #A3E635;
+        font-size: 13px; font-weight: 700;
+        letter-spacing: 5px; color: #A3E635;
         font-family: 'Courier New', monospace;
       }
-
       .loader-ring {
-        width: 36px;
-        height: 36px;
+        width: 36px; height: 36px;
         border: 2px solid #27272A;
         border-top-color: #A3E635;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
       }
-
       .loader-sub {
-        font-size: 11px;
-        color: #52525B;
+        font-size: 11px; color: #52525B;
         letter-spacing: 0.5px;
         font-family: 'Courier New', monospace;
       }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
 
   <body>
-    <!-- Instant loading UI — hidden by script below once React is ready -->
     <div id="app-loader">
       <span class="loader-wordmark">ARCADIA</span>
       <div class="loader-ring"></div>
-      <span class="loader-sub">Loading protocol…</span>
+      <span class="loader-sub" id="loader-sub-text">Loading protocol…</span>
     </div>
 
     <div id="root"></div>
 
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Hide the loader once React has rendered into #root -->
+    <!-- ─── Loader dismiss ──────────────────────────────────────────────────
+         Watches #root for React's first child element, then fades the loader.
+         Also detects SW-served (cached) loads and updates the hint text.
+    ────────────────────────────────────────────────────────────────────────── -->
     <script>
       (function () {
-        var root = document.getElementById('root');
-        var loader = document.getElementById('app-loader');
+        var root    = document.getElementById('root');
+        var loader  = document.getElementById('app-loader');
+        var subText = document.getElementById('loader-sub-text');
         if (!root || !loader) return;
+
+        // Show "cached" hint when SW serves the page
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration('/').then(function (reg) {
+            if (reg && reg.active) {
+              if (subText) subText.textContent = 'Serving from cache…';
+            }
+          });
+        }
+
+        function dismiss() {
+          loader.classList.add('hidden');
+          setTimeout(function () {
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+          }, 350);
+        }
+
         var obs = new MutationObserver(function () {
-          if (root.childElementCount > 0) {
-            loader.classList.add('hidden');
-            setTimeout(function () { loader.remove(); }, 300);
-            obs.disconnect();
-          }
+          if (root.childElementCount > 0) { dismiss(); obs.disconnect(); }
         });
         obs.observe(root, { childList: true });
-        // Fallback: hide after 8 s even if something goes wrong
-        setTimeout(function () { loader.classList.add('hidden'); }, 8000);
+
+        // Hard fallback — never leave the user stranded
+        setTimeout(function () { dismiss(); }, 10000);
       })();
     </script>
   </body>

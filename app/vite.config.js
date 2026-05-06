@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { fileURLToPath } from "url";
+import { VitePWA } from "vite-plugin-pwa";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,12 +14,106 @@ export default defineConfig(({ mode }) => ({
     hmr: { overlay: false },
   },
 
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      // 'auto' injects a tiny <script> into index.html that registers the SW.
+      // No virtual:pwa-register import needed in app code.
+      injectRegister: "auto",
+
+      manifest: {
+        name: "Arcadia Protocol",
+        short_name: "Arcadia",
+        description: "Proof-gated Solana vaults — back traders by proof, not promises.",
+        theme_color: "#0C0C0E",
+        background_color: "#0C0C0E",
+        display: "standalone",
+        orientation: "portrait-primary",
+        start_url: "/",
+        scope: "/",
+        icons: [
+          {
+            src: "/arcadia-logo.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+          {
+            src: "/favicon.ico",
+            sizes: "48x48",
+            type: "image/x-icon",
+          },
+        ],
+      },
+
+      workbox: {
+        // Precache everything produced by the build.
+        // Content-hashed filenames mean these are safe to cache indefinitely.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,woff}"],
+        globIgnores: ["**/node_modules/**"],
+
+        // SPA: serve index.html for any navigation miss (client-side routing)
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/(api|rpc)\//],
+
+        // Skip waiting so updated SW activates immediately on next page load
+        skipWaiting: true,
+        clientsClaim: true,
+
+        // ── Runtime caching ───────────────────────────────────────────────
+        runtimeCaching: [
+          // Solana devnet / mainnet RPC — stale-while-revalidate
+          // Shows cached data instantly; refreshes in background every 30 s
+          {
+            urlPattern: /^https:\/\/(api\.devnet|api\.mainnet-beta)\.solana\.com\//,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "solana-rpc",
+              expiration: { maxEntries: 30, maxAgeSeconds: 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Helius RPC
+          {
+            urlPattern: /^https:\/\/.*helius.*\.com\//,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "helius-rpc",
+              expiration: { maxEntries: 30, maxAgeSeconds: 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // External fonts — cache for 1 year
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts",
+              expiration: { maxEntries: 20, maxAgeSeconds: 365 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // OG images
+          {
+            urlPattern: /^https:\/\/storage\.googleapis\.com\//,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "og-images",
+              expiration: { maxEntries: 10, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+
+        disableDevLogs: true,
+      },
+    }),
+  ],
 
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Force browser-compatible polyfills — prevents "externalized for browser" crash
       buffer: path.resolve(__dirname, "node_modules/buffer/index.js"),
     },
     dedupe: [
@@ -35,7 +130,6 @@ export default defineConfig(({ mode }) => ({
   },
 
   optimizeDeps: {
-    // Force Vite to pre-bundle these so they're never externalized
     include: ["buffer", "@solana/web3.js", "bs58"],
     esbuildOptions: {
       define: { global: "globalThis" },
@@ -51,7 +145,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // ── Tier 1: Critical path (loads first, must be tiny) ──────────────
+          // Tier 1 — critical path (loads before React renders)
           if (
             id.includes("node_modules/react/") ||
             id.includes("node_modules/react-dom/") ||
@@ -63,11 +157,11 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/@remix-run/")
           ) return "vendor-router";
 
-          // ── Tier 2: Solana core (web3 + wallet standard) ─────────────────
+          // Tier 2 — Solana core
           if (
             id.includes("node_modules/@solana/web3.js") ||
             id.includes("node_modules/@solana/wallet-adapter-base") ||
-            id.includes("node_modules/@solana/wallet-adapter-react") ||
+            id.includes("node_modules/@solana/wallet-adapter-react/") ||
             id.includes("node_modules/bs58") ||
             id.includes("node_modules/buffer") ||
             id.includes("node_modules/bn.js") ||
@@ -76,7 +170,7 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/superstruct")
           ) return "vendor-solana";
 
-          // ── Tier 3: Wallet UI + specific adapters ─────────────────────────
+          // Tier 3 — Wallet UI
           if (
             id.includes("node_modules/@solana/wallet-adapter-react-ui") ||
             id.includes("node_modules/@solana/wallet-adapter-wallets") ||
@@ -84,22 +178,21 @@ export default defineConfig(({ mode }) => ({
             id.includes("node_modules/@solflare-wallet/")
           ) return "vendor-wallet-ui";
 
-          // ── Tier 4: WalletConnect / AppKit (heavy, only on modal open) ───
+          // Tier 4 — WalletConnect / AppKit (only needed when modal opens)
           if (
             id.includes("node_modules/@walletconnect/") ||
             id.includes("node_modules/@reown/") ||
-            id.includes("node_modules/web3modal") ||
             id.includes("node_modules/@web3modal/") ||
             id.includes("node_modules/@toruslabs/")
           ) return "vendor-walletconnect";
 
-          // ── Tier 5: UI framework ──────────────────────────────────────────
+          // Tier 5 — UI framework
           if (id.includes("node_modules/@radix-ui/")) return "vendor-radix";
           if (id.includes("node_modules/framer-motion")) return "vendor-motion";
           if (id.includes("node_modules/lucide-react")) return "vendor-icons";
           if (id.includes("node_modules/@tanstack/")) return "vendor-query";
 
-          // ── Tier 6: Everything else in node_modules ───────────────────────
+          // Tier 6 — remainder
           if (id.includes("node_modules/")) return "vendor-misc";
         },
       },
