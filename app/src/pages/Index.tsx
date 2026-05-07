@@ -252,26 +252,6 @@ const HERO_FLOW = [
   },
 ];
 
-const HeroWireframe = () => (
-  <div
-    className="hero-wireframe pointer-events-none absolute left-[58%] top-[7.25rem] hidden h-[34rem] w-[34rem] -translate-x-1/2 text-primary/36 md:block xl:left-[61%]"
-    aria-hidden="true"
-  >
-    <div className="wireframe-plane wireframe-plane-one" />
-    <div className="wireframe-plane wireframe-plane-two" />
-    <div className="wireframe-plane wireframe-plane-three" />
-    <div className="wireframe-node wireframe-node-a" />
-    <div className="wireframe-node wireframe-node-b" />
-    <div className="wireframe-node wireframe-node-c" />
-    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 540 540" fill="none">
-      <path className="wireframe-line wireframe-line-a" d="M112 308 256 224 420 302 274 392Z" />
-      <path className="wireframe-line wireframe-line-b" d="M256 224 274 392" />
-      <path className="wireframe-line wireframe-line-c" d="M112 308 254 116 420 302" />
-      <path className="wireframe-line wireframe-line-d" d="M254 116 256 224" />
-    </svg>
-  </div>
-);
-
 const Landing = () => {
   const { data: vaults } = useVaults();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
@@ -307,9 +287,6 @@ const Landing = () => {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.88)_0%,hsl(var(--background)/0.62)_37%,hsl(var(--background)/0.22)_63%,hsl(var(--background)/0.56)_100%)] dark:bg-[linear-gradient(90deg,hsl(var(--background)/0.94)_0%,hsl(var(--background)/0.66)_34%,hsl(var(--background)/0.14)_62%,hsl(var(--background)/0.58)_100%)]" />
         <div className="absolute inset-0 arcadia-glow opacity-85 dark:opacity-70" />
         <div className="absolute left-1/2 top-[12%] hidden h-[28rem] w-[28rem] -translate-x-[8%] rounded-full bg-primary/[0.10] blur-[118px] md:block" />
-        <HeroWireframe />
-        <div className="absolute right-[12%] top-[15%] h-24 w-24 bg-[linear-gradient(135deg,hsl(var(--foreground)/0.11),hsl(var(--primary-glow)/0.12))] opacity-40 [clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]" />
-        <div className="absolute bottom-[18%] left-[12%] h-12 w-12 bg-[linear-gradient(135deg,hsl(var(--primary-glow)/0.16),hsl(var(--foreground)/0.08))] opacity-40 [clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
         <div className="container relative flex min-h-[calc(100dvh-3.75rem)] flex-col justify-center py-16 md:py-24">

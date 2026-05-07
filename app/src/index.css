@@ -418,68 +418,10 @@
 }
 .animate-fade-up { animation: fade-up 0.4s ease-out forwards; }
 
-@keyframes wireframe-float {
-  0%, 100% { transform: rotateX(58deg) rotateZ(-34deg) translate3d(0, 0, 0); }
-  50% { transform: rotateX(58deg) rotateZ(-34deg) translate3d(0, -14px, 26px); }
-}
-@keyframes wireframe-pulse {
-  0%, 100% { opacity: 0.28; transform: scale(0.96); }
-  50% { opacity: 0.72; transform: scale(1.06); }
-}
-@keyframes wireframe-draw {
-  0% { stroke-dashoffset: 520; opacity: 0.16; }
-  48% { opacity: 0.72; }
-  100% { stroke-dashoffset: 0; opacity: 0.26; }
-}
-.hero-wireframe {
-  perspective: 900px;
-  transform-style: preserve-3d;
-  filter: drop-shadow(0 0 34px hsl(var(--primary) / 0.18));
-}
-.wireframe-plane {
-  position: absolute;
-  inset: 22%;
-  border: 1px solid hsl(var(--primary) / 0.34);
-  background:
-    linear-gradient(90deg, hsl(var(--primary) / 0.10) 1px, transparent 1px),
-    linear-gradient(hsl(var(--primary) / 0.10) 1px, transparent 1px);
-  background-size: 34px 34px;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 74%, 50% 100%, 0% 74%, 0% 25%);
-  transform: rotateX(58deg) rotateZ(-34deg);
-  animation: wireframe-float 7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-.wireframe-plane-one { inset: 24% 18% 28% 20%; opacity: 0.42; }
-.wireframe-plane-two { inset: 33% 27% 20% 29%; opacity: 0.28; animation-delay: -2.2s; }
-.wireframe-plane-three { inset: 16% 34% 42% 18%; opacity: 0.18; animation-delay: -4.4s; }
-.wireframe-node {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: hsl(var(--primary));
-  box-shadow: 0 0 24px hsl(var(--primary) / 0.72);
-  animation: wireframe-pulse 3.6s ease-in-out infinite;
-}
-.wireframe-node-a { left: 21%; top: 56%; }
-.wireframe-node-b { left: 48%; top: 21%; animation-delay: -1.2s; }
-.wireframe-node-c { right: 20%; top: 55%; animation-delay: -2.4s; }
-.wireframe-line {
-  stroke: currentColor;
-  stroke-width: 1.1;
-  stroke-dasharray: 10 12;
-  stroke-linecap: round;
-  opacity: 0.38;
-  animation: wireframe-draw 9s linear infinite;
-}
-.wireframe-line-b { animation-delay: -1.5s; }
-.wireframe-line-c { animation-delay: -3s; }
-.wireframe-line-d { animation-delay: -4.5s; }
-
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-glow, .signal-orb-1, .signal-orb-2, .signal-orb-3,
   .grid-bg-animated, .animate-line-scan, .animate-ticker, .animate-flicker,
-  .animate-float, .animate-shimmer, .animate-fade-up,
-  .wireframe-plane, .wireframe-node, .wireframe-line {
+  .animate-float, .animate-shimmer, .animate-fade-up {
     animation: none !important;
   }
 }
