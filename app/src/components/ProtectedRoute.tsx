@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { ArrowRightLeft, ShieldAlert, Wallet } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/Layout";
@@ -63,7 +64,10 @@ export const ProtectedRoute = ({
         title={`${roleLabels[preferredRole]} access required`}
         description={`You are currently in ${roleLabels[role].toLowerCase()} mode. Switch roles to access this flow without disconnecting your wallet.`}
         primaryLabel={`Switch to ${roleLabels[preferredRole]}`}
-        onPrimaryClick={() => setRole(preferredRole)}
+        onPrimaryClick={() => {
+          setRole(preferredRole);
+          toast.success(`Switched to ${roleLabels[preferredRole]} mode`);
+        }}
         secondaryHref={preferredRole === "trader" ? "/vaults" : "/manager"}
         secondaryLabel={preferredRole === "trader" ? "View marketplace" : "View manager"}
       />

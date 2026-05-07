@@ -20,7 +20,7 @@ import {
     Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { toast } from "sonner";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ConnectModal } from "@/components/ConnectModal";
 
 type NotifType = "gain" | "loss" | "warning" | "success" | "info";
 
@@ -87,8 +88,8 @@ const notifIcon: Record<NotifType, React.ReactNode> = {
 export const Nav = () => {
     const { connected, address, role, network, walletName, setRole, disconnect } = useWallet();
     const [open, setOpen] = useState(false);
+    const [connectOpen, setConnectOpen] = useState(false);
     const [notifications, setNotifications] = useState(DEMO_NOTIFICATIONS);
-    const { setVisible: openWalletModal } = useWalletModal();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -132,6 +133,12 @@ export const Nav = () => {
 
     const isActive = (to: string) =>
         location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
+
+    const switchRole = (nextRole: typeof role) => {
+        if (nextRole === role) return;
+        setRole(nextRole);
+        toast.success(`Switched to ${nextRole === "trader" ? "Trader" : "Investor"} mode`);
+    };
 
     return (
         <>
@@ -266,7 +273,7 @@ export const Nav = () => {
 
                         {!connected ? (
                             <Button
-                                onClick={() => openWalletModal(true)}
+                                onClick={() => setConnectOpen(true)}
                                 size="sm"
                                 className="h-9 border-0 bg-primary text-primary-foreground shadow-signal hover:bg-primary-glow font-display font-semibold text-[13px]"
                             >
@@ -278,6 +285,8 @@ export const Nav = () => {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm" className="h-9 font-mono text-[12px] border-border/60">
                                         <span className="w-1.5 h-1.5 rounded-full bg-status-active mr-1.5 animate-pulse-glow" />
+                                        <span className="hidden sm:inline capitalize text-muted-foreground">{role}</span>
+                                        <span className="hidden sm:inline text-muted-foreground/50">·</span>
                                         {shortAddr(address!)}
                                         <ChevronDown className="w-3 h-3 ml-1.5" />
                                     </Button>
@@ -287,8 +296,8 @@ export const Nav = () => {
                                         {walletName ?? "Wallet"}
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => setRole("investor")}>Investor view</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setRole("trader")}>Trader view</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => switchRole("investor")}>Switch to Investor</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => switchRole("trader")}>Switch to Trader</DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem asChild>
                                         <Link to="/portfolio">Portfolio</Link>
@@ -347,6 +356,7 @@ export const Nav = () => {
                     </div>
                 </div>
             )}
+            <ConnectModal open={connectOpen} onOpenChange={setConnectOpen} />
         </>
     );
 };

@@ -36,7 +36,7 @@ interface KilnWalletState {
   network: Network;
   walletName: string | null;
   connection: Connection | null;
-  connect: () => void;
+  connect: (walletName?: string) => void;
   disconnect: () => void;
   setRole: (r: Role) => void;
   setNetwork: (n: Network) => void;
@@ -61,8 +61,9 @@ const KilnWalletContext = createContext<KilnWalletState>(defaultState);
 const PREFS_KEY = "kiln.wallet.prefs";
 
 function KilnWalletInner({ children }: { children: ReactNode }) {
-  const { connected, publicKey, wallet, disconnect: solDisconnect, select } = useSolanaWallet();
+  const { connected, publicKey, wallet, disconnect: solDisconnect } = useSolanaWallet();
   const { connection } = useConnection();
+  const [demoWalletName, setDemoWalletName] = useState<string | null>(null);
 
   const stored = useMemo(() => {
     try {
@@ -80,27 +81,30 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ role, network }));
   }, [role, network]);
 
-  const address = publicKey?.toBase58() ?? null;
+  const demoAddress = "Dnaz9wQvYpyh1LqL7AxnSmpuPjZLk6xrKfB3cXvjCXVj";
+  const isConnected = connected || Boolean(demoWalletName);
+  const address = publicKey?.toBase58() ?? (demoWalletName ? demoAddress : null);
 
   const value: KilnWalletState = useMemo(
     () => ({
-      connected,
+      connected: isConnected,
       address,
       publicKey: publicKey ?? null,
       role,
       network,
-      walletName: wallet?.adapter.name ?? null,
+      walletName: wallet?.adapter.name ?? demoWalletName,
       connection,
-      connect: () => {
-        /* Wallet modal handles this via WalletMultiButton */
+      connect: (name?: string) => {
+        setDemoWalletName(name ?? "Demo Wallet");
       },
       disconnect: () => {
+        setDemoWalletName(null);
         solDisconnect();
       },
       setRole,
       setNetwork,
     }),
-    [connected, address, publicKey, role, network, wallet, connection, solDisconnect]
+    [isConnected, address, publicKey, role, network, wallet, demoWalletName, connection, solDisconnect]
   );
 
   return (

@@ -8,6 +8,7 @@ import { WalletProvider } from "@/lib/wallet";
 import { ThemeProvider } from "@/lib/theme";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleSwitchHint } from "./components/RoleSwitchHint";
 
 // Index loads eagerly so the landing page is instant — no loading screen
 import Index from "./pages/Index";
@@ -44,6 +45,7 @@ const App = () => (
                         <Toaster />
                         <Sonner />
                         <BrowserRouter>
+                            <RoleSwitchHint />
                             <Suspense fallback={<RouteFallback />}>
                                 <Routes>
                                     <Route path="/" element={<Index />} />
