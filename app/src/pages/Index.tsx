@@ -360,16 +360,16 @@ const Landing = () => {
             <motion.div
               variants={fadeUp}
               custom={4}
-              className="relative left-1/2 mt-10 w-[calc(100vw-2rem)] max-w-[1600px] -translate-x-1/2 sm:w-[calc(100vw-3rem)] lg:w-[calc(100vw-5rem)]"
+              className="relative left-1/2 mt-12 w-screen -translate-x-1/2"
             >
-              <div className="apex-terminal arcadia-flow-panel w-full">
-                <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <div className="apex-terminal arcadia-flow-panel w-full rounded-none border-x-0">
+                <div className="mx-auto flex max-w-[1680px] items-center justify-between border-b border-border/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:px-8 lg:px-12">
                   <span>&gt; arcadia.flow</span>
                   <span>20 / 80 capital model</span>
                 </div>
-                <div className="grid divide-y divide-border/60 bg-border/40 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+                <div className="mx-auto grid max-w-[1680px] divide-y divide-border/60 bg-border/40 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
                   {HERO_FLOW.map((item) => (
-                    <div key={item.label} className="flow-step-cell bg-background/95 px-5 py-6 sm:px-6 lg:min-h-[13rem] lg:px-8">
+                    <div key={item.label} className="flow-step-cell bg-background/95 px-5 py-6 sm:px-8 lg:min-h-[13rem] lg:px-12">
                       <div className="font-display text-4xl font-bold leading-none tracking-[-0.04em] text-primary md:text-5xl">{item.value}</div>
                       <div className="mt-4 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{item.label}</div>
                       <p className="mt-4 max-w-[28rem] text-sm leading-6 text-foreground/75">{item.body}</p>
