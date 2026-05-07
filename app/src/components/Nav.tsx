@@ -135,55 +135,55 @@ export const Nav = () => {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-border/40 bg-background/82 shadow-[0_10px_36px_hsl(var(--foreground)/0.05)] backdrop-blur-xl">
-                <div className="container flex items-center justify-between h-[3.75rem]">
-                    <div className="flex items-center gap-7">
-                        <Link to="/" className="flex items-center gap-2 group shrink-0">
-                            <ArcadiaLogo className="h-6 w-6 transition-transform duration-200 group-hover:translate-x-0.5" />
-                            <ArcadiaWordmark className="hidden text-[30px] sm:inline-block md:text-[34px]" />
+            <header className="sticky top-0 z-40 border-b border-border/40 bg-background/88 shadow-[0_10px_36px_hsl(var(--foreground)/0.05)] backdrop-blur-xl">
+                <div className="container grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:grid-cols-[minmax(15rem,1fr)_auto_minmax(15rem,1fr)]">
+                    <div className="flex min-w-0 items-center">
+                        <Link to="/" className="group flex min-w-0 shrink-0 items-center gap-2.5">
+                            <ArcadiaLogo className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 md:h-5 md:w-5" />
+                            <ArcadiaWordmark className="max-w-[14.5rem] truncate" />
                         </Link>
-
-                        <nav className="hidden md:flex items-center gap-0.5">
-                            {links.map((l) =>
-                                "to" in l ? (
-                                    <Link
-                                        key={l.to}
-                                        to={l.to}
-                                        className={cn(
-                                            "relative px-3 py-2 text-[13px] font-medium rounded-lg transition-colors",
-                                            "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
-                                            "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
-                                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                                            isActive(l.to)
-                                                ? "text-foreground after:scale-x-100"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
-                                        )}
-                                    >
-                                        {l.label}
-                                    </Link>
-                                ) : (
-                                    <button
-                                        key={l.label}
-                                        onClick={l.action}
-                                        className={cn(
-                                            "relative px-3 py-2 text-[13px] font-medium rounded-lg transition-colors",
-                                            "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
-                                            "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
-                                            "text-muted-foreground hover:text-foreground hover:bg-secondary/70",
-                                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                        )}
-                                    >
-                                        {l.label}
-                                    </button>
-                                )
-                            )}
-                        </nav>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <nav className="hidden items-center justify-center gap-1 lg:flex">
+                        {links.map((l) =>
+                            "to" in l ? (
+                                <Link
+                                    key={l.to}
+                                    to={l.to}
+                                    className={cn(
+                                        "relative px-3.5 py-2 text-[13px] font-medium rounded-lg transition-colors",
+                                        "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
+                                        "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        isActive(l.to)
+                                            ? "text-foreground after:scale-x-100"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/70"
+                                    )}
+                                >
+                                    {l.label}
+                                </Link>
+                            ) : (
+                                <button
+                                    key={l.label}
+                                    onClick={l.action}
+                                    className={cn(
+                                        "relative px-3.5 py-2 text-[13px] font-medium rounded-lg transition-colors",
+                                        "after:absolute after:inset-x-2.5 after:bottom-0.5 after:h-px after:origin-center",
+                                        "after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform",
+                                        "text-muted-foreground hover:text-foreground hover:bg-secondary/70",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                    )}
+                                >
+                                    {l.label}
+                                </button>
+                            )
+                        )}
+                    </nav>
+
+                    <div className="flex min-w-0 items-center justify-end gap-1.5 lg:col-start-3">
                         <ThemeToggle />
                         {connected && (
-                            <div className="hidden lg:flex items-center gap-2 rounded-full border border-primary/20 bg-card/70 px-3 py-1.5 text-[11px] shadow-card">
+                            <div className="hidden xl:flex items-center gap-2 rounded-lg border border-border/55 bg-card/60 px-2.5 py-2 text-[11px] shadow-card">
                                 <span className="flex items-center gap-1.5 text-muted-foreground">
                                     <Globe2 className="w-3 h-3 text-primary/70" />
                                     <span className="capitalize font-mono">{network}</span>
