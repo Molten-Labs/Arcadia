@@ -337,14 +337,14 @@ const Landing = () => {
             <motion.div
               variants={fadeUp}
               custom={4}
-              className="relative left-1/2 mt-12 w-screen -translate-x-1/2"
+              className="relative mt-12 ml-[calc(50%-50vw)] w-screen"
             >
               <div className="apex-terminal arcadia-flow-panel w-full rounded-none border-x-0">
-                <div className="mx-auto flex max-w-[1680px] items-center justify-between border-b border-border/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:px-8 lg:px-12">
+                <div className="flex w-full items-center justify-between border-b border-border/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:px-8 lg:px-12">
                   <span>&gt; arcadia.flow</span>
                   <span>20 / 80 capital model</span>
                 </div>
-                <div className="mx-auto grid max-w-[1680px] divide-y divide-border/60 bg-border/40 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+                <div className="grid w-full divide-y divide-border/60 bg-border/40 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
                   {HERO_FLOW.map((item) => (
                     <div key={item.label} className="flow-step-cell bg-background/95 px-5 py-6 sm:px-8 lg:min-h-[13rem] lg:px-12">
                       <div className="font-display text-4xl font-bold leading-none tracking-[-0.04em] text-primary md:text-5xl">{item.value}</div>
