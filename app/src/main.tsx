@@ -1,13 +1,20 @@
 // ── Polyfills — must be first, before any Solana import ────────────────────
 import { Buffer } from "buffer";
-if (typeof (globalThis as any).Buffer === "undefined") {
-  (globalThis as any).Buffer = Buffer;
+
+const globalScope = globalThis as typeof globalThis & {
+  Buffer?: typeof Buffer;
+  global?: typeof globalThis;
+};
+const windowScope = window as Window & { Buffer?: typeof Buffer };
+
+if (typeof globalScope.Buffer === "undefined") {
+  globalScope.Buffer = Buffer;
 }
-if (typeof (window as any).Buffer === "undefined") {
-  (window as any).Buffer = Buffer;
+if (typeof windowScope.Buffer === "undefined") {
+  windowScope.Buffer = Buffer;
 }
-if (typeof (globalThis as any).global === "undefined") {
-  (globalThis as any).global = globalThis;
+if (typeof globalScope.global === "undefined") {
+  globalScope.global = globalThis;
 }
 
 // ── App ─────────────────────────────────────────────────────────────────────

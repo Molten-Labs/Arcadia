@@ -3,10 +3,8 @@ import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useVaults } from "@/hooks/useVaults";
-import { useDataMode } from "@/hooks/useDataMode";
 import { VaultCard } from "@/components/VaultCard";
 import { VaultCarousel } from "@/components/VaultCarousel";
-import { Switch } from "@/components/ui/switch";
 import { fmtUSD } from "@/lib/format";
 import { FAQ_ITEMS } from "@/lib/faq";
 import {
@@ -236,9 +234,43 @@ const FLOW_STEPS = [
   },
 ];
 
+const HERO_FLOW = [
+  {
+    value: "01",
+    label: "Trader proves",
+    body: "Trades in proof mode for 30 days, building a public performance record and reputation before touching investor capital.",
+  },
+  {
+    value: "02",
+    label: "Vault opens",
+    body: "If profitable and credible, the vault opens with the trader’s first-loss junior capital targeting 20% and investors supplying up to 80% senior capital.",
+  },
+  {
+    value: "03",
+    label: "Capital aligns",
+    body: "Investors access verified managers. If losses occur, trader capital absorbs them first; if performance holds, capable traders can scale earnings.",
+  },
+];
+
+const HeroWireframe = () => (
+  <div className="hero-wireframe pointer-events-none absolute right-[-3rem] top-[8rem] hidden h-[34rem] w-[34rem] text-primary/45 md:block" aria-hidden="true">
+    <div className="wireframe-plane wireframe-plane-one" />
+    <div className="wireframe-plane wireframe-plane-two" />
+    <div className="wireframe-plane wireframe-plane-three" />
+    <div className="wireframe-node wireframe-node-a" />
+    <div className="wireframe-node wireframe-node-b" />
+    <div className="wireframe-node wireframe-node-c" />
+    <svg className="absolute inset-0 h-full w-full" viewBox="0 0 540 540" fill="none">
+      <path className="wireframe-line wireframe-line-a" d="M112 308 256 224 420 302 274 392Z" />
+      <path className="wireframe-line wireframe-line-b" d="M256 224 274 392" />
+      <path className="wireframe-line wireframe-line-c" d="M112 308 254 116 420 302" />
+      <path className="wireframe-line wireframe-line-d" d="M254 116 256 224" />
+    </svg>
+  </div>
+);
+
 const Landing = () => {
   const { data: vaults } = useVaults();
-  const { mode, setMode } = useDataMode();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
 
   const featuredVaults = useMemo(
@@ -258,7 +290,7 @@ const Landing = () => {
       {/* 1. Hero */}
       <section className="grid-bg relative min-h-[calc(100dvh-3.75rem)] overflow-hidden border-b border-border/40">
         <video
-          className="hero-video absolute inset-0 h-full w-full object-cover opacity-0 saturate-[0.75] dark:opacity-[0.54]"
+          className="hero-video absolute inset-0 h-full w-full object-cover opacity-[0.36] saturate-[0.86] contrast-[1.05] dark:opacity-[0.66]"
           src={HERO_VIDEO}
           autoPlay
           muted
@@ -267,10 +299,11 @@ const Landing = () => {
           preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_68%_54%_at_52%_22%,hsl(var(--primary-glow)/0.12),transparent_68%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.30)_0%,hsl(var(--background)/0.82)_78%,hsl(var(--background))_100%)] dark:bg-[linear-gradient(180deg,hsl(var(--background)/0.62)_0%,hsl(var(--background)/0.30)_40%,hsl(var(--background)/0.90)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.90)_0%,hsl(var(--background)/0.66)_42%,hsl(var(--background)/0.34)_100%)] dark:bg-[linear-gradient(90deg,hsl(var(--background)/0.94)_0%,hsl(var(--background)/0.72)_34%,hsl(var(--background)/0.18)_64%,hsl(var(--background)/0.74)_100%)]" />
-        <div className="absolute inset-0 arcadia-glow opacity-70 dark:opacity-50" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_72%_56%_at_55%_20%,hsl(var(--primary-glow)/0.22),transparent_68%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.18)_0%,hsl(var(--background)/0.62)_78%,hsl(var(--background))_100%)] dark:bg-[linear-gradient(180deg,hsl(var(--background)/0.42)_0%,hsl(var(--background)/0.18)_42%,hsl(var(--background)/0.88)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.86)_0%,hsl(var(--background)/0.58)_42%,hsl(var(--background)/0.18)_100%)] dark:bg-[linear-gradient(90deg,hsl(var(--background)/0.92)_0%,hsl(var(--background)/0.62)_34%,hsl(var(--background)/0.10)_64%,hsl(var(--background)/0.62)_100%)]" />
+        <div className="absolute inset-0 arcadia-glow opacity-85 dark:opacity-70" />
+        <HeroWireframe />
         <div className="absolute right-[12%] top-[15%] h-24 w-24 bg-[linear-gradient(135deg,hsl(var(--foreground)/0.11),hsl(var(--primary-glow)/0.12))] opacity-40 [clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]" />
         <div className="absolute bottom-[18%] left-[12%] h-12 w-12 bg-[linear-gradient(135deg,hsl(var(--primary-glow)/0.16),hsl(var(--foreground)/0.08))] opacity-40 [clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
@@ -280,22 +313,13 @@ const Landing = () => {
             initial="hidden"
             animate="show"
             variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-            className="max-w-[740px]"
+            className="w-full"
           >
             <motion.div variants={fadeUp} custom={0} className="mb-6 flex flex-wrap items-center gap-4">
               <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-status-active animate-pulse-glow" />
                 Devnet Live
               </span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {mode === "mock" ? "Devnet Preview" : "Live"}
-                </span>
-                <Switch
-                  checked={mode === "mock"}
-                  onCheckedChange={(checked) => setMode(checked ? "mock" : "real")}
-                />
-              </div>
             </motion.div>
 
             <motion.h1
@@ -312,7 +336,7 @@ const Landing = () => {
             <motion.p
               variants={fadeUp}
               custom={2}
-              className="mt-7 max-w-2xl text-[1.1rem] leading-[1.65] text-foreground/72 md:text-[1.25rem]"
+              className="mt-7 max-w-2xl text-[1.1rem] leading-[1.65] text-foreground/78 md:text-[1.25rem]"
             >
               Arcadia gives skilled traders a path from their own capital to investor allocation, while investors get visible performance, automatic protection, and orderly exits.
             </motion.p>
@@ -329,22 +353,21 @@ const Landing = () => {
               </Button>
             </motion.div>
 
-            <motion.div variants={fadeUp} custom={4} className="apex-terminal mt-9 max-w-3xl">
-              <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                <span>&gt; arcadia.flow</span>
-                <span>proof mode active</span>
-              </div>
-              <div className="grid divide-y divide-border/60 bg-border/40 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                {[
-                  { label: "Trader proves", value: "01" },
-                  { label: "Vault opens", value: "02" },
-                  { label: "Capital allocates", value: "03" },
-                ].map((item) => (
-                  <div key={item.label} className="bg-background px-5 py-5">
-                    <div className="font-display text-3xl font-bold leading-none tracking-[-0.04em] text-primary">{item.value}</div>
-                    <div className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{item.label}</div>
-                  </div>
-                ))}
+            <motion.div variants={fadeUp} custom={4} className="relative left-1/2 mt-10 w-screen -translate-x-1/2 px-4 sm:px-6 lg:px-10">
+              <div className="apex-terminal arcadia-flow-panel mx-auto w-full max-w-[1500px]">
+                <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <span>&gt; arcadia.flow</span>
+                  <span>20 / 80 capital model</span>
+                </div>
+                <div className="grid divide-y divide-border/60 bg-border/40 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+                  {HERO_FLOW.map((item) => (
+                    <div key={item.label} className="flow-step-cell bg-background/95 px-5 py-6 sm:px-6 lg:min-h-[13rem] lg:px-8">
+                      <div className="font-display text-4xl font-bold leading-none tracking-[-0.04em] text-primary md:text-5xl">{item.value}</div>
+                      <div className="mt-4 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{item.label}</div>
+                      <p className="mt-4 max-w-[28rem] text-sm leading-6 text-foreground/75">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </motion.div>
