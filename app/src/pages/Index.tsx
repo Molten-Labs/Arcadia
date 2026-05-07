@@ -339,7 +339,7 @@ const Landing = () => {
               custom={4}
               className="relative mt-12 ml-[calc(50%-50vw)] w-screen"
             >
-              <div className="apex-terminal arcadia-flow-panel w-full rounded-none border-x-0">
+              <div className="apex-terminal arcadia-flow-panel mx-4 rounded-xl sm:mx-6 lg:mx-10">
                 <div className="flex w-full items-center justify-between border-b border-border/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:px-8 lg:px-12">
                   <span>&gt; arcadia.flow</span>
                   <span>20 / 80 capital model</span>
