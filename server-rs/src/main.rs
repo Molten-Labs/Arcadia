@@ -1,5 +1,8 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Path, Query, State,
+    },
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -16,6 +19,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use thiserror::Error;
+use tokio::{sync::broadcast, time::{interval, Duration}};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -28,6 +32,76 @@ struct AppState {
     webhook_secret: Option<String>,
     jupiter_api_key: Option<String>,
     jupiter_swap_base_url: String,
+    demo_mode: bool,
+    realtime: RealtimeHub,
+}
+
+#[derive(Clone)]
+struct RealtimeHub {
+    tx: broadcast::Sender<RealtimeEvent>,
+}
+
+impl RealtimeHub {
+    fn new() -> Self {
+        let (tx, _) = broadcast::channel(512);
+        Self { tx }
+    }
+
+    fn subscribe(&self) -> broadcast::Receiver<RealtimeEvent> {
+        self.tx.subscribe()
+    }
+
+    fn publish(&self, event: RealtimeEvent) {
+        let _ = self.tx.send(event);
+    }
+
+    fn publish_materialized(&self, updates: &[MaterializedUpdate]) {
+        for update in updates {
+            let received_at = now_ts();
+            if let Some(manager) = &update.manager {
+                self.publish(RealtimeEvent::ManagerUpsert {
+                    item: manager.clone(),
+                    received_at,
+                });
+            }
+            if let Some(vault) = &update.vault {
+                self.publish(RealtimeEvent::VaultUpsert {
+                    item: vault.clone(),
+                    received_at,
+                });
+            }
+            if let Some(position) = &update.position {
+                self.publish(RealtimeEvent::PositionUpsert {
+                    wallet: position.investor_pubkey.clone(),
+                    item: position.clone(),
+                    received_at,
+                });
+            }
+            if let Some(point) = &update.nav_point {
+                self.publish(RealtimeEvent::NavPoint {
+                    vault_config_pubkey: point.vault_config_pubkey.clone(),
+                    item: point.clone(),
+                    received_at,
+                });
+            }
+            if let Some(trade) = &update.trade {
+                if trade.is_public_visible && trade.visibility_after <= received_at {
+                    self.publish(RealtimeEvent::TradePublic {
+                        vault_config_pubkey: trade.vault_config_pubkey.clone(),
+                        item: trade.clone(),
+                        received_at,
+                    });
+                }
+            }
+            if let Some(status) = &update.status {
+                self.publish(RealtimeEvent::StatusEvent {
+                    vault_config_pubkey: status.vault_config_pubkey.clone(),
+                    item: status.clone(),
+                    received_at,
+                });
+            }
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -121,6 +195,12 @@ struct ManagerView {
     active_vaults: i32,
     total_junior_deposited: f64,
     created_at: i64,
+    reputation_score: f64,
+    pnl_30d: f64,
+    max_drawdown: f64,
+    capital_handled: f64,
+    claimed_fees: f64,
+    frozen_vault_count: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -176,9 +256,161 @@ struct StatusEvent {
     reason: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapitalEvent {
+    vault_config_pubkey: String,
+    actor_role: String,
+    actor: String,
+    action: String,
+    amount: f64,
+    capital_layer: String,
+    status: String,
+    detail: String,
+    occurred_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FeeEvent {
+    vault_config_pubkey: String,
+    manager: String,
+    high_water_mark: f64,
+    profit_above_high_water_mark: f64,
+    claimable_fees: f64,
+    claimed_fees: f64,
+    fee_bps: i32,
+    detail: String,
+    occurred_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RiskEvent {
+    vault_config_pubkey: String,
+    state: String,
+    previous_state: Option<String>,
+    junior_buffer_remaining: f64,
+    junior_buffer_used_pct: f64,
+    investor_capital_impacted: f64,
+    trading_enabled: bool,
+    reason: String,
+    occurred_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type")]
+enum RealtimeEvent {
+    #[serde(rename = "manager.upsert")]
+    ManagerUpsert {
+        item: ManagerView,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "vault.upsert")]
+    VaultUpsert {
+        item: VaultView,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "position.upsert")]
+    PositionUpsert {
+        wallet: String,
+        item: PositionView,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "nav.point")]
+    NavPoint {
+        #[serde(rename = "vaultConfigPubkey")]
+        vault_config_pubkey: String,
+        item: NavPoint,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "trade.public")]
+    TradePublic {
+        #[serde(rename = "vaultConfigPubkey")]
+        vault_config_pubkey: String,
+        item: TradeEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "status.event")]
+    StatusEvent {
+        #[serde(rename = "vaultConfigPubkey")]
+        vault_config_pubkey: String,
+        item: StatusEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "deposit.event")]
+    DepositEvent {
+        item: CapitalEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "withdrawal.event")]
+    WithdrawalEvent {
+        item: CapitalEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "fee.event")]
+    FeeEvent {
+        item: FeeEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "risk.event")]
+    RiskEvent {
+        item: RiskEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "heartbeat")]
+    Heartbeat {
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "resync_required")]
+    ResyncRequired {
+        topics: Vec<String>,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+}
+
 #[derive(Debug, Serialize)]
 struct Items<T> {
     items: Vec<T>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LiveQuery {
+    topics: Option<String>,
+}
+
+const DEMO_MANAGER_PROFILE: &str = "DemoManager1111111111111111111111111111111";
+const DEMO_MANAGER_WALLET: &str = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgS1";
+const DEMO_VAULT_CONFIG: &str = "So11111111111111111111111111111111111111112";
+const DEMO_VAULT_STATE: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const DEMO_TREASURY: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const DEMO_INVESTOR_WALLET: &str = "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN";
+const DEMO_POSITION: &str = "DemoPosition111111111111111111111111111111";
+
+#[derive(Clone, Copy)]
+enum DemoStep {
+    TraderJoins,
+    CreateVault,
+    TraderDepositJunior,
+    InvestorDeposit,
+    ProfitTrade,
+    LossTrade,
+    InvestorWithdraw,
+    TraderWithdraw,
+    ClaimFees,
+    FreezeVault,
 }
 
 #[derive(Error, Debug)]
@@ -233,6 +465,10 @@ async fn main() -> anyhow::Result<()> {
 
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/kiln".to_string());
+    let memory_store = env::var("ARCADIA_STORE")
+        .map(|value| value.eq_ignore_ascii_case("memory"))
+        .unwrap_or(false)
+        || database_url.eq_ignore_ascii_case("memory");
     let port: u16 = env::var("PORT")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -243,27 +479,37 @@ async fn main() -> anyhow::Result<()> {
         .filter(|value| !value.is_empty());
     let jupiter_swap_base_url = env::var("JUPITER_SWAP_BASE_URL")
         .unwrap_or_else(|_| "https://api.jup.ag/swap/v1".to_string());
+    let demo_mode = env::var("ARCADIA_DEMO_MODE")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
-    info!(
-        "starting server-rs; connecting to database: {}",
-        mask_db_url(&database_url)
-    );
-
-    let db = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await?;
-    MIGRATOR.run(&db).await?;
+    let store = if memory_store {
+        info!("starting server-rs with in-memory demo store");
+        Store::Memory(Arc::new(Mutex::new(MaterializedState::default())))
+    } else {
+        info!(
+            "starting server-rs; connecting to database: {}",
+            mask_db_url(&database_url)
+        );
+        let db = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&database_url)
+            .await?;
+        MIGRATOR.run(&db).await?;
+        Store::Postgres(db)
+    };
 
     if webhook_secret.is_none() {
         info!("HELIUS_WEBHOOK_SECRET not set; webhook receiver accepts unsigned payloads");
     }
 
     let app = build_app(AppState {
-        store: Store::Postgres(db),
+        store,
         webhook_secret,
         jupiter_api_key,
         jupiter_swap_base_url,
+        demo_mode,
+        realtime: RealtimeHub::new(),
     });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -282,6 +528,7 @@ fn build_app(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health_handler))
         .route("/webhook", post(webhook_handler))
+        .route("/live", get(live_handler))
         .route("/vaults", get(list_vaults_handler))
         .route("/vaults/:config_address", get(get_vault_handler))
         .route(
@@ -297,6 +544,18 @@ fn build_app(state: AppState) -> Router {
             "/jupiter/swap-instructions",
             post(jupiter_swap_instructions_handler),
         )
+        .route("/demo/reset", post(demo_reset_handler))
+        .route("/demo/trader-joins", post(demo_trader_joins_handler))
+        .route("/demo/create-vault", post(demo_create_vault_handler))
+        .route("/demo/trader-deposit-junior", post(demo_trader_deposit_junior_handler))
+        .route("/demo/investor-deposit", post(demo_investor_deposit_handler))
+        .route("/demo/profit-trade", post(demo_profit_trade_handler))
+        .route("/demo/loss-trade", post(demo_loss_trade_handler))
+        .route("/demo/investor-withdraw", post(demo_investor_withdraw_handler))
+        .route("/demo/trader-withdraw", post(demo_trader_withdraw_handler))
+        .route("/demo/claim-fees", post(demo_claim_fees_handler))
+        .route("/demo/freeze-vault", post(demo_freeze_vault_handler))
+        .route("/demo/run-full", post(demo_run_full_handler))
         .layer(cors)
         .with_state(Arc::new(state))
 }
@@ -329,6 +588,66 @@ async fn webhook_handler(
     let kind = event_kind(&payload);
     state.record_webhook(kind, payload).await?;
     Ok((StatusCode::OK, Json(serde_json::json!({ "ok": true }))))
+}
+
+async fn live_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<LiveQuery>,
+) -> impl IntoResponse {
+    let topics = parse_topics(query.topics.as_deref());
+    ws.on_upgrade(move |socket| live_socket(socket, state, topics))
+}
+
+async fn live_socket(
+    mut socket: WebSocket,
+    state: Arc<AppState>,
+    topics: HashSet<String>,
+) {
+    let mut rx = state.realtime.subscribe();
+    let mut heartbeat = interval(Duration::from_secs(25));
+
+    if send_realtime(&mut socket, RealtimeEvent::Heartbeat { received_at: now_ts() }).await.is_err() {
+        return;
+    }
+
+    loop {
+        tokio::select! {
+            _ = heartbeat.tick() => {
+                if send_realtime(&mut socket, RealtimeEvent::Heartbeat { received_at: now_ts() }).await.is_err() {
+                    break;
+                }
+            }
+            event = rx.recv() => {
+                match event {
+                    Ok(event) if topic_matches(&event, &topics) => {
+                        if send_realtime(&mut socket, event).await.is_err() {
+                            break;
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        let event = RealtimeEvent::ResyncRequired {
+                            topics: topics.iter().cloned().collect(),
+                            received_at: now_ts(),
+                        };
+                        if send_realtime(&mut socket, event).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        }
+    }
+}
+
+async fn send_realtime(socket: &mut WebSocket, event: RealtimeEvent) -> Result<(), axum::Error> {
+    socket
+        .send(Message::Text(
+            serde_json::to_string(&event).unwrap_or_else(|_| "{\"type\":\"resync_required\",\"topics\":[],\"receivedAt\":0}".to_string()),
+        ))
+        .await
 }
 
 async fn list_vaults_handler(
@@ -394,6 +713,102 @@ async fn positions_handler(
     Ok(Json(Items {
         items: state.positions(&wallet).await?,
     }))
+}
+
+async fn demo_reset_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    state.reset_demo().await?;
+    Ok((StatusCode::OK, Json(serde_json::json!({ "ok": true, "step": "reset" }))))
+}
+
+async fn demo_trader_joins_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::TraderJoins).await
+}
+
+async fn demo_create_vault_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::CreateVault).await
+}
+
+async fn demo_trader_deposit_junior_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::TraderDepositJunior).await
+}
+
+async fn demo_investor_deposit_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::InvestorDeposit).await
+}
+
+async fn demo_profit_trade_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::ProfitTrade).await
+}
+
+async fn demo_loss_trade_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::LossTrade).await
+}
+
+async fn demo_investor_withdraw_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::InvestorWithdraw).await
+}
+
+async fn demo_trader_withdraw_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::TraderWithdraw).await
+}
+
+async fn demo_claim_fees_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::ClaimFees).await
+}
+
+async fn demo_freeze_vault_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    demo_step(state, DemoStep::FreezeVault).await
+}
+
+async fn demo_run_full_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    state.reset_demo().await?;
+    for step in [
+        DemoStep::TraderJoins,
+        DemoStep::CreateVault,
+        DemoStep::TraderDepositJunior,
+        DemoStep::InvestorDeposit,
+        DemoStep::ProfitTrade,
+        DemoStep::ClaimFees,
+        DemoStep::LossTrade,
+        DemoStep::InvestorWithdraw,
+        DemoStep::FreezeVault,
+        DemoStep::TraderWithdraw,
+    ] {
+        state.apply_demo_step(step).await?;
+    }
+    Ok((StatusCode::OK, Json(serde_json::json!({ "ok": true, "step": "run-full" }))))
+}
+
+async fn demo_step(
+    state: Arc<AppState>,
+    step: DemoStep,
+) -> Result<impl IntoResponse, AppError> {
+    state.apply_demo_step(step).await?;
+    Ok((StatusCode::OK, Json(serde_json::json!({ "ok": true }))))
 }
 
 #[derive(Debug, Deserialize)]
@@ -673,7 +1088,7 @@ impl AppState {
         let updates = MaterializedUpdate::from_payload(&payload);
         match &self.store {
             Store::Postgres(pool) => {
-                sqlx::query(
+                let result = sqlx::query(
                     "INSERT INTO raw_events (event_key, kind, payload) VALUES ($1, $2, $3)
                      ON CONFLICT (event_key) DO NOTHING",
                 )
@@ -682,7 +1097,10 @@ impl AppState {
                 .bind(&payload)
                 .execute(pool)
                 .await?;
-                apply_update_postgres(pool, updates).await?;
+                if result.rows_affected() == 0 {
+                    return Ok(());
+                }
+                apply_update_postgres(pool, updates.clone()).await?;
             }
             Store::Memory(state) => {
                 let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
@@ -690,9 +1108,10 @@ impl AppState {
                     return Ok(());
                 }
                 state.raw_events.push(payload);
-                state.apply_updates(updates);
+                state.apply_updates(updates.clone());
             }
         }
+        self.realtime.publish_materialized(&updates);
         Ok(())
     }
 
@@ -787,7 +1206,8 @@ impl AppState {
         match &self.store {
             Store::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at
+                    "SELECT pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at,
+                            reputation_score, pnl_30d, max_drawdown, capital_handled, claimed_fees, frozen_vault_count
                      FROM manager_profiles ORDER BY total_vaults DESC, created_at DESC",
                 )
                 .fetch_all(pool)
@@ -807,7 +1227,8 @@ impl AppState {
         match &self.store {
             Store::Postgres(pool) => {
                 let manager = sqlx::query(
-                    "SELECT pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at
+                    "SELECT pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at,
+                            reputation_score, pnl_30d, max_drawdown, capital_handled, claimed_fees, frozen_vault_count
                      FROM manager_profiles WHERE pubkey = $1 OR owner = $1",
                 )
                 .bind(address)
@@ -884,9 +1305,78 @@ impl AppState {
             }
         }
     }
+
+    async fn reset_demo(&self) -> Result<(), AppError> {
+        if !self.demo_mode {
+            return Err(AppError::BadRequest("demo mode disabled".to_string()));
+        }
+        match &self.store {
+            Store::Postgres(pool) => {
+                sqlx::query("DELETE FROM investor_positions WHERE pubkey = $1 OR vault_config_pubkey = $2")
+                    .bind(DEMO_POSITION)
+                    .bind(DEMO_VAULT_CONFIG)
+                    .execute(pool)
+                    .await?;
+                sqlx::query("DELETE FROM nav_points WHERE vault_config_pubkey = $1")
+                    .bind(DEMO_VAULT_CONFIG)
+                    .execute(pool)
+                    .await?;
+                sqlx::query("DELETE FROM trade_events WHERE vault_config_pubkey = $1")
+                    .bind(DEMO_VAULT_CONFIG)
+                    .execute(pool)
+                    .await?;
+                sqlx::query("DELETE FROM status_events WHERE vault_config_pubkey = $1")
+                    .bind(DEMO_VAULT_CONFIG)
+                    .execute(pool)
+                    .await?;
+                sqlx::query("DELETE FROM vaults WHERE config_pubkey = $1")
+                    .bind(DEMO_VAULT_CONFIG)
+                    .execute(pool)
+                    .await?;
+                sqlx::query("DELETE FROM manager_profiles WHERE pubkey = $1")
+                    .bind(DEMO_MANAGER_PROFILE)
+                    .execute(pool)
+                    .await?;
+                sqlx::query("DELETE FROM raw_events WHERE event_key LIKE 'arcadia-demo:%'")
+                    .execute(pool)
+                    .await?;
+            }
+            Store::Memory(state) => {
+                let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                state.managers.remove(DEMO_MANAGER_PROFILE);
+                state.vaults.remove(DEMO_VAULT_CONFIG);
+                state.positions.remove(DEMO_POSITION);
+                state.nav_points.retain(|point| point.vault_config_pubkey != DEMO_VAULT_CONFIG);
+                state.trades.retain(|trade| trade.vault_config_pubkey != DEMO_VAULT_CONFIG);
+                state.status_events.retain(|event| event.vault_config_pubkey != DEMO_VAULT_CONFIG);
+                state.raw_events.clear();
+                state.raw_event_keys.clear();
+                state.nav_event_keys.clear();
+                state.trade_event_keys.clear();
+                state.status_event_keys.clear();
+            }
+        }
+        self.realtime.publish(RealtimeEvent::ResyncRequired {
+            topics: vec!["vaults".to_string(), "managers".to_string()],
+            received_at: now_ts(),
+        });
+        Ok(())
+    }
+
+    async fn apply_demo_step(&self, step: DemoStep) -> Result<(), AppError> {
+        if !self.demo_mode {
+            return Err(AppError::BadRequest("demo mode disabled".to_string()));
+        }
+        let (kind, payload, extra_events) = demo_payload(step);
+        self.record_webhook(Some(kind.to_string()), payload).await?;
+        for event in extra_events {
+            self.realtime.publish(event);
+        }
+        Ok(())
+    }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MaterializedUpdate {
     event_key: String,
     manager: Option<ManagerView>,
@@ -987,6 +1477,353 @@ fn event_key(payload: &Value, kind: Option<&str>, index: usize) -> String {
     format!("{}:{}:{index}", kind.unwrap_or("webhook"), signature)
 }
 
+fn demo_payload(step: DemoStep) -> (&'static str, Value, Vec<RealtimeEvent>) {
+    let now = now_ts();
+    let received_at = now;
+    let mut extras = Vec::new();
+    let (kind, manager, vault, position, nav, trade, status) = match step {
+        DemoStep::TraderJoins => (
+            "arcadia-demo:trader-joins",
+            Some(demo_manager(120.0, 0.0, 0.0, 0.0, 0.0, 0)),
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
+        DemoStep::CreateVault => (
+            "arcadia-demo:create-vault",
+            Some(demo_manager(160.0, 0.0, 0.0, 0.0, 0.0, 0)),
+            Some(demo_vault("paper", 0.0, 0.0, 0.0, 0.0, 100_000.0, true, 4, now)),
+            None,
+            Some(demo_nav(0.0, 0.0, 0.0, now)),
+            None,
+            Some(demo_status("paper", "Trader entered proof mode", now)),
+        ),
+        DemoStep::TraderDepositJunior => {
+            extras.push(RealtimeEvent::DepositEvent {
+                item: demo_capital_event("trader", DEMO_MANAGER_WALLET, "deposited", 20_000.0, "junior", "confirmed", "Trader posted first-loss capital", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:trader-deposit-junior",
+                Some(demo_manager(210.0, 0.0, 0.0, 0.0, 0.0, 0)),
+                Some(demo_vault("paper", 20_000.0, 0.0, 20_000.0, 20_000.0, 100_000.0, true, 9, now)),
+                None,
+                Some(demo_nav(20_000.0, 20_000.0, 0.0, now)),
+                None,
+                Some(demo_status("paper", "Junior buffer funded", now)),
+            )
+        }
+        DemoStep::InvestorDeposit => {
+            extras.push(RealtimeEvent::DepositEvent {
+                item: demo_capital_event("investor", DEMO_INVESTOR_WALLET, "deposited", 80_000.0, "senior", "confirmed", "Investor capital entered the vault", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:investor-deposit",
+                Some(demo_manager(280.0, 0.0, 0.0, 100_000.0, 0.0, 0)),
+                Some(demo_vault("active", 20_000.0, 80_000.0, 100_000.0, 20_000.0, 100_000.0, true, 12, now)),
+                Some(demo_position(80_000.0, 80_000.0, now)),
+                Some(demo_nav(100_000.0, 20_000.0, 80_000.0, now)),
+                None,
+                Some(demo_status("active", "Vault opened to senior capital", now)),
+            )
+        }
+        DemoStep::ProfitTrade => {
+            extras.push(RealtimeEvent::FeeEvent {
+                item: demo_fee_event(100_000.0, 10_000.0, 2_000.0, 0.0, "Performance fee is now claimable", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:profit-trade",
+                Some(demo_manager(390.0, 10.0, -2.5, 110_000.0, 0.0, 0)),
+                Some(demo_vault("active", 30_000.0, 80_000.0, 110_000.0, 20_000.0, 100_000.0, true, 14, now)),
+                Some(demo_position(80_000.0, 80_000.0, now)),
+                Some(demo_nav(110_000.0, 30_000.0, 80_000.0, now)),
+                Some(demo_trade("USDC -> SOL", 18_000.0, now)),
+                Some(demo_status("active", "NAV moved above high-water mark", now)),
+            )
+        }
+        DemoStep::ClaimFees => {
+            extras.push(RealtimeEvent::FeeEvent {
+                item: demo_fee_event(108_000.0, 0.0, 0.0, 2_000.0, "Trader claimed performance fee earned above HWM", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:claim-fees",
+                Some(demo_manager(420.0, 8.0, -2.5, 108_000.0, 2_000.0, 0)),
+                Some(demo_vault("active", 28_000.0, 80_000.0, 108_000.0, 20_000.0, 108_000.0, true, 15, now)),
+                Some(demo_position(80_000.0, 80_000.0, now)),
+                Some(demo_nav(108_000.0, 28_000.0, 80_000.0, now)),
+                None,
+                Some(demo_status("active", "Fees claimed after new performance", now)),
+            )
+        }
+        DemoStep::LossTrade => {
+            extras.push(RealtimeEvent::RiskEvent {
+                item: demo_risk("caution", Some("healthy"), 8_000.0, 60.0, 0.0, true, "Loss absorbed by trader junior capital", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:loss-trade",
+                Some(demo_manager(330.0, -12.0, -12.0, 88_000.0, 2_000.0, 0)),
+                Some(demo_vault("cooldown", 8_000.0, 80_000.0, 88_000.0, 20_000.0, 108_000.0, true, 16, now)),
+                Some(demo_position(80_000.0, 80_000.0, now)),
+                Some(demo_nav(88_000.0, 8_000.0, 80_000.0, now)),
+                Some(demo_trade("SOL -> USDC", 22_000.0, now)),
+                Some(demo_status("cooldown", "Junior buffer weakened; position limits reduced", now)),
+            )
+        }
+        DemoStep::InvestorWithdraw => {
+            extras.push(RealtimeEvent::WithdrawalEvent {
+                item: demo_capital_event("investor", DEMO_INVESTOR_WALLET, "withdrew", 5_000.0, "senior", "confirmed", "Mid-vault withdrawal paid from liquid USDC", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:investor-withdraw",
+                Some(demo_manager(325.0, -12.0, -12.0, 83_000.0, 2_000.0, 0)),
+                Some(demo_vault("cooldown", 8_000.0, 75_000.0, 83_000.0, 20_000.0, 108_000.0, true, 16, now)),
+                Some(demo_position(75_000.0, 75_000.0, now)),
+                Some(demo_nav(83_000.0, 8_000.0, 75_000.0, now)),
+                None,
+                Some(demo_status("cooldown", "Investor withdrawal settled", now)),
+            )
+        }
+        DemoStep::TraderWithdraw => {
+            extras.push(RealtimeEvent::WithdrawalEvent {
+                item: demo_capital_event("trader", DEMO_MANAGER_WALLET, "blocked withdrawal", 3_000.0, "junior", "blocked", "Trader cannot withdraw while vault is frozen or exit-priority", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:trader-withdraw",
+                Some(demo_manager(170.0, -22.0, -22.0, 73_000.0, 2_000.0, 1)),
+                Some(demo_vault("frozen", 0.0, 73_000.0, 73_000.0, 20_000.0, 108_000.0, false, 16, now)),
+                Some(demo_position(75_000.0, 73_000.0, now)),
+                Some(demo_nav(73_000.0, 0.0, 73_000.0, now)),
+                None,
+                Some(demo_status("frozen", "Trader withdrawal blocked; investor exits take priority", now)),
+            )
+        }
+        DemoStep::FreezeVault => {
+            extras.push(RealtimeEvent::RiskEvent {
+                item: demo_risk("frozen", Some("caution"), 0.0, 100.0, 2_000.0, false, "Junior buffer depleted; trading disabled", now),
+                received_at,
+            });
+            (
+                "arcadia-demo:freeze-vault",
+                Some(demo_manager(180.0, -22.0, -22.0, 73_000.0, 2_000.0, 1)),
+                Some(demo_vault("frozen", 0.0, 73_000.0, 73_000.0, 20_000.0, 108_000.0, false, 16, now)),
+                Some(demo_position(75_000.0, 73_000.0, now)),
+                Some(demo_nav(73_000.0, 0.0, 73_000.0, now)),
+                Some(demo_trade("SOL -> USDC", 14_000.0, now)),
+                Some(demo_status("frozen", "Junior buffer depleted; trading disabled", now)),
+            )
+        }
+    };
+
+    let payload = serde_json::json!({
+        "signature": format!("{kind}:{}", now_nonce()),
+        "kind": kind,
+        "data": {
+            "manager": manager,
+            "vault": vault,
+            "position": position,
+            "navPoint": nav,
+            "trade": trade,
+            "statusEvent": status
+        }
+    });
+    (kind, payload, extras)
+}
+
+fn demo_manager(
+    reputation_score: f64,
+    pnl_30d: f64,
+    max_drawdown: f64,
+    capital_handled: f64,
+    claimed_fees: f64,
+    frozen_vault_count: i32,
+) -> Value {
+    serde_json::json!({
+        "pubkey": DEMO_MANAGER_PROFILE,
+        "owner": DEMO_MANAGER_WALLET,
+        "totalVaults": 1,
+        "activeVaults": if frozen_vault_count > 0 { 0 } else { 1 },
+        "totalJuniorDeposited": 20_000.0,
+        "createdAt": now_ts() - 2_592_000,
+        "reputationScore": reputation_score,
+        "pnl30d": pnl_30d,
+        "maxDrawdown": max_drawdown,
+        "capitalHandled": capital_handled,
+        "claimedFees": claimed_fees,
+        "frozenVaultCount": frozen_vault_count
+    })
+}
+
+fn demo_vault(
+    status: &str,
+    junior_capital: f64,
+    senior_capital: f64,
+    current_nav: f64,
+    original_junior: f64,
+    high_water_mark: f64,
+    trading_enabled: bool,
+    paper_trade_count: i32,
+    now: i64,
+) -> Value {
+    let junior_health = if original_junior > 0.0 {
+        ((junior_capital / original_junior) * 100.0).clamp(0.0, 100.0)
+    } else {
+        0.0
+    };
+    let senior_principal_remaining = if status == "frozen" {
+        75_000.0
+    } else {
+        senior_capital
+    };
+    serde_json::json!({
+        "configPubkey": DEMO_VAULT_CONFIG,
+        "statePubkey": DEMO_VAULT_STATE,
+        "treasuryPubkey": DEMO_TREASURY,
+        "managerPubkey": DEMO_MANAGER_WALLET,
+        "managerProfilePubkey": DEMO_MANAGER_PROFILE,
+        "name": "Arcadia Proof Vault",
+        "status": status,
+        "tvl": current_nav,
+        "juniorCapital": junior_capital,
+        "seniorCapital": senior_capital,
+        "originalJuniorDeposit": original_junior,
+        "juniorSharesOutstanding": junior_capital,
+        "seniorSharesOutstanding": senior_principal_remaining,
+        "juniorHealth": junior_health.round(),
+        "currentNav": current_nav,
+        "highWaterMark": high_water_mark,
+        "feeBps": 2000,
+        "maxSlippageBps": 50,
+        "createdAt": now - 2_592_000,
+        "graduatedAt": if status == "paper" { 0 } else { now - 3_600 },
+        "paperTradeCount": paper_trade_count,
+        "minQualifyingTrades": 10,
+        "rolling24hLossBps": if junior_health < 50.0 { 1200 } else { 0 },
+        "rolling7dLossBps": if junior_health < 50.0 { 2200 } else { 0 },
+        "tradingEnabled": trading_enabled,
+        "instantExit": junior_health < 20.0,
+        "vaultIndex": 1
+    })
+}
+
+fn demo_position(principal_remaining: f64, current_value: f64, now: i64) -> Value {
+    serde_json::json!({
+        "pubkey": DEMO_POSITION,
+        "vaultConfigPubkey": DEMO_VAULT_CONFIG,
+        "investorPubkey": DEMO_INVESTOR_WALLET,
+        "seniorShares": principal_remaining,
+        "totalDeposited": 80_000.0,
+        "depositedAt": now - 3_000,
+        "alertThresholdBps": 2000,
+        "currentValue": current_value
+    })
+}
+
+fn demo_nav(nav: f64, junior_capital: f64, senior_capital: f64, now: i64) -> Value {
+    serde_json::json!({
+        "vaultConfigPubkey": DEMO_VAULT_CONFIG,
+        "recordedAt": now,
+        "nav": nav,
+        "juniorCapital": junior_capital,
+        "seniorCapital": senior_capital
+    })
+}
+
+fn demo_trade(route: &str, size: f64, now: i64) -> Value {
+    serde_json::json!({
+        "vaultConfigPubkey": DEMO_VAULT_CONFIG,
+        "occurredAt": now,
+        "visibilityAfter": now,
+        "isPublicVisible": true,
+        "side": "swap",
+        "size": size,
+        "route": route
+    })
+}
+
+fn demo_status(status: &str, reason: &str, now: i64) -> Value {
+    serde_json::json!({
+        "vaultConfigPubkey": DEMO_VAULT_CONFIG,
+        "occurredAt": now,
+        "status": status,
+        "reason": reason
+    })
+}
+
+fn demo_capital_event(
+    actor_role: &str,
+    actor: &str,
+    action: &str,
+    amount: f64,
+    capital_layer: &str,
+    status: &str,
+    detail: &str,
+    now: i64,
+) -> CapitalEvent {
+    CapitalEvent {
+        vault_config_pubkey: DEMO_VAULT_CONFIG.to_string(),
+        actor_role: actor_role.to_string(),
+        actor: actor.to_string(),
+        action: action.to_string(),
+        amount,
+        capital_layer: capital_layer.to_string(),
+        status: status.to_string(),
+        detail: detail.to_string(),
+        occurred_at: now,
+    }
+}
+
+fn demo_fee_event(
+    high_water_mark: f64,
+    profit_above_high_water_mark: f64,
+    claimable_fees: f64,
+    claimed_fees: f64,
+    detail: &str,
+    now: i64,
+) -> FeeEvent {
+    FeeEvent {
+        vault_config_pubkey: DEMO_VAULT_CONFIG.to_string(),
+        manager: DEMO_MANAGER_WALLET.to_string(),
+        high_water_mark,
+        profit_above_high_water_mark,
+        claimable_fees,
+        claimed_fees,
+        fee_bps: 2000,
+        detail: detail.to_string(),
+        occurred_at: now,
+    }
+}
+
+fn demo_risk(
+    state: &str,
+    previous_state: Option<&str>,
+    junior_buffer_remaining: f64,
+    junior_buffer_used_pct: f64,
+    investor_capital_impacted: f64,
+    trading_enabled: bool,
+    reason: &str,
+    now: i64,
+) -> RiskEvent {
+    RiskEvent {
+        vault_config_pubkey: DEMO_VAULT_CONFIG.to_string(),
+        state: state.to_string(),
+        previous_state: previous_state.map(ToString::to_string),
+        junior_buffer_remaining,
+        junior_buffer_used_pct,
+        investor_capital_impacted,
+        trading_enabled,
+        reason: reason.to_string(),
+        occurred_at: now,
+    }
+}
+
 impl MaterializedState {
     fn apply_updates(&mut self, updates: Vec<MaterializedUpdate>) {
         for update in updates {
@@ -1035,14 +1872,21 @@ async fn apply_update_postgres(
         if let Some(manager) = update.manager {
             sqlx::query(
                 "INSERT INTO manager_profiles
-             (pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6)
+             (pubkey, owner, total_vaults, active_vaults, total_junior_deposited, created_at,
+              reputation_score, pnl_30d, max_drawdown, capital_handled, claimed_fees, frozen_vault_count)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
              ON CONFLICT (pubkey) DO UPDATE SET
                owner = EXCLUDED.owner,
                total_vaults = EXCLUDED.total_vaults,
                active_vaults = EXCLUDED.active_vaults,
                total_junior_deposited = EXCLUDED.total_junior_deposited,
                created_at = EXCLUDED.created_at,
+               reputation_score = EXCLUDED.reputation_score,
+               pnl_30d = EXCLUDED.pnl_30d,
+               max_drawdown = EXCLUDED.max_drawdown,
+               capital_handled = EXCLUDED.capital_handled,
+               claimed_fees = EXCLUDED.claimed_fees,
+               frozen_vault_count = EXCLUDED.frozen_vault_count,
                updated_at = now()",
             )
             .bind(manager.pubkey)
@@ -1051,6 +1895,12 @@ async fn apply_update_postgres(
             .bind(manager.active_vaults)
             .bind(manager.total_junior_deposited)
             .bind(manager.created_at)
+            .bind(manager.reputation_score)
+            .bind(manager.pnl_30d)
+            .bind(manager.max_drawdown)
+            .bind(manager.capital_handled)
+            .bind(manager.claimed_fees)
+            .bind(manager.frozen_vault_count)
             .execute(pool)
             .await?;
         }
@@ -1254,6 +2104,12 @@ fn row_to_manager(row: sqlx::postgres::PgRow) -> ManagerView {
         active_vaults: row.get("active_vaults"),
         total_junior_deposited: row.get("total_junior_deposited"),
         created_at: row.get("created_at"),
+        reputation_score: row.get("reputation_score"),
+        pnl_30d: row.get("pnl_30d"),
+        max_drawdown: row.get("max_drawdown"),
+        capital_handled: row.get("capital_handled"),
+        claimed_fees: row.get("claimed_fees"),
+        frozen_vault_count: row.get("frozen_vault_count"),
     }
 }
 
@@ -1301,6 +2157,12 @@ fn parse_manager(value: &Value) -> Option<ManagerView> {
         active_vaults: i32_value(value, &["activeVaults"]).unwrap_or_default(),
         total_junior_deposited: f64_value(value, &["totalJuniorDeposited"]).unwrap_or_default(),
         created_at: i64_value(value, &["createdAt"]).unwrap_or_else(now_ts),
+        reputation_score: f64_value(value, &["reputationScore"]).unwrap_or_default(),
+        pnl_30d: f64_value(value, &["pnl30d", "pnl_30d"]).unwrap_or_default(),
+        max_drawdown: f64_value(value, &["maxDrawdown"]).unwrap_or_default(),
+        capital_handled: f64_value(value, &["capitalHandled"]).unwrap_or_default(),
+        claimed_fees: f64_value(value, &["claimedFees"]).unwrap_or_default(),
+        frozen_vault_count: i32_value(value, &["frozenVaultCount"]).unwrap_or_default(),
     })
 }
 
@@ -1354,15 +2216,14 @@ fn parse_vault(value: &Value) -> Option<VaultView> {
 fn parse_position(value: &Value, vault: Option<VaultView>) -> Option<PositionView> {
     let senior_shares = f64_value(value, &["seniorShares"]).unwrap_or_default();
     let total_deposited = f64_value(value, &["totalDeposited"]).unwrap_or_default();
-    let current_value = vault
-        .as_ref()
-        .and_then(|v| {
+    let current_value = f64_value(value, &["currentValue"])
+        .or_else(|| vault.as_ref().and_then(|v| {
             if v.senior_shares_outstanding > 0.0 {
                 Some((senior_shares / v.senior_shares_outstanding) * v.senior_capital)
             } else {
                 None
             }
-        })
+        }))
         .unwrap_or(total_deposited);
 
     Some(PositionView {
@@ -1458,10 +2319,72 @@ fn bool_value(value: &Value, keys: &[&str]) -> Option<bool> {
         .and_then(|v| v.as_bool().or_else(|| v.as_str()?.parse().ok()))
 }
 
+fn parse_topics(topics: Option<&str>) -> HashSet<String> {
+    topics
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|topic| !topic.is_empty())
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn topic_matches(event: &RealtimeEvent, topics: &HashSet<String>) -> bool {
+    if topics.is_empty() {
+        return true;
+    }
+    match event {
+        RealtimeEvent::VaultUpsert { item, .. } => {
+            topics.contains("vaults") || topics.contains(&format!("vault:{}", item.config_pubkey))
+        }
+        RealtimeEvent::ManagerUpsert { .. } => topics.contains("managers"),
+        RealtimeEvent::PositionUpsert { wallet, item, .. } => {
+            topics.contains(&format!("positions:{wallet}"))
+                || topics.contains(&format!("vault:{}", item.vault_config_pubkey))
+        }
+        RealtimeEvent::NavPoint {
+            vault_config_pubkey,
+            ..
+        }
+        | RealtimeEvent::TradePublic {
+            vault_config_pubkey,
+            ..
+        }
+        | RealtimeEvent::StatusEvent {
+            vault_config_pubkey,
+            ..
+        } => {
+            topics.contains(&format!("vault:{vault_config_pubkey}"))
+                || topics.contains(&format!("trades:{vault_config_pubkey}"))
+                || topics.contains("vaults")
+        }
+        RealtimeEvent::DepositEvent { item, .. }
+        | RealtimeEvent::WithdrawalEvent { item, .. } => {
+            topics.contains("vaults")
+                || topics.contains(&format!("vault:{}", item.vault_config_pubkey))
+                || topics.contains(&format!("positions:{}", item.actor))
+        }
+        RealtimeEvent::FeeEvent { item, .. } => {
+            topics.contains("managers") || topics.contains(&format!("vault:{}", item.vault_config_pubkey))
+        }
+        RealtimeEvent::RiskEvent { item, .. } => {
+            topics.contains("vaults") || topics.contains(&format!("vault:{}", item.vault_config_pubkey))
+        }
+        RealtimeEvent::Heartbeat { .. } | RealtimeEvent::ResyncRequired { .. } => true,
+    }
+}
+
 fn now_ts() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
+        .unwrap_or_default()
+}
+
+fn now_nonce() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
         .unwrap_or_default()
 }
 
@@ -1496,6 +2419,8 @@ mod tests {
             webhook_secret: secret.map(ToString::to_string),
             jupiter_api_key: None,
             jupiter_swap_base_url: "https://api.jup.ag/swap/v1".to_string(),
+            demo_mode: true,
+            realtime: RealtimeHub::new(),
         })
     }
 
@@ -1782,6 +2707,36 @@ mod tests {
         assert_eq!(health["rawEvents"], 1);
         assert_eq!(health["vaults"], 1);
         assert!(health["lastIngestedAt"].as_i64().is_some());
+    }
+
+    #[tokio::test]
+    async fn demo_full_run_materializes_capital_lifecycle() {
+        let app = test_app(None);
+
+        let (status, _) = json_request(app.clone(), Method::POST, "/demo/run-full", Value::Null).await;
+        assert_eq!(status, StatusCode::OK);
+
+        let (status, vault) =
+            json_request(app.clone(), Method::GET, "/vaults/So11111111111111111111111111111111111111112", Value::Null).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(vault["status"], "frozen");
+        assert_eq!(vault["tradingEnabled"], false);
+        assert_eq!(vault["juniorCapital"], 0.0);
+
+        let (status, managers) = json_request(app.clone(), Method::GET, "/managers", Value::Null).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(managers["items"][0]["claimedFees"], 2000.0);
+        assert_eq!(managers["items"][0]["frozenVaultCount"], 1);
+
+        let (status, positions) = json_request(
+            app,
+            Method::GET,
+            "/positions/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(positions["items"][0]["currentValue"], 73000.0);
     }
 
     #[tokio::test]

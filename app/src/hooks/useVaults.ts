@@ -165,6 +165,12 @@ export interface ManagerView {
   activeVaults: number;
   totalJuniorDeposited: number;
   createdAt: number;
+  reputationScore?: number;
+  pnl30d?: number;
+  maxDrawdown?: number;
+  capitalHandled?: number;
+  claimedFees?: number;
+  frozenVaultCount?: number;
 }
 
 export function useManagers() {
@@ -196,9 +202,15 @@ export function useManagers() {
         activeVaults: m.data.activeVaults,
         totalJuniorDeposited: tokenUnitsToUsdc(m.data.totalJuniorDeposited),
         createdAt: m.data.createdAt,
+        reputationScore: 0,
+        pnl30d: 0,
+        maxDrawdown: 0,
+        capitalHandled: 0,
+        claimedFees: 0,
+        frozenVaultCount: 0,
       }));
     },
-    enabled: isMock || !!connection,
+    enabled: isMock || !!getKilnApiUrl() || !!connection,
     staleTime: 30_000,
   });
 }

@@ -24,6 +24,7 @@ import { PublicKey } from "@solana/web3.js";
 import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
 
 const LIVE_VIEW_RANGES = ["1H", "4H", "1D", "1W"] as const;
 type LiveViewRange = (typeof LIVE_VIEW_RANGES)[number];
@@ -193,6 +194,11 @@ const VaultDetail = () => {
           <StatCard label="Senior" value={`${fmtUSD(vault.seniorCapital, { compact: true })} USDC`} hint="protected" />
           <StatCard label="NAV" value={`${fmtUSD(vault.currentNav, { compact: true })} USDC`} />
           <StatCard label="HWM" value={`${fmtUSD(vault.highWaterMark, { compact: true })} USDC`} />
+        </div>
+
+        <div className="mb-6 grid gap-5 xl:grid-cols-[1.35fr_0.9fr]">
+          <LiveVaultKpis vault={vault} />
+          <VaultActivityFeed vaultConfigPubkey={vault.configPubkey} />
         </div>
 
         {/* ── Main grid ─────────────────────────────── */}

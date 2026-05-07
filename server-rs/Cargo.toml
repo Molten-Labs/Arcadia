@@ -9,7 +9,7 @@ repository = "https://example.com/kiln"
 
 [dependencies]
 # Web framework
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 
 # Async runtime
 tokio = { version = "1.29", features = ["full"] }

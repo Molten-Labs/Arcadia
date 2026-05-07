@@ -56,7 +56,7 @@ function estimateCurrentValue(pos: InvestorPositionData, vault: VaultView | null
   return calculatePositionValue(pos.seniorShares, pos.totalDeposited, vault);
 }
 
-function normalizeApiPosition(pos: PositionView): PositionView {
+export function normalizeApiPosition(pos: PositionView): PositionView {
   const vault = pos.vault ? normalizeVaultView(pos.vault) : null;
   const seniorPrincipalRemaining = Number(pos.seniorPrincipalRemaining ?? pos.seniorShares ?? 0);
   const totalDeposited = Number(pos.totalDeposited);
@@ -68,7 +68,11 @@ function normalizeApiPosition(pos: PositionView): PositionView {
       : BigInt(Math.round(seniorPrincipalRemaining * USDC_DECIMALS)));
   const totalDepositedLamports =
     pos.totalDepositedLamports ?? BigInt(Math.round(totalDeposited * USDC_DECIMALS));
-  const currentValueRaw = calculatePositionValueRaw(seniorPrincipalRemainingRaw, totalDepositedLamports, vault);
+  const providedCurrentValue = Number(pos.currentValue);
+  const currentValueRaw = pos.currentValueRaw ??
+    (Number.isFinite(providedCurrentValue)
+      ? BigInt(Math.round(providedCurrentValue * USDC_DECIMALS))
+      : calculatePositionValueRaw(seniorPrincipalRemainingRaw, totalDepositedLamports, vault));
 
   return {
     ...pos,

@@ -9,9 +9,9 @@ import { fmtUSD } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import {
-    Search, Trophy, ArrowUpRight, BadgeCheck,
+    Search, ArrowUpRight, BadgeCheck,
     ChevronUp, ChevronDown, ChevronsUpDown,
-    Loader2, AlertTriangle, Zap,
+    Loader2, AlertTriangle, Zap, Activity,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { shortAddr } from "@/lib/wallet";
@@ -91,14 +91,14 @@ const Traders = () => {
                 name:        mock?.name         ?? shortAddr(m.owner),
                 handle:      mock?.handle       ?? m.owner.slice(0, 6),
                 tier:        mock?.tier         ?? "novice",
-                reputation:  mock?.reputation   ?? 0,
+                reputation:  Math.round(m.reputationScore ?? mock?.reputation ?? 0),
                 nextTierAt:  mock?.nextTierAt   ?? 100,
-                pnl30d:      mock?.pnl30d       ?? 0,
+                pnl30d:      m.pnl30d ?? mock?.pnl30d ?? 0,
                 pnl90d:      mock?.pnl90d       ?? 0,
                 pnlAllTime:  mock?.pnlAllTime   ?? 0,
-                maxDrawdown: mock?.maxDrawdown  ?? 0,
-                totalAUM:    mock?.totalAUM     ?? m.totalJuniorDeposited,
-                freezeCount: mock?.freezeCount  ?? 0,
+                maxDrawdown: m.maxDrawdown ?? mock?.maxDrawdown ?? 0,
+                totalAUM:    m.capitalHandled ?? mock?.totalAUM ?? m.totalJuniorDeposited,
+                freezeCount: m.frozenVaultCount ?? mock?.freezeCount ?? 0,
                 cooldownCount: mock?.cooldownCount ?? 0,
                 strategyTags: mock?.strategyTags ?? [],
                 joinedAt:    mock?.joinedAt     ?? new Date(m.createdAt * 1000).toISOString().slice(0, 10),
@@ -168,7 +168,7 @@ const Traders = () => {
                 {/* ── Header ── */}
                 <div className="mb-8">
                     <span className="page-header-label">
-                        <Trophy className="w-3 h-3" /> Trader Leaderboard
+                        <Activity className="w-3 h-3" /> Trader records
                     </span>
                     <h1 className="font-display type-h1 font-semibold mt-3">Arcadia Traders</h1>
                     <p className="text-muted-foreground mt-2 max-w-xl text-[14px]">
@@ -281,19 +281,12 @@ const Traders = () => {
                                             >
                                                 {/* Rank */}
                                                 <td className="px-3 py-3.5">
-                                                    {e.rank === 1 ? (
-                                                        <span className="flex items-center gap-1">
-                                                            <Trophy className="w-3.5 h-3.5 text-primary/70" />
-                                                            <span className="font-mono text-[11px] font-bold text-primary">1</span>
-                                                        </span>
-                                                    ) : (
-                                                        <span className={cn(
-                                                            "font-mono text-[12px] font-semibold tabular-nums",
-                                                            isTopThree ? "text-foreground/70" : "text-muted-foreground/50"
-                                                        )}>
-                                                            {e.rank}
-                                                        </span>
-                                                    )}
+                                                    <span className={cn(
+                                                        "font-mono text-[12px] font-semibold tabular-nums",
+                                                        isTopThree ? "text-primary/80" : "text-muted-foreground/50"
+                                                    )}>
+                                                        {String(e.rank).padStart(2, "0")}
+                                                    </span>
                                                 </td>
 
                                                 {/* Identity */}
@@ -433,7 +426,7 @@ const Traders = () => {
                                 Reputation = on-chain vault performance × graduated vaults × investor trust score
                             </p>
                             <p className="font-mono text-[10px] text-muted-foreground/40">
-                                Solana Devnet · Mock data
+                                Arcadia realtime · API-backed when configured
                             </p>
                         </div>
                     </div>

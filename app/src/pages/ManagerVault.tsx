@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
 import { DataModeToggle } from "@/components/DataModeToggle";
+import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
 
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
 
@@ -207,6 +208,11 @@ const ManagerVault = () => {
           <StatCard label="Fee" value={`${v.feeBps / 100}%`} />
           <StatCard label="24h loss" value={`${v.rolling24hLossBps / 100}%`} />
           <StatCard label="Senior" value={`${fmtUSD(v.seniorCapital, { decimals: 2 })} USDC`} />
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr] mb-6">
+          <LiveVaultKpis vault={v} />
+          <VaultActivityFeed vaultConfigPubkey={v.configPubkey} />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

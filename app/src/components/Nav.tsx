@@ -32,6 +32,7 @@ import {
 import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
+import { RealtimeStatusPill } from "@/components/RealtimeStatusPill";
 
 type NotifType = "gain" | "loss" | "warning" | "success" | "info";
 
@@ -188,6 +189,7 @@ export const Nav = () => {
                     </nav>
 
                     <div className="flex min-w-0 items-center justify-end gap-1.5 lg:col-start-3">
+                        <RealtimeStatusPill />
                         <ThemeToggle />
                         {connected && (
                             <div className="hidden xl:flex items-center gap-2 rounded-lg border border-border/55 bg-card/60 px-2.5 py-2 text-[11px] shadow-card">

@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleSwitchHint } from "./components/RoleSwitchHint";
+import { RealtimeProvider } from "./hooks/useRealtime";
 
 // Index loads eagerly so the landing page is instant — no loading screen
 import Index from "./pages/Index";
@@ -27,6 +28,7 @@ const Trade          = lazy(() => import("./pages/Trade.tsx"));
 const HowItWorks     = lazy(() => import("./pages/HowItWorks.tsx"));
 const Docs           = lazy(() => import("./pages/Docs.tsx"));
 const FAQ            = lazy(() => import("./pages/FAQ.tsx"));
+const DemoControl    = lazy(() => import("./pages/DemoControl.tsx"));
 const NotFound       = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
@@ -41,13 +43,14 @@ const App = () => (
         <ThemeProvider>
             <QueryClientProvider client={queryClient}>
                 <WalletProvider>
-                    <TooltipProvider>
-                        <Toaster />
-                        <Sonner />
-                        <BrowserRouter>
-                            <RoleSwitchHint />
-                            <Suspense fallback={<RouteFallback />}>
-                                <Routes>
+                    <RealtimeProvider>
+                        <TooltipProvider>
+                            <Toaster />
+                            <Sonner />
+                            <BrowserRouter>
+                                <RoleSwitchHint />
+                                <Suspense fallback={<RouteFallback />}>
+                                    <Routes>
                                     <Route path="/" element={<Index />} />
                                     <Route path="/vaults" element={<Vaults />} />
                                     <Route path="/vault/:id" element={<VaultDetail />} />
@@ -112,11 +115,13 @@ const App = () => (
                                     <Route path="/how-it-works" element={<HowItWorks />} />
                                     <Route path="/docs" element={<Docs />} />
                                     <Route path="/faq" element={<FAQ />} />
+                                    <Route path="/demo-control" element={<DemoControl />} />
                                     <Route path="*" element={<NotFound />} />
-                                </Routes>
-                            </Suspense>
-                        </BrowserRouter>
-                    </TooltipProvider>
+                                    </Routes>
+                                </Suspense>
+                            </BrowserRouter>
+                        </TooltipProvider>
+                    </RealtimeProvider>
                 </WalletProvider>
             </QueryClientProvider>
         </ThemeProvider>
