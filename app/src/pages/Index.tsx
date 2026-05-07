@@ -252,6 +252,43 @@ const HERO_FLOW = [
   },
 ];
 
+const ProblemCard = ({
+  column,
+  index,
+}: {
+  column: (typeof PROBLEM_COLUMNS)[number];
+  index: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 18 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.45, delay: index * 0.08 }}
+    className="group relative overflow-hidden rounded-xl border border-border/55 bg-card/72 p-6 shadow-card backdrop-blur-xl"
+  >
+    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+    <div className="mb-6 flex items-center justify-between gap-4">
+      <div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          {index === 0 ? "Supply side" : "Demand side"}
+        </p>
+        <h3 className="mt-2 font-display type-h3 font-semibold">{column.title}</h3>
+      </div>
+      <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+        {index === 0 ? <TrendingUp className="h-5 w-5" aria-hidden="true" /> : <Shield className="h-5 w-5" aria-hidden="true" />}
+      </div>
+    </div>
+    <ul className="space-y-3">
+      {column.items.map((item) => (
+        <li key={item} className="flex items-start gap-3 rounded-lg border border-border/35 bg-background/45 px-3 py-2.5 text-sm text-foreground/78">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_18px_hsl(var(--primary)/0.45)]" />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  </motion.div>
+);
+
 const Landing = () => {
   const { data: vaults } = useVaults();
   const allVaults = useMemo(() => vaults ?? [], [vaults]);
@@ -371,39 +408,45 @@ const Landing = () => {
       </section>
 
       {/* 2. Problem → Solution */}
-      <section id="problem-solution" className="border-b border-border/35 py-20 scroll-mt-16">
-        <div className="container">
+      <section id="problem-solution" className="relative overflow-hidden border-b border-border/35 py-24 scroll-mt-16">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_32%,hsl(var(--primary)/0.14),transparent_32rem)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
+        <div className="container relative">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="mx-auto mb-10 max-w-2xl text-center"
+            className="mx-auto mb-12 max-w-3xl text-center"
           >
+            <p className="mb-3 font-mono text-xs uppercase tracking-[0.24em] text-primary">Capital routing problem</p>
             <h2 className="font-display type-h2 font-semibold">The way capital is allocated today is broken.</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+              Skilled managers and cautious capital meet through weak signals. Arcadia turns proof, buffers, and liquidity into the interface.
+            </p>
           </motion.div>
 
-          <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
-            {PROBLEM_COLUMNS.map((column, i) => (
-              <motion.div
-                key={column.title}
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.45, delay: i * 0.08 }}
-                className="surface rounded-[11px] p-6"
-              >
-                <h3 className="font-display type-h3 font-semibold">{column.title}</h3>
-                <ul className="mt-5 space-y-3">
-                  {column.items.map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-foreground/78">
-                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            ))}
+          <div className="mx-auto grid max-w-6xl items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr]">
+            <ProblemCard column={PROBLEM_COLUMNS[0]} index={0} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: 0.1 }}
+              className="order-first flex items-center justify-center lg:order-none"
+            >
+              <div className="relative flex h-full min-h-[12rem] w-full items-center justify-center rounded-xl border border-primary/25 bg-primary/[0.06] p-5 shadow-[0_24px_90px_hsl(var(--primary)/0.12)] lg:w-44">
+                <div className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-primary/35 to-transparent lg:block" />
+                <div className="relative z-10 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-signal">
+                    <Activity className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Arcadia layer</p>
+                  <p className="mt-2 font-display text-base font-semibold text-foreground">Proof routes capital</p>
+                </div>
+              </div>
+            </motion.div>
+            <ProblemCard column={PROBLEM_COLUMNS[1]} index={1} />
           </div>
 
           <motion.p
@@ -411,7 +454,7 @@ const Landing = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.45, delay: 0.16 }}
-            className="mx-auto mt-8 max-w-xl text-center font-display type-h3 font-semibold text-primary"
+            className="mx-auto mt-10 max-w-3xl rounded-xl border border-primary/25 bg-primary/10 px-5 py-4 text-center font-display type-h3 font-semibold text-primary shadow-[0_20px_70px_hsl(var(--primary)/0.10)]"
           >
             Arcadia replaces trust with performance.
           </motion.p>
