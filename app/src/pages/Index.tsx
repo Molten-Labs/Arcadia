@@ -253,7 +253,10 @@ const HERO_FLOW = [
 ];
 
 const HeroWireframe = () => (
-  <div className="hero-wireframe pointer-events-none absolute right-[-3rem] top-[8rem] hidden h-[34rem] w-[34rem] text-primary/45 md:block" aria-hidden="true">
+  <div
+    className="hero-wireframe pointer-events-none absolute left-[58%] top-[7.25rem] hidden h-[34rem] w-[34rem] -translate-x-1/2 text-primary/36 md:block xl:left-[61%]"
+    aria-hidden="true"
+  >
     <div className="wireframe-plane wireframe-plane-one" />
     <div className="wireframe-plane wireframe-plane-two" />
     <div className="wireframe-plane wireframe-plane-three" />
@@ -301,8 +304,9 @@ const Landing = () => {
         />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_72%_56%_at_55%_20%,hsl(var(--primary-glow)/0.22),transparent_68%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.18)_0%,hsl(var(--background)/0.62)_78%,hsl(var(--background))_100%)] dark:bg-[linear-gradient(180deg,hsl(var(--background)/0.42)_0%,hsl(var(--background)/0.18)_42%,hsl(var(--background)/0.88)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.86)_0%,hsl(var(--background)/0.58)_42%,hsl(var(--background)/0.18)_100%)] dark:bg-[linear-gradient(90deg,hsl(var(--background)/0.92)_0%,hsl(var(--background)/0.62)_34%,hsl(var(--background)/0.10)_64%,hsl(var(--background)/0.62)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background)/0.88)_0%,hsl(var(--background)/0.62)_37%,hsl(var(--background)/0.22)_63%,hsl(var(--background)/0.56)_100%)] dark:bg-[linear-gradient(90deg,hsl(var(--background)/0.94)_0%,hsl(var(--background)/0.66)_34%,hsl(var(--background)/0.14)_62%,hsl(var(--background)/0.58)_100%)]" />
         <div className="absolute inset-0 arcadia-glow opacity-85 dark:opacity-70" />
+        <div className="absolute left-1/2 top-[12%] hidden h-[28rem] w-[28rem] -translate-x-[8%] rounded-full bg-primary/[0.10] blur-[118px] md:block" />
         <HeroWireframe />
         <div className="absolute right-[12%] top-[15%] h-24 w-24 bg-[linear-gradient(135deg,hsl(var(--foreground)/0.11),hsl(var(--primary-glow)/0.12))] opacity-40 [clip-path:polygon(50%_0%,100%_25%,100%_75%,50%_100%,0%_75%,0%_25%)]" />
         <div className="absolute bottom-[18%] left-[12%] h-12 w-12 bg-[linear-gradient(135deg,hsl(var(--primary-glow)/0.16),hsl(var(--foreground)/0.08))] opacity-40 [clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]" />
@@ -353,8 +357,12 @@ const Landing = () => {
               </Button>
             </motion.div>
 
-            <motion.div variants={fadeUp} custom={4} className="relative left-1/2 mt-10 w-screen -translate-x-1/2 px-4 sm:px-6 lg:px-10">
-              <div className="apex-terminal arcadia-flow-panel mx-auto w-full max-w-[1500px]">
+            <motion.div
+              variants={fadeUp}
+              custom={4}
+              className="relative left-1/2 mt-10 w-[calc(100vw-2rem)] max-w-[1600px] -translate-x-1/2 sm:w-[calc(100vw-3rem)] lg:w-[calc(100vw-5rem)]"
+            >
+              <div className="apex-terminal arcadia-flow-panel w-full">
                 <div className="flex items-center justify-between border-b border-border/60 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   <span>&gt; arcadia.flow</span>
                   <span>20 / 80 capital model</span>
