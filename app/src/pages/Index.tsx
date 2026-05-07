@@ -435,14 +435,14 @@ const Landing = () => {
               transition={{ duration: 0.45, delay: 0.1 }}
               className="order-first flex items-center justify-center lg:order-none"
             >
-              <div className="relative flex h-full min-h-[12rem] w-full items-center justify-center rounded-xl border border-primary/25 bg-primary/[0.06] p-5 shadow-[0_24px_90px_hsl(var(--primary)/0.12)] lg:w-44">
-                <div className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-primary/35 to-transparent lg:block" />
-                <div className="relative z-10 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-signal">
+              <div className="relative flex w-full items-center justify-center rounded-xl border border-border/55 bg-card/60 p-5 shadow-card backdrop-blur-xl lg:h-full lg:w-44">
+                <div className="pointer-events-none absolute left-0 right-0 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/25 to-transparent lg:block" />
+                <div className="relative z-10 max-w-[12rem] rounded-xl bg-background/85 px-4 py-5 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-signal">
                     <Activity className="h-6 w-6" aria-hidden="true" />
                   </div>
-                  <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Arcadia layer</p>
-                  <p className="mt-2 font-display text-base font-semibold text-foreground">Proof routes capital</p>
+                  <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Arcadia layer</p>
+                  <p className="mt-2 font-display text-sm font-semibold leading-5 text-foreground">Proof routes capital</p>
                 </div>
               </div>
             </motion.div>
