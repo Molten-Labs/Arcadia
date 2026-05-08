@@ -7,7 +7,7 @@ set -e
 # Auto-install dependencies if node_modules is missing
 if [ ! -d "app/node_modules" ]; then
   echo "[dev] node_modules not found — running npm install in app/..."
-  cd app && npm install --legacy-peer-deps --ignore-scripts
+  cd app && npm install --legacy-peer-deps --ignore-scripts --prefer-offline 2>/dev/null || npm install --legacy-peer-deps --ignore-scripts
   cd ..
 fi
 
