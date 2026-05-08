@@ -87,12 +87,29 @@ export const DEMO_STEPS: DemoStep[] = [
     duration: 4000,
   },
   {
+    id: "trade-terminal",
+    phase: "trader",
+    caption: "Pro trading terminal",
+    subcaption:
+      "Full-featured terminal with live market data, multi-asset order routing via Jupiter, real-time positions panel, and NAV impact preview before each trade.",
+    route: "/trade",
+    duration: 5500,
+  },
+  {
     id: "execute-trades",
     phase: "trader",
-    caption: "Running paper trades",
+    caption: "Executing paper trades",
     subcaption:
-      "Each trade updates NAV, junior buffer health, and the on-chain activity log — all visible to prospective investors in real time.",
-    duration: 6500,
+      "Each trade is recorded on-chain: pair, size, price, and NAV impact. The vault's track record updates live — prospective investors can audit every entry.",
+    duration: 7000,
+  },
+  {
+    id: "vault-post-trades",
+    phase: "trader",
+    caption: "Vault NAV updated after trading",
+    subcaption:
+      "The manager vault view reflects every trade: updated NAV chart, junior buffer health, activity log, and paper trade count toward graduation threshold.",
+    duration: 4500,
   },
   {
     id: "graduate",

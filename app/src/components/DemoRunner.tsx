@@ -80,16 +80,25 @@ export function DemoRunner() {
       case "execute-trades": {
         const vid = newVaultIdRef.current;
         if (!vid) break;
-        const pairs = ["SOL → USDC", "ETH → USDC", "SOL → USDC"];
-        for (const pair of pairs) {
-          await sleep(1900);
+        const trades = [
+          { pair: "SOL → USDC", amount: 2500 },
+          { pair: "ETH → USDC", amount: 1800 },
+          { pair: "JUP → USDC", amount: 1200 },
+          { pair: "SOL → USDC", amount: 3000 },
+        ];
+        for (const t of trades) {
+          await sleep(1600);
           if (isPausedRef.current) break;
-          mockStore.executeTrade(vid, pair, 3000);
+          mockStore.executeTrade(vid, t.pair, t.amount);
           queryClient.invalidateQueries({ queryKey: ["vaults"] });
-          toast.info(`Paper trade: ${pair} · 3,000 USDC`);
+          toast.info(`Paper trade executed: ${t.pair} · ${t.amount.toLocaleString()} USDC`);
         }
         break;
       }
+
+      case "vault-post-trades":
+        if (newVaultIdRef.current) navigate(`/manager/vault/${newVaultIdRef.current}`);
+        break;
 
       case "graduate": {
         const vid = newVaultIdRef.current;
