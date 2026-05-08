@@ -15,9 +15,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { fmtUSD } from "@/lib/format";
-import { CandlestickChart } from "@/components/CandlestickChart";
-import { OrderBook } from "@/components/OrderBook";
-import { ArrowLeft, Info, Bell, Zap, Loader2, ShieldCheck, TrendingUp, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Info, Bell, Zap, Loader2, ShieldCheck, Copy, ExternalLink } from "lucide-react";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { toast } from "sonner";
 import { PublicKey } from "@solana/web3.js";
@@ -26,8 +24,6 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
 
-const LIVE_VIEW_RANGES = ["1H", "4H", "1D", "1W"] as const;
-type LiveViewRange = (typeof LIVE_VIEW_RANGES)[number];
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
 
 const VaultDetail = () => {
@@ -37,7 +33,6 @@ const VaultDetail = () => {
   const { data: positions } = usePositions();
   const { depositSenior, withdrawSenior } = useKilnTransactions();
   const [amount, setAmount] = useState("");
-  const [liveViewRange, setLiveViewRange] = useState<LiveViewRange>("1D");
   const [sending, setSending] = useState(false);
   const [activePanel, setActivePanel] = useState<"deposit" | "withdraw">("deposit");
 
@@ -59,9 +54,6 @@ const VaultDetail = () => {
   const investorPosition = positions?.find(p => p.vaultConfigPubkey === vault.configPubkey);
   const withdrawableUsdc = investorPosition?.currentValueRaw ?? 0n;
   const juniorPct = vault.tvl > 0 ? Math.round((vault.juniorCapital / vault.tvl) * 100) : 0;
-
-  const liveViewCount =
-    liveViewRange === "1H" ? 20 : liveViewRange === "4H" ? 36 : liveViewRange === "1D" ? 56 : 84;
 
   const handleDeposit = async () => {
     if (!connected) { toast.error("Connect a wallet first"); return; }
@@ -210,39 +202,6 @@ const VaultDetail = () => {
             {/* Capital stack */}
             <div className="surface rounded-[11px] p-6">
               <CapitalStack junior={vault.juniorCapital} senior={vault.seniorCapital} health={vault.juniorHealth} />
-            </div>
-
-            {/* Live trading view */}
-            <div className="surface rounded-[11px] p-6">
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <h3 className="font-display font-semibold text-[15px] flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" /> Live trading view
-                  </h3>
-                  <p className="font-mono text-[11px] text-muted-foreground mt-0.5">SOL / USDC · Simulated positions</p>
-                </div>
-                <div className="flex gap-0.5 rounded-lg bg-secondary/60 p-1">
-                  {LIVE_VIEW_RANGES.map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setLiveViewRange(r)}
-                      className={cn(
-                        "h-7 rounded-md px-3 font-mono text-[11px] transition-colors",
-                        r === liveViewRange
-                          ? "bg-background text-primary shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid lg:grid-cols-[1fr_220px] gap-4">
-                <CandlestickChart count={liveViewCount} height={260} />
-                <OrderBook />
-              </div>
             </div>
 
             {/* Risk & rules */}
