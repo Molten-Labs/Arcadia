@@ -50,3 +50,16 @@ build = [
   "cd app && node node_modules/vite/bin/vite.js build --config vite.config.js",
 ]
 publicDir = "app/dist"
+
+[userenv]
+
+[userenv.shared]
+VITE_PRIVY_APP_ID = "cmowmjzxf002r0cl5zonkvtai"
+VITE_RPC_URL = "https://devnet.helius-rpc.com/?api-key=a901c8af-d871-4edd-b64f-c98d7316ba8b"
+VITE_SOLANA_CLUSTER = "devnet"
+HELIUS_API_KEY = "a901c8af-d871-4edd-b64f-c98d7316ba8b"
+ARCADIA_STORE = "memory"
+ARCADIA_DEMO_MODE = "true"
+VITE_ARCADIA_DEMO_MODE = "true"
+VITE_KILN_API_URL = "/api"
+PORT = "8080"
