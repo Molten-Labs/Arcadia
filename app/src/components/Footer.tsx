@@ -23,7 +23,6 @@ export const Footer = () => (
                     { to: "/traders", label: "Traders" },
                     { to: "/how-it-works", label: "How Arcadia Works" },
                     { to: "/portfolio", label: "Portfolio" },
-                    { to: "/alerts", label: "Alerts" },
                 ]}
             />
             <FooterCol

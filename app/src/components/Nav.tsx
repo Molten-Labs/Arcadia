@@ -10,6 +10,16 @@ import {
     LogOut,
     Globe2,
     LayoutDashboard,
+    Bell,
+    TrendingDown,
+    ShieldAlert,
+    AlertTriangle,
+    Zap,
+    Award,
+    DollarSign,
+    ExternalLink,
+    Check,
+    CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -21,64 +31,50 @@ import {
     DropdownMenuTrigger,
     DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
 import { useRealtimeStatus } from "@/hooks/realtimeContext";
+import { alerts as RAW_ALERTS } from "@/lib/mockData";
+import type { Alert } from "@/lib/mockData";
+import { formatDistanceToNow } from "date-fns";
 
-interface Notification {
-    id: number;
-    title: string;
-    body: string;
-    time: string;
-    read: boolean;
-}
-
-const DEMO_NOTIFICATIONS: Notification[] = [
-    {
-        id: 1, read: false,
-        title: "Vault NAV +4.2%",
-        body: "Kiln Core vault crossed a new high-water mark.",
-        time: "2m ago",
-    },
-    {
-        id: 2, read: false,
-        title: "Vault graduated",
-        body: "Meridian Alpha completed paper mode and is now open to investors.",
-        time: "18m ago",
-    },
-    {
-        id: 3, read: false,
-        title: "Junior health at 61%",
-        body: "Solstice Fund buffer dropped below 65%. Position limits tightening.",
-        time: "1h ago",
-    },
-    {
-        id: 4, read: true,
-        title: "Senior deposit confirmed",
-        body: "Your 2,500 USDC deposit into Kiln Core settled on-chain.",
-        time: "3h ago",
-    },
-    {
-        id: 5, read: true,
-        title: "Cooldown triggered",
-        body: "Apex Quant vault entered cooldown after junior health fell below 50%.",
-        time: "Yesterday",
-    },
-];
+const KIND_META: Record<Alert["kind"], { icon: React.ElementType; color: string }> = {
+    cooldown:       { icon: TrendingDown,  color: "text-warning" },
+    freeze:         { icon: ShieldAlert,   color: "text-destructive" },
+    junior_low:     { icon: AlertTriangle, color: "text-warning" },
+    instant_exit:   { icon: Zap,          color: "text-primary" },
+    graduate:       { icon: Award,         color: "text-success" },
+    fee:            { icon: DollarSign,    color: "text-success" },
+    paper_complete: { icon: Award,         color: "text-success" },
+};
 
 export const Nav = () => {
     const { connected, address, role, network, walletName, setRole, disconnect } = useWallet();
     const { status, lastEventAt } = useRealtimeStatus();
     const [open, setOpen] = useState(false);
     const [connectOpen, setConnectOpen] = useState(false);
-    const [notifications, setNotifications] = useState(DEMO_NOTIFICATIONS);
+    const [bellOpen, setBellOpen] = useState(false);
+    const [readSet, setReadSet] = useState<Set<string>>(
+        () => new Set(RAW_ALERTS.filter((a) => a.read).map((a) => a.id))
+    );
     const location = useLocation();
 
-    const unread = notifications.filter((n) => !n.read).length;
+    const alerts = RAW_ALERTS.map((a) => ({ ...a, read: readSet.has(a.id) }))
+        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+    const unread = alerts.filter((a) => !a.read).length;
+
+    const markRead = (id: string) =>
+        setReadSet((prev) => new Set([...prev, id]));
 
     const markAllRead = () =>
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        setReadSet(new Set(RAW_ALERTS.map((a) => a.id)));
 
     const publicLinks = [
         { to: "/vaults", label: "Marketplace" },
@@ -207,6 +203,124 @@ export const Nav = () => {
                     <div className="flex min-w-0 items-center justify-end gap-2 lg:col-start-3">
                         <ThemeToggle className="hidden sm:inline-flex" />
 
+                        {/* Bell notification popover */}
+                        <Popover open={bellOpen} onOpenChange={setBellOpen}>
+                            <PopoverTrigger asChild>
+                                <button
+                                    aria-label="Notifications"
+                                    className={cn(
+                                        "relative hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                                        "text-muted-foreground hover:text-foreground hover:bg-secondary/70",
+                                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                        bellOpen && "bg-secondary/70 text-foreground"
+                                    )}
+                                >
+                                    <Bell className="h-4 w-4" />
+                                    {unread > 0 && (
+                                        <span className="absolute right-1 top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 font-mono text-[8px] font-bold leading-none text-primary-foreground">
+                                            {unread > 9 ? "9+" : unread}
+                                        </span>
+                                    )}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="end"
+                                sideOffset={8}
+                                className="w-[360px] p-0 shadow-lg"
+                            >
+                                {/* Header */}
+                                <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-display text-[13px] font-semibold text-foreground">Notifications</span>
+                                        {unread > 0 && (
+                                            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-mono text-[9px] font-bold text-primary-foreground">
+                                                {unread}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {unread > 0 && (
+                                        <button
+                                            onClick={markAllRead}
+                                            className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <CheckCheck className="h-3 w-3" />
+                                            Mark all read
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Alert list */}
+                                <div className="max-h-[400px] overflow-y-auto">
+                                    {alerts.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                                            <Bell className="h-6 w-6 text-muted-foreground/50" />
+                                            <p className="text-[13px] text-muted-foreground">No notifications yet</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-border/40">
+                                            {alerts.map((alert) => {
+                                                const meta = KIND_META[alert.kind] ?? KIND_META.fee;
+                                                const Icon = meta.icon;
+                                                const ago = formatDistanceToNow(new Date(alert.time), { addSuffix: true });
+                                                return (
+                                                    <div
+                                                        key={alert.id}
+                                                        className={cn(
+                                                            "relative flex gap-3 px-4 py-3 transition-colors hover:bg-secondary/30",
+                                                            !alert.read && "bg-primary/[0.03]"
+                                                        )}
+                                                    >
+                                                        {!alert.read && (
+                                                            <div className="absolute left-0 inset-y-2 w-[2px] rounded-r-full bg-primary" />
+                                                        )}
+                                                        <div className={cn(
+                                                            "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+                                                            !alert.read ? "bg-primary/10" : "bg-secondary/60"
+                                                        )}>
+                                                            <Icon className={cn("h-3.5 w-3.5", !alert.read ? meta.color : "text-muted-foreground")} />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-start justify-between gap-2">
+                                                                <span className={cn(
+                                                                    "text-[12px] font-semibold leading-snug",
+                                                                    alert.read ? "text-foreground/70" : "text-foreground"
+                                                                )}>
+                                                                    {alert.title}
+                                                                </span>
+                                                                <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{ago}</span>
+                                                            </div>
+                                                            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
+                                                                {alert.description}
+                                                            </p>
+                                                            <div className="mt-1.5 flex items-center gap-3">
+                                                                {alert.vaultId && (
+                                                                    <Link
+                                                                        to={`/vault/${alert.vaultId}`}
+                                                                        onClick={() => setBellOpen(false)}
+                                                                        className="inline-flex items-center gap-1 font-mono text-[10px] text-primary/80 hover:text-primary transition-colors"
+                                                                    >
+                                                                        View vault <ExternalLink className="h-2.5 w-2.5" />
+                                                                    </Link>
+                                                                )}
+                                                                {!alert.read && (
+                                                                    <button
+                                                                        onClick={() => markRead(alert.id)}
+                                                                        className="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                                                                    >
+                                                                        <Check className="h-2.5 w-2.5" /> Mark read
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
                         {!connected ? (
                             <Button
                                 onClick={() => setConnectOpen(true)}
@@ -286,21 +400,6 @@ export const Nav = () => {
                                         <DropdownMenuItem asChild>
                                             <Link to="/vaults">Marketplace</Link>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem asChild>
-                                            <Link to="/alerts">
-                                                <span className="flex w-full items-center justify-between gap-3">
-                                                    Activity
-                                                    {unread > 0 && (
-                                                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                                                            {unread}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            </Link>
-                                        </DropdownMenuItem>
-                                        {unread > 0 && (
-                                            <DropdownMenuItem onClick={markAllRead}>Mark activity read</DropdownMenuItem>
-                                        )}
                                     </div>
                                     <DropdownMenuSeparator />
                                     <div className="p-1.5">

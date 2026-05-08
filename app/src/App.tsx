@@ -19,7 +19,6 @@ const VaultDetail    = lazy(() => import("./pages/VaultDetail.tsx"));
 const Traders        = lazy(() => import("./pages/Traders.tsx"));
 const TraderProfile  = lazy(() => import("./pages/TraderProfile.tsx"));
 const Portfolio      = lazy(() => import("./pages/Portfolio.tsx"));
-const Alerts         = lazy(() => import("./pages/Alerts.tsx"));
 const Settings       = lazy(() => import("./pages/Settings.tsx"));
 const ManagerDashboard = lazy(() => import("./pages/ManagerDashboard.tsx"));
 const ManagerVault   = lazy(() => import("./pages/ManagerVault.tsx"));
@@ -61,14 +60,6 @@ const App = () => (
                                         element={
                                             <ProtectedRoute allowedRoles={["investor"]} requireConnection={false}>
                                                 <Portfolio />
-                                            </ProtectedRoute>
-                                        }
-                                    />
-                                    <Route
-                                        path="/alerts"
-                                        element={
-                                            <ProtectedRoute>
-                                                <Alerts />
                                             </ProtectedRoute>
                                         }
                                     />
