@@ -10,6 +10,7 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleSwitchHint } from "./components/RoleSwitchHint";
 import { RealtimeProvider } from "./hooks/useRealtime";
+import { DemoRunner } from "./components/DemoRunner";
 
 // Index loads eagerly so the landing page is instant — no loading screen
 import Index from "./pages/Index";
@@ -48,6 +49,7 @@ const App = () => (
                             <Sonner />
                             <BrowserRouter>
                                 <RoleSwitchHint />
+                                <DemoRunner />
                                 <Suspense fallback={<RouteFallback />}>
                                     <Routes>
                                     <Route path="/" element={<Index />} />
