@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,8 @@ import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
 import { useRealtimeStatus } from "@/hooks/realtimeContext";
-import { alerts as RAW_ALERTS } from "@/lib/mockData";
 import type { Alert } from "@/lib/mockData";
+import { mockStore } from "@/lib/mockStore";
 import { formatDistanceToNow } from "date-fns";
 
 const KIND_META: Record<Alert["kind"], { icon: React.ElementType; color: string }> = {
@@ -60,12 +60,19 @@ export const Nav = () => {
     const [open, setOpen] = useState(false);
     const [connectOpen, setConnectOpen] = useState(false);
     const [bellOpen, setBellOpen] = useState(false);
+    const [, forceRender] = useState(0);
     const [readSet, setReadSet] = useState<Set<string>>(
-        () => new Set(RAW_ALERTS.filter((a) => a.read).map((a) => a.id))
+        () => new Set(mockStore.alerts.filter((a) => a.read).map((a) => a.id))
     );
     const location = useLocation();
 
-    const alerts = RAW_ALERTS.map((a) => ({ ...a, read: readSet.has(a.id) }))
+    useEffect(() => {
+        const handler = () => forceRender(n => n + 1);
+        window.addEventListener("kiln:mock-update", handler);
+        return () => window.removeEventListener("kiln:mock-update", handler);
+    }, []);
+
+    const alerts = mockStore.alerts.map((a) => ({ ...a, read: readSet.has(a.id) }))
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
     const unread = alerts.filter((a) => !a.read).length;
@@ -74,7 +81,7 @@ export const Nav = () => {
         setReadSet((prev) => new Set([...prev, id]));
 
     const markAllRead = () =>
-        setReadSet(new Set(RAW_ALERTS.map((a) => a.id)));
+        setReadSet(new Set(mockStore.alerts.map((a) => a.id)));
 
     const publicLinks = [
         { to: "/vaults", label: "Marketplace" },
@@ -203,8 +210,8 @@ export const Nav = () => {
                     <div className="flex min-w-0 items-center justify-end gap-2 lg:col-start-3">
                         <ThemeToggle className="hidden sm:inline-flex" />
 
-                        {/* Bell notification popover */}
-                        <Popover open={bellOpen} onOpenChange={setBellOpen}>
+                        {/* Bell notification popover — only shown when connected */}
+                        {connected && <Popover open={bellOpen} onOpenChange={setBellOpen}>
                             <PopoverTrigger asChild>
                                 <button
                                     aria-label="Notifications"
@@ -319,7 +326,7 @@ export const Nav = () => {
                                     )}
                                 </div>
                             </PopoverContent>
-                        </Popover>
+                        </Popover>}
 
                         {!connected ? (
                             <Button

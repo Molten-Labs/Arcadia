@@ -1,11 +1,16 @@
-import { getKilnApiUrl } from "./api";
+import { getKilnApiUrl, isArcadiaDemoMode } from "./api";
 
 export type DataMode = "mock" | "real";
 
 export const DATA_MODE_STORAGE_KEY = "kiln:data-mode";
 
+function hasRealApiConfigured(): boolean {
+  const apiUrl = getKilnApiUrl();
+  return Boolean(apiUrl) && !apiUrl.includes("localhost") && !apiUrl.includes("127.0.0.1");
+}
+
 export function getDefaultDataMode(): DataMode {
-  return getKilnApiUrl() ? "real" : "mock";
+  return hasRealApiConfigured() ? "real" : "mock";
 }
 
 export function isDataMode(value: unknown): value is DataMode {
@@ -13,6 +18,8 @@ export function isDataMode(value: unknown): value is DataMode {
 }
 
 export function getStoredDataMode(storage: Storage | undefined = globalThis.localStorage): DataMode {
+  // Demo/local mode: always prefer mock unless real API is configured
+  if (isArcadiaDemoMode() || !hasRealApiConfigured()) return "mock";
   try {
     const value = storage?.getItem(DATA_MODE_STORAGE_KEY);
     return isDataMode(value) ? value : getDefaultDataMode();

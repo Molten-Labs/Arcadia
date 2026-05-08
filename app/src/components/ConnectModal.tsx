@@ -32,7 +32,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Step = "role" | "network" | "wallet" | "connecting" | "success" | "error";
+type Step = "role" | "wallet" | "connecting" | "success" | "error";
 
 const wallets = [
     {
@@ -169,7 +169,6 @@ export const ConnectModal = ({
             <DialogContent className="surface-elevated border-border-strong sm:max-w-lg p-0 overflow-hidden">
                 {/* Step indicator */}
                 {(step === "role" ||
-                    step === "network" ||
                     step === "wallet") && <StepBar current={step} />}
 
                 <div className="p-6">
@@ -217,57 +216,10 @@ export const ConnectModal = ({
                                 <PrimaryButton
                                     className="mt-5"
                                     disabled={!chosenRole}
-                                    onClick={() => setStep("network")}
+                                    onClick={() => setStep("wallet")}
                                 >
                                     Continue <ArrowRight className="w-4 h-4" />
                                 </PrimaryButton>
-                            </motion.div>
-                        )}
-
-                        {step === "network" && (
-                            <motion.div key="network" {...fade}>
-                                <DialogHeader>
-                                    <DialogTitle className="font-display text-2xl">
-                                        Choose a network
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        This frontend preview uses deterministic
-                                        demo sessions. Choose the network
-                                        context you want the interface to
-                                        simulate.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                                    <NetworkCard
-                                        name="Mainnet"
-                                        badge="Live"
-                                        badgeTone="success"
-                                        desc="Mainnet-style context for reviewing production flows and risk copy."
-                                        selected={network === "mainnet"}
-                                        onClick={() => setNetwork("mainnet")}
-                                    />
-                                    <NetworkCard
-                                        name="Devnet"
-                                        badge="Sandbox"
-                                        badgeTone="info"
-                                        desc="Sandbox context for testing flows without implying real value."
-                                        selected={network === "devnet"}
-                                        onClick={() => setNetwork("devnet")}
-                                    />
-                                </div>
-                                <div className="flex gap-2 mt-5">
-                                    <SecondaryButton
-                                        onClick={() => setStep("role")}
-                                    >
-                                        Back
-                                    </SecondaryButton>
-                                    <PrimaryButton
-                                        onClick={() => setStep("wallet")}
-                                    >
-                                        Continue{" "}
-                                        <ArrowRight className="w-4 h-4" />
-                                    </PrimaryButton>
-                                </div>
                             </motion.div>
                         )}
 
@@ -279,7 +231,7 @@ export const ConnectModal = ({
                                     </DialogTitle>
                                     <DialogDescription className="flex items-center gap-2 flex-wrap">
                                         Continuing as <Pill>{chosenRole}</Pill>{" "}
-                                        on <Pill icon={Globe}>{network}</Pill>.
+                                        on <Pill icon={Globe}>devnet</Pill>.
                                         Connections are deterministic demo
                                         sessions in this build.
                                     </DialogDescription>
@@ -327,7 +279,7 @@ export const ConnectModal = ({
                                 </div>
                                 <div className="flex gap-2 mt-5">
                                     <SecondaryButton
-                                        onClick={() => setStep("network")}
+                                        onClick={() => setStep("role")}
                                     >
                                         Back
                                     </SecondaryButton>
@@ -520,7 +472,7 @@ const fade = {
 };
 
 const StepBar = ({ current }: { current: Step }) => {
-    const steps: Step[] = ["role", "network", "wallet"];
+    const steps: Step[] = ["role", "wallet"];
     const idx = steps.indexOf(current);
     return (
         <div className="flex items-center gap-2 px-6 pt-5">

@@ -23,6 +23,9 @@ import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
+import { useDataMode } from "@/hooks/useDataMode";
+import { mockStore } from "@/lib/mockStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
 
@@ -32,6 +35,8 @@ const VaultDetail = () => {
   const { connected, role } = useWallet();
   const { data: positions } = usePositions();
   const { depositSenior, withdrawSenior } = useKilnTransactions();
+  const { isMock } = useDataMode();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
   const [activePanel, setActivePanel] = useState<"deposit" | "withdraw">("deposit");
@@ -63,7 +68,15 @@ const VaultDetail = () => {
     if (!hasValidAmount) { toast.error("Enter a valid USDC amount"); return; }
     setSending(true);
     try {
-      await depositSenior(new PublicKey(vault.configPubkey), usdcUnits);
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 1500));
+        mockStore.depositSenior(vault.id, Number(usdcUnits) / 1e6);
+        queryClient.invalidateQueries({ queryKey: ["vaults"] });
+        queryClient.invalidateQueries({ queryKey: ["positions"] });
+        toast.success("Deposit confirmed", { description: `+${fmtUSD(Number(usdcUnits) / 1e6)} USDC deposited` });
+      } else {
+        await depositSenior(new PublicKey(vault.configPubkey), usdcUnits);
+      }
       setAmount("");
     } catch (e) {
       toast.error("Deposit failed", { description: e instanceof Error ? e.message : "Unknown error" });
@@ -77,7 +90,15 @@ const VaultDetail = () => {
     if (usdcUnits > withdrawableUsdc) { toast.error("Exceeds your current claim"); return; }
     setSending(true);
     try {
-      await withdrawSenior(new PublicKey(vault.configPubkey), usdcUnits);
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 1500));
+        mockStore.withdrawSenior(vault.id, Number(usdcUnits) / 1e6);
+        queryClient.invalidateQueries({ queryKey: ["vaults"] });
+        queryClient.invalidateQueries({ queryKey: ["positions"] });
+        toast.success("Withdrawal confirmed", { description: `${fmtUSD(Number(usdcUnits) / 1e6)} USDC returned` });
+      } else {
+        await withdrawSenior(new PublicKey(vault.configPubkey), usdcUnits);
+      }
       setAmount("");
     } catch (e) {
       toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });

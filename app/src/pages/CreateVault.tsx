@@ -12,6 +12,8 @@ import { PublicKey } from "@solana/web3.js";
 import { useWallet } from "@/lib/wallet";
 import { getVaultConfigPDA, getManagerProfilePDA } from "@/lib/solana/pdas";
 import { parseUsdcToUnits } from "@/lib/solana/amounts";
+import { useDataMode } from "@/hooks/useDataMode";
+import { mockStore } from "@/lib/mockStore";
 
 
 const steps = ["Identity", "Risk setup", "Junior capital", "Paper mode", "Review"];
@@ -32,6 +34,7 @@ const CreateVault = () => {
   const navigate = useNavigate();
   const { initManager, createVault, depositJunior } = useKilnTransactions();
   const { publicKey, connection } = useWallet();
+  const { isMock } = useDataMode();
 
   const next = () => setStep(s => Math.min(steps.length - 1, s + 1));
   const back = () => setStep(s => Math.max(0, s - 1));
@@ -40,10 +43,30 @@ const CreateVault = () => {
     const juniorUsdcUnits = parseUsdcToUnits(junior);
     const juniorUsdc = parseFloat(junior || "0");
     if (!Number.isFinite(juniorUsdc) || !juniorUsdcUnits || juniorUsdcUnits <= 0n) { toast.error("Enter a valid junior deposit amount"); return; }
-    if (!publicKey || !connection) { toast.error("Wallet not connected"); return; }
 
     setSending(true);
     try {
+      if (isMock) {
+        const profile = RISK_PROFILES[risk];
+        await new Promise(r => setTimeout(r, 800));
+        toast.info("Initialising manager profile…");
+        await new Promise(r => setTimeout(r, 700));
+        toast.info("Creating vault on-chain…");
+        await new Promise(r => setTimeout(r, 900));
+        toast.info("Depositing junior capital…");
+        await new Promise(r => setTimeout(r, 700));
+        mockStore.createVault({
+          name: name.slice(0, 32),
+          feeBps: profile.feeBps,
+          maxSlippageBps: profile.maxSlippageBps,
+          juniorAmount: juniorUsdc,
+        });
+        toast.success("Vault created & funded!", { description: `${juniorUsdc.toFixed(2)} USDC junior capital posted. Paper mode begins now.` });
+        navigate("/manager");
+        return;
+      }
+
+      if (!publicKey || !connection) { toast.error("Wallet not connected"); return; }
       try {
         await initManager();
       } catch {

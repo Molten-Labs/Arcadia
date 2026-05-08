@@ -19,6 +19,9 @@ import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
 import { DataModeToggle } from "@/components/DataModeToggle";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
+import { useDataMode } from "@/hooks/useDataMode";
+import { mockStore } from "@/lib/mockStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
 
@@ -26,6 +29,8 @@ const ManagerVault = () => {
   const { id } = useParams();
   const { data: v, isLoading } = useVault(id);
   const { depositJunior, withdrawJunior, updateNav, graduateVault, executeSwap, claimFees } = useKilnTransactions();
+  const { isMock } = useDataMode();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -73,13 +78,25 @@ const ManagerVault = () => {
   const allOk = checks.every(c => c.ok);
   const realJupiterEnabled = isRealJupiterEnabled();
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["vaults"] });
+    queryClient.invalidateQueries({ queryKey: ["positions"] });
+  };
+
   const handleDepositJunior = async () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
     setSending(true);
     try {
-      await depositJunior(new PublicKey(v.configPubkey), usdcUnits);
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 1500));
+        mockStore.depositJunior(v.id, Number(usdcUnits) / 1e6);
+        invalidate();
+        toast.success("Junior capital deposited", { description: `+${fmtUSD(Number(usdcUnits) / 1e6)} USDC added to vault` });
+      } else {
+        await depositJunior(new PublicKey(v.configPubkey), usdcUnits);
+        toast.success("Junior capital deposited");
+      }
       setAmount("");
-      toast.success("Junior capital deposited");
     } catch (e) {
       toast.error("Deposit failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -92,9 +109,16 @@ const ManagerVault = () => {
     if (usdcUnits > v.juniorCapitalLamports) { toast.error("Withdrawal exceeds junior capital"); return; }
     setSending(true);
     try {
-      await withdrawJunior(new PublicKey(v.configPubkey), usdcUnits);
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 1500));
+        mockStore.withdrawJunior(v.id, Number(usdcUnits) / 1e6);
+        invalidate();
+        toast.success("Junior capital withdrawn", { description: `${fmtUSD(Number(usdcUnits) / 1e6)} USDC returned to manager` });
+      } else {
+        await withdrawJunior(new PublicKey(v.configPubkey), usdcUnits);
+        toast.success("Junior capital withdrawn");
+      }
       setAmount("");
-      toast.success("Junior capital withdrawn");
     } catch (e) {
       toast.error("Withdrawal failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -105,8 +129,14 @@ const ManagerVault = () => {
   const handleUpdateNav = async () => {
     setSending(true);
     try {
-      await updateNav(new PublicKey(v.configPubkey));
-      toast.success("NAV updated");
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 800));
+        invalidate();
+        toast.success("NAV updated");
+      } else {
+        await updateNav(new PublicKey(v.configPubkey));
+        toast.success("NAV updated");
+      }
     } catch (e) {
       toast.error("NAV update failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -117,8 +147,15 @@ const ManagerVault = () => {
   const handleGraduateVault = async () => {
     setSending(true);
     try {
-      await graduateVault(new PublicKey(v.configPubkey), new PublicKey(v.managerPubkey));
-      toast.success("Graduation submitted");
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 2000));
+        mockStore.graduateVault(v.id);
+        invalidate();
+        toast.success("Vault graduated!", { description: "Investor deposits are now open." });
+      } else {
+        await graduateVault(new PublicKey(v.configPubkey), new PublicKey(v.managerPubkey));
+        toast.success("Graduation submitted");
+      }
     } catch (e) {
       toast.error("Graduation failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -129,14 +166,22 @@ const ManagerVault = () => {
   const handleGuardedSwap = async () => {
     if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
     if (realJupiterEnabled) {
-      toast.error("Use the Jupiter quote flow before submitting a mainnet swap");
+      toast.error("Use the Jupiter quote flow for a live swap");
       return;
     }
     setSending(true);
     try {
-      await executeSwap(new PublicKey(v.configPubkey), usdcUnits, 0n);
-      setAmount("");
-      toast.success("Devnet guard-only swap check submitted");
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 1800));
+        mockStore.executeTrade(v.id, "SOL → USDC", Number(usdcUnits) / 1e6);
+        invalidate();
+        setAmount("");
+        toast.success("Swap executed", { description: "Trade recorded in vault activity" });
+      } else {
+        await executeSwap(new PublicKey(v.configPubkey), usdcUnits, 0n);
+        setAmount("");
+        toast.success("Devnet guard-only swap check submitted");
+      }
     } catch (e) {
       toast.error("Swap check failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {
@@ -147,8 +192,15 @@ const ManagerVault = () => {
   const handleClaimFees = async () => {
     setSending(true);
     try {
-      await claimFees(new PublicKey(v.configPubkey));
-      toast.success("Fees claimed");
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 1200));
+        mockStore.claimFees(v.id);
+        invalidate();
+        toast.success("Performance fees claimed");
+      } else {
+        await claimFees(new PublicKey(v.configPubkey));
+        toast.success("Fees claimed");
+      }
     } catch (e) {
       toast.error("Claim failed", { description: e instanceof Error ? e.message : "Unknown error" });
     } finally {

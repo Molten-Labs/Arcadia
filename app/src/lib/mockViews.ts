@@ -1,30 +1,25 @@
-import { investorPositions, traders, vaults } from "./mockData";
+import { mockStore } from "./mockStore";
 import type { PositionView } from "@/hooks/usePositions";
 import type { ManagerView, VaultView } from "@/hooks/useVaults";
 
 const toLamports = (value: number) => BigInt(Math.round(value * 1e6));
 const toUnix = (date: string | undefined) => date ? Math.floor(new Date(date).getTime() / 1000) : 0;
 
-// Smooth sine-wave oscillation for "live" feel — different phase per vault
 const liveJitter = (seed: number, amplitude: number): number => {
   const t = Date.now() / 1000;
   return Math.sin(t * 0.22 + seed * 1.7) * amplitude;
 };
 
 export function mockVaultViews(): VaultView[] {
-  return vaults.map((vault, index) => {
-    // Apply small live jitter to health and tvl
+  return mockStore.vaults.map((vault, index) => {
     const jHealth = Math.max(1, Math.min(100,
       Math.round((vault.juniorHealth + liveJitter(index, 1.8)) * 10) / 10
     ));
     const jTvl = Math.round(vault.tvl * (1 + liveJitter(index + 5, 0.003)));
-
     const currentNav = jTvl;
     const highWaterMark = vault.hwm;
     const paperWindowSecs = (vault.paperDaysRequired ?? 30) * 86400;
     const paperTradeCount = vault.trades.length || Math.max(0, Math.min(10, vault.paperDaysElapsed ?? 0));
-
-    // Sparkline: last 30 nav data points
     const sparkline = vault.navHistory.slice(-30).map(h => h.nav);
 
     return {
@@ -62,7 +57,6 @@ export function mockVaultViews(): VaultView[] {
       tradingEnabled: vault.status !== "frozen" && vault.status !== "cooldown",
       instantExit: vault.instantExit,
       vaultIndex: index,
-      // enriched display fields
       sparkline,
       return30d: vault.return30d + liveJitter(index + 8, 0.15),
       return7d: vault.return7d + liveJitter(index + 12, 0.08),
@@ -73,22 +67,26 @@ export function mockVaultViews(): VaultView[] {
 }
 
 export function mockManagerViews(): ManagerView[] {
-  return traders.map((trader) => ({
-    pubkey: `${trader.wallet}-profile`,
-    owner: trader.wallet,
-    totalVaults: trader.activeVaults + trader.graduatedVaults,
-    activeVaults: trader.activeVaults,
-    totalJuniorDeposited: Math.round((trader.totalAUM * trader.avgJuniorRatio) / 100),
-    createdAt: toUnix(trader.joinedAt),
-  }));
+  return mockStore.vaults
+    .filter((v, i, arr) => arr.findIndex(x => x.traderWallet === v.traderWallet) === i)
+    .map((vault) => {
+      const traderVaults = mockStore.vaults.filter(v => v.traderWallet === vault.traderWallet);
+      return {
+        pubkey: `${vault.traderWallet}-profile`,
+        owner: vault.traderWallet,
+        totalVaults: traderVaults.length,
+        activeVaults: traderVaults.filter(v => v.status === "active").length,
+        totalJuniorDeposited: traderVaults.reduce((s, v) => s + v.juniorCapital, 0),
+        createdAt: toUnix(vault.createdAt),
+      };
+    });
 }
 
 export function mockPositionViews(vaultViews = mockVaultViews()): PositionView[] {
-  return investorPositions.map((position, index) => {
+  return mockStore.positions.map((position, index) => {
     const vault = vaultViews.find((item) => item.id === position.vaultId) ?? null;
     const totalDepositedLamports = toLamports(position.deposited);
     const seniorPrincipalRemainingRaw = toLamports(position.deposited);
-
     return {
       pubkey: `mock-position-${index + 1}`,
       vaultConfigPubkey: position.vaultId,
