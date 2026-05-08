@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, SkipForward, SkipBack, X, Clapperboard } from "lucide-react";
+import {
+  Play, Pause, SkipForward, SkipBack, X,
+  Clapperboard, ChevronDown, ChevronUp, Maximize2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from "@/lib/wallet";
 import { mockStore } from "@/lib/mockStore";
@@ -16,37 +19,93 @@ export function DemoRunner() {
   const { connect, setRole } = useWallet();
   const queryClient = useQueryClient();
 
-  const [isActive, setIsActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [stepIdx, setStepIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const [isActive, setIsActive]       = useState(false);
+  const [isPaused, setIsPaused]       = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [stepIdx, setStepIdx]         = useState(0);
+  const [progress, setProgress]       = useState(0);
 
-  const newVaultIdRef = useRef<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const stepStartRef = useRef<number>(0);
-  const pausedAtRef = useRef<number>(0);
-  const remainingRef = useRef<number>(0);
-  const isPausedRef = useRef(false);
-  const stepIdxRef = useRef(0);
+  const newVaultIdRef  = useRef<string | null>(null);
+  const timerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef         = useRef<number | null>(null);
+  const stepStartRef   = useRef<number>(0);
+  const remainingRef   = useRef<number>(0);
+  const isPausedRef    = useRef(false);
+  const stepIdxRef     = useRef(0);
 
-  // Keep refs in sync with state
   useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
-  useEffect(() => { stepIdxRef.current = stepIdx; }, [stepIdx]);
+  useEffect(() => { stepIdxRef.current = stepIdx; },  [stepIdx]);
 
+  // ── Stop ──────────────────────────────────────────────────────────────────
   const stopDemo = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (rafRef.current)   cancelAnimationFrame(rafRef.current);
     timerRef.current = null;
-    rafRef.current = null;
+    rafRef.current   = null;
     setIsActive(false);
     setIsPaused(false);
+    setIsMinimized(false);
     setStepIdx(0);
     setProgress(0);
     newVaultIdRef.current = null;
   }, []);
 
-  // Run actions for a given step id
+  // ── Internal pause helper (shared by togglePause & minimize) ──────────────
+  const doPause = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (rafRef.current)   cancelAnimationFrame(rafRef.current);
+    const elapsed = Date.now() - stepStartRef.current;
+    remainingRef.current = Math.max(0, DEMO_STEPS[stepIdxRef.current].duration - elapsed);
+    setIsPaused(true);
+    isPausedRef.current = true;
+  }, []);
+
+  // ── Internal resume helper ─────────────────────────────────────────────────
+  const advanceStep = useCallback(() => {
+    setStepIdx((p) => Math.min(DEMO_STEPS.length - 1, p + 1));
+  }, []);
+
+  const doResume = useCallback(() => {
+    const remaining = remainingRef.current;
+    setIsPaused(false);
+    isPausedRef.current = false;
+    const newStart = Date.now() - (DEMO_STEPS[stepIdxRef.current].duration - remaining);
+    stepStartRef.current = newStart;
+
+    // rAF progress
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const duration = DEMO_STEPS[stepIdxRef.current].duration;
+    const tick = () => {
+      if (isPausedRef.current) return;
+      const pct = Math.min(100, ((Date.now() - newStart) / duration) * 100);
+      setProgress(pct);
+      if (pct < 100) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    timerRef.current = setTimeout(() => {
+      if (stepIdxRef.current < DEMO_STEPS.length - 1) {
+        advanceStep();
+      } else {
+        toast.success("Demo complete!", { description: "All flows demonstrated." });
+        stopDemo();
+      }
+    }, remaining);
+  }, [advanceStep, stopDemo]);
+
+  // ── Minimize / expand ──────────────────────────────────────────────────────
+  const minimize = useCallback(() => {
+    doPause();
+    setIsMinimized(true);
+  }, [doPause]);
+
+  const expand = useCallback(() => {
+    setIsMinimized(false);
+    // Small delay for the panel to animate in before resuming
+    setTimeout(() => doResume(), 220);
+  }, [doResume]);
+
+  // ── Step actions ───────────────────────────────────────────────────────────
   const runAction = useCallback(async (stepId: string) => {
     switch (stepId) {
       case "connect-trader":
@@ -91,7 +150,7 @@ export function DemoRunner() {
           if (isPausedRef.current) break;
           mockStore.executeTrade(vid, t.pair, t.amount);
           queryClient.invalidateQueries({ queryKey: ["vaults"] });
-          toast.info(`Paper trade executed: ${t.pair} · ${t.amount.toLocaleString()} USDC`);
+          toast.info(`Paper trade: ${t.pair} · ${t.amount.toLocaleString()} USDC`);
         }
         break;
       }
@@ -123,51 +182,31 @@ export function DemoRunner() {
     }
   }, [connect, setRole, navigate, queryClient]);
 
-  // Animate the progress bar using rAF
+  // ── rAF progress ───────────────────────────────────────────────────────────
   const startProgressRaf = useCallback((duration: number, startTime: number) => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const tick = () => {
       if (isPausedRef.current) return;
-      const elapsed = Date.now() - startTime;
-      const pct = Math.min(100, (elapsed / duration) * 100);
+      const pct = Math.min(100, ((Date.now() - startTime) / duration) * 100);
       setProgress(pct);
       if (pct < 100) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
   }, []);
 
-  // Advance to next step or end demo
-  const advanceStep = useCallback(() => {
-    setStepIdx((prev) => {
-      const next = prev + 1;
-      if (next >= DEMO_STEPS.length) {
-        return prev; // handled below
-      }
-      return next;
-    });
-  }, []);
-
-  // Core step runner — called whenever stepIdx changes while active
+  // ── Run a step ─────────────────────────────────────────────────────────────
   const runStep = useCallback(async (idx: number) => {
     if (idx >= DEMO_STEPS.length) {
       toast.success("Demo complete!", { description: "All flows demonstrated." });
       stopDemo();
       return;
     }
-
     const step = DEMO_STEPS[idx];
     setProgress(0);
-
-    // Navigate if step has a static route
     if (step.route) navigate(step.route);
-
-    // Small settle delay after navigation
     await sleep(300);
-
-    // Run any programmatic action for this step
     await runAction(step.id);
 
-    // Start the countdown
     const duration = step.duration;
     stepStartRef.current = Date.now();
     remainingRef.current = duration;
@@ -183,18 +222,18 @@ export function DemoRunner() {
     }, duration);
   }, [navigate, runAction, startProgressRaf, advanceStep, stopDemo]);
 
-  // Run step whenever stepIdx changes while demo is active
+  // Run step when stepIdx changes while active (and not paused)
   useEffect(() => {
     if (!isActive || isPaused) return;
     runStep(stepIdx);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current)   cancelAnimationFrame(rafRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx, isActive]);
 
-  // Start demo when not running
+  // ── Start ──────────────────────────────────────────────────────────────────
   const startDemo = useCallback(() => {
     mockStore.reset();
     queryClient.invalidateQueries({ queryKey: ["vaults"] });
@@ -203,51 +242,26 @@ export function DemoRunner() {
     setStepIdx(0);
     setProgress(0);
     setIsPaused(false);
+    setIsMinimized(false);
     setIsActive(true);
   }, [queryClient]);
 
-  // Listen for the global trigger event fired by the nav button
   useEffect(() => {
     const handler = () => startDemo();
     window.addEventListener("kiln:demo-start", handler);
     return () => window.removeEventListener("kiln:demo-start", handler);
   }, [startDemo]);
 
-  // Pause / resume
+  // ── Pause / resume toggle ──────────────────────────────────────────────────
   const togglePause = useCallback(() => {
     if (!isActive) return;
-    if (isPaused) {
-      // Resume — restart timer with remaining time
-      const remaining = remainingRef.current;
-      setIsPaused(false);
-      isPausedRef.current = false;
-      const newStart = Date.now() - (DEMO_STEPS[stepIdx].duration - remaining);
-      stepStartRef.current = newStart;
-      startProgressRaf(DEMO_STEPS[stepIdx].duration, newStart);
-      timerRef.current = setTimeout(() => {
-        if (stepIdxRef.current < DEMO_STEPS.length - 1) {
-          advanceStep();
-        } else {
-          toast.success("Demo complete!");
-          stopDemo();
-        }
-      }, remaining);
-    } else {
-      // Pause — record how much time is left
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const elapsed = Date.now() - stepStartRef.current;
-      remainingRef.current = Math.max(0, DEMO_STEPS[stepIdx].duration - elapsed);
-      pausedAtRef.current = Date.now();
-      setIsPaused(true);
-      isPausedRef.current = true;
-    }
-  }, [isActive, isPaused, stepIdx, startProgressRaf, advanceStep, stopDemo]);
+    if (isPaused) doResume(); else doPause();
+  }, [isActive, isPaused, doPause, doResume]);
 
-  // Skip to next / prev step
+  // ── Skip ──────────────────────────────────────────────────────────────────
   const skipNext = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (rafRef.current)   cancelAnimationFrame(rafRef.current);
     setIsPaused(false);
     isPausedRef.current = false;
     setStepIdx((p) => Math.min(DEMO_STEPS.length - 1, p + 1));
@@ -255,138 +269,229 @@ export function DemoRunner() {
 
   const skipPrev = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (rafRef.current)   cancelAnimationFrame(rafRef.current);
     setIsPaused(false);
     isPausedRef.current = false;
     setStepIdx((p) => Math.max(0, p - 1));
   }, []);
 
-  const step = DEMO_STEPS[stepIdx];
-  const phase = step?.phase;
+  const jumpTo = useCallback((i: number) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (rafRef.current)   cancelAnimationFrame(rafRef.current);
+    setIsPaused(false);
+    isPausedRef.current = false;
+    setStepIdx(i);
+  }, []);
+
+  // ── Derived ────────────────────────────────────────────────────────────────
+  const step      = DEMO_STEPS[stepIdx];
+  const phase     = step?.phase;
   const phaseMeta = phase ? PHASE_META[phase] : null;
+  const phaseColor = phase === "investor" ? "bg-success" : phase === "trader" ? "bg-warning" : "bg-primary";
+  const phaseText  = phase === "investor" ? "text-success" : phase === "trader" ? "text-warning" : "text-primary";
+
+  if (!isActive || !step) return null;
 
   return (
-    <AnimatePresence>
-      {isActive && step && (
-        <motion.div
-          key="demo-hud"
-          initial={{ opacity: 0, y: 32, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 24, scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 340, damping: 30 }}
-          className="fixed bottom-5 left-1/2 z-[200] w-[min(96vw,680px)] -translate-x-1/2"
-        >
-          <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/95 shadow-2xl backdrop-blur-xl ring-1 ring-white/5">
-            {/* ── Top bar ─────────────────────────────────────────────── */}
-            <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="flex h-5 items-center gap-1.5 rounded-full bg-destructive/15 px-2 font-mono text-[10px] font-bold uppercase tracking-widest text-destructive">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
-                  Live Demo
-                </span>
+    <>
+      {/* ── Minimized chip ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isMinimized && (
+          <motion.div
+            key="demo-chip"
+            initial={{ opacity: 0, y: 16, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0,  scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            className="fixed bottom-5 right-5 z-[200]"
+          >
+            <div className="flex items-center gap-2 rounded-2xl border border-border/60 bg-background/95 px-3 py-2 shadow-2xl backdrop-blur-xl ring-1 ring-white/5">
+              {/* Live badge */}
+              <span className="flex items-center gap-1.5 rounded-full bg-destructive/15 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest text-destructive">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
+                Demo
+              </span>
+
+              {/* Phase + caption snippet */}
+              <div className="flex flex-col min-w-0 max-w-[180px]">
                 {phaseMeta && (
-                  <span className={cn("flex items-center gap-1.5 font-mono text-[11px] font-semibold", phaseMeta.color)}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full", phaseMeta.dot)} />
+                  <span className={cn("font-mono text-[9px] font-semibold uppercase tracking-wider", phaseText)}>
                     {phaseMeta.label}
                   </span>
                 )}
-              </div>
-              <span className="font-mono text-[11px] text-muted-foreground">
-                {stepIdx + 1} / {DEMO_STEPS.length}
-              </span>
-            </div>
-
-            {/* ── Caption ─────────────────────────────────────────────── */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={step.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2 }}
-                className="px-5 pb-3 pt-4"
-              >
-                <p className="font-display text-[17px] font-semibold leading-snug text-foreground">
+                <span className="truncate font-display text-[12px] font-semibold text-foreground leading-tight">
                   {step.caption}
-                </p>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                  {step.subcaption}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-
-            {/* ── Progress bar ─────────────────────────────────────────── */}
-            <div className="mx-5 mb-3 h-[3px] overflow-hidden rounded-full bg-secondary">
-              <motion.div
-                className={cn(
-                  "h-full rounded-full",
-                  phase === "overview" ? "bg-primary" :
-                  phase === "trader"   ? "bg-warning"  :
-                                         "bg-success"
-                )}
-                style={{ width: `${progress}%` }}
-                transition={{ ease: "linear" }}
-              />
-            </div>
-
-            {/* ── Controls ─────────────────────────────────────────────── */}
-            <div className="flex items-center gap-1.5 border-t border-border/40 px-4 py-2.5">
-              <ControlBtn onClick={skipPrev} disabled={stepIdx === 0} title="Previous step">
-                <SkipBack className="h-3.5 w-3.5" />
-              </ControlBtn>
-              <ControlBtn onClick={togglePause} title={isPaused ? "Resume" : "Pause"} accent>
-                {isPaused
-                  ? <Play className="h-3.5 w-3.5 translate-x-px" />
-                  : <Pause className="h-3.5 w-3.5" />}
-              </ControlBtn>
-              <ControlBtn onClick={skipNext} disabled={stepIdx === DEMO_STEPS.length - 1} title="Skip step">
-                <SkipForward className="h-3.5 w-3.5" />
-              </ControlBtn>
-
-              {/* Step dots */}
-              <div className="mx-2 flex flex-1 items-center justify-center gap-1 overflow-hidden">
-                {DEMO_STEPS.map((s, i) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      if (timerRef.current) clearTimeout(timerRef.current);
-                      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-                      setIsPaused(false);
-                      isPausedRef.current = false;
-                      setStepIdx(i);
-                    }}
-                    className={cn(
-                      "h-1.5 rounded-full transition-[width,opacity]",
-                      i === stepIdx
-                        ? cn("opacity-100", phase === "investor" ? "bg-success w-4" : phase === "trader" ? "bg-warning w-4" : "bg-primary w-4")
-                        : i < stepIdx
-                          ? "w-1.5 bg-muted-foreground/60 opacity-80"
-                          : "w-1.5 bg-muted-foreground/25 opacity-50"
-                    )}
-                    title={s.caption}
-                  />
-                ))}
+                </span>
               </div>
 
-              <ControlBtn onClick={stopDemo} title="End demo" danger>
+              {/* Step counter */}
+              <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                {stepIdx + 1}/{DEMO_STEPS.length}
+              </span>
+
+              {/* Paused indicator */}
+              <span className="flex items-center gap-1 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground shrink-0">
+                <Pause className="h-2.5 w-2.5" />
+                Paused
+              </span>
+
+              {/* Expand button */}
+              <button
+                onClick={expand}
+                title="Expand demo controls"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+              </button>
+
+              {/* Stop */}
+              <button
+                onClick={stopDemo}
+                title="End demo"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+              >
                 <X className="h-3.5 w-3.5" />
-              </ControlBtn>
+              </button>
             </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Expanded panel ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {!isMinimized && (
+          <motion.div
+            key="demo-hud"
+            initial={{ opacity: 0, y: 32, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0,  scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            className="fixed bottom-5 left-1/2 z-[200] w-[min(96vw,680px)] -translate-x-1/2"
+          >
+            <div className="overflow-hidden rounded-2xl border border-border/60 bg-background/95 shadow-2xl backdrop-blur-xl ring-1 ring-white/5">
+
+              {/* ── Header ──────────────────────────────────────────────── */}
+              <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 items-center gap-1.5 rounded-full bg-destructive/15 px-2 font-mono text-[10px] font-bold uppercase tracking-widest text-destructive">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
+                    Live Demo
+                  </span>
+                  {phaseMeta && (
+                    <span className={cn("flex items-center gap-1.5 font-mono text-[11px] font-semibold", phaseText)}>
+                      <span className={cn("h-1.5 w-1.5 rounded-full", phaseColor)} />
+                      {phaseMeta.label}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <span className="font-mono text-[11px] text-muted-foreground mr-1">
+                    {stepIdx + 1} / {DEMO_STEPS.length}
+                  </span>
+                  {/* Minimize */}
+                  <button
+                    onClick={minimize}
+                    title="Minimise — pauses timer so you can narrate freely"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Caption ─────────────────────────────────────────────── */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={step.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2 }}
+                  className="px-5 pb-3 pt-4"
+                >
+                  <p className="font-display text-[17px] font-semibold leading-snug text-foreground">
+                    {step.caption}
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                    {step.subcaption}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* ── Progress bar ─────────────────────────────────────────── */}
+              <div className="mx-5 mb-3 h-[3px] overflow-hidden rounded-full bg-secondary">
+                <motion.div
+                  className={cn("h-full rounded-full", phaseColor)}
+                  style={{ width: `${progress}%` }}
+                  transition={{ ease: "linear" }}
+                />
+              </div>
+
+              {/* ── Controls ─────────────────────────────────────────────── */}
+              <div className="flex items-center gap-1.5 border-t border-border/40 px-4 py-2.5">
+                <ControlBtn onClick={skipPrev} disabled={stepIdx === 0} title="Previous step">
+                  <SkipBack className="h-3.5 w-3.5" />
+                </ControlBtn>
+
+                <ControlBtn onClick={togglePause} accent title={isPaused ? "Resume auto-play" : "Pause auto-play"}>
+                  {isPaused
+                    ? <Play  className="h-3.5 w-3.5 translate-x-px" />
+                    : <Pause className="h-3.5 w-3.5" />}
+                </ControlBtn>
+
+                <ControlBtn onClick={skipNext} disabled={stepIdx === DEMO_STEPS.length - 1} title="Skip to next step">
+                  <SkipForward className="h-3.5 w-3.5" />
+                </ControlBtn>
+
+                {/* Step dots */}
+                <div className="mx-2 flex flex-1 items-center justify-center gap-1 overflow-hidden">
+                  {DEMO_STEPS.map((s, i) => (
+                    <button
+                      key={s.id}
+                      onClick={() => jumpTo(i)}
+                      title={s.caption}
+                      className={cn(
+                        "h-1.5 rounded-full transition-[width,background-color,opacity] duration-200",
+                        i === stepIdx
+                          ? cn("w-4 opacity-100", phaseColor)
+                          : i < stepIdx
+                            ? "w-1.5 bg-muted-foreground/60 opacity-80"
+                            : "w-1.5 bg-muted-foreground/25 opacity-50"
+                      )}
+                    />
+                  ))}
+                </div>
+
+                {/* Minimise shortcut in controls too */}
+                <ControlBtn onClick={minimize} title="Minimise — narrate freely, timer pauses">
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </ControlBtn>
+
+                <ControlBtn onClick={stopDemo} danger title="End demo">
+                  <X className="h-3.5 w-3.5" />
+                </ControlBtn>
+              </div>
+
+              {/* ── Minimise hint ────────────────────────────────────────── */}
+              {!isPaused && (
+                <div className="border-t border-border/30 px-5 py-1.5">
+                  <p className="text-[11px] text-muted-foreground/60">
+                    Press <kbd className="rounded border border-border/60 bg-secondary px-1 font-mono text-[10px]">↓</kbd> or click minimise to collapse and narrate freely — timer pauses automatically.
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
-/* ── Small helper button ─────────────────────────────────────────────────── */
+/* ── Control button ──────────────────────────────────────────────────────── */
 function ControlBtn({
-  children,
-  onClick,
-  disabled,
-  title,
-  accent,
-  danger,
+  children, onClick, disabled, title, accent, danger,
 }: {
   children: React.ReactNode;
   onClick: () => void;
@@ -414,13 +519,13 @@ function ControlBtn({
   );
 }
 
-/* ── Trigger button rendered in the Nav ─────────────────────────────────── */
+/* ── Nav trigger button ──────────────────────────────────────────────────── */
 export function DemoTriggerButton({ className }: { className?: string }) {
   const fire = () => window.dispatchEvent(new CustomEvent("kiln:demo-start"));
   return (
     <button
       onClick={fire}
-      title="Play hands-free demo"
+      title="Start hands-free demo"
       className={cn(
         "hidden sm:inline-flex items-center gap-1.5 h-9 rounded-lg border border-border/60 px-3",
         "font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
