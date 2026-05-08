@@ -549,7 +549,7 @@ const PrimaryButton = ({
     <button
         {...rest}
         className={cn(
-            "flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gradient-signal text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed",
+            "flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-lg bg-gradient-signal text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed text-left font-medium ml-[0px] pl-[5px] pr-[5px]",
             className,
         )}
     >
