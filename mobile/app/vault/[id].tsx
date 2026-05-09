@@ -26,7 +26,7 @@ import { HealthMeter } from '../../src/components/HealthMeter';
 import { CapitalStack } from '../../src/components/CapitalStack';
 import { EmptyState } from '../../src/components/EmptyState';
 import { TxModal, TxState, txFailureState } from '../../src/components/TxModal';
-import { Ionicons } from '@expo/vector-icons';
+
 import { formatUSD, formatBps, formatNav, formatAge, truncateAddress } from '../../src/lib/format';
 import { parseUsdcToUnits } from '../../src/lib/amounts';
 
@@ -213,11 +213,7 @@ export default function VaultDetailScreen() {
               { backgroundColor: navPositive ? colors.signalDim : colors.dangerDim,
                 borderColor: navPositive ? colors.signal + '40' : colors.danger + '40' }
             ]}>
-              <Ionicons
-                name={navPositive ? 'trending-up' : 'trending-down'}
-                size={12}
-                color={navPositive ? colors.signal : colors.danger}
-              />
+              <Text style={{ fontSize: 12 }}>{navPositive ? '📈' : '📉'}</Text>
               <Text style={[styles.navDeltaText, { color: navPositive ? colors.signal : colors.danger }]}>
                 {Math.abs(navChange * 100).toFixed(2)}%
               </Text>

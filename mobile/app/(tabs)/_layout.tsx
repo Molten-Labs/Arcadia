@@ -1,17 +1,14 @@
 import { Tabs } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Animated, View, StyleSheet, Text, Platform } from 'react-native';
 import { colors } from '../../src/lib/theme';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface TabIconProps {
-  name: IoniconName;
+  emoji: string;
   focused: boolean;
 }
 
-function TabIcon({ name, focused }: TabIconProps) {
+function TabIcon({ emoji, focused }: TabIconProps) {
   const scale = useRef(new Animated.Value(1)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
 
@@ -35,11 +32,7 @@ function TabIcon({ name, focused }: TabIconProps) {
     <View style={styles.iconContainer}>
       <Animated.View style={[styles.indicator, { opacity: bgOpacity }]} />
       <Animated.View style={{ transform: [{ scale }] }}>
-        <Ionicons
-          name={name}
-          size={21}
-          color={focused ? colors.signal : colors.textQuiet}
-        />
+        <Text style={{ fontSize: 20 }}>{emoji}</Text>
       </Animated.View>
     </View>
   );
@@ -84,9 +77,7 @@ export default function TabLayout() {
           shadowRadius: 24,
           shadowOffset: { width: 0, height: 8 },
         },
-        tabBarItemStyle: {
-          paddingVertical: 6,
-        },
+        tabBarItemStyle: { paddingVertical: 6 },
         tabBarActiveTintColor: colors.signal,
         tabBarInactiveTintColor: colors.textQuiet,
         tabBarLabelStyle: {
@@ -101,45 +92,35 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Vaults',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'layers' : 'layers-outline'} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📦" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'briefcase' : 'briefcase-outline'} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="💼" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="traders"
         options={{
           title: 'Traders',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'people' : 'people-outline'} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="manager"
         options={{
           title: 'Manage',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'stats-chart' : 'stats-chart-outline'} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name={focused ? 'settings' : 'settings-outline'} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" focused={focused} />,
         }}
       />
     </Tabs>

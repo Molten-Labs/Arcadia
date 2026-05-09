@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,19 +20,17 @@ import {
 } from '../../src/lib/constants';
 import { API_BASE } from '../../src/lib/api';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 function SettingRow({ label, right, onPress, icon }: {
   label: string;
   right: React.ReactNode;
   onPress?: () => void;
-  icon?: IoniconName;
+  icon?: string;
 }) {
   const inner = (
     <View style={styles.row}>
       {icon && (
         <View style={styles.rowIcon}>
-          <Ionicons name={icon} size={15} color={colors.textMuted} />
+          <Text style={{ fontSize: 15 }}>{icon}</Text>
         </View>
       )}
       <Text style={styles.rowLabel}>{label}</Text>
@@ -126,7 +123,7 @@ export default function SettingsScreen() {
                   {publicKey?.slice(0, 2).toUpperCase() ?? '—'}
                 </Text>
               ) : (
-                <Ionicons name="wallet-outline" size={22} color={colors.textQuiet} />
+                <Text style={{ fontSize: 22 }}>👛</Text>
               )}
             </View>
 
@@ -147,7 +144,7 @@ export default function SettingsScreen() {
               {isConnected && publicKey && (
                 <Pressable onPress={copyAddress} style={styles.addrRow}>
                   <Text style={styles.walletAddr}>{truncateAddress(publicKey, 10)}</Text>
-                  <Ionicons name="copy-outline" size={11} color={colors.signal} />
+                  <Text style={{ fontSize: 11, color: colors.signal }}>⧉</Text>
                 </Pressable>
               )}
             </View>
@@ -185,7 +182,7 @@ export default function SettingsScreen() {
           />
           <View style={styles.demoHeader}>
             <View style={styles.demoIconWrap}>
-              <Ionicons name="play-circle-outline" size={22} color={colors.signal} />
+              <Text style={{ fontSize: 22 }}>▶</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.demoTitle}>Guided Demo</Text>
@@ -194,7 +191,7 @@ export default function SettingsScreen() {
           </View>
           <Pressable style={styles.demoButton} onPress={handleDemo}>
             <Text style={styles.demoButtonText}>Start lifecycle demo</Text>
-            <Ionicons name="arrow-forward" size={14} color={colors.white} />
+            <Text style={{ fontSize: 14, color: colors.white }}>→</Text>
           </Pressable>
         </View>
 
@@ -219,11 +216,7 @@ export default function SettingsScreen() {
                       style={StyleSheet.absoluteFillObject}
                     />
                   )}
-                  <Ionicons
-                    name={r === 'investor' ? 'briefcase-outline' : 'stats-chart-outline'}
-                    size={20}
-                    color={active ? colors.signal : colors.textQuiet}
-                  />
+                  <Text style={{ fontSize: 20 }}>{r === 'investor' ? '💼' : '📊'}</Text>
                   <Text style={[styles.roleLabel, active && { color: colors.signal }]}>
                     {r === 'investor' ? 'Investor' : 'Trader'}
                   </Text>
@@ -243,8 +236,8 @@ export default function SettingsScreen() {
             <View style={styles.card}>
               <SettingRow
                 label="Initialize Manager Profile"
-                icon="person-add-outline"
-                right={<Ionicons name="chevron-forward" size={14} color={colors.textQuiet} />}
+                icon="👤"
+                right={<Text style={{ fontSize: 14, color: colors.textQuiet }}>›</Text>}
                 onPress={handleInitManager}
               />
             </View>
@@ -257,19 +250,19 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <SettingRow
               label="MWA"
-              icon="phone-portrait-outline"
+              icon="📱"
               right={<Text style={styles.monoText}>{isMwaAvailable ? 'Available' : 'Web only'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="RPC"
-              icon="server-outline"
+              icon="🖥"
               right={<Text style={styles.monoText}>{shortUrl(RPC_URL)}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Cluster"
-              icon="globe-outline"
+              icon="🌐"
               right={
                 <View style={[styles.clusterChip, {
                   borderColor: cluster === 'devnet' ? colors.warningBorder : colors.signalBorder,
@@ -286,13 +279,13 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <SettingRow
               label="API"
-              icon="cloud-outline"
+              icon="☁️"
               right={<Text style={styles.monoText}>{API_BASE ? shortUrl(API_BASE) : 'Mock mode'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Jupiter"
-              icon="swap-horizontal-outline"
+              icon="⇄"
               right={<Text style={styles.monoText}>{shortUrl(JUPITER_API_URL)}</Text>}
             />
           </View>
@@ -304,19 +297,19 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <SettingRow
               label="Version"
-              icon="information-circle-outline"
+              icon="ℹ️"
               right={<Text style={styles.monoText}>1.0.0</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Program"
-              icon="code-slash-outline"
+              icon="＜/＞"
               right={<Text style={styles.monoText}>{truncateAddress(PROGRAM_ID.toBase58(), 5)}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Protocol"
-              icon="shield-checkmark-outline"
+              icon="🛡️"
               right={<Text style={styles.monoText}>Arcadia</Text>}
             />
           </View>

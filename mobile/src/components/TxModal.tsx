@@ -9,7 +9,6 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing } from '../lib/theme';
 import { CLUSTER, EXPLORER_BASE } from '../lib/constants';
@@ -50,7 +49,7 @@ function StepDot({ active, done, label }: { active: boolean; done: boolean; labe
   return (
     <View style={styles.stepCol}>
       <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>
-        {done && <Ionicons name="checkmark" size={18} color={colors.white} />}
+        {done && <Text style={{ fontSize: 16, color: colors.white, fontWeight: '700' }}>✓</Text>}
         {active && <ActivityIndicator size="small" color={colors.white} />}
       </View>
       <Text style={[styles.stepLabel, (done || active) && { color: colors.text }]}>{label}</Text>
@@ -94,11 +93,7 @@ export function TxModal({ state, onClose, label }: Props) {
                 borderColor: colors.dangerBorder,
                 backgroundColor: colors.dangerDim,
               }]}>
-                <Ionicons
-                  name={state.type === 'offline' ? 'wifi-outline' : 'close'}
-                  size={36}
-                  color={colors.danger}
-                />
+                <Text style={{ fontSize: 34 }}>{state.type === 'offline' ? '📡' : '✕'}</Text>
               </View>
               <Text style={styles.title}>{failureTitle}</Text>
               <Text style={styles.hint}>{failureMessage}</Text>
@@ -113,7 +108,7 @@ export function TxModal({ state, onClose, label }: Props) {
                 borderColor: colors.signalBorder,
                 backgroundColor: colors.signalDim,
               }]}>
-                <Ionicons name="checkmark" size={40} color={colors.signal} />
+                <Text style={{ fontSize: 36, color: colors.signal, fontWeight: '700' }}>✓</Text>
               </View>
               <Text style={styles.title}>Submitted</Text>
               <Text style={styles.subtitle}>{label}</Text>
@@ -129,7 +124,7 @@ export function TxModal({ state, onClose, label }: Props) {
                   </Text>
                   <View style={styles.explorerLinkRow}>
                     <Text style={styles.explorerLink}>View on Explorer</Text>
-                    <Ionicons name="open-outline" size={13} color={colors.signal} />
+                    <Text style={{ fontSize: 13, color: colors.signal }}>↗</Text>
                   </View>
                 </Pressable>
               )}

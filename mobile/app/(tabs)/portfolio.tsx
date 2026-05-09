@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../src/lib/theme';
 import { useWallet } from '../../src/lib/wallet';
@@ -61,11 +60,7 @@ function PositionRow({
           styles.posIcon,
           { backgroundColor: positive ? colors.signalDim : colors.dangerDim },
         ]}>
-          <Ionicons
-            name={positive ? 'trending-up' : 'trending-down'}
-            size={18}
-            color={positive ? colors.signal : colors.danger}
-          />
+          <Text style={{ fontSize: 20 }}>{positive ? '📈' : '📉'}</Text>
         </View>
         <View style={styles.posInfo}>
           <Text style={styles.posLabel}>{label}</Text>
@@ -124,7 +119,7 @@ export default function PortfolioScreen() {
               style={styles.connectBtnGrad}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="wallet-outline" size={18} color={colors.white} />
+              <Text style={{ fontSize: 18 }}>👛</Text>
               <Text style={styles.connectBtnText}>Connect Wallet</Text>
             </LinearGradient>
           </Pressable>
@@ -152,7 +147,7 @@ export default function PortfolioScreen() {
         {isDemoWallet && (
           <FadeSlideIn delay={60} style={{ marginHorizontal: spacing.md }}>
             <View style={styles.demoBanner}>
-              <Ionicons name="flask-outline" size={12} color={colors.warning} />
+              <Text style={{ fontSize: 12 }}>🧪</Text>
               <Text style={styles.demoBannerText}>Demo wallet · simulated data</Text>
             </View>
           </FadeSlideIn>
@@ -176,11 +171,9 @@ export default function PortfolioScreen() {
                   borderColor: pnlPositive ? colors.signalBorder : colors.dangerBorder,
                 },
               ]}>
-                <Ionicons
-                  name={pnlPositive ? 'arrow-up' : 'arrow-down'}
-                  size={10}
-                  color={pnlPositive ? colors.signal : colors.danger}
-                />
+                <Text style={{ fontSize: 10, color: pnlPositive ? colors.signal : colors.danger }}>
+                  {pnlPositive ? '↑' : '↓'}
+                </Text>
                 <Text style={[styles.pnlPillText, { color: pnlPositive ? colors.signal : colors.danger }]}>
                   {Math.abs(Number(pnlPct))}% all time
                 </Text>
@@ -199,7 +192,7 @@ export default function PortfolioScreen() {
               <Text style={styles.sectionLabel}>Wallet Balances</Text>
               <View style={styles.tokenRow}>
                 <View style={[styles.tokenIcon, { backgroundColor: colors.signalDim }]}>
-                  <Ionicons name="logo-bitcoin" size={18} color={colors.signal} />
+                  <Text style={{ fontSize: 18 }}>◎</Text>
                 </View>
                 <View style={styles.tokenInfo}>
                   <Text style={styles.tokenName}>Solana</Text>

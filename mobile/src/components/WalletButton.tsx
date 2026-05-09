@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing } from '../lib/theme';
 import { useWallet } from '../lib/wallet';
 import { truncateAddress } from '../lib/format';
@@ -74,7 +73,7 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <View style={styles.connectInner}>
-              <Ionicons name="wallet-outline" size={14} color={colors.white} />
+              <Text style={{ fontSize: 14 }}>👛</Text>
               <Text style={styles.connectText}>Connect</Text>
             </View>
           )}
@@ -115,13 +114,13 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 />
                 <View style={styles.optionIcon}>
-                  <Ionicons name="phone-portrait-outline" size={22} color={colors.signal} />
+                  <Text style={{ fontSize: 22 }}>📱</Text>
                 </View>
                 <View style={styles.optionText}>
                   <Text style={styles.optionTitle}>Mobile Wallet Adapter</Text>
                   <Text style={styles.optionDesc}>Phantom · Solflare · Any MWA wallet</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Text style={{ fontSize: 16, color: colors.textMuted }}>›</Text>
               </Pressable>
             )}
 
@@ -133,18 +132,18 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
               }}
             >
               <View style={[styles.optionIcon, { backgroundColor: colors.warningDim }]}>
-                <Ionicons name="flask-outline" size={22} color={colors.warning} />
+                <Text style={{ fontSize: 22 }}>🧪</Text>
               </View>
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>Demo Mode</Text>
                 <Text style={styles.optionDesc}>Explore with simulated data — no wallet needed</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Text style={{ fontSize: 16, color: colors.textMuted }}>›</Text>
             </Pressable>
 
             {!isMwaAvailable && (
               <View style={styles.mwaHint}>
-                <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+                <Text style={{ fontSize: 14 }}>ℹ️</Text>
                 <Text style={styles.mwaHintText}>
                   To use MWA: open this app on an Android device with Phantom or Solflare installed
                 </Text>

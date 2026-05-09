@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+
 import Animated2, {
   useAnimatedStyle,
   useSharedValue,
@@ -148,11 +148,7 @@ export function VaultCard({ vault, onPress, sparkData, entryDelay = 0 }: Props) 
             <Text style={styles.navLabel}>NAV</Text>
             <Text style={styles.navValue}>{formatNav(vault.currentNav)}</Text>
             <View style={styles.navDeltaRow}>
-              <Ionicons
-                name={navPositive ? 'trending-up' : 'trending-down'}
-                size={12}
-                color={navPositive ? colors.signal : colors.danger}
-              />
+              <Text style={{ fontSize: 12 }}>{navPositive ? '📈' : '📉'}</Text>
               <Text style={[styles.navDelta, { color: navPositive ? colors.signal : colors.danger }]}>
                 {navPct}%
               </Text>

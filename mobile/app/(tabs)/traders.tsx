@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../src/lib/theme';
 import { useManagers, ManagerWithVaults } from '../../src/hooks/useManagers';
@@ -23,9 +22,9 @@ import { formatUSD, truncateAddress, formatAge } from '../../src/lib/format';
 const ND = Platform.OS !== 'web';
 
 const PODIUM_COLORS = [
-  { ring: '#FFD700', dim: 'rgba(255,215,0,0.10)', icon: 'trophy' as const, label: 'GOLD' },
-  { ring: '#C0C8D4', dim: 'rgba(192,200,212,0.10)', icon: 'medal' as const, label: 'SILVER' },
-  { ring: '#CD7F32', dim: 'rgba(205,127,50,0.10)', icon: 'ribbon' as const, label: 'BRONZE' },
+  { ring: '#FFD700', dim: 'rgba(255,215,0,0.10)', icon: '🏆', label: 'GOLD' },
+  { ring: '#C0C8D4', dim: 'rgba(192,200,212,0.10)', icon: '🥈', label: 'SILVER' },
+  { ring: '#CD7F32', dim: 'rgba(205,127,50,0.10)', icon: '🥉', label: 'BRONZE' },
 ];
 
 function getAvgHealth(m: ManagerWithVaults) {
@@ -85,7 +84,7 @@ function PodiumCard({
           />
 
           <View style={styles.podiumRankBadge}>
-            <Ionicons name={p.icon} size={large ? 14 : 11} color={p.ring} />
+            <Text style={{ fontSize: large ? 14 : 11 }}>{p.icon}</Text>
             <Text style={[styles.podiumRankText, { color: p.ring }]}>#{rank}</Text>
           </View>
 
@@ -187,7 +186,7 @@ function RankRow({
           </View>
         </View>
 
-        <Ionicons name="chevron-forward" size={14} color={colors.textQuiet} />
+        <Text style={{ fontSize: 14, color: colors.textQuiet }}>›</Text>
       </Pressable>
     </Animated.View>
   );
@@ -233,7 +232,7 @@ export default function TradersScreen() {
             <Text style={styles.pageSub}>{sorted.length} verified traders</Text>
           </View>
           <View style={styles.seasonBadge}>
-            <Ionicons name="flame" size={12} color={colors.warning} />
+            <Text style={{ fontSize: 12 }}>🔥</Text>
             <Text style={styles.seasonText}>S1</Text>
           </View>
         </View>

@@ -1,6 +1,5 @@
 import { Link, Stack } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../src/lib/theme';
 
 export default function NotFoundScreen() {
@@ -14,7 +13,7 @@ export default function NotFoundScreen() {
       }} />
       <View style={styles.container}>
         <View style={styles.iconWrap}>
-          <Ionicons name="compass-outline" size={36} color={colors.textMuted} />
+          <Text style={{ fontSize: 36 }}>🧭</Text>
         </View>
         <Text style={styles.title}>Screen not found</Text>
         <Text style={styles.sub}>This page doesn't exist or was moved.</Text>

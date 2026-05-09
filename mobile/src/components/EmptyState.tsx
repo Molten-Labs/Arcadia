@@ -1,11 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../lib/theme';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const EMOJI_FALLBACK: Partial<Record<string, string>> = {
+const EMOJI_MAP: Record<string, string> = {
   'layers-outline': '📦',
   'briefcase-outline': '💼',
   'people-outline': '👥',
@@ -30,24 +27,18 @@ const EMOJI_FALLBACK: Partial<Record<string, string>> = {
 
 interface Props {
   icon?: string;
-  iconName?: IoniconName;
+  iconName?: string;
   title: string;
   subtitle?: string;
 }
 
 export function EmptyState({ icon, iconName, title, subtitle }: Props) {
-  const emojiIcon = iconName ? EMOJI_FALLBACK[iconName] : null;
+  const resolvedEmoji = iconName ? (EMOJI_MAP[iconName] ?? '○') : (icon ?? '○');
 
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        {iconName && !emojiIcon ? (
-          <Ionicons name={iconName} size={28} color={colors.textQuiet} />
-        ) : (
-          <Text style={styles.iconText}>
-            {emojiIcon ?? icon ?? '○'}
-          </Text>
-        )}
+        <Text style={styles.iconText}>{resolvedEmoji}</Text>
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
