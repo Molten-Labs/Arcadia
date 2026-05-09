@@ -1,8 +1,9 @@
+use pinocchio::program_error::ProgramError;
 use Kiln_program::{
     errors::KilnError,
     instructions::custody::{
-        enforce_liquid_reserve, min_liquid_usdc, nav_usdc, wsol_needed_for_usdc,
-        wsol_value_usdc, PRICE_SCALE, USDC_DECIMALS, WSOL_DECIMALS,
+        enforce_liquid_reserve, min_liquid_usdc, nav_usdc, wsol_needed_for_usdc, wsol_value_usdc,
+        PRICE_SCALE, USDC_DECIMALS, WSOL_DECIMALS,
     },
     instructions::vault_guard::{
         apply_post_swap_cooldown, effective_health_bps, max_position_bps, run_guards,
@@ -10,7 +11,6 @@ use Kiln_program::{
     },
     states::VaultState,
 };
-use pinocchio::program_error::ProgramError;
 
 fn make_state(junior: u64, original_junior: u64, senior: u64, nav: u64) -> VaultState {
     VaultState {

@@ -170,6 +170,7 @@ pub fn withdraw_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .current_nav
         .checked_sub(withdrawal_amount)
         .ok_or(KilnError::MathOverflow)?;
+    state.high_water_mark = state.high_water_mark.saturating_sub(withdrawal_amount);
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
 
@@ -340,6 +341,7 @@ fn withdraw_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         .current_nav
         .checked_sub(withdrawal_amount)
         .ok_or(KilnError::MathOverflow)?;
+    state.high_water_mark = state.high_water_mark.saturating_sub(withdrawal_amount);
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
 

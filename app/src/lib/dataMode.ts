@@ -1,10 +1,11 @@
-import { getKilnApiUrl, isArcadiaDemoMode } from "./api";
+import { getKilnApiUrl, isArcadiaDemoMode, isArcadiaDevnetProductMode } from "./api";
 
 export type DataMode = "mock" | "real";
 
 export const DATA_MODE_STORAGE_KEY = "kiln:data-mode";
 
 function hasRealApiConfigured(): boolean {
+  if (isArcadiaDevnetProductMode()) return true;
   const apiUrl = getKilnApiUrl();
   return Boolean(apiUrl) && !apiUrl.includes("localhost") && !apiUrl.includes("127.0.0.1");
 }
@@ -18,14 +19,19 @@ export function isDataMode(value: unknown): value is DataMode {
 }
 
 export function getStoredDataMode(storage: Storage | undefined = globalThis.localStorage): DataMode {
-  // Demo/local mode: always prefer mock unless real API is configured
-  if (isArcadiaDemoMode() || !hasRealApiConfigured()) return "mock";
+  // Cinematic demo mode owns its local/mock state. Real devnet mode must not
+  // silently downgrade wallet actions to mock just because the API is local,
+  // but an explicit user/test selection is still honored.
+  if (isArcadiaDemoMode()) return "mock";
   try {
     const value = storage?.getItem(DATA_MODE_STORAGE_KEY);
-    return isDataMode(value) ? value : getDefaultDataMode();
+    if (isDataMode(value)) return value;
   } catch {
     return getDefaultDataMode();
   }
+  if (isArcadiaDevnetProductMode()) return "real";
+  if (!hasRealApiConfigured()) return "mock";
+  return getDefaultDataMode();
 }
 
 export function setStoredDataMode(mode: DataMode, storage: Storage | undefined = globalThis.localStorage) {

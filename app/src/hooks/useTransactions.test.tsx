@@ -19,8 +19,7 @@ import { useKilnTransactions } from "./useTransactions";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   PROGRAM_ID,
-  PYTH_SOL_USD_ACCOUNT,
-  PYTH_USDC_USD_ACCOUNT,
+  ORACLE_PRICE_SEED,
   SOL_MINT,
   TOKEN_PROGRAM_ID,
   USDC_MINT,
@@ -89,8 +88,9 @@ function lastInstruction(): TransactionInstruction {
   const call = mocks.sendTransaction.mock.calls.at(-1);
   expect(call).toBeDefined();
   const tx = call?.[0] as Transaction;
-  expect(tx.instructions).toHaveLength(1);
-  return tx.instructions[0];
+  const programIx = tx.instructions.filter((ix) => ix.programId.toBase58() === PROGRAM_ID.toBase58()).at(-1);
+  expect(programIx).toBeDefined();
+  return programIx!;
 }
 
 async function invoke(
@@ -119,6 +119,10 @@ function ata(owner: PublicKey, mint: PublicKey): PublicKey {
     [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
     ASSOCIATED_TOKEN_PROGRAM_ID,
   )[0];
+}
+
+function priceFeed(feed: 1 | 2): PublicKey {
+  return PublicKey.findProgramAddressSync([ORACLE_PRICE_SEED, Buffer.from([feed])], PROGRAM_ID)[0];
 }
 
 describe("useKilnTransactions", () => {
@@ -169,7 +173,7 @@ describe("useKilnTransactions", () => {
 
     let ix = await invoke(() => result.current.initManager());
     expect(ix.programId.toBase58()).toBe(PROGRAM_ID.toBase58());
-    expect(ix.data.equals(Buffer.from([0]))).toBe(true);
+    expect(Buffer.from(ix.data).equals(Buffer.from([0]))).toBe(true);
     expectKey(ix, 0, manager, true, true);
     expectKey(ix, 1, managerProfilePda, false, true);
     expectKey(ix, 2, SYSVAR_RENT_PUBKEY, false, false);
@@ -232,16 +236,19 @@ describe("useKilnTransactions", () => {
     const { result } = renderHook(() => useKilnTransactions());
 
     let ix = await invoke(() => result.current.updateNav(vaultConfigPda));
-    expect(ix.data.equals(Buffer.from([3, 0]))).toBe(true);
+    expect(Buffer.from(ix.data).equals(Buffer.from([3, 0]))).toBe(true);
     expectKey(ix, 0, caller, true, false);
     expectKey(ix, 1, vaultConfigPda, false, false);
     expectKey(ix, 2, vaultStatePda, false, true);
-    expectKey(ix, 3, treasuryPda, false, true);
-    expectKey(ix, 4, SystemProgram.programId, false, false);
-    expectKey(ix, 5, SYSVAR_CLOCK_PUBKEY, false, false);
+    expectKey(ix, 3, treasuryPda, false, false);
+    expectKey(ix, 4, ata(treasuryPda, USDC_MINT), false, true);
+    expectKey(ix, 5, ata(treasuryPda, SOL_MINT), false, true);
+    expectKey(ix, 6, priceFeed(1), false, false);
+    expectKey(ix, 7, priceFeed(2), false, false);
+    expectKey(ix, 8, SYSVAR_CLOCK_PUBKEY, false, false);
 
     ix = await invoke(() => result.current.graduateVault(vaultConfigPda, manager));
-    expect(ix.data.equals(Buffer.from([4]))).toBe(true);
+    expect(Buffer.from(ix.data).equals(Buffer.from([4]))).toBe(true);
     expectKey(ix, 0, caller, true, false);
     expectKey(ix, 1, vaultStatePda, false, true);
     expectKey(ix, 2, vaultConfigPda, false, false);
@@ -250,7 +257,7 @@ describe("useKilnTransactions", () => {
     expectKey(ix, 5, SYSVAR_CLOCK_PUBKEY, false, false);
 
     ix = await invoke(() => result.current.claimFees(vaultConfigPda));
-    expect(ix.data.equals(Buffer.from([8]))).toBe(true);
+    expect(Buffer.from(ix.data).equals(Buffer.from([8]))).toBe(true);
     expectKey(ix, 0, caller, true, true);
     expectKey(ix, 1, callerProfilePda, false, false);
     expectKey(ix, 2, vaultConfigPda, false, false);
@@ -300,8 +307,8 @@ describe("useKilnTransactions", () => {
     expectKey(ix, 5, ata(treasuryPda, USDC_MINT), false, true);
     expectKey(ix, 6, ata(treasuryPda, SOL_MINT), false, true);
     expectKey(ix, 7, ata(investor, USDC_MINT), false, true);
-    expectKey(ix, 8, PYTH_SOL_USD_ACCOUNT!, false, false);
-    expectKey(ix, 9, PYTH_USDC_USD_ACCOUNT!, false, false);
+    expectKey(ix, 8, priceFeed(1), false, false);
+    expectKey(ix, 9, priceFeed(2), false, false);
     expectKey(ix, 10, TOKEN_PROGRAM_ID, false, false);
     expectKey(ix, 11, SYSVAR_CLOCK_PUBKEY, false, false);
   });

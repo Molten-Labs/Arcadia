@@ -7,13 +7,13 @@ import {
   SYSVAR_RENT_PUBKEY,
   SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
+import { Buffer } from "buffer";
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWallet } from "@/lib/wallet";
 import { PROGRAM_ID } from "@/lib/solana/constants";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
-  PYTH_SOL_USD_ACCOUNT,
-  PYTH_USDC_USD_ACCOUNT,
+  ORACLE_PRICE_SEED,
   SOL_MINT,
   TOKEN_PROGRAM_ID,
   USDC_MINT,
@@ -74,6 +74,26 @@ function getAssociatedTokenAddress(owner: PublicKey, mint: PublicKey): PublicKey
   )[0];
 }
 
+function createAssociatedTokenAccountIdempotentInstruction(
+  payer: PublicKey,
+  associatedToken: PublicKey,
+  owner: PublicKey,
+  mint: PublicKey,
+): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: ASSOCIATED_TOKEN_PROGRAM_ID,
+    keys: [
+      { pubkey: payer, isSigner: true, isWritable: true },
+      { pubkey: associatedToken, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: false, isWritable: false },
+      { pubkey: mint, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.from([1]),
+  });
+}
+
 function getCustodyTokenAccounts(treasury: PublicKey) {
   return {
     vaultUsdc: getAssociatedTokenAddress(treasury, USDC_MINT),
@@ -81,14 +101,48 @@ function getCustodyTokenAccounts(treasury: PublicKey) {
   };
 }
 
-function requirePythAccounts() {
-  if (!PYTH_SOL_USD_ACCOUNT || !PYTH_USDC_USD_ACCOUNT) {
-    throw new Error("Pyth SOL/USD and USDC/USD accounts are not configured");
-  }
+function getOraclePriceAccounts() {
+  const derivedSol = PublicKey.findProgramAddressSync(
+    [ORACLE_PRICE_SEED, Buffer.from([1])],
+    PROGRAM_ID,
+  )[0];
+  const derivedUsdc = PublicKey.findProgramAddressSync(
+    [ORACLE_PRICE_SEED, Buffer.from([2])],
+    PROGRAM_ID,
+  )[0];
   return {
-    solPrice: PYTH_SOL_USD_ACCOUNT,
-    usdcPrice: PYTH_USDC_USD_ACCOUNT,
+    solPrice: derivedSol,
+    usdcPrice: derivedUsdc,
   };
+}
+
+function buildOraclePriceIx(
+  payer: PublicKey,
+  priceAccount: PublicKey,
+  feed: 1 | 2,
+  price: bigint,
+  confidence: bigint,
+) {
+  const data = Buffer.alloc(17);
+  data.writeUInt8(feed, 0);
+  data.writeBigUInt64LE(price, 1);
+  data.writeBigUInt64LE(confidence, 9);
+  return buildInstruction(10, [
+    { pubkey: payer, isSigner: true, isWritable: true },
+    { pubkey: priceAccount, isSigner: false, isWritable: true },
+    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+  ], data);
+}
+
+function buildDevnetOracleRefreshIxs(payer: PublicKey) {
+  const { solPrice, usdcPrice } = getOraclePriceAccounts();
+  const scale = 1_000_000n;
+  return [
+    buildOraclePriceIx(payer, solPrice, 1, 150n * scale, 1_500_000n),
+    buildOraclePriceIx(payer, usdcPrice, 2, scale, 10_000n),
+  ];
 }
 
 export function useKilnTransactions() {
@@ -194,6 +248,18 @@ export function useKilnTransactions() {
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
       const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
       const managerUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
+      const ensureManagerUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        managerUsdc,
+        publicKey,
+        USDC_MINT,
+      );
+      const ensureVaultUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultUsdc,
+        treasuryPda,
+        USDC_MINT,
+      );
 
       const data = Buffer.alloc(8);
       data.writeBigUInt64LE(usdcUnits, 0);
@@ -210,7 +276,7 @@ export function useKilnTransactions() {
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ], data);
-      return send(ix, "Deposit Junior");
+      return send([ensureManagerUsdc, ensureVaultUsdc, ix], "Deposit Junior");
     },
     [publicKey, send]
   );
@@ -224,6 +290,18 @@ export function useKilnTransactions() {
       const [positionPda] = getInvestorPositionPDA(publicKey, vaultConfigPubkey);
       const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
       const investorUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
+      const ensureInvestorUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        investorUsdc,
+        publicKey,
+        USDC_MINT,
+      );
+      const ensureVaultUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultUsdc,
+        treasuryPda,
+        USDC_MINT,
+      );
 
       const data = Buffer.alloc(8);
       data.writeBigUInt64LE(usdcUnits, 0);
@@ -241,7 +319,7 @@ export function useKilnTransactions() {
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ], data);
-      return send(ix, "Deposit Senior");
+      return send([ensureInvestorUsdc, ensureVaultUsdc, ix], "Deposit Senior");
     },
     [publicKey, send]
   );
@@ -255,7 +333,26 @@ export function useKilnTransactions() {
       const [positionPda] = getInvestorPositionPDA(publicKey, vaultConfigPubkey);
       const { vaultUsdc, vaultWsol } = getCustodyTokenAccounts(treasuryPda);
       const investorUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
-      const { solPrice, usdcPrice } = requirePythAccounts();
+      const { solPrice, usdcPrice } = getOraclePriceAccounts();
+      const refreshPrices = buildDevnetOracleRefreshIxs(publicKey);
+      const ensureInvestorUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        investorUsdc,
+        publicKey,
+        USDC_MINT,
+      );
+      const ensureVaultUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultUsdc,
+        treasuryPda,
+        USDC_MINT,
+      );
+      const ensureVaultWsol = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultWsol,
+        treasuryPda,
+        SOL_MINT,
+      );
 
       const data = Buffer.alloc(8);
       data.writeBigUInt64LE(amountUsdcUnits, 0);
@@ -274,7 +371,13 @@ export function useKilnTransactions() {
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
-      return send(ix, "Withdraw Senior");
+      return send([
+        ensureInvestorUsdc,
+        ensureVaultUsdc,
+        ensureVaultWsol,
+        ...refreshPrices,
+        ix,
+      ], "Withdraw Senior");
     },
     [publicKey, send]
   );
@@ -288,6 +391,18 @@ export function useKilnTransactions() {
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
       const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
       const managerUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
+      const ensureManagerUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        managerUsdc,
+        publicKey,
+        USDC_MINT,
+      );
+      const ensureVaultUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultUsdc,
+        treasuryPda,
+        USDC_MINT,
+      );
 
       const data = Buffer.alloc(8);
       data.writeBigUInt64LE(amountUsdcUnits, 0);
@@ -303,7 +418,7 @@ export function useKilnTransactions() {
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
-      return send(ix, "Withdraw Junior");
+      return send([ensureManagerUsdc, ensureVaultUsdc, ix], "Withdraw Junior");
     },
     [publicKey, send]
   );
@@ -314,17 +429,40 @@ export function useKilnTransactions() {
       if (!publicKey) throw new Error("Wallet not connected");
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const { vaultUsdc, vaultWsol } = getCustodyTokenAccounts(treasuryPda);
+      const { solPrice, usdcPrice } = getOraclePriceAccounts();
       const data = Buffer.from([0]);
+      const refreshPrices = buildDevnetOracleRefreshIxs(publicKey);
+      const ensureVaultUsdc = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultUsdc,
+        treasuryPda,
+        USDC_MINT,
+      );
+      const ensureVaultWsol = createAssociatedTokenAccountIdempotentInstruction(
+        publicKey,
+        vaultWsol,
+        treasuryPda,
+        SOL_MINT,
+      );
 
       const ix = buildInstruction(3, [
         { pubkey: publicKey, isSigner: true, isWritable: false },
         { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
         { pubkey: statePda, isSigner: false, isWritable: true },
-        { pubkey: treasuryPda, isSigner: false, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: treasuryPda, isSigner: false, isWritable: false },
+        { pubkey: vaultUsdc, isSigner: false, isWritable: true },
+        { pubkey: vaultWsol, isSigner: false, isWritable: true },
+        { pubkey: solPrice, isSigner: false, isWritable: false },
+        { pubkey: usdcPrice, isSigner: false, isWritable: false },
         { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
       ], data);
-      return send(ix, "Update NAV");
+      return send([
+        ensureVaultUsdc,
+        ensureVaultWsol,
+        ...refreshPrices,
+        ix,
+      ], "Update NAV");
     },
     [publicKey, send]
   );

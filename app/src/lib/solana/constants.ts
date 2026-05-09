@@ -1,7 +1,8 @@
 import { PublicKey } from "@solana/web3.js";
+import { Buffer } from "buffer";
 
 export const PROGRAM_ID = new PublicKey(
-  "WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB"
+  "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN"
 );
 
 export const MANAGER_PROFILE_SEED = Buffer.from("manager");
@@ -16,15 +17,26 @@ export const RPC_URL =
 export const SOLANA_CLUSTER =
   import.meta.env.VITE_SOLANA_CLUSTER || (RPC_URL.includes("mainnet") ? "mainnet-beta" : "devnet");
 
+export const ARCADIA_EXECUTION_ENV =
+  String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || SOLANA_CLUSTER).toLowerCase();
+
 export const KILN_API_BASE_URL =
   import.meta.env.VITE_KILN_API_BASE_URL ||
   import.meta.env.VITE_KILN_API_URL ||
   "http://localhost:8080";
 
 export const SOL_MINT = new PublicKey("So11111111111111111111111111111111111111112");
-export const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+export const MAINNET_USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+export const ARCADIA_DEVNET_USDC_MINT = new PublicKey("DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz");
+export const USDC_MINT = new PublicKey(
+  import.meta.env.VITE_USDC_MINT ||
+    (ARCADIA_EXECUTION_ENV === "surfpool" || SOLANA_CLUSTER === "mainnet-beta"
+      ? MAINNET_USDC_MINT.toBase58()
+      : ARCADIA_DEVNET_USDC_MINT.toBase58())
+);
 export const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+export const ORACLE_PRICE_SEED = Buffer.from("price-feed");
 
 const env = import.meta.env as Record<string, string | undefined>;
 const processEnv =

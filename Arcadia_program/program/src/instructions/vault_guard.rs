@@ -91,7 +91,10 @@ pub fn run_guards_with_notional(
     Ok(())
 }
 
-pub fn enforce_usdc_reserve_after_swap(usdc_after: u64, nav_after: u64) -> Result<(), ProgramError> {
+pub fn enforce_usdc_reserve_after_swap(
+    usdc_after: u64,
+    nav_after: u64,
+) -> Result<(), ProgramError> {
     super::custody::enforce_liquid_reserve(usdc_after, nav_after)
 }
 

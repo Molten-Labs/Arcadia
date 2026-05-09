@@ -4,7 +4,7 @@ import { PublicKey } from '@solana/web3.js';
 const env = process.env as Record<string, string | undefined>;
 
 export const PROGRAM_ID = new PublicKey(
-  env.EXPO_PUBLIC_ARCADIA_PROGRAM_ID ?? 'WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB',
+  env.EXPO_PUBLIC_ARCADIA_PROGRAM_ID ?? '49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN',
 );
 
 export const MANAGER_PROFILE_SEED = Buffer.from('manager');
@@ -18,7 +18,7 @@ export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9
 export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
 
 export const MAINNET_USDC_MINT = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
-export const DEVNET_USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+export const DEVNET_USDC_MINT = new PublicKey('DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz');
 
 export const RPC_URL = env.EXPO_PUBLIC_RPC_URL ?? 'https://api.devnet.solana.com';
 export const CLUSTER = (

@@ -116,11 +116,11 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     let total_senior_principal = state.senior_shares_outstanding;
     let withdrawal_amount = args.amount_usdc;
     let max_claim = if total_senior_principal > 0 {
-        investor_principal_remaining
-            .checked_mul(state.senior_capital)
-            .ok_or(KilnError::MathOverflow)?
-            .checked_div(total_senior_principal)
-            .ok_or(KilnError::MathOverflow)?
+        claim_for_principal(
+            investor_principal_remaining,
+            state.senior_capital,
+            total_senior_principal,
+        )?
     } else {
         return Err(KilnError::InsufficientSeniorCapital.into());
     };
@@ -161,6 +161,7 @@ pub fn withdraw_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .current_nav
         .checked_sub(withdrawal_amount)
         .ok_or(KilnError::MathOverflow)?;
+    state.high_water_mark = state.high_water_mark.saturating_sub(withdrawal_amount);
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
     drop(state);
@@ -337,11 +338,11 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
     let total_senior_principal = state.senior_shares_outstanding;
     let withdrawal_amount = requested_amount;
     let max_claim = if total_senior_principal > 0 {
-        investor_principal_remaining
-            .checked_mul(state.senior_capital)
-            .ok_or(KilnError::MathOverflow)?
-            .checked_div(total_senior_principal)
-            .ok_or(KilnError::MathOverflow)?
+        claim_for_principal(
+            investor_principal_remaining,
+            state.senior_capital,
+            total_senior_principal,
+        )?
     } else {
         return Err(KilnError::InsufficientSeniorCapital.into());
     };
@@ -458,6 +459,7 @@ fn withdraw_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         .ok_or(KilnError::MathOverflow)?;
     state.last_nav = fresh_nav;
     state.current_nav = post_withdraw_nav;
+    state.high_water_mark = state.high_water_mark.saturating_sub(withdrawal_amount);
     state.last_nav_update_at = clock.unix_timestamp;
     drop(state);
 
@@ -493,4 +495,23 @@ fn principal_for_claim(
         return Err(KilnError::MathOverflow.into());
     }
     Ok(principal as u64)
+}
+
+fn claim_for_principal(
+    investor_principal: u64,
+    pool_capital: u64,
+    total_principal: u64,
+) -> Result<u64, ProgramError> {
+    if investor_principal == 0 || pool_capital == 0 || total_principal == 0 {
+        return Err(KilnError::InvalidAmount.into());
+    }
+    let claim = (investor_principal as u128)
+        .checked_mul(pool_capital as u128)
+        .ok_or(KilnError::MathOverflow)?
+        .checked_div(total_principal as u128)
+        .ok_or(KilnError::MathOverflow)?;
+    if claim > u64::MAX as u128 {
+        return Err(KilnError::MathOverflow.into());
+    }
+    Ok(claim as u64)
 }

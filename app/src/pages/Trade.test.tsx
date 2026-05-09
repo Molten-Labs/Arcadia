@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
@@ -21,6 +22,11 @@ vi.mock("sonner", () => ({
 
 vi.mock("@/components/Layout", () => ({
   Layout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/lib/solana/constants", () => ({
+  ARCADIA_EXECUTION_ENV: "surfpool",
+  SOLANA_CLUSTER: "mainnet-beta",
 }));
 
 import Trade from "./Trade";
@@ -46,7 +52,11 @@ describe("Trade simulated swap screen", () => {
   });
 
   it("keeps the trade action on the client-side simulation path", async () => {
-    render(<Trade />);
+    render(
+      <MemoryRouter>
+        <Trade />
+      </MemoryRouter>,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /simulate guarded quote/i }));
     expect(mocks.toastLoading).toHaveBeenCalledWith("Simulating guarded quote…", { id: "swap" });

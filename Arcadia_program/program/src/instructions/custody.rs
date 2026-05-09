@@ -28,11 +28,13 @@ pub const TOKEN_PROGRAM_ID: Pubkey =
 pub const WSOL_MINT: Pubkey =
     pinocchio_pubkey::pubkey!("So11111111111111111111111111111111111111112");
 pub const USDC_MINT: Pubkey =
-    pinocchio_pubkey::pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+    pinocchio_pubkey::pubkey!("DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz");
 
 pub const PRICE_MAGIC: &[u8; 8] = b"SYNQPYTH";
 pub const PRICE_FEED_SOL_USD: u8 = 1;
 pub const PRICE_FEED_USDC_USD: u8 = 2;
+pub const PRICE_ACCOUNT_LEN: usize = 40;
+pub const PRICE_FEED_SEED: &[u8] = b"price-feed";
 
 const TOKEN_TRANSFER_DISCRIMINATOR: u8 = 3;
 

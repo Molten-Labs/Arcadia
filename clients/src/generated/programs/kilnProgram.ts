@@ -30,7 +30,7 @@ import {
 } from "../instructions";
 
 export const KILN_PROGRAM_PROGRAM_ADDRESS =
-  "WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB" as Address<"WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB">;
+  "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN" as Address<"49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN">;
 
 export enum KilnProgramAccount {
   ManagerProfile,
@@ -50,6 +50,7 @@ export enum KilnProgramInstruction {
   WithdrawJunior,
   ClaimFees,
   ExecuteSwap,
+  UpdateOraclePrice,
 }
 
 export function identifyKilnProgramInstruction(
@@ -86,13 +87,16 @@ export function identifyKilnProgramInstruction(
   if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return KilnProgramInstruction.ExecuteSwap;
   }
+  if (containsBytes(data, getU8Encoder().encode(10), 0)) {
+    return KilnProgramInstruction.UpdateOraclePrice;
+  }
   throw new Error(
     "The provided instruction could not be identified as a kilnProgram instruction.",
   );
 }
 
 export type ParsedKilnProgramInstruction<
-  TProgram extends string = "WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB",
+  TProgram extends string = "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN",
 > =
   | ({
       instructionType: KilnProgramInstruction.InitManager;
@@ -115,7 +119,8 @@ export type ParsedKilnProgramInstruction<
         | KilnProgramInstruction.WithdrawSenior
         | KilnProgramInstruction.WithdrawJunior
         | KilnProgramInstruction.ClaimFees
-        | KilnProgramInstruction.ExecuteSwap;
+        | KilnProgramInstruction.ExecuteSwap
+        | KilnProgramInstruction.UpdateOraclePrice;
       programAddress: Address<TProgram>;
       accounts: readonly AccountMeta[];
       data: ReadonlyUint8Array;
@@ -165,7 +170,8 @@ export function parseKilnProgramInstruction<TProgram extends string>(
     case KilnProgramInstruction.WithdrawSenior:
     case KilnProgramInstruction.WithdrawJunior:
     case KilnProgramInstruction.ClaimFees:
-    case KilnProgramInstruction.ExecuteSwap: {
+    case KilnProgramInstruction.ExecuteSwap:
+    case KilnProgramInstruction.UpdateOraclePrice: {
       assertIsInstructionWithAccounts(instruction);
       return {
         instructionType,

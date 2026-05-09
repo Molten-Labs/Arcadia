@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Activity, AlertTriangle, Check, Circle, Loader2, Pause, Play, RadioTower, RefreshCw, ShieldCheck, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -87,7 +87,33 @@ const DemoControl = () => {
     return [] as VaultActivityEvent[];
   }, [activity]);
 
-  if (!isArcadiaDemoMode()) return <Navigate to="/" replace />;
+  if (!isArcadiaDemoMode()) {
+    return (
+      <Layout>
+        <div className="container max-w-4xl py-12">
+          <span className="page-header-label">
+            <RadioTower className="h-3 w-3" /> Surfpool preview
+          </span>
+          <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+            Jupiter execution is shown in demo mode
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+            This devnet app signs real Arcadia program transactions for vault creation, deposits,
+            NAV, and withdrawals. Jupiter swap execution is mainnet-only, so Arcadia shows live
+            Jupiter quotes with Surfpool local simulation in the recording cockpit.
+          </p>
+          <div className="mt-6 rounded-2xl border border-border bg-card/80 p-5 font-mono text-xs text-muted-foreground">
+            <p className="text-foreground">Run Surfpool preview locally:</p>
+            <p className="mt-3">ARCADIA_DEMO_MODE=true ARCADIA_SURFPOOL_MODE=true cargo run --manifest-path server-rs/Cargo.toml</p>
+            <p className="mt-2">VITE_ARCADIA_DEMO_MODE=true VITE_ARCADIA_EXECUTION_ENV=surfpool pnpm --dir app dev --host 0.0.0.0 --port 8080</p>
+          </div>
+          <Button asChild className="mt-6">
+            <Link to="/trade">Back to trade terminal</Link>
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const busy = story.isBusy || story.story.running;
 

@@ -33,7 +33,7 @@ import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { toast } from "sonner";
 
-const PROGRAM_ID = "WMzhPepsS5n1mhZGvYa2RF6gfUJLa5CKwpqFYsqw6RB";
+const PROGRAM_ID = "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN";
 
 const DevnetSection = () => {
   const [copied, setCopied] = useState(false);
