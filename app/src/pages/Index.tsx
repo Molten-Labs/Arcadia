@@ -183,22 +183,55 @@ const PROBLEM_COLUMNS = [
   {
     title: "For Traders",
     items: [
-      "No way to raise capital without a fund structure or personal brand",
-      "Strategy exposed on-chain the moment a trade executes",
-      "Front-running and copy-trading destroy edge before positions close",
-      "No credible proof of past performance to show potential investors",
-      "Fees depend on goodwill and informal agreements",
+      {
+        problem: "No way to raise capital without a fund structure or personal brand",
+        solution: "Any trader can create a vault and build a verifiable on-chain track record from scratch",
+      },
+      {
+        problem: "Strategy exposed on-chain the moment a trade executes",
+        solution: "Private intent execution hides route, size, and timing while still proving the trade was safe",
+      },
+      {
+        problem: "Front-running and copy-trading destroy edge before positions close",
+        solution: "Trade details never touch the blockchain so no one can read and replicate the strategy",
+      },
+      {
+        problem: "No credible proof of past performance to show potential investors",
+        solution: "Every trade in paper mode is recorded publicly and permanently on Solana",
+      },
+      {
+        problem: "Fees depend on goodwill and informal agreements",
+        solution: "Performance fees above the high-water mark are enforced and claimed automatically by the program",
+      },
     ],
   },
   {
     title: "For Investors",
     items: [
-      "No way to verify a trader's track record before depositing",
-      "Manager earns fees on wins but does not absorb losses",
-      "Stuck waiting for the trader to unwind positions before withdrawing",
-      "Trader can deploy all capital into risky positions with no floor",
-      "No way to know if risk rules are being followed when strategy is private",
-      "Custody risk when handing control to a managed product",
+      {
+        problem: "No way to verify a trader's track record before depositing",
+        solution: "Graduation requires 30 days of positive on-chain performance before a vault can accept investor capital",
+      },
+      {
+        problem: "Manager earns fees on wins but does not absorb losses",
+        solution: "Trader capital sits in the junior tranche and takes every loss before investor capital is touched",
+      },
+      {
+        problem: "Stuck waiting for the trader to unwind positions before withdrawing",
+        solution: "Investors withdraw their pro-rata share of every token in the vault instantly without asking anyone",
+      },
+      {
+        problem: "Trader can deploy all capital into risky positions with no floor",
+        solution: "The vault guard enforces a hard 20% liquid reserve on every swap so there is always capital available to exit",
+      },
+      {
+        problem: "No way to know if risk rules are being followed when strategy is private",
+        solution: "The guard result of every trade is recorded publicly on-chain even when the trade details stay private",
+      },
+      {
+        problem: "Custody risk when handing control to a managed product",
+        solution: "The vault is non-custodial and every rule is enforced by the program with no operator override",
+      },
     ],
   },
 ];
@@ -266,43 +299,75 @@ const ProblemCard = ({
 }: {
   column: (typeof PROBLEM_COLUMNS)[number];
   index: number;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 18 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    transition={{ duration: 0.45, delay: index * 0.08 }}
-    className="group relative overflow-hidden rounded-xl border border-border/55 bg-card/72 p-6 shadow-card backdrop-blur-xl"
-  >
-    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-    <div className="mb-6 flex items-center justify-between gap-4">
-      <div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          {index === 0 ? "Supply side" : "Demand side"}
-        </p>
-        <h3 className="mt-2 font-display type-h3 font-semibold">{column.title}</h3>
+}) => {
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.45, delay: index * 0.08 }}
+      className="group relative overflow-hidden rounded-xl border border-border/55 bg-card/72 p-6 shadow-card backdrop-blur-xl"
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            {index === 0 ? "Supply side" : "Demand side"}
+          </p>
+          <h3 className="mt-2 font-display type-h3 font-semibold">{column.title}</h3>
+        </div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+          {index === 0 ? <TrendingUp className="h-5 w-5" aria-hidden="true" /> : <Shield className="h-5 w-5" aria-hidden="true" />}
+        </div>
       </div>
-      <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
-        {index === 0 ? <TrendingUp className="h-5 w-5" aria-hidden="true" /> : <Shield className="h-5 w-5" aria-hidden="true" />}
-      </div>
-    </div>
-    <ul className="space-y-3">
-      {column.items.map((item, itemIndex) => (
-        <motion.li
-          key={item}
-          initial={{ opacity: 0, x: index === 0 ? -10 : 10 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.38, delay: index * 0.08 + 0.18 + itemIndex * 0.1 }}
-          className="flex items-start gap-3 rounded-lg border border-border/35 bg-background/45 px-3 py-2.5 text-sm text-foreground/78"
-        >
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_18px_hsl(var(--primary)/0.45)]" />
-          <span>{item}</span>
-        </motion.li>
-      ))}
-    </ul>
-  </motion.div>
-);
+      <ul className="space-y-2">
+        {column.items.map((item, itemIndex) => {
+          const isOpen = expanded === itemIndex;
+          return (
+            <motion.li
+              key={item.problem}
+              initial={{ opacity: 0, x: index === 0 ? -10 : 10 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.38, delay: index * 0.08 + 0.18 + itemIndex * 0.08 }}
+              className="overflow-hidden rounded-lg border border-border/35 bg-background/45"
+            >
+              <button
+                onClick={() => setExpanded(isOpen ? null : itemIndex)}
+                className="flex w-full items-start gap-3 px-3 py-2.5 text-left text-sm text-foreground/78 transition-colors hover:text-foreground/95"
+              >
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_18px_hsl(var(--primary)/0.45)]" />
+                <span className="flex-1 leading-snug">{item.problem}</span>
+                <ChevronDown
+                  className={`mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-transform duration-200 ${isOpen ? "rotate-180 text-primary" : ""}`}
+                />
+              </button>
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    key="solution"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-start gap-2.5 border-t border-primary/15 bg-primary/5 px-3 py-2.5">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                      <p className="text-[12px] leading-relaxed text-primary/85">{item.solution}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.li>
+          );
+        })}
+      </ul>
+    </motion.div>
+  );
+};
 
 /* ── Animated guard evaluation widget (center connector) ─────────────────── */
 const GUARD_SEQ = [
