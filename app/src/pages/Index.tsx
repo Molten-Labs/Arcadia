@@ -183,17 +183,22 @@ const PROBLEM_COLUMNS = [
   {
     title: "For Traders",
     items: [
-      "Strategy exposed to front-runners on-chain",
-      "Hard to prove skill without burning edge",
-      "No scalable path to investor capital",
+      "No way to raise capital without a fund structure or personal brand",
+      "Strategy exposed on-chain the moment a trade executes",
+      "Front-running and copy-trading destroy edge before positions close",
+      "No credible proof of past performance to show potential investors",
+      "Fees depend on goodwill and informal agreements",
     ],
   },
   {
     title: "For Investors",
     items: [
-      "No way to verify risk rules are followed",
-      "Trust-based systems with no enforcement",
-      "Capital gets locked or exits delayed",
+      "No way to verify a trader's track record before depositing",
+      "Manager earns fees on wins but does not absorb losses",
+      "Stuck waiting for the trader to unwind positions before withdrawing",
+      "Trader can deploy all capital into risky positions with no floor",
+      "No way to know if risk rules are being followed when strategy is private",
+      "Custody risk when handing control to a managed product",
     ],
   },
 ];
@@ -553,40 +558,11 @@ const Landing = () => {
             </p>
           </motion.div>
 
-          {/* ── Problem cards + Guard connector ──────────────────────────── */}
-          <div className="mx-auto grid max-w-6xl items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr]">
+          {/* ── Problem cards ─────────────────────────────────────────────── */}
+          <div className="mx-auto grid max-w-6xl items-stretch gap-4 lg:grid-cols-2">
             <ProblemCard column={PROBLEM_COLUMNS[0]} index={0} />
-            <GuardConnector />
             <ProblemCard column={PROBLEM_COLUMNS[1]} index={1} />
           </div>
-
-          {/* Private Guard compact strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.45, delay: 0.2 }}
-            className="mx-auto mt-5 max-w-6xl overflow-hidden rounded-xl border border-border/40 bg-card/50 backdrop-blur-sm"
-          >
-            <div className="grid divide-y divide-border/40 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-              <div className="px-6 py-5">
-                <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-destructive/80">
-                  <XCircle className="h-3 w-3" /> The hidden problem
-                </p>
-                <p className="text-[13px] leading-relaxed text-foreground/65">
-                  Publishing strategy on-chain means front-runners copy every move. Keeping it private means investors can't verify risk rules are followed. Either way, serious traders stay off-chain.
-                </p>
-              </div>
-              <div className="px-6 py-5">
-                <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
-                  <EyeOff className="h-3 w-3" /> Private Intent Vault Guard
-                </p>
-                <p className="text-[13px] leading-relaxed text-foreground/65">
-                  Trade intents are checked by a private evaluator against Arcadia's risk rules. Only the result — approved or rejected — lands on-chain. Strategy, size, and route stay hidden forever.
-                </p>
-              </div>
-            </div>
-          </motion.div>
 
           {/* ── Arcadia Gate connector ────────────────────────────────────── */}
           <div className="relative my-16 flex flex-col items-center" id="how-it-works">
