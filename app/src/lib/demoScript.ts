@@ -38,7 +38,7 @@ export const DEMO_STEPS: DemoStep[] = [
     phase: "overview",
     caption: "The first-loss mechanism",
     subcaption:
-      "Trader losses hit junior capital first. Senior (investor) capital is only at risk after the buffer is fully depleted — structurally enforced on-chain.",
+      "Each vault holds two layers. Junior capital comes from the trader. Senior capital comes from investors. Losses always hit junior first — investors are protected as long as the junior buffer holds.",
     route: "/how-it-works",
     duration: 5500,
   },
