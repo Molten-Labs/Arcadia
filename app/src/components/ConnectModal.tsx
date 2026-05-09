@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { useWallet, type Role, type Network, shortAddr } from "@/lib/wallet";
+import { useWallet, type Role, shortAddr } from "@/lib/wallet";
 import {
     Wallet,
     Shield,
@@ -72,8 +72,6 @@ export const ConnectModal = ({
     const {
         connect,
         setRole,
-        setNetwork,
-        network,
         role,
         address,
         connected,
@@ -137,7 +135,7 @@ export const ConnectModal = ({
             if (chosenRole) setRole(chosenRole);
             setStep("success");
             toast.success(`Connected with ${name}`, {
-                description: `Deterministic demo session · Network: ${network}`,
+                description: "Deterministic demo session · Devnet",
             });
         } catch (e) {
             setError(e instanceof Error ? e.message : "Connection failed");
@@ -313,7 +311,7 @@ export const ConnectModal = ({
                                     session for this preview…
                                 </DialogDescription>
                                 <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                    <Globe className="w-3 h-3" /> {network} ·{" "}
+                                    <Globe className="w-3 h-3" /> devnet ·{" "}
                                     {chosenRole}
                                 </div>
                             </motion.div>
@@ -398,7 +396,7 @@ export const ConnectModal = ({
                                     <Detail label="Network">
                                         <span className="inline-flex items-center gap-1.5 text-sm">
                                             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-glow" />
-                                            {network}
+                                            devnet
                                         </span>
                                     </Detail>
                                     <Detail label="Role">

@@ -26,7 +26,7 @@ import { RPC_URL } from "./solana/constants";
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export type Role = "investor" | "trader";
-export type Network = "mainnet" | "devnet";
+export type Network = "devnet";
 
 interface KilnWalletState {
   connected: boolean;

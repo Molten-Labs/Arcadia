@@ -27,9 +27,7 @@ import {
   Check,
   ExternalLink,
   Zap,
-  EyeOff,
   CheckCircle2,
-  XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
@@ -368,121 +366,6 @@ const ProblemCard = ({
     </motion.div>
   );
 };
-
-/* ── Animated guard evaluation widget (center connector) ─────────────────── */
-const GUARD_SEQ = [
-  { id: "intent",   dur: 1800 },
-  { id: "check",    dur: 1600 },
-  { id: "approved", dur: 2300 },
-  { id: "intent2",  dur: 1800 },
-  { id: "check2",   dur: 1600 },
-  { id: "rejected", dur: 2300 },
-] as const;
-
-function GuardConnector() {
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    const t = setTimeout(() => setStep((s) => (s + 1) % GUARD_SEQ.length), GUARD_SEQ[step].dur);
-    return () => clearTimeout(t);
-  }, [step]);
-
-  const id = GUARD_SEQ[step].id;
-  const isIntent   = id === "intent" || id === "intent2";
-  const isChecking = id === "check"  || id === "check2";
-  const isApproved = id === "approved";
-  const isRejected = id === "rejected";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.45, delay: 0.1 }}
-      className="order-first flex items-center justify-center lg:order-none"
-    >
-      <div className="relative flex w-full flex-col items-center gap-4 rounded-xl border border-border/55 bg-card/60 px-4 py-7 shadow-card backdrop-blur-xl lg:h-full lg:w-44">
-        <div className="pointer-events-none absolute left-0 right-0 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/25 to-transparent lg:block" />
-
-        {/* Icon */}
-        <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-signal">
-          <Lock className="h-5 w-5" />
-        </div>
-
-        {/* Label */}
-        <div className="relative z-10 text-center">
-          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Arcadia layer</p>
-          <p className="mt-0.5 font-display text-[13px] font-semibold text-foreground">Private Guard</p>
-        </div>
-
-        {/* Cycling guard state */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, y: 6, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            className="relative z-10 flex flex-col items-center gap-1.5"
-          >
-            {isIntent && (
-              <>
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <span key={i} className="h-1 w-1 rounded-full bg-muted-foreground/25" />
-                  ))}
-                </div>
-                <span className="font-mono text-[9px] text-muted-foreground/55">intent in</span>
-              </>
-            )}
-            {isChecking && (
-              <>
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.span
-                      key={i}
-                      className="h-1.5 w-1.5 rounded-full bg-warning"
-                      animate={{ opacity: [0.25, 1, 0.25], scale: [0.7, 1, 0.7] }}
-                      transition={{ duration: 0.65, delay: i * 0.2, repeat: Infinity }}
-                    />
-                  ))}
-                </div>
-                <span className="font-mono text-[9px] text-warning/80">checking rules…</span>
-              </>
-            )}
-            {isApproved && (
-              <motion.div
-                initial={{ scale: 0.7 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 420, damping: 18 }}
-                className="rounded-md border border-success/35 bg-success/10 px-2.5 py-1.5 font-mono text-[10px] font-bold text-success"
-              >
-                ✓ Approved
-              </motion.div>
-            )}
-            {isRejected && (
-              <motion.div
-                initial={{ scale: 0.7 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 420, damping: 18 }}
-                className="rounded-md border border-destructive/35 bg-destructive/10 px-2.5 py-1.5 font-mono text-[10px] font-bold text-destructive"
-              >
-                ✗ Rejected
-              </motion.div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* New feature badge */}
-        <div className="relative z-10 mt-auto">
-          <div className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5">
-            <EyeOff className="h-2.5 w-2.5 text-primary/75" />
-            <span className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-primary/75">New</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 const Landing = () => {
   const { data: vaults } = useVaults();
