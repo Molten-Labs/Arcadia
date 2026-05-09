@@ -47,9 +47,12 @@ fn make_state(junior: u64, original_junior: u64, senior: u64, nav: u64) -> Vault
     }
 }
 
-fn private_intent_session_bytes(max_in_amount: u64, expires_at: i64) -> [u8; 152] {
-    assert_eq!(PRIVATE_INTENT_SESSION_LEN, 152);
-    let mut data = [0_u8; 152];
+const TEST_MANAGER: [u8; 32] = [5_u8; 32];
+const TEST_VAULT_CONFIG: [u8; 32] = [6_u8; 32];
+
+fn private_intent_session_bytes(max_in_amount: u64, expires_at: i64) -> [u8; 216] {
+    assert_eq!(PRIVATE_INTENT_SESSION_LEN, 216);
+    let mut data = [0_u8; 216];
     data[0..4].copy_from_slice(&PRIVATE_INTENT_SESSION_MAGIC);
     data[4] = MAGICBLOCK_PRIVATE_INTENT_VERSION;
     data[5] = 0b0000_0001;
@@ -58,8 +61,10 @@ fn private_intent_session_bytes(max_in_amount: u64, expires_at: i64) -> [u8; 152
     data[40..72].copy_from_slice(&[2_u8; 32]);
     data[72..104].copy_from_slice(&[3_u8; 32]);
     data[104..136].copy_from_slice(&[4_u8; 32]);
-    data[136..144].copy_from_slice(&max_in_amount.to_le_bytes());
-    data[144..152].copy_from_slice(&expires_at.to_le_bytes());
+    data[136..168].copy_from_slice(&TEST_MANAGER);
+    data[168..200].copy_from_slice(&TEST_VAULT_CONFIG);
+    data[200..208].copy_from_slice(&max_in_amount.to_le_bytes());
+    data[208..216].copy_from_slice(&expires_at.to_le_bytes());
     data
 }
 
@@ -77,6 +82,8 @@ fn parses_private_intent_session() {
     assert_eq!(session.intent_commitment, &[2_u8; 32]);
     assert_eq!(session.proof_hash, &[3_u8; 32]);
     assert_eq!(session.er_state_root, &[4_u8; 32]);
+    assert_eq!(session.manager_pubkey, &TEST_MANAGER);
+    assert_eq!(session.vault_config_pubkey, &TEST_VAULT_CONFIG);
     assert_eq!(session.max_in_amount, 1_000);
     assert_eq!(session.expires_at, 5_000);
 }
@@ -98,14 +105,28 @@ fn private_intent_guard_checks_expiry_and_amount() {
     let data = private_intent_session_bytes(1_000, 5_000);
     let session = parse_private_intent_session(&data).expect("private intent session");
 
-    assert!(validate_private_intent_session(&session, 1_000, 5_000).is_ok());
+    assert!(validate_private_intent_session(
+        &session,
+        &TEST_MANAGER,
+        &TEST_VAULT_CONFIG,
+        1_000,
+        5_000
+    )
+    .is_ok());
     assert_eq!(
-        validate_private_intent_session(&session, 1_001, 5_000).unwrap_err(),
+        validate_private_intent_session(&session, &TEST_MANAGER, &TEST_VAULT_CONFIG, 1_001, 5_000)
+            .unwrap_err(),
         ProgramError::Custom(KilnError::PrivateIntentAmountExceeded as u32)
     );
     assert_eq!(
-        validate_private_intent_session(&session, 1_000, 5_001).unwrap_err(),
+        validate_private_intent_session(&session, &TEST_MANAGER, &TEST_VAULT_CONFIG, 1_000, 5_001)
+            .unwrap_err(),
         ProgramError::Custom(KilnError::PrivateIntentExpired as u32)
+    );
+    assert_eq!(
+        validate_private_intent_session(&session, &[9_u8; 32], &TEST_VAULT_CONFIG, 1_000, 5_000)
+            .unwrap_err(),
+        ProgramError::Custom(KilnError::InvalidPrivateIntentSession as u32)
     );
 }
 

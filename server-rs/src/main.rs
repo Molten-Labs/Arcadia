@@ -965,7 +965,7 @@ fn magicblock_config_from_env() -> MagicBlockConfig {
             .filter(|value| !value.trim().is_empty()),
         fallback_enabled: env::var("MAGICBLOCK_ALLOW_LOCAL_FALLBACK")
             .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
-            .unwrap_or(true),
+            .unwrap_or(false),
         timeout_ms: env::var("MAGICBLOCK_EXECUTOR_TIMEOUT_MS")
             .ok()
             .and_then(|value| value.parse().ok())
@@ -1364,10 +1364,12 @@ async fn private_intent_proof_events_handler(
 }
 
 async fn private_intent_lifecycle_handler(
+    headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Path(intent_id): Path<String>,
     Json(request): Json<PrivateIntentLifecycleRequest>,
 ) -> Result<impl IntoResponse, AppError> {
+    state.verify_magicblock_lifecycle(&headers)?;
     let intent = state
         .record_private_intent_lifecycle(&intent_id, request)
         .await?;
@@ -1392,10 +1394,12 @@ async fn private_intent_submit_handler(
 }
 
 async fn private_intent_guard_handler(
+    headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Path(intent_id): Path<String>,
     Json(proof): Json<Value>,
 ) -> Result<impl IntoResponse, AppError> {
+    state.verify_magicblock_lifecycle(&headers)?;
     let intent = state
         .record_private_intent_lifecycle(
             &intent_id,
@@ -1417,10 +1421,12 @@ async fn private_intent_guard_handler(
 }
 
 async fn private_intent_reject_handler(
+    headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Path(intent_id): Path<String>,
     Json(proof): Json<Value>,
 ) -> Result<impl IntoResponse, AppError> {
+    state.verify_magicblock_lifecycle(&headers)?;
     let intent = state
         .record_private_intent_lifecycle(
             &intent_id,
@@ -1443,10 +1449,12 @@ async fn private_intent_reject_handler(
 }
 
 async fn private_intent_settle_handler(
+    headers: HeaderMap,
     State(state): State<Arc<AppState>>,
     Path(intent_id): Path<String>,
     Json(proof): Json<Value>,
 ) -> Result<impl IntoResponse, AppError> {
+    state.verify_magicblock_lifecycle(&headers)?;
     let intent = state
         .record_private_intent_lifecycle(
             &intent_id,
@@ -2242,6 +2250,28 @@ impl AppState {
         }
     }
 
+    fn verify_magicblock_lifecycle(&self, headers: &HeaderMap) -> Result<(), AppError> {
+        if self.demo_mode && self.magicblock.fallback_enabled {
+            return Ok(());
+        }
+        let Some(token) = &self.magicblock.auth_token else {
+            return Err(AppError::ServiceUnavailable(
+                "MAGICBLOCK_AUTH_TOKEN is required for non-demo private-intent lifecycle updates"
+                    .to_string(),
+            ));
+        };
+        let bearer = format!("Bearer {token}");
+        let header_token = headers
+            .get("authorization")
+            .or_else(|| headers.get("x-magicblock-token"))
+            .and_then(|value| value.to_str().ok());
+        if header_token == Some(bearer.as_str()) || header_token == Some(token.as_str()) {
+            Ok(())
+        } else {
+            Err(AppError::Unauthorized)
+        }
+    }
+
     async fn health_stats(&self) -> Result<HealthStats, AppError> {
         match &self.store {
             Store::Postgres(pool) => {
@@ -2787,10 +2817,25 @@ impl AppState {
             }
         }
 
-        self.local_private_intent_execution(
-            intent,
-            Some("MagicBlock executor not configured".to_string()),
-        )
+        if self.magicblock.fallback_enabled {
+            self.local_private_intent_execution(
+                intent,
+                Some("MagicBlock executor not configured".to_string()),
+            )
+        } else {
+            PrivateIntentExecution {
+                status: "failed".to_string(),
+                executor: "magicblock".to_string(),
+                executor_request_id: None,
+                signature: None,
+                response: json!({
+                    "error": "MagicBlock executor not configured and local fallback disabled"
+                }),
+                error: Some(
+                    "MagicBlock executor not configured and local fallback disabled".to_string(),
+                ),
+            }
+        }
     }
 
     async fn submit_private_intent_to_magicblock(
@@ -4968,7 +5013,7 @@ fn parse_private_intent(value: &Value) -> Option<PrivateIntentEvent> {
     Some(PrivateIntentEvent {
         vault_config_pubkey: string(value, &["vaultConfigPubkey", "vaultConfig"])?,
         intent_id: string(value, &["intentId", "id"])?,
-        trader: string(value, &["trader"]).unwrap_or_default(),
+        trader: string(value, &["managerPubkey", "trader"]).unwrap_or_default(),
         commitment_hash: string(value, &["commitmentHash", "commitment"])?,
         status: string(value, &["status"]).unwrap_or_else(|| "submitted".to_string()),
         guard_decision: string(value, &["guardDecision"]),
@@ -5376,6 +5421,18 @@ mod tests {
         build_app(test_state(secret, surfpool_mode, jupiter_api_key))
     }
 
+    fn private_intent_test_app(
+        demo_mode: bool,
+        fallback_enabled: bool,
+        auth_token: Option<&str>,
+    ) -> Router {
+        let mut state = test_state(None, false, None);
+        state.demo_mode = demo_mode;
+        state.magicblock.fallback_enabled = fallback_enabled;
+        state.magicblock.auth_token = auth_token.map(ToString::to_string);
+        build_app(state)
+    }
+
     fn test_state(
         secret: Option<&str>,
         surfpool_mode: bool,
@@ -5425,6 +5482,31 @@ mod tests {
                     .method(method)
                     .uri(uri)
                     .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+        (status, json)
+    }
+
+    async fn json_request_with_auth(
+        app: Router,
+        method: Method,
+        uri: &str,
+        body: Value,
+        token: &str,
+    ) -> (StatusCode, Value) {
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .header("authorization", format!("Bearer {token}"))
                     .body(Body::from(body.to_string()))
                     .unwrap(),
             )
@@ -5540,6 +5622,77 @@ mod tests {
         assert!(proofs["items"].as_array().unwrap().len() >= 4);
         assert!(!proofs.to_string().contains("secret route"));
         assert!(!proofs.to_string().contains("never return this"));
+    }
+
+    #[tokio::test]
+    async fn private_intent_lifecycle_requires_magicblock_auth_outside_demo() {
+        let submit = json!({
+            "managerPubkey": "11111111111111111111111111111111",
+            "vaultConfigPubkey": "vault-config-auth-111111111111111111",
+            "intentType": "trade.private_intent",
+            "payload": { "direction": "USDC_TO_WSOL", "sizeUsdc": 1000.0 },
+            "proof": { "privacyMode": "magicblock-er" }
+        });
+
+        let app = private_intent_test_app(false, true, None);
+        let (status, body) = json_request(
+            app.clone(),
+            Method::POST,
+            "/private-intents/submit",
+            submit.clone(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let intent_id = body["intentId"].as_str().unwrap();
+        let (status, _) = json_request(
+            app,
+            Method::POST,
+            &format!("/private-intents/{intent_id}/guard"),
+            json!({ "proofHash": "guard-proof" }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+
+        let app = private_intent_test_app(false, true, Some("magic-secret"));
+        let (status, body) =
+            json_request(app.clone(), Method::POST, "/private-intents/submit", submit).await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let intent_id = body["intentId"].as_str().unwrap();
+        let (status, guarded) = json_request_with_auth(
+            app,
+            Method::POST,
+            &format!("/private-intents/{intent_id}/guard"),
+            json!({ "proofHash": "guard-proof" }),
+            "magic-secret",
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(guarded["status"], "executing");
+    }
+
+    #[tokio::test]
+    async fn private_intent_fallback_disabled_fails_visibly() {
+        let app = private_intent_test_app(false, false, None);
+        let (status, body) = json_request(
+            app,
+            Method::POST,
+            "/private-intents/submit",
+            json!({
+                "managerPubkey": "11111111111111111111111111111111",
+                "vaultConfigPubkey": "vault-config-no-fallback-11111111111",
+                "intentType": "trade.private_intent",
+                "payload": { "direction": "USDC_TO_WSOL", "sizeUsdc": 1000.0 },
+                "proof": { "privacyMode": "magicblock-er" }
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        assert_eq!(body["status"], "failed");
+        assert_eq!(body["executor"], "magicblock");
+        assert!(body["error"]
+            .as_str()
+            .unwrap()
+            .contains("local fallback disabled"));
     }
 
     #[tokio::test]

@@ -62,7 +62,7 @@ export interface SubmitPrivateIntentRequest {
 }
 
 export interface PrivateIntentRealtimeEvent {
-  type: `private_intent.${string}` | `privateIntent.${string}` | `private-intent.${string}`;
+  type: `private_intent.${string}` | `privateIntent.${string}` | `private-intent.${string}` | "proof.event";
   vaultConfigPubkey?: string;
   intentId?: string;
   item?: unknown;
@@ -70,15 +70,13 @@ export interface PrivateIntentRealtimeEvent {
 }
 
 const PRIVATE_INTENT_ENDPOINTS = (vaultConfigPubkey: string) => [
-  `/private-intents/vaults/${encodeURIComponent(vaultConfigPubkey)}/snapshot`,
-  `/private-intents/vaults/${encodeURIComponent(vaultConfigPubkey)}`,
+  `/private/intents/vault/${encodeURIComponent(vaultConfigPubkey)}`,
   `/vaults/${encodeURIComponent(vaultConfigPubkey)}/private-intents`,
 ];
 
-const PRIVATE_INTENT_SUBMIT_ENDPOINTS = (vaultConfigPubkey: string) => [
-  "/private-intents",
+const PRIVATE_INTENT_SUBMIT_ENDPOINTS = () => [
+  "/private/intents",
   "/private-intents/submit",
-  `/vaults/${encodeURIComponent(vaultConfigPubkey)}/private-intents`,
 ];
 
 const DEFAULT_TIMELINE: PrivateIntentProofStep[] = [
@@ -136,9 +134,38 @@ export async function fetchPrivateIntentVaultSnapshot(
 ): Promise<PrivateIntentVaultSnapshot> {
   for (const path of PRIVATE_INTENT_ENDPOINTS(vaultConfigPubkey)) {
     const data = await fetchKilnApiOptional<unknown>(path);
-    if (data) return normalizePrivateIntentSnapshot(data, vaultConfigPubkey);
+    if (data) return hydrateProofEvents(normalizePrivateIntentSnapshot(data, vaultConfigPubkey));
   }
   return emptyPrivateIntentSnapshot(vaultConfigPubkey);
+}
+
+async function hydrateProofEvents(
+  snapshot: PrivateIntentVaultSnapshot,
+): Promise<PrivateIntentVaultSnapshot> {
+  const proofEvents = (
+    await Promise.all(
+      snapshot.activity
+        .slice(0, 8)
+        .map(async (activity) => {
+          const data = await fetchKilnApiOptional<{ items: unknown[] }>(
+            `/private/intents/${encodeURIComponent(activity.intentId)}/proof-events`,
+          );
+          return data?.items ?? [];
+        }),
+    )
+  ).flat();
+  if (!proofEvents.length) return snapshot;
+
+  return normalizePrivateIntentSnapshot(
+    {
+      vaultConfigPubkey: snapshot.vaultConfigPubkey,
+      guard: snapshot.guard,
+      activity: [...snapshot.activity, ...proofEvents],
+      proofs: proofEvents,
+      updatedAt: snapshot.updatedAt,
+    },
+    snapshot.vaultConfigPubkey,
+  );
 }
 
 export async function submitPrivateIntent(
@@ -161,7 +188,7 @@ export async function submitPrivateIntent(
     },
   };
 
-  for (const path of PRIVATE_INTENT_SUBMIT_ENDPOINTS(request.vaultConfigPubkey)) {
+  for (const path of PRIVATE_INTENT_SUBMIT_ENDPOINTS()) {
     const data = await postKilnApiOptional<unknown>(path, body);
     if (data) return normalizePrivateIntentSnapshot(data, request.vaultConfigPubkey);
   }
@@ -171,7 +198,7 @@ export async function submitPrivateIntent(
 
 export function isPrivateIntentRealtimeEvent(event: { type?: string }): event is PrivateIntentRealtimeEvent {
   const type = event.type ?? "";
-  return type.startsWith("private_intent.") || type.startsWith("privateIntent.") || type.startsWith("private-intent.");
+  return type === "proof.event" || type.startsWith("private_intent.") || type.startsWith("privateIntent.") || type.startsWith("private-intent.");
 }
 
 export function privateIntentRealtimeToSnapshot(
@@ -367,8 +394,10 @@ function inferStepStatus(
       ? 2
       : normalized.includes("guard")
         ? 1
-        : normalized.includes("sealed") || normalized.includes("pending")
-          ? 0
+        : normalized.includes("accepted") || normalized.includes("submitted")
+          ? 1
+          : normalized.includes("sealed") || normalized.includes("pending")
+            ? 0
           : -1;
   const stepIndex = order.indexOf(stepId);
   if (activeIndex === -1) return "pending";
@@ -422,7 +451,7 @@ function guardStatus(value?: string): PrivateIntentGuardStatus {
 function stepStatus(value?: string): PrivateIntentStageStatus | undefined {
   const normalized = (value ?? "").toLowerCase();
   if (["pending", "queued"].includes(normalized)) return "pending";
-  if (["active", "running", "processing"].includes(normalized)) return "active";
+  if (["active", "running", "processing", "accepted", "submitted"].includes(normalized)) return "active";
   if (["complete", "completed", "approved", "settled"].includes(normalized)) return "complete";
   if (["failed", "rejected", "error"].includes(normalized)) return "failed";
   return undefined;

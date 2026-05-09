@@ -20,18 +20,17 @@ async function get<T>(path: string): Promise<T | null> {
 
 async function post<T>(path: string, body: unknown): Promise<T | null> {
   if (!API_BASE) return null;
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (res.status === 404 || res.status === 405) return null;
-    if (!res.ok) throw new Error(`${res.status}`);
-    return res.json() as Promise<T>;
-  } catch {
-    return null;
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 404 || res.status === 405) return null;
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Private intent API request failed: ${res.status}${detail ? ` ${detail}` : ''}`);
   }
+  return res.json() as Promise<T>;
 }
 
 export async function fetchVaults(): Promise<VaultView[] | null> {
@@ -64,15 +63,40 @@ export async function fetchNavHistory(configAddress: string): Promise<NavPoint[]
 
 export async function fetchPrivateIntentSnapshot(configAddress: string): Promise<PrivateIntentSnapshot | null> {
   const paths = [
-    `/private-intents/vaults/${encodeURIComponent(configAddress)}/snapshot`,
-    `/private-intents/vaults/${encodeURIComponent(configAddress)}`,
+    `/private/intents/vault/${encodeURIComponent(configAddress)}`,
     `/vaults/${encodeURIComponent(configAddress)}/private-intents`,
   ];
   for (const path of paths) {
     const data = await get<unknown>(path);
-    if (data) return normalizePrivateIntentSnapshot(data, configAddress);
+    if (data) return hydratePrivateIntentProofEvents(normalizePrivateIntentSnapshot(data, configAddress));
   }
   return null;
+}
+
+async function hydratePrivateIntentProofEvents(snapshot: PrivateIntentSnapshot): Promise<PrivateIntentSnapshot> {
+  const proofEvents = (
+    await Promise.all(
+      snapshot.activity.slice(0, 8).map(async (activity) => {
+        const data = await get<{ items: unknown[] }>(`/private/intents/${encodeURIComponent(activity.intentId)}/proof-events`);
+        return data?.items ?? [];
+      }),
+    )
+  ).flat();
+  if (!proofEvents.length) return snapshot;
+  return normalizePrivateIntentSnapshot(
+    {
+      vaultConfigPubkey: snapshot.vaultConfigPubkey,
+      guardStatus: snapshot.guardStatus,
+      guardLabel: snapshot.guardLabel,
+      pendingCount: snapshot.pendingCount,
+      approvedCount: snapshot.approvedCount,
+      rejectedCount: snapshot.rejectedCount,
+      latencyMs: snapshot.latencyMs,
+      activity: [...snapshot.activity, ...proofEvents],
+      proofTimeline: proofEvents,
+    },
+    snapshot.vaultConfigPubkey,
+  );
 }
 
 export async function submitPrivateIntent(request: SubmitPrivateIntentRequest): Promise<PrivateIntentSnapshot | null> {
@@ -93,9 +117,8 @@ export async function submitPrivateIntent(request: SubmitPrivateIntentRequest): 
     },
   };
   const paths = [
-    '/private-intents',
+    '/private/intents',
     '/private-intents/submit',
-    `/vaults/${encodeURIComponent(request.vaultConfigPubkey)}/private-intents`,
   ];
   for (const path of paths) {
     const data = await post<unknown>(path, body);

@@ -47,7 +47,7 @@ describe("private intent normalization", () => {
 
   it("converts realtime private-intent events into a mergeable snapshot and feed item", () => {
     const event = {
-      type: "private_intent.proof" as const,
+      type: "proof.event" as const,
       receivedAt: 1_700_000_100,
       item: {
         vaultConfigPubkey: "vault-1",
@@ -66,5 +66,17 @@ describe("private intent normalization", () => {
     expect(activity?.detail).toMatch(/settled/i);
     expect(merged.activity).toHaveLength(1);
     expect(merged.timeline.some((step) => step.status === "active" || step.status === "complete")).toBe(true);
+  });
+
+  it("treats accepted backend intents as sealed and guard-active", () => {
+    const snapshot = normalizePrivateIntentSnapshot({
+      intentId: "intent-accepted",
+      vaultConfigPubkey: "vault-1",
+      status: "accepted",
+      requestHash: "requesthash123",
+    }, "vault-1");
+
+    expect(snapshot.timeline[0]).toMatchObject({ id: "sealed", status: "complete" });
+    expect(snapshot.timeline[1]).toMatchObject({ id: "er-guard", status: "active" });
   });
 });

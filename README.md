@@ -75,12 +75,21 @@ cargo build-sbf
 solana program deploy target/deploy/Kiln_program.so
 ```
 
-### 4. Run the frontend
+### 4. Run the backend
+
+Private intent and MagicBlock ER submission are server-mediated. For a hosted/devnet ER demo, deploy or run `server-rs` first, then point the frontend at it with `VITE_KILN_API_BASE_URL`.
+
+```bash
+cd server-rs
+ARCADIA_STORE=memory ARCADIA_DEMO_MODE=true cargo run --release
+```
+
+### 5. Run the frontend
 
 ```bash
 # From repo root
 cp .env.example .env
-# Set VITE_RPC_URL to your devnet RPC endpoint
+# Set VITE_RPC_URL and VITE_KILN_API_BASE_URL to your devnet RPC/backend
 
 pnpm install
 pnpm --dir app dev
@@ -204,13 +213,16 @@ JUPITER_API_KEY=your_jupiter_key
 # Optional private-intent execution
 MAGICBLOCK_PRIVATE_ER_ENDPOINT=https://your-magicblock-executor.example
 MAGICBLOCK_AUTH_TOKEN=your_magicblock_token
+MAGICBLOCK_APP_ID=arcadia-kiln
 MAGICBLOCK_ER_RPC_URL=https://devnet-router.magicblock.app
 MAGICBLOCK_ER_VALIDATOR=
 MAGICBLOCK_ER_SKIP_PREFLIGHT=true
-MAGICBLOCK_ALLOW_LOCAL_FALLBACK=true
+MAGICBLOCK_ALLOW_LOCAL_FALLBACK=false
+MAGICBLOCK_EXECUTOR_TIMEOUT_MS=1500
 ```
 
 > **Never commit secrets.** Use environment variables or a secrets manager.
+> `MAGICBLOCK_ALLOW_LOCAL_FALLBACK=true` is for local demos/tests only; production ER deployments should keep it `false` so unavailable MagicBlock execution fails visibly.
 
 ---
 
@@ -243,7 +255,7 @@ Endpoints:
 | `POST /private/intents/{intentId}/proof-events` | Append lifecycle/proof transition |
 | `POST /private-intents/submit` | Legacy redacted private intent lifecycle demo route |
 
-MagicBlock boundary: Arcadia only delegates the private intent/session proof path to ER. Vault creation, custody, deposits, withdrawals, graduation, investor share accounting, and first-loss state remain on public Solana so investors can audit safety.
+MagicBlock boundary: Arcadia only delegates the private intent/session proof path to ER. Vault creation, custody, deposits, withdrawals, graduation, investor share accounting, and first-loss state remain on public Solana so investors can audit safety. The on-chain proof envelope is bound to the manager and vault config, but cryptographic ER attestation depends on a real MagicBlock executor endpoint; `local_fallback` is demo evidence only.
 
 ---
 

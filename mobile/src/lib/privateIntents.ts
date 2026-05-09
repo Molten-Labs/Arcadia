@@ -190,7 +190,7 @@ function guardStatus(value?: string): PrivateIntentSnapshot['guardStatus'] {
 function stage(value?: string): PrivateIntentStage | undefined {
   const normalized = (value ?? '').toLowerCase();
   if (['pending', 'queued'].includes(normalized)) return 'pending';
-  if (['active', 'running', 'processing'].includes(normalized)) return 'active';
+  if (['active', 'running', 'processing', 'accepted', 'submitted'].includes(normalized)) return 'active';
   if (['complete', 'completed', 'approved', 'settled'].includes(normalized)) return 'complete';
   if (['failed', 'rejected', 'error'].includes(normalized)) return 'failed';
   return undefined;

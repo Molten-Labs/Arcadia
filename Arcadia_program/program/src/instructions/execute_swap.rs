@@ -28,7 +28,7 @@ const MAX_JUPITER_CPI_ACCOUNTS: usize = 48;
 pub const MAGICBLOCK_PRIVATE_INTENT_VERSION: u8 = 1;
 pub const PRIVATE_INTENT_PROOF_KIND_ER: u16 = 1;
 pub const PRIVATE_INTENT_SESSION_MAGIC: [u8; 4] = *b"MBER";
-pub const PRIVATE_INTENT_SESSION_LEN: usize = 152;
+pub const PRIVATE_INTENT_SESSION_LEN: usize = 216;
 
 pub(crate) const JUPITER_PROGRAM_ID: Pubkey =
     pinocchio_pubkey::pubkey!("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
@@ -40,8 +40,8 @@ pub struct ExecuteSwapArgs {
     pub minimum_amount_out: u64,
 }
 
-/// Opt-in MagicBlock ER proof envelope. It is parsed, guarded, and logged
-/// without being persisted so existing vault and custody accounts do not move.
+/// Opt-in MagicBlock ER proof envelope. It is bound to the manager and vault,
+/// then guarded and logged without moving vault or custody accounts to ER.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PrivateIntentSession<'a> {
     pub version: u8,
@@ -51,6 +51,8 @@ pub struct PrivateIntentSession<'a> {
     pub intent_commitment: &'a [u8; 32],
     pub proof_hash: &'a [u8; 32],
     pub er_state_root: &'a [u8; 32],
+    pub manager_pubkey: &'a [u8; 32],
+    pub vault_config_pubkey: &'a [u8; 32],
     pub max_in_amount: u64,
     pub expires_at: i64,
 }
@@ -127,7 +129,13 @@ fn execute_guard_only_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResu
     let config = VaultConfig::load(vault_config)?;
     let clock = Clock::from_account_info(clock_sysvar)?;
     if let Some(session) = parsed_args.private_intent_session {
-        validate_private_intent_session(&session, args.in_amount, clock.unix_timestamp)?;
+        validate_private_intent_session(
+            &session,
+            manager.key(),
+            vault_config.key(),
+            args.in_amount,
+            clock.unix_timestamp,
+        )?;
         log_private_intent_session(
             "guard_pre",
             &session,
@@ -346,7 +354,13 @@ fn execute_jupiter_swap(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult 
         super::custody::wsol_value_usdc(args.in_amount, sol_price.price, usdc_price.price)?
     };
     if let Some(session) = args.private_intent_session {
-        validate_private_intent_session(&session, args.in_amount, clock.unix_timestamp)?;
+        validate_private_intent_session(
+            &session,
+            manager.key(),
+            vault_config.key(),
+            args.in_amount,
+            clock.unix_timestamp,
+        )?;
         log_private_intent_session(
             "jupiter_pre",
             &session,
@@ -613,13 +627,22 @@ pub fn parse_private_intent_session(data: &[u8]) -> Result<PrivateIntentSession<
     {
         return Err(KilnError::InvalidPrivateIntentSession.into());
     }
+    let manager_pubkey: &[u8; 32] = data[136..168]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    let vault_config_pubkey: &[u8; 32] = data[168..200]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    if is_zero_32(manager_pubkey) || is_zero_32(vault_config_pubkey) {
+        return Err(KilnError::InvalidPrivateIntentSession.into());
+    }
     let max_in_amount = u64::from_le_bytes(
-        data[136..144]
+        data[200..208]
             .try_into()
             .map_err(|_| ProgramError::InvalidInstructionData)?,
     );
     let expires_at = i64::from_le_bytes(
-        data[144..152]
+        data[208..216]
             .try_into()
             .map_err(|_| ProgramError::InvalidInstructionData)?,
     );
@@ -634,6 +657,8 @@ pub fn parse_private_intent_session(data: &[u8]) -> Result<PrivateIntentSession<
         intent_commitment,
         proof_hash,
         er_state_root,
+        manager_pubkey,
+        vault_config_pubkey,
         max_in_amount,
         expires_at,
     })
@@ -641,9 +666,16 @@ pub fn parse_private_intent_session(data: &[u8]) -> Result<PrivateIntentSession<
 
 pub fn validate_private_intent_session(
     session: &PrivateIntentSession<'_>,
+    manager_pubkey: &Pubkey,
+    vault_config_pubkey: &Pubkey,
     in_amount: u64,
     now: i64,
 ) -> ProgramResult {
+    if session.manager_pubkey != manager_pubkey
+        || session.vault_config_pubkey != vault_config_pubkey
+    {
+        return Err(KilnError::InvalidPrivateIntentSession.into());
+    }
     if now > session.expires_at {
         return Err(KilnError::PrivateIntentExpired.into());
     }
@@ -692,6 +724,10 @@ fn log_private_intent_session(
     logger.append(first_u64(session.proof_hash));
     logger.append(" er_root=");
     logger.append(first_u64(session.er_state_root));
+    logger.append(" manager=");
+    logger.append(first_u64(session.manager_pubkey));
+    logger.append(" vault=");
+    logger.append(first_u64(session.vault_config_pubkey));
     logger.append(" in=");
     logger.append(in_amount);
     logger.append(" guard=");
