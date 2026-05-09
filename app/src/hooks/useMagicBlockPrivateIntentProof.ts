@@ -20,9 +20,11 @@ import {
   getMagicBlockEnvStatus,
   privateErConnection,
   readOwnerProof,
+  requestMagicBlockTeeAuth,
   type MagicBlockPhase,
   type MagicBlockPhaseId,
   type MagicBlockPrivateIntentPlan,
+  type MagicBlockTeeAuthSession,
 } from "@/lib/solana/magicblockPrivateIntent";
 import {
   recordPrivateIntentOnchainProof,
@@ -40,6 +42,7 @@ interface RunRealMagicBlockIntentParams {
 
 interface RealMagicBlockProofResult {
   plan: MagicBlockPrivateIntentPlan;
+  teeAuth: MagicBlockTeeAuthSession;
   intentId?: string;
   signatures: {
     init: string;
@@ -61,7 +64,7 @@ interface RealMagicBlockProofResult {
 
 export function useMagicBlockPrivateIntentProof() {
   const { connection } = useWallet();
-  const { publicKey, sendTransaction } = useSolanaWallet();
+  const { publicKey, sendTransaction, signMessage } = useSolanaWallet();
   const queryClient = useQueryClient();
   const envStatus = useMemo(() => getMagicBlockEnvStatus(), []);
   const [phases, setPhases] = useState<MagicBlockPhase[]>(MAGICBLOCK_PHASES);
@@ -97,6 +100,14 @@ export function useMagicBlockPrivateIntentProof() {
 
     try {
       const vaultConfig = new PublicKey(params.vaultConfigPubkey);
+      markPhase("init-session", {
+        status: "active",
+        detail: "Verifying MagicBlock TEE integrity and requesting a wallet-signed auth token.",
+      });
+      const teeAuth = await requestMagicBlockTeeAuth({
+        publicKey,
+        signMessage,
+      });
       const plan = await buildMagicBlockPrivateIntentPlan({
         manager: publicKey,
         vaultConfig,
@@ -104,8 +115,8 @@ export function useMagicBlockPrivateIntentProof() {
         side: params.side ?? "USDC_TO_WSOL",
         maxSlippageBps: params.maxSlippageBps,
         outcome: params.outcome,
-      });
-      const erConnection = privateErConnection();
+      }, teeAuth);
+      const erConnection = privateErConnection(teeAuth);
       const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 15 * 60);
 
       const sessionBefore = await readOwnerProof(connection, plan.sessionPda);
@@ -256,7 +267,7 @@ export function useMagicBlockPrivateIntentProof() {
       }
       queryClient.invalidateQueries({ queryKey: ["private-intent-vault", params.vaultConfigPubkey] });
 
-      const result = { plan, intentId, signatures, accountOwners, snapshot };
+      const result = { plan, teeAuth, intentId, signatures, accountOwners, snapshot };
       setLastResult(result);
       toast.success("Real MagicBlock proof flow completed", {
         description:
@@ -276,7 +287,7 @@ export function useMagicBlockPrivateIntentProof() {
     } finally {
       setRunning(false);
     }
-  }, [connection, envStatus, markPhase, publicKey, queryClient, sendTransaction]);
+  }, [connection, envStatus, markPhase, publicKey, queryClient, sendTransaction, signMessage]);
 
   return {
     envStatus,

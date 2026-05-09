@@ -6,6 +6,10 @@ import {
   SystemProgram,
   TransactionInstruction,
 } from "@solana/web3.js";
+import {
+  getAuthToken,
+  verifyTeeRpcIntegrity,
+} from "@magicblock-labs/ephemeral-rollups-sdk/privacy";
 import { Buffer } from "buffer";
 import {
   MAGICBLOCK_DELEGATION_PROGRAM_ID,
@@ -77,6 +81,14 @@ export interface MagicBlockEnvStatus {
   delegationProgram: string;
 }
 
+export interface MagicBlockTeeAuthSession {
+  token: string;
+  connectionUrl: string;
+  integrityVerified: boolean;
+  source: "wallet-challenge" | "env-token";
+  issuedAt: number;
+}
+
 export interface RealMagicBlockIntentInput {
   manager: PublicKey;
   vaultConfig: PublicKey;
@@ -141,7 +153,6 @@ const PRIVATE_INTENT_SETTLEMENT_FAILED = 3;
 export function getMagicBlockEnvStatus(): MagicBlockEnvStatus {
   const missing: string[] = [];
   if (!MAGICBLOCK_TEE_RPC_URL) missing.push("VITE_MAGICBLOCK_TEE_RPC_URL");
-  if (!MAGICBLOCK_TEE_AUTH_TOKEN) missing.push("VITE_MAGICBLOCK_TEE_AUTH_TOKEN");
   if (!MAGICBLOCK_ER_RPC_URL) missing.push("VITE_MAGICBLOCK_ER_RPC_URL");
 
   return {
@@ -155,13 +166,58 @@ export function getMagicBlockEnvStatus(): MagicBlockEnvStatus {
   };
 }
 
-export function getPrivateErConnectionUrl(): string {
-  const separator = MAGICBLOCK_TEE_RPC_URL.includes("?") ? "&" : "?";
-  return `${MAGICBLOCK_TEE_RPC_URL}${separator}token=${encodeURIComponent(MAGICBLOCK_TEE_AUTH_TOKEN)}`;
+export function privateErConnection(auth: MagicBlockTeeAuthSession): Connection {
+  return new Connection(auth.connectionUrl, "confirmed");
+}
+
+export async function requestMagicBlockTeeAuth(input: {
+  publicKey: PublicKey;
+  signMessage?: (message: Uint8Array) => Promise<Uint8Array>;
+}): Promise<MagicBlockTeeAuthSession> {
+  if (!MAGICBLOCK_TEE_RPC_URL) {
+    throw new Error("VITE_MAGICBLOCK_TEE_RPC_URL is required for MagicBlock PER.");
+  }
+
+  if (MAGICBLOCK_TEE_AUTH_TOKEN) {
+    return {
+      token: MAGICBLOCK_TEE_AUTH_TOKEN,
+      connectionUrl: withTeeAuthToken(MAGICBLOCK_TEE_RPC_URL, MAGICBLOCK_TEE_AUTH_TOKEN),
+      integrityVerified: false,
+      source: "env-token",
+      issuedAt: Date.now(),
+    };
+  }
+
+  if (!input.signMessage) {
+    throw new Error(
+      "This wallet does not expose signMessage, so Arcadia cannot request a MagicBlock TEE auth token. Use Phantom/Solflare with message signing enabled.",
+    );
+  }
+
+  const integrityVerified = await verifyTeeRpcIntegrity(MAGICBLOCK_TEE_RPC_URL);
+  if (!integrityVerified) {
+    throw new Error("MagicBlock TEE integrity verification failed. Refusing to use the private ER endpoint.");
+  }
+
+  const authToken = await getAuthToken(
+    MAGICBLOCK_TEE_RPC_URL,
+    input.publicKey,
+    input.signMessage,
+  );
+  const token = normalizeTeeAuthToken(authToken);
+
+  return {
+    token,
+    connectionUrl: withTeeAuthToken(MAGICBLOCK_TEE_RPC_URL, token),
+    integrityVerified,
+    source: "wallet-challenge",
+    issuedAt: Date.now(),
+  };
 }
 
 export async function buildMagicBlockPrivateIntentPlan(
   input: RealMagicBlockIntentInput,
+  auth: MagicBlockTeeAuthSession,
 ): Promise<MagicBlockPrivateIntentPlan> {
   const rejected = input.outcome === "rejected";
   const nonce = cryptoRandomBytes(16);
@@ -208,7 +264,7 @@ export async function buildMagicBlockPrivateIntentPlan(
     intentCommitment,
     proofHash,
     erStateRoot,
-    teeRpcUrl: getPrivateErConnectionUrl(),
+    teeRpcUrl: auth.connectionUrl,
     erRpcUrl: MAGICBLOCK_ER_RPC_URL,
     validator: MAGICBLOCK_DEVNET_TEE_VALIDATOR,
     explorerCluster: "devnet",
@@ -217,10 +273,6 @@ export async function buildMagicBlockPrivateIntentPlan(
     juniorDeltaUsdc: rejected ? 0 : -Number(input.amountUsdcUnits) / 1e6,
     seniorDeltaUsdc: 0,
   };
-}
-
-export function privateErConnection(): Connection {
-  return new Connection(getPrivateErConnectionUrl(), "confirmed");
 }
 
 export function buildInitPrivateIntentSessionIx(
@@ -375,6 +427,25 @@ function buildMagicBlockCommitIx(
     ],
     data: Buffer.from([discriminator]),
   });
+}
+
+function normalizeTeeAuthToken(authToken: unknown): string {
+  if (typeof authToken === "string" && authToken.length > 0) return authToken;
+  if (
+    authToken &&
+    typeof authToken === "object" &&
+    "token" in authToken &&
+    typeof authToken.token === "string" &&
+    authToken.token.length > 0
+  ) {
+    return authToken.token;
+  }
+  throw new Error("MagicBlock returned an empty TEE auth token.");
+}
+
+function withTeeAuthToken(teeRpcUrl: string, token: string): string {
+  const separator = teeRpcUrl.includes("?") ? "&" : "?";
+  return `${teeRpcUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
 async function sha256Json(value: unknown): Promise<Buffer> {

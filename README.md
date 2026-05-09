@@ -202,6 +202,7 @@ VITE_RPC_URL=https://api.devnet.solana.com
 VITE_KILN_API_BASE_URL=http://localhost:8080
 VITE_MAGICBLOCK_ER_RPC_URL=https://devnet-router.magicblock.app
 VITE_MAGICBLOCK_TEE_RPC_URL=https://devnet-tee.magicblock.app
+# Optional fallback only. The app normally gets this at runtime via wallet signMessage.
 VITE_MAGICBLOCK_TEE_AUTH_TOKEN=your_short_lived_tee_token
 VITE_MAGICBLOCK_ER_VALIDATOR=MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo
 
