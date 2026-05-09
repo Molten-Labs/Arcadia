@@ -34,33 +34,37 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Step = "role" | "wallet" | "connecting" | "success" | "error";
 
-const wallets = [
+const WALLETS = [
     {
         name: "Phantom",
         tone: "bg-primary/12 text-primary ring-1 ring-primary/25",
-        detected: true,
         recommended: true,
+        demo: false,
     },
     {
         name: "Solflare",
         tone: "bg-warning/12 text-warning ring-1 ring-warning/25",
-        detected: true,
         recommended: false,
-    },
-    {
-        name: "Backpack",
-        tone: "bg-destructive/12 text-destructive ring-1 ring-destructive/25",
-        detected: false,
-        recommended: false,
+        demo: false,
     },
     {
         name: "Demo Wallet",
-        tone: "bg-primary/12 text-primary ring-1 ring-primary/25",
-        detected: true,
+        tone: "bg-secondary text-muted-foreground ring-1 ring-border",
         recommended: false,
         demo: true,
     },
 ];
+
+function detectWallet(name: string): boolean {
+    if (typeof window === "undefined") return false;
+    const w = window as Record<string, unknown>;
+    if (name === "Phantom")
+        return Boolean(
+            (w.phantom as Record<string, unknown> | undefined)?.solana,
+        );
+    if (name === "Solflare") return Boolean(w.solflare);
+    return true; // Demo Wallet always available
+}
 
 export const ConnectModal = ({
     open,
@@ -122,21 +126,31 @@ export const ConnectModal = ({
         setError(null);
     };
 
-    const handleConnect = async (name: string) => {
+    // Watch for real wallet connection completing (Phantom / Solflare popup approved)
+    useEffect(() => {
+        if (step === "connecting" && chosenWallet && chosenWallet !== "Demo Wallet" && connected) {
+            if (chosenRole) setRole(chosenRole);
+            setStep("success");
+            toast.success(`Connected with ${chosenWallet}`, {
+                description: "Devnet · live wallet",
+            });
+        }
+    }, [connected, step, chosenWallet]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleConnect = (name: string) => {
         setChosenWallet(name);
         setStep("connecting");
         setError(null);
         try {
-            if (name === "Backpack")
-                throw new Error(
-                    "Backpack is not available in this demo environment. Choose Phantom, Solflare, or Demo Wallet to continue.",
-                );
-            await connect(name);
-            if (chosenRole) setRole(chosenRole);
-            setStep("success");
-            toast.success(`Connected with ${name}`, {
-                description: "Deterministic demo session · Devnet",
-            });
+            connect(name); // sync for Demo Wallet; triggers select+pendingConnect for real wallets
+            if (name === "Demo Wallet") {
+                if (chosenRole) setRole(chosenRole);
+                setStep("success");
+                toast.success("Connected with Demo Wallet", {
+                    description: "Deterministic demo session · Devnet",
+                });
+            }
+            // Real wallets: the useEffect above transitions to "success" once connected === true
         } catch (e) {
             setError(e instanceof Error ? e.message : "Connection failed");
             setStep("error");
@@ -230,50 +244,55 @@ export const ConnectModal = ({
                                     <DialogDescription className="flex items-center gap-2 flex-wrap">
                                         Continuing as <Pill>{chosenRole}</Pill>{" "}
                                         on <Pill icon={Globe}>devnet</Pill>.
-                                        Connections are deterministic demo
-                                        sessions in this build.
+                                        Use your real Phantom or Solflare wallet,
+                                        or try the demo session.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-2 mt-4">
-                                    {wallets.map((w) => (
-                                        <button
-                                            key={w.name}
-                                            onClick={() =>
-                                                handleConnect(w.name)
-                                            }
-                                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left group"
-                                        >
-                                            <div
-                                                className={`w-10 h-10 rounded-lg ${w.tone} flex items-center justify-center shrink-0`}
+                                    {WALLETS.map((w) => {
+                                        const detected = detectWallet(w.name);
+                                        return (
+                                            <button
+                                                key={w.name}
+                                                onClick={() =>
+                                                    handleConnect(w.name)
+                                                }
+                                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left group"
                                             >
-                                                <Wallet className="w-5 h-5" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-medium flex items-center gap-2">
-                                                    {w.name}
-                                                    {w.recommended && (
-                                                        <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
-                                                            Recommended
-                                                        </span>
-                                                    )}
-                                                    {w.demo && (
-                                                        <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-info/15 text-info">
-                                                            Demo
-                                                        </span>
-                                                    )}
+                                                <div
+                                                    className={`w-10 h-10 rounded-lg ${w.tone} flex items-center justify-center shrink-0`}
+                                                >
+                                                    <Wallet className="w-5 h-5" />
                                                 </div>
-                                                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                                    <span
-                                                        className={`w-1.5 h-1.5 rounded-full ${w.detected ? "bg-success" : "bg-muted-foreground/40"}`}
-                                                    />
-                                                    {w.detected
-                                                        ? "Demo adapter available"
-                                                        : "Not available in demo"}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium flex items-center gap-2">
+                                                        {w.name}
+                                                        {w.recommended && (
+                                                            <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
+                                                                Recommended
+                                                            </span>
+                                                        )}
+                                                        {w.demo && (
+                                                            <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                                                                Demo
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                                        <span
+                                                            className={`w-1.5 h-1.5 rounded-full ${detected ? "bg-success" : "bg-muted-foreground/40"}`}
+                                                        />
+                                                        {w.demo
+                                                            ? "Always available · no extension needed"
+                                                            : detected
+                                                              ? "Extension detected"
+                                                              : "Not installed — get it at " + (w.name === "Phantom" ? "phantom.app" : "solflare.com")}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-[color,transform]" />
-                                        </button>
-                                    ))}
+                                                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-[color,transform]" />
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                                 <div className="flex gap-2 mt-5">
                                     <SecondaryButton
@@ -283,10 +302,9 @@ export const ConnectModal = ({
                                     </SecondaryButton>
                                 </div>
                                 <InfoNote>
-                                    Arcadia never custodies funds. This build uses
-                                    transparent demo wallet sessions until a
-                                    production Solana wallet adapter is
-                                    connected.
+                                    Arcadia never custodies funds. Phantom and
+                                    Solflare connect directly to your browser
+                                    extension — no keys are shared with this app.
                                 </InfoNote>
                             </motion.div>
                         )}
@@ -307,13 +325,23 @@ export const ConnectModal = ({
                                     Connecting to {chosenWallet}
                                 </DialogTitle>
                                 <DialogDescription className="mt-2">
-                                    Creating a deterministic {chosenWallet}{" "}
-                                    session for this preview…
+                                    {chosenWallet === "Demo Wallet"
+                                        ? "Creating a deterministic demo session…"
+                                        : `Approve the connection request in your ${chosenWallet} extension.`}
                                 </DialogDescription>
                                 <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                     <Globe className="w-3 h-3" /> devnet ·{" "}
                                     {chosenRole}
                                 </div>
+                                {chosenWallet !== "Demo Wallet" && (
+                                    <div className="mt-4 flex justify-center">
+                                        <SecondaryButton
+                                            onClick={() => setStep("wallet")}
+                                        >
+                                            Cancel
+                                        </SecondaryButton>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
@@ -368,8 +396,10 @@ export const ConnectModal = ({
                                         You're signed in
                                         {walletName
                                             ? ` with ${walletName}`
-                                            : ""}{" "}
-                                        using a deterministic demo session.
+                                            : ""}
+                                        {walletName === "Demo Wallet"
+                                            ? " using a deterministic demo session."
+                                            : " · live wallet on devnet."}
                                     </DialogDescription>
                                 </div>
 
@@ -616,7 +646,7 @@ const RoleCard = ({
     </button>
 );
 
-const NetworkCard = ({
+const _NetworkCard_UNUSED = ({
     name,
     badge,
     badgeTone,

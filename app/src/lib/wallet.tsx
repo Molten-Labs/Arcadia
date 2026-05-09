@@ -20,6 +20,7 @@ import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
+import type { WalletName } from "@solana/wallet-adapter-base";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { RPC_URL } from "./solana/constants";
 
@@ -61,9 +62,17 @@ const KilnWalletContext = createContext<KilnWalletState>(defaultState);
 const PREFS_KEY = "kiln.wallet.prefs";
 
 function KilnWalletInner({ children }: { children: ReactNode }) {
-  const { connected, publicKey, wallet, disconnect: solDisconnect } = useSolanaWallet();
+  const {
+    connected,
+    publicKey,
+    wallet,
+    disconnect: solDisconnect,
+    select,
+    connect: solConnect,
+  } = useSolanaWallet();
   const { connection } = useConnection();
   const [demoWalletName, setDemoWalletName] = useState<string | null>(null);
+  const [pendingConnect, setPendingConnect] = useState(false);
 
   const stored = useMemo(() => {
     try {
@@ -75,11 +84,20 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   }, []);
 
   const [role, setRole] = useState<Role>(stored?.role ?? "investor");
-  const [network, setNetwork] = useState<Network>(stored?.network ?? "devnet");
 
   useEffect(() => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ role, network }));
-  }, [role, network]);
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ role }));
+  }, [role]);
+
+  // After select() updates the wallet state, trigger the real connect()
+  useEffect(() => {
+    if (pendingConnect && wallet && !connected) {
+      setPendingConnect(false);
+      solConnect().catch(() => {
+        // User cancelled or wallet not available — silent, ConnectModal handles UI
+      });
+    }
+  }, [pendingConnect, wallet, connected, solConnect]);
 
   const demoAddress = "Dnaz9wQvYpyh1LqL7AxnSmpuPjZLk6xrKfB3cXvjCXVj";
   const isConnected = connected || Boolean(demoWalletName);
@@ -91,20 +109,26 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
       address,
       publicKey: publicKey ?? null,
       role,
-      network,
+      network: "devnet",
       walletName: wallet?.adapter.name ?? demoWalletName,
       connection,
       connect: (name?: string) => {
-        setDemoWalletName(name ?? "Demo Wallet");
+        if (!name || name === "Demo Wallet") {
+          setDemoWalletName(name ?? "Demo Wallet");
+          return;
+        }
+        setDemoWalletName(null);
+        select(name as WalletName);
+        setPendingConnect(true);
       },
       disconnect: () => {
         setDemoWalletName(null);
         solDisconnect();
       },
       setRole,
-      setNetwork,
+      setNetwork: () => {},
     }),
-    [isConnected, address, publicKey, role, network, wallet, demoWalletName, connection, solDisconnect]
+    [isConnected, address, publicKey, role, wallet, demoWalletName, connection, solDisconnect, select]
   );
 
   return (
