@@ -15,11 +15,13 @@ use std::{
     collections::{HashMap, HashSet},
     env,
     net::SocketAddr,
+    path::Path as FsPath,
     sync::{Arc, Mutex},
     time::{SystemTime, UNIX_EPOCH},
 };
 use thiserror::Error;
 use tokio::{
+    process::Command,
     sync::broadcast,
     time::{interval, sleep, Duration},
 };
@@ -37,9 +39,21 @@ struct AppState {
     jupiter_swap_base_url: String,
     demo_mode: bool,
     surfpool_mode: bool,
+    devnet_faucet: DevnetFaucetConfig,
+    faucet_claims: Arc<Mutex<HashMap<String, i64>>>,
     quote_cache: Arc<Mutex<HashMap<String, CachedQuote>>>,
     demo_story: Arc<Mutex<DemoStoryState>>,
     realtime: RealtimeHub,
+}
+
+#[derive(Clone)]
+struct DevnetFaucetConfig {
+    enabled: bool,
+    mint: String,
+    authority_keypair: String,
+    amount_ui: String,
+    rpc_url: String,
+    cooldown_secs: i64,
 }
 
 #[derive(Clone)]
@@ -598,6 +612,7 @@ async fn main() -> anyhow::Result<()> {
     let surfpool_mode = env::var("ARCADIA_SURFPOOL_MODE")
         .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
+    let devnet_faucet = devnet_faucet_config_from_env();
 
     let store = if memory_store {
         info!("starting server-rs with in-memory demo store");
@@ -626,6 +641,8 @@ async fn main() -> anyhow::Result<()> {
         jupiter_swap_base_url,
         demo_mode,
         surfpool_mode,
+        devnet_faucet,
+        faucet_claims: Arc::new(Mutex::new(HashMap::new())),
         quote_cache: Arc::new(Mutex::new(HashMap::new())),
         demo_story: Arc::new(Mutex::new(DemoStoryState::default())),
         realtime: RealtimeHub::new(),
@@ -661,6 +678,7 @@ fn build_app(state: AppState) -> Router {
         .route("/managers", get(list_managers_handler))
         .route("/managers/:address", get(get_manager_handler))
         .route("/positions/:wallet", get(positions_handler))
+        .route("/devnet/faucet/usdc", post(devnet_usdc_faucet_handler))
         .route("/jupiter/quote", get(jupiter_quote_handler))
         .route(
             "/jupiter/swap-instructions",
@@ -710,6 +728,203 @@ fn build_app(state: AppState) -> Router {
         )
         .layer(cors)
         .with_state(Arc::new(state))
+}
+
+fn devnet_faucet_config_from_env() -> DevnetFaucetConfig {
+    DevnetFaucetConfig {
+        enabled: env::var("ARCADIA_DEVNET_FAUCET_ENABLED")
+            .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+            .unwrap_or(false),
+        mint: env::var("ARCADIA_DEVNET_USDC_MINT")
+            .unwrap_or_else(|_| "DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz".to_string()),
+        authority_keypair: env::var("ARCADIA_DEVNET_USDC_MINT_AUTHORITY")
+            .or_else(|_| env::var("SOLANA_KEYPAIR"))
+            .unwrap_or_else(|_| {
+                let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
+                format!("{home}/.config/solana/id.json")
+            }),
+        amount_ui: env::var("ARCADIA_DEVNET_FAUCET_AMOUNT")
+            .unwrap_or_else(|_| "100000".to_string()),
+        rpc_url: env::var("ARCADIA_DEVNET_RPC_URL")
+            .or_else(|_| env::var("VITE_RPC_URL"))
+            .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string()),
+        cooldown_secs: env::var("ARCADIA_DEVNET_FAUCET_COOLDOWN_SECS")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(60),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DevnetUsdcFaucetRequest {
+    wallet: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DevnetUsdcFaucetResponse {
+    ok: bool,
+    mint: String,
+    wallet: String,
+    amount_ui: String,
+    signature: String,
+}
+
+async fn devnet_usdc_faucet_handler(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<DevnetUsdcFaucetRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let config = state.devnet_faucet.clone();
+    if !config.enabled {
+        return Err(AppError::ServiceUnavailable(
+            "Arcadia devnet USDC faucet is not enabled on this server".to_string(),
+        ));
+    }
+
+    let wallet = request.wallet.trim().to_string();
+    if !is_base58_pubkey_like(&wallet) {
+        return Err(AppError::BadRequest(
+            "invalid Solana wallet address".to_string(),
+        ));
+    }
+    if !is_positive_ui_amount(&config.amount_ui) {
+        return Err(AppError::ServiceUnavailable(
+            "invalid faucet amount configuration".to_string(),
+        ));
+    }
+    if !is_base58_pubkey_like(&config.mint) {
+        return Err(AppError::ServiceUnavailable(
+            "invalid faucet mint configuration".to_string(),
+        ));
+    }
+    if !FsPath::new(&config.authority_keypair).exists() {
+        return Err(AppError::ServiceUnavailable(
+            "devnet USDC mint authority keypair is not available on this server".to_string(),
+        ));
+    }
+
+    let now = now_ts();
+    {
+        let claims = state
+            .faucet_claims
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
+        if let Some(last_claim_at) = claims.get(&wallet) {
+            let retry_after = config.cooldown_secs - (now - *last_claim_at);
+            if retry_after > 0 {
+                return Err(AppError::BadRequest(format!(
+                    "demo USDC already requested; try again in {retry_after}s"
+                )));
+            }
+        }
+    }
+
+    let output = Command::new("spl-token")
+        .args([
+            "transfer",
+            "--fund-recipient",
+            "--url",
+            config.rpc_url.as_str(),
+            "--fee-payer",
+            config.authority_keypair.as_str(),
+            "--owner",
+            config.authority_keypair.as_str(),
+            "--output",
+            "json",
+            config.mint.as_str(),
+            config.amount_ui.as_str(),
+            wallet.as_str(),
+        ])
+        .output()
+        .await
+        .map_err(|error| {
+            AppError::ServiceUnavailable(format!("spl-token is unavailable: {error}"))
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let detail = first_non_empty_line(&stderr)
+            .or_else(|| first_non_empty_line(&stdout))
+            .unwrap_or_else(|| "spl-token transfer failed".to_string());
+        return Err(AppError::Upstream(format!(
+            "devnet USDC faucet failed: {detail}"
+        )));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let signature = extract_cli_signature(&stdout).ok_or_else(|| {
+        AppError::Upstream("devnet USDC faucet submitted but no signature was returned".to_string())
+    })?;
+
+    {
+        let mut claims = state
+            .faucet_claims
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
+        claims.insert(wallet.clone(), now);
+    }
+
+    Ok(Json(DevnetUsdcFaucetResponse {
+        ok: true,
+        mint: config.mint,
+        wallet,
+        amount_ui: config.amount_ui,
+        signature,
+    }))
+}
+
+fn is_positive_ui_amount(value: &str) -> bool {
+    value
+        .parse::<f64>()
+        .map(|amount| amount.is_finite() && amount > 0.0)
+        .unwrap_or(false)
+}
+
+fn is_base58_pubkey_like(value: &str) -> bool {
+    const BASE58: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    (32..=44).contains(&value.len()) && value.chars().all(|ch| BASE58.contains(ch))
+}
+
+fn first_non_empty_line(value: &str) -> Option<String> {
+    value
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(ToString::to_string)
+}
+
+fn extract_cli_signature(stdout: &str) -> Option<String> {
+    let parsed = serde_json::from_str::<Value>(stdout).ok()?;
+    find_signature_value(&parsed)
+}
+
+fn find_signature_value(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) if is_signature_like(text) => Some(text.clone()),
+        Value::Array(items) => items.iter().find_map(find_signature_value),
+        Value::Object(map) => {
+            for key in ["signature", "transactionSignature", "txSignature"] {
+                if let Some(Value::String(signature)) = map.get(key) {
+                    if is_signature_like(signature) {
+                        return Some(signature.clone());
+                    }
+                }
+            }
+            map.values().find_map(find_signature_value)
+        }
+        _ => None,
+    }
+}
+
+fn is_signature_like(value: &str) -> bool {
+    (64..=96).contains(&value.len()) && is_base58_chars(value)
+}
+
+fn is_base58_chars(value: &str) -> bool {
+    const BASE58: &str = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    value.chars().all(|ch| BASE58.contains(ch))
 }
 
 async fn health_handler(
@@ -2002,7 +2217,10 @@ impl AppState {
     }
 
     fn demo_story_snapshot(&self) -> Result<DemoStorySnapshot, AppError> {
-        let story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let story = self
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         Ok(DemoStorySnapshot {
             running: story.running,
             active_step: story.active_step.clone(),
@@ -2012,15 +2230,23 @@ impl AppState {
     }
 
     fn reset_demo_story(&self) -> Result<(), AppError> {
-        let mut story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let mut story = self
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         *story = DemoStoryState::default();
         Ok(())
     }
 
     fn start_demo_story(&self) -> Result<(), AppError> {
-        let mut story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let mut story = self
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         if story.running {
-            return Err(AppError::BadRequest("demo story already running".to_string()));
+            return Err(AppError::BadRequest(
+                "demo story already running".to_string(),
+            ));
         }
         story.running = true;
         story.stop_requested = false;
@@ -2031,7 +2257,10 @@ impl AppState {
     }
 
     fn finish_demo_story(&self, completed_step: Option<&str>) -> Result<(), AppError> {
-        let mut story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let mut story = self
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         if let Some(step) = completed_step {
             if !story.completed_steps.iter().any(|id| id == step) {
                 story.completed_steps.push(step.to_string());
@@ -2044,7 +2273,10 @@ impl AppState {
     }
 
     fn stop_demo_story(&self) -> Result<(), AppError> {
-        let mut story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let mut story = self
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         story.stop_requested = true;
         story.running = false;
         story.active_step = None;
@@ -2052,13 +2284,19 @@ impl AppState {
     }
 
     fn should_stop_demo_story(&self) -> Result<bool, AppError> {
-        let story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let story = self
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         Ok(story.stop_requested)
     }
 
     fn publish_story_event(&self, event: DemoStepEvent, completed: bool) -> Result<(), AppError> {
         {
-            let mut story = self.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+            let mut story = self
+                .demo_story
+                .lock()
+                .map_err(|_| AppError::StatePoisoned)?;
             story.last_step = Some(event.clone());
             match event.stage.as_str() {
                 "active" => story.active_step = Some(event.id.clone()),
@@ -2216,7 +2454,8 @@ fn demo_story_steps() -> Vec<DemoStoryStep> {
         DemoStoryStep {
             id: "story-complete",
             label: "Demo complete",
-            summary: "The full lifecycle proves reputation, earnings, loss priority, and withdrawals.",
+            summary:
+                "The full lifecycle proves reputation, earnings, loss priority, and withdrawals.",
             actor: "protocol",
             metric: Some("Recording ready"),
             action: DemoStoryAction::None,
@@ -2231,7 +2470,10 @@ async fn run_demo_story_sequence(state: Arc<AppState>, fast: bool) -> Result<(),
     }
     state.reset_demo().await?;
     {
-        let mut story = state.demo_story.lock().map_err(|_| AppError::StatePoisoned)?;
+        let mut story = state
+            .demo_story
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
         story.running = true;
         story.stop_requested = false;
         story.active_step = None;
@@ -2802,7 +3044,11 @@ fn surfpool_market_payload(step: SurfpoolMarketStep) -> (&'static str, Value, Ve
                 Some(demo_position(80_000.0, 80_000.0, now)),
                 Some(demo_nav(101_200.0, 21_200.0, 80_000.0, now)),
                 None,
-                Some(demo_status("active", "Performance fee claimed above HWM", now)),
+                Some(demo_status(
+                    "active",
+                    "Performance fee claimed above HWM",
+                    now,
+                )),
             )
         }
         SurfpoolMarketStep::InvestorWithdrawHealthy => {
@@ -2840,7 +3086,11 @@ fn surfpool_market_payload(step: SurfpoolMarketStep) -> (&'static str, Value, Ve
                 Some(demo_position(70_000.0, 70_000.0, now)),
                 Some(demo_nav(91_200.0, 21_200.0, 70_000.0, now)),
                 None,
-                Some(demo_status("active", "Investor withdrew without trader approval", now)),
+                Some(demo_status(
+                    "active",
+                    "Investor withdrew without trader approval",
+                    now,
+                )),
             )
         }
         SurfpoolMarketStep::LossAfterWithdrawal => {
@@ -2878,7 +3128,11 @@ fn surfpool_market_payload(step: SurfpoolMarketStep) -> (&'static str, Value, Ve
                 Some(demo_position(70_000.0, 70_000.0, now)),
                 Some(demo_nav(85_200.0, 15_200.0, 70_000.0, now)),
                 Some(demo_trade("SOL mark -15%", 6_000.0, now)),
-                Some(demo_status("cooldown", "Junior buffer absorbed the drawdown", now)),
+                Some(demo_status(
+                    "cooldown",
+                    "Junior buffer absorbed the drawdown",
+                    now,
+                )),
             )
         }
         SurfpoolMarketStep::FreezeAfterLoss => {
@@ -2916,7 +3170,11 @@ fn surfpool_market_payload(step: SurfpoolMarketStep) -> (&'static str, Value, Ve
                 Some(demo_position(70_000.0, 68_200.0, now)),
                 Some(demo_nav(68_200.0, 0.0, 68_200.0, now)),
                 Some(demo_trade("Emergency SOL unwind", 17_000.0, now)),
-                Some(demo_status("frozen", "Protection exhausted; trading disabled", now)),
+                Some(demo_status(
+                    "frozen",
+                    "Protection exhausted; trading disabled",
+                    now,
+                )),
             )
         }
         SurfpoolMarketStep::InvestorWithdrawRemaining => {
@@ -2954,7 +3212,11 @@ fn surfpool_market_payload(step: SurfpoolMarketStep) -> (&'static str, Value, Ve
                 Some(demo_position(0.0, 0.0, now)),
                 Some(demo_nav(0.0, 0.0, 0.0, now)),
                 None,
-                Some(demo_status("closed", "Investor exited remaining claim", now)),
+                Some(demo_status(
+                    "closed",
+                    "Investor exited remaining claim",
+                    now,
+                )),
             )
         }
         SurfpoolMarketStep::TraderWithdrawBlocked => {
@@ -3896,6 +4158,15 @@ mod tests {
             jupiter_swap_base_url: "https://api.jup.ag/swap/v1".to_string(),
             demo_mode: true,
             surfpool_mode,
+            devnet_faucet: DevnetFaucetConfig {
+                enabled: false,
+                mint: "DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz".to_string(),
+                authority_keypair: "/tmp/arcadia-devnet-faucet.json".to_string(),
+                amount_ui: "100000".to_string(),
+                rpc_url: "https://api.devnet.solana.com".to_string(),
+                cooldown_secs: 60,
+            },
+            faucet_claims: Arc::new(Mutex::new(HashMap::new())),
             quote_cache: Arc::new(Mutex::new(HashMap::new())),
             demo_story: Arc::new(Mutex::new(DemoStoryState::default())),
             realtime: RealtimeHub::new(),
@@ -4404,7 +4675,10 @@ mod tests {
             "trader-withdraw-blocked",
             "story-complete",
         ] {
-            assert!(ids.contains(&required), "missing demo story step {required}");
+            assert!(
+                ids.contains(&required),
+                "missing demo story step {required}"
+            );
         }
     }
 
@@ -4413,7 +4687,9 @@ mod tests {
         let state = test_state(None, true, None);
         state.start_demo_story().unwrap();
         let step = demo_story_steps()[0];
-        state.publish_story_event(story_event(&step, "active"), false).unwrap();
+        state
+            .publish_story_event(story_event(&step, "active"), false)
+            .unwrap();
         let snapshot = state.demo_story_snapshot().unwrap();
         assert!(snapshot.running);
         assert_eq!(snapshot.active_step.as_deref(), Some("trader-joins"));
@@ -4422,7 +4698,9 @@ mod tests {
             .publish_story_event(story_event(&step, "completed"), true)
             .unwrap();
         let snapshot = state.demo_story_snapshot().unwrap();
-        assert!(snapshot.completed_steps.contains(&"trader-joins".to_string()));
+        assert!(snapshot
+            .completed_steps
+            .contains(&"trader-joins".to_string()));
         assert_eq!(snapshot.active_step, None);
     }
 
@@ -4477,5 +4755,39 @@ mod tests {
             .manager;
         assert_eq!(manager.claimed_fees, 300.0);
         assert_eq!(manager.frozen_vault_count, 1);
+    }
+
+    #[test]
+    fn devnet_faucet_rejects_invalid_wallets() {
+        assert!(is_base58_pubkey_like(
+            "dEEv13eRjRQodutata5L5ammEh54mPTo3e8B4wNvjWy"
+        ));
+        assert!(!is_base58_pubkey_like("not a wallet"));
+        assert!(!is_base58_pubkey_like(
+            "0OIl111111111111111111111111111111111111111"
+        ));
+        assert!(!is_base58_pubkey_like("short"));
+    }
+
+    #[test]
+    fn devnet_faucet_extracts_spl_token_signature() {
+        let json = r#"{"signature":"4auPedUgcbboAvhJMkb2ZGci2U2oqVrrCL6sWT9NR8sbuQxTgYgJYWCquXB878HkomxGSYmdodhc54DPShM8BmNW"}"#;
+        assert_eq!(
+            extract_cli_signature(json).as_deref(),
+            Some("4auPedUgcbboAvhJMkb2ZGci2U2oqVrrCL6sWT9NR8sbuQxTgYgJYWCquXB878HkomxGSYmdodhc54DPShM8BmNW")
+        );
+    }
+
+    #[tokio::test]
+    async fn devnet_faucet_returns_unavailable_when_disabled() {
+        let app = test_app(None);
+        let (status, _) = json_request(
+            app,
+            Method::POST,
+            "/devnet/faucet/usdc",
+            serde_json::json!({ "wallet": "dEEv13eRjRQodutata5L5ammEh54mPTo3e8B4wNvjWy" }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     }
 }

@@ -31,6 +31,7 @@ import {
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
+import { DevnetUsdcFaucet } from "@/components/DevnetUsdcFaucet";
 import { toast } from "sonner";
 
 const PROGRAM_ID = "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN";
@@ -56,9 +57,9 @@ const DevnetSection = () => {
     {
       n: "02",
       title: "Get devnet USDC",
-      body: "Mint devnet USDC from Circle's testnet faucet for vault deposits.",
-      href: "https://faucet.circle.com",
-      cta: "Circle faucet →",
+      body: "Connect a devnet wallet, then request Arcadia demo USDC from the wallet menu for vault deposits.",
+      href: "/vaults",
+      cta: "Open marketplace →",
     },
     {
       n: "03",
@@ -159,6 +160,15 @@ const DevnetSection = () => {
             </motion.div>
           ))}
         </div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.45, delay: 0.16 }}
+          className="mt-4"
+        >
+          <DevnetUsdcFaucet />
+        </motion.div>
       </div>
     </section>
   );
