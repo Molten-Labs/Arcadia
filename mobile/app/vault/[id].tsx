@@ -24,13 +24,27 @@ import { useWallet } from '../../src/lib/wallet';
 import { StatusBadge } from '../../src/components/StatusBadge';
 import { HealthMeter } from '../../src/components/HealthMeter';
 import { CapitalStack } from '../../src/components/CapitalStack';
-import { StatCard } from '../../src/components/StatCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { TxModal, TxState, txFailureState } from '../../src/components/TxModal';
 import { formatUSD, formatBps, formatNav, formatAge, truncateAddress } from '../../src/lib/format';
 import { parseUsdcToUnits } from '../../src/lib/amounts';
 
 type Tab = 'overview' | 'deposit' | 'withdraw';
+
+function StatPill({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <View style={pill.wrap}>
+      <Text style={[pill.value, valueColor ? { color: valueColor } : {}]}>{value}</Text>
+      <Text style={pill.label}>{label}</Text>
+    </View>
+  );
+}
+
+const pill = StyleSheet.create({
+  wrap: { flex: 1, alignItems: 'center', paddingVertical: 14, gap: 4 },
+  value: { fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  label: { fontSize: 7, fontWeight: '700', color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.7, fontFamily: 'Courier' },
+});
 
 export default function VaultDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,11 +90,14 @@ export default function VaultDetailScreen() {
   const navChange = vault.currentNav - 1;
   const navPositive = navChange >= 0;
   const canDeposit = connected && role === 'investor' && vault.status === 'active';
+  const hColor = vault.juniorHealth >= 0.8 ? colors.signal
+    : vault.juniorHealth >= 0.6 ? colors.warning : colors.danger;
 
   const navPts = navHistory ?? [];
   const minNav = Math.min(...navPts.map(p => p.nav), vault.currentNav);
   const maxNav = Math.max(...navPts.map(p => p.nav), vault.currentNav);
   const navRange = maxNav - minNav || 0.01;
+
   const getVaultConfigKey = () => {
     try {
       return new PublicKey(vault!.configPubkey);
@@ -95,9 +112,7 @@ export default function VaultDetailScreen() {
     const usdcUnits = parseUsdcToUnits(amount);
     if (!usdcUnits || usdcUnits <= 0n) { Alert.alert('Invalid Amount'); return; }
     if (!connected) {
-      try {
-        await connect();
-      } catch (err: any) {
+      try { await connect(); } catch (err: any) {
         Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
       }
       return;
@@ -122,9 +137,7 @@ export default function VaultDetailScreen() {
     const usdcUnits = parseUsdcToUnits(amount);
     if (!usdcUnits || usdcUnits <= 0n) { Alert.alert('Invalid Amount'); return; }
     if (!connected) {
-      try {
-        await connect();
-      } catch (err: any) {
+      try { await connect(); } catch (err: any) {
         Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
       }
       return;
@@ -173,28 +186,40 @@ export default function VaultDetailScreen() {
           />
         }
       >
-
-        {/* Hero card */}
-        <View style={styles.heroCard}>
+        {/* Hero — NAV is the star, value much bigger than labels */}
+        <View style={[styles.heroCard, vault.status === 'active' && styles.heroCardActive]}>
           <LinearGradient
-            colors={['rgba(0,181,164,0.10)', 'transparent']}
+            colors={['rgba(0,200,150,0.10)', 'rgba(0,200,150,0.03)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          <View style={styles.heroTop}>
+
+          <View style={styles.heroTopRow}>
             <StatusBadge status={vault.status} />
-            <View style={styles.navBlock}>
-              <Text style={styles.navLabel}>NAV</Text>
-              <Text style={styles.navVal}>{formatNav(vault.currentNav)}</Text>
-              <Text style={[styles.navDelta, { color: navPositive ? colors.signal : colors.danger }]}>
+            <Text style={styles.heroSubAddr}>{truncateAddress(vault.managerPubkey, 8)}</Text>
+          </View>
+
+          <Text style={styles.heroName}>{vault.name}</Text>
+
+          {/* NAV is the primary hero metric */}
+          <View style={styles.navHero}>
+            <View>
+              <Text style={styles.navHeroLabel}>NET ASSET VALUE</Text>
+              <Text style={styles.navHeroValue}>{formatNav(vault.currentNav)}</Text>
+            </View>
+            <View style={[
+              styles.navDeltaBadge,
+              { backgroundColor: navPositive ? colors.signalDim : colors.dangerDim,
+                borderColor: navPositive ? colors.signal + '40' : colors.danger + '40' }
+            ]}>
+              <Text style={[styles.navDeltaText, { color: navPositive ? colors.signal : colors.danger }]}>
                 {navPositive ? '▲' : '▼'} {Math.abs(navChange * 100).toFixed(2)}%
               </Text>
             </View>
           </View>
-          <Text style={styles.heroName}>{vault.name}</Text>
-          <Text style={styles.heroSub}>Manager · {truncateAddress(vault.managerPubkey, 10)}</Text>
         </View>
 
-        {/* NAV chart */}
+        {/* NAV chart — area chart with gradient bars */}
         {navPts.length > 1 && (
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
@@ -205,8 +230,9 @@ export default function VaultDetailScreen() {
             </View>
             <View style={styles.chartBars}>
               {navPts.map((p, i) => {
-                const h = Math.max(4, ((p.nav - minNav) / navRange) * 80);
+                const h = Math.max(6, ((p.nav - minNav) / navRange) * 80);
                 const isLast = i === navPts.length - 1;
+                const abovePar = p.nav >= 1;
                 return (
                   <View key={i} style={styles.barWrap}>
                     <View style={[
@@ -214,8 +240,12 @@ export default function VaultDetailScreen() {
                       {
                         height: h,
                         backgroundColor: isLast ? colors.signal
-                          : p.nav >= 1 ? colors.signalDeep + 'CC'
+                          : abovePar ? colors.signal + 'AA'
                           : colors.surfaceHigh,
+                        shadowColor: isLast ? colors.signal : 'transparent',
+                        shadowOpacity: isLast ? 0.7 : 0,
+                        shadowRadius: 8,
+                        shadowOffset: { width: 0, height: 0 },
                       }
                     ]} />
                   </View>
@@ -229,30 +259,48 @@ export default function VaultDetailScreen() {
           </View>
         )}
 
-        {/* Stats bento */}
+        {/* Stats grid — values larger than labels */}
         <View style={styles.statsGrid}>
-          <StatCard label="TVL" value={formatUSD(vault.tvl, true)} flex={1} />
-          <StatCard label="Fee" value={formatBps(vault.feeBps)} flex={1} />
-        </View>
-        <View style={styles.statsGrid}>
-          <StatCard
-            label="24h Loss"
-            value={formatBps(vault.rolling24hLossBps)}
-            valueColor={vault.rolling24hLossBps > 100 ? colors.danger : colors.signal}
-            flex={1}
-          />
-          <StatCard
-            label="7d Loss"
-            value={formatBps(vault.rolling7dLossBps)}
-            valueColor={vault.rolling7dLossBps > 300 ? colors.danger : vault.rolling7dLossBps > 100 ? colors.warning : colors.signal}
-            flex={1}
-          />
+          <View style={styles.statsCard}>
+            <StatPill label="TVL" value={formatUSD(vault.tvl, true)} />
+            <View style={styles.statsDivider} />
+            <StatPill label="PERF FEE" value={formatBps(vault.feeBps)} />
+          </View>
         </View>
 
-        <View style={styles.card}><HealthMeter health={vault.juniorHealth} /></View>
-        <View style={styles.card}><CapitalStack juniorCapital={vault.juniorCapital} seniorCapital={vault.seniorCapital} /></View>
+        <View style={styles.statsGrid}>
+          <View style={styles.statsCard}>
+            <StatPill
+              label="24H LOSS"
+              value={formatBps(vault.rolling24hLossBps)}
+              valueColor={vault.rolling24hLossBps > 100 ? colors.danger : colors.signal}
+            />
+            <View style={styles.statsDivider} />
+            <StatPill
+              label="7D LOSS"
+              value={formatBps(vault.rolling7dLossBps)}
+              valueColor={vault.rolling7dLossBps > 300 ? colors.danger : vault.rolling7dLossBps > 100 ? colors.warning : colors.signal}
+            />
+            <View style={styles.statsDivider} />
+            <StatPill
+              label="HEALTH"
+              value={`${(vault.juniorHealth * 100).toFixed(0)}%`}
+              valueColor={hColor}
+            />
+          </View>
+        </View>
 
-        {/* Risk detail */}
+        {/* Health meter */}
+        <View style={styles.card}>
+          <HealthMeter health={vault.juniorHealth} />
+        </View>
+
+        {/* Capital stack */}
+        <View style={styles.card}>
+          <CapitalStack juniorCapital={vault.juniorCapital} seniorCapital={vault.seniorCapital} />
+        </View>
+
+        {/* Parameters */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>PARAMETERS</Text>
           {([
@@ -270,9 +318,8 @@ export default function VaultDetailScreen() {
           ))}
         </View>
 
-        {/* Action card */}
+        {/* Action card — in thumb zone at bottom of scroll */}
         <View style={styles.actionCard}>
-          {/* Tab strip */}
           <View style={styles.tabs}>
             {(['overview', 'deposit', 'withdraw'] as Tab[]).map(t => (
               <Pressable
@@ -323,7 +370,7 @@ export default function VaultDetailScreen() {
                 <Text style={styles.gateText}>
                   {role !== 'investor'
                     ? 'Switch to Investor role in Settings to deposit.'
-                    : `Deposits are unavailable — vault is ${vault.status}.`}
+                    : `Deposits unavailable — vault is ${vault.status}.`}
                 </Text>
               ) : (
                 <>
@@ -396,143 +443,157 @@ export default function VaultDetailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  scroll: { gap: 10, paddingBottom: 60 },
+  scroll: { gap: 12, paddingBottom: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
 
   heroCard: {
     margin: spacing.md,
     marginBottom: 0,
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    gap: 6,
+    padding: 24,
+    gap: 10,
     overflow: 'hidden',
   },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  navBlock: { alignItems: 'flex-end' },
-  navLabel: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier', letterSpacing: 0.5, textTransform: 'uppercase' },
-  navVal: { fontSize: 26, fontWeight: '600', color: colors.text, fontFamily: 'Courier', letterSpacing: -0.5 },
-  navDelta: { fontSize: 12, fontWeight: '700', fontFamily: 'Courier' },
-  heroName: { fontSize: 26, fontWeight: '600', color: colors.text, letterSpacing: -0.4 },
-  heroSub: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+  heroCardActive: {
+    borderColor: colors.signal + '30',
+    shadowColor: colors.signal,
+    shadowOpacity: 0.10,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroSubAddr: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier' },
+  heroName: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.6 },
+
+  navHero: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  navHeroLabel: {
+    fontSize: 9, fontWeight: '700', color: colors.textQuiet,
+    textTransform: 'uppercase', letterSpacing: 0.7, fontFamily: 'Courier', marginBottom: 4,
+  },
+  navHeroValue: {
+    fontSize: 40, fontWeight: '600', color: colors.text,
+    fontFamily: 'Courier', letterSpacing: -1.5,
+  },
+  navDeltaBadge: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radius.full, borderWidth: 1,
+  },
+  navDeltaText: { fontSize: 14, fontWeight: '800', fontFamily: 'Courier' },
 
   chartCard: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    gap: 10,
+    padding: 20,
+    gap: 12,
   },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chartTitle: { fontSize: 9, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Courier' },
   chartRange: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier' },
-  chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 88, gap: 1.5 },
+  chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 88, gap: 2 },
   barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
-  bar: { width: '100%', borderRadius: 3 },
+  bar: { width: '100%', borderRadius: 4 },
   chartFooter: { flexDirection: 'row', justifyContent: 'space-between' },
   chartLabel: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier' },
 
-  statsGrid: { flexDirection: 'row', gap: 10, marginHorizontal: spacing.md },
+  statsGrid: { marginHorizontal: spacing.md },
+  statsCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  statsDivider: { width: 1, backgroundColor: colors.border },
+
   card: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
+    padding: 20,
   },
   cardTitle: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    fontFamily: 'Courier',
-    marginBottom: 12,
+    fontSize: 9, fontWeight: '700', color: colors.textMuted,
+    letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Courier', marginBottom: 12,
   },
   paramRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 9,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   paramKey: { fontSize: 13, color: colors.textMuted },
-  paramVal: { fontSize: 12, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+  paramVal: { fontSize: 13, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
 
   actionCard: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   tabs: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border },
   tabBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    flex: 1, paddingVertical: 16, alignItems: 'center',
+    borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   tabBtnActive: { borderBottomColor: colors.signal },
-  tabText: { fontSize: 12, fontWeight: '600', color: colors.textMuted, fontFamily: 'Courier' },
+  tabText: { fontSize: 11, fontWeight: '700', color: colors.textMuted, fontFamily: 'Courier', letterSpacing: 0.4 },
   tabTextActive: { color: colors.signal },
-  tabBody: { padding: spacing.md, gap: 14 },
+  tabBody: { padding: 20, gap: 16 },
 
-  infoText: { fontSize: 13, color: colors.textMuted, lineHeight: 22 },
-  gate: { gap: 14, alignItems: 'center', paddingVertical: 8 },
-  gateText: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+  infoText: { fontSize: 14, color: colors.textMuted, lineHeight: 24 },
+
+  gate: { gap: 16, alignItems: 'center', paddingVertical: 8 },
+  gateText: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
   gateBtn: { borderRadius: radius.full, overflow: 'hidden', width: '100%' },
-  gateBtnGrad: { paddingVertical: 14, alignItems: 'center' },
-  gateBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
+  gateBtnGrad: { paddingVertical: 16, alignItems: 'center' },
+  gateBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
 
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  balanceLabelSm: { fontSize: 10, fontWeight: '600', color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Courier' },
-  balanceAmt: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
+  balanceLabelSm: { fontSize: 10, fontWeight: '700', color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Courier' },
+  balanceAmt: { fontSize: 15, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
 
   amtWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    paddingHorizontal: spacing.md,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surfaceElevated, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: spacing.md,
   },
   amtInput: {
-    flex: 1,
-    height: 56,
-    fontSize: 22,
-    color: colors.text,
-    fontFamily: 'Courier',
-    fontWeight: '600',
+    flex: 1, height: 60, fontSize: 26, color: colors.text,
+    fontFamily: 'Courier', fontWeight: '600',
   },
-  amtUnit: { fontSize: 12, color: colors.textMuted, fontWeight: '600', fontFamily: 'Courier' },
+  amtUnit: { fontSize: 12, color: colors.textMuted, fontWeight: '700', fontFamily: 'Courier' },
   maxChip: {
-    marginLeft: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    backgroundColor: colors.signalDim,
-    borderWidth: 1,
-    borderColor: colors.signal + '40',
+    marginLeft: 10, paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: radius.full, backgroundColor: colors.signalDim,
+    borderWidth: 1, borderColor: colors.signal + '40',
   },
-  maxChipText: { fontSize: 9, fontWeight: '700', color: colors.signal, letterSpacing: 0.5, fontFamily: 'Courier' },
+  maxChipText: { fontSize: 9, fontWeight: '800', color: colors.signal, letterSpacing: 0.5, fontFamily: 'Courier' },
+
   exitNote: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated, borderRadius: radius.lg,
+    padding: 12, borderWidth: 1, borderColor: colors.border,
   },
-  exitNoteText: { fontSize: 12, color: colors.textMuted, fontFamily: 'Courier' },
+  exitNoteText: { fontSize: 13, color: colors.textMuted, fontFamily: 'Courier' },
+
   submitBtn: { borderRadius: radius.full, overflow: 'hidden' },
-  submitBtnGrad: { paddingVertical: 16, alignItems: 'center', borderRadius: radius.full },
-  submitBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
+  submitBtnGrad: { paddingVertical: 18, alignItems: 'center', borderRadius: radius.full },
+  submitBtnText: { fontSize: 17, fontWeight: '700', color: colors.white },
 });

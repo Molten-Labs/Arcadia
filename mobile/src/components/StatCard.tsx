@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, spacing } from '../lib/theme';
+import { colors, radius } from '../lib/theme';
 
 interface Props {
   label: string;
@@ -18,8 +18,10 @@ export function StatCard({ label, value, sub, valueColor, flex, accent }: Props)
       flex !== undefined && { flex },
       accent && styles.cardAccent,
     ]}>
+      <Text numberOfLines={1} style={[styles.value, valueColor ? { color: valueColor } : {}]}>
+        {value}
+      </Text>
       <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, valueColor ? { color: valueColor } : {}]}>{value}</Text>
       {sub ? <Text style={styles.sub}>{sub}</Text> : null}
     </View>
   );
@@ -28,30 +30,30 @@ export function StatCard({ label, value, sub, valueColor, flex, accent }: Props)
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
+    padding: 18,
     gap: 4,
   },
   cardAccent: {
     borderColor: colors.signal + '50',
     backgroundColor: colors.signalDim,
   },
+  value: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
+    fontFamily: 'Courier',
+    letterSpacing: -0.5,
+  },
   label: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 9,
+    fontWeight: '700',
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     fontFamily: 'Courier',
-  },
-  value: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: colors.text,
-    fontFamily: 'Courier',
-    letterSpacing: -0.5,
   },
   sub: {
     fontSize: 11,

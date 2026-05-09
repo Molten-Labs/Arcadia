@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, View, Text, StyleSheet } from 'react-native';
 import { colors, radius } from '../lib/theme';
 import { formatUSD } from '../lib/format';
 
@@ -13,6 +13,16 @@ export function CapitalStack({ juniorCapital, seniorCapital }: Props) {
   const jrPct = total > 0 ? juniorCapital / total : 0;
   const srPct = total > 0 ? seniorCapital / total : 0;
 
+  const jrAnim = useRef(new Animated.Value(0)).current;
+  const srAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(jrAnim, { toValue: jrPct, duration: 800, delay: 100, useNativeDriver: false }),
+      Animated.timing(srAnim, { toValue: srPct, duration: 800, delay: 100, useNativeDriver: false }),
+    ]).start();
+  }, [jrPct, srPct]);
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
@@ -20,23 +30,36 @@ export function CapitalStack({ juniorCapital, seniorCapital }: Props) {
         <Text style={styles.total}>{formatUSD(total, true)} TVL</Text>
       </View>
 
+      {/* Segmented track with animated widths */}
       <View style={styles.track}>
-        <View style={[styles.bar, styles.jrBar, { flex: jrPct }]} />
-        <View style={[styles.bar, styles.srBar, { flex: srPct }]} />
+        <Animated.View style={[
+          styles.jrBar,
+          { flex: jrAnim },
+          jrPct > 0 && {
+            shadowColor: colors.signal,
+            shadowOpacity: 0.5,
+            shadowRadius: 6,
+            shadowOffset: { width: 0, height: 0 },
+          },
+        ]} />
+        <Animated.View style={[styles.srBar, { flex: srAnim }]} />
       </View>
 
+      {/* Inline labels showing % */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.signal }]} />
-          <Text style={styles.legendKey}>First-loss</Text>
-          <Text style={styles.legendVal}>{formatUSD(juniorCapital, true)}</Text>
-          <Text style={styles.legendPct}>{(jrPct * 100).toFixed(0)}%</Text>
+          <View style={[styles.dot, { backgroundColor: colors.signal }]} />
+          <View>
+            <Text style={styles.legendAmt}>{formatUSD(juniorCapital, true)}</Text>
+            <Text style={styles.legendKey}>First-loss · {(jrPct * 100).toFixed(0)}%</Text>
+          </View>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.surfaceHigh }]} />
-          <Text style={styles.legendKey}>Senior</Text>
-          <Text style={styles.legendVal}>{formatUSD(seniorCapital, true)}</Text>
-          <Text style={styles.legendPct}>{(srPct * 100).toFixed(0)}%</Text>
+          <View style={[styles.dot, { backgroundColor: colors.borderStrong }]} />
+          <View>
+            <Text style={styles.legendAmt}>{formatUSD(seniorCapital, true)}</Text>
+            <Text style={styles.legendKey}>Senior · {(srPct * 100).toFixed(0)}%</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -44,41 +67,22 @@ export function CapitalStack({ juniorCapital, seniorCapital }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 12 },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  container: { gap: 14 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    fontFamily: 'Courier',
+    fontSize: 9, fontWeight: '700', color: colors.textMuted,
+    letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'Courier',
   },
-  total: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
-    fontFamily: 'Courier',
-  },
+  total: { fontSize: 13, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
   track: {
-    flexDirection: 'row',
-    height: 8,
-    borderRadius: radius.full,
-    overflow: 'hidden',
-    gap: 2,
-    backgroundColor: colors.surfaceHigh,
+    flexDirection: 'row', height: 10, borderRadius: radius.full,
+    overflow: 'hidden', gap: 2, backgroundColor: colors.surfaceHigh,
   },
-  bar: { borderRadius: radius.full },
-  jrBar: { backgroundColor: colors.signal },
-  srBar: { backgroundColor: colors.borderStrong },
-  legend: { flexDirection: 'row', gap: 20 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 7, height: 7, borderRadius: 4 },
-  legendKey: { fontSize: 11, color: colors.textMuted },
-  legendVal: { fontSize: 11, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
-  legendPct: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier' },
+  jrBar: { backgroundColor: colors.signal, borderRadius: radius.full },
+  srBar: { backgroundColor: colors.borderStrong, borderRadius: radius.full },
+  legend: { flexDirection: 'row', justifyContent: 'space-between' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot: { width: 8, height: 8, borderRadius: 4, marginTop: 2 },
+  legendAmt: { fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  legendKey: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier', marginTop: 1 },
 });
