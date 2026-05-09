@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { useWallet, type Role, type Network, shortAddr } from "@/lib/wallet";
+import { useWallet, type Role, shortAddr } from "@/lib/wallet";
 import {
     Wallet,
     Shield,
@@ -38,27 +38,12 @@ const wallets = [
     {
         name: "Phantom",
         tone: "bg-primary/12 text-primary ring-1 ring-primary/25",
-        detected: true,
         recommended: true,
     },
     {
         name: "Solflare",
         tone: "bg-warning/12 text-warning ring-1 ring-warning/25",
-        detected: true,
         recommended: false,
-    },
-    {
-        name: "Backpack",
-        tone: "bg-destructive/12 text-destructive ring-1 ring-destructive/25",
-        detected: false,
-        recommended: false,
-    },
-    {
-        name: "Demo Wallet",
-        tone: "bg-primary/12 text-primary ring-1 ring-primary/25",
-        detected: true,
-        recommended: false,
-        demo: true,
     },
 ];
 
@@ -129,15 +114,12 @@ export const ConnectModal = ({
         setStep("connecting");
         setError(null);
         try {
-            if (name === "Backpack")
-                throw new Error(
-                    "Backpack is not available in this demo environment. Choose Phantom, Solflare, or Demo Wallet to continue.",
-                );
+            setNetwork("devnet");
             await connect(name);
             if (chosenRole) setRole(chosenRole);
             setStep("success");
             toast.success(`Connected with ${name}`, {
-                description: `Deterministic demo session · Network: ${network}`,
+                description: `${chosenRole === "trader" ? "Trader" : "Investor"} mode · Devnet`,
             });
         } catch (e) {
             setError(e instanceof Error ? e.message : "Connection failed");
@@ -227,13 +209,13 @@ export const ConnectModal = ({
                             <motion.div key="wallet" {...fade}>
                                 <DialogHeader>
                                     <DialogTitle className="font-display text-2xl">
-                                        Start a wallet session
+                                        Connect on devnet
                                     </DialogTitle>
                                     <DialogDescription className="flex items-center gap-2 flex-wrap">
                                         Continuing as <Pill>{chosenRole}</Pill>{" "}
                                         on <Pill icon={Globe}>devnet</Pill>.
-                                        Connections are deterministic demo
-                                        sessions in this build.
+                                        Your wallet signs real Arcadia devnet
+                                        transactions.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-2 mt-4">
@@ -258,19 +240,10 @@ export const ConnectModal = ({
                                                             Recommended
                                                         </span>
                                                     )}
-                                                    {w.demo && (
-                                                        <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-info/15 text-info">
-                                                            Demo
-                                                        </span>
-                                                    )}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                                                    <span
-                                                        className={`w-1.5 h-1.5 rounded-full ${w.detected ? "bg-success" : "bg-muted-foreground/40"}`}
-                                                    />
-                                                    {w.detected
-                                                        ? "Demo adapter available"
-                                                        : "Not available in demo"}
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-success" />
+                                                    Real Solana wallet adapter
                                                 </div>
                                             </div>
                                             <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-[color,transform]" />
@@ -285,10 +258,10 @@ export const ConnectModal = ({
                                     </SecondaryButton>
                                 </div>
                                 <InfoNote>
-                                    Arcadia never custodies funds. This build uses
-                                    transparent demo wallet sessions until a
-                                    production Solana wallet adapter is
-                                    connected.
+                                    Arcadia never custodies funds. Devnet vault
+                                    actions are signed by your wallet; Jupiter
+                                    exposure previews are simulated with
+                                    Surfpool where shown.
                                 </InfoNote>
                             </motion.div>
                         )}
@@ -309,11 +282,11 @@ export const ConnectModal = ({
                                     Connecting to {chosenWallet}
                                 </DialogTitle>
                                 <DialogDescription className="mt-2">
-                                    Creating a deterministic {chosenWallet}{" "}
-                                    session for this preview…
+                                    Approve the request in {chosenWallet} to
+                                    continue on Arcadia devnet.
                                 </DialogDescription>
                                 <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                    <Globe className="w-3 h-3" /> {network} ·{" "}
+                                    <Globe className="w-3 h-3" /> devnet ·{" "}
                                     {chosenRole}
                                 </div>
                             </motion.div>
@@ -371,7 +344,7 @@ export const ConnectModal = ({
                                         {walletName
                                             ? ` with ${walletName}`
                                             : ""}{" "}
-                                        using a deterministic demo session.
+                                        on Arcadia devnet.
                                     </DialogDescription>
                                 </div>
 
@@ -386,7 +359,7 @@ export const ConnectModal = ({
                                                 <Copy className="w-3.5 h-3.5" />
                                             </button>
                                             <a
-                                                href={`https://solscan.io/account/${address}`}
+                                                href={`https://solscan.io/account/${address}?cluster=devnet`}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="text-muted-foreground hover:text-foreground p-1 -m-1"

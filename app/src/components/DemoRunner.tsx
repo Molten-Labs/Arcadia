@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export function DemoRunner() {
   const navigate = useNavigate();
-  const { connect, setRole } = useWallet();
+  const { connectDemoWallet, setRole } = useWallet();
   const queryClient = useQueryClient();
 
   const [isActive, setIsActive] = useState(false);
@@ -50,7 +50,7 @@ export function DemoRunner() {
   const runAction = useCallback(async (stepId: string) => {
     switch (stepId) {
       case "connect-trader":
-        connect("Demo Wallet");
+        connectDemoWallet();
         setRole("trader");
         break;
 
@@ -112,7 +112,7 @@ export function DemoRunner() {
         toast.success("Deposited 50,000 USDC into Signal Macro I");
         break;
     }
-  }, [connect, setRole, navigate, queryClient]);
+  }, [connectDemoWallet, setRole, navigate, queryClient]);
 
   // Animate the progress bar using rAF
   const startProgressRaf = useCallback((duration: number, startTime: number) => {

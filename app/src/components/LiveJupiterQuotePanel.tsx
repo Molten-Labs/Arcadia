@@ -38,10 +38,10 @@ export function LiveJupiterQuotePanel({ vaultConfigPubkey }: LiveJupiterQuotePan
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 font-display text-[16px] font-semibold">
-            <RadioTower className="h-4 w-4 text-primary" /> Live Jupiter quote
+            <RadioTower className="h-4 w-4 text-primary" /> Preview SOL exposure
           </h3>
           <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
-            Quote data is live. Execution is simulated locally on Surfpool; no mainnet funds move.
+            Live Jupiter quote. Execution simulated with Surfpool. No mainnet funds touched.
           </p>
         </div>
         <span className="rounded-md bg-primary/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-primary">
@@ -77,18 +77,21 @@ export function LiveJupiterQuotePanel({ vaultConfigPubkey }: LiveJupiterQuotePan
         </div>
         <div className="mt-3 flex items-center gap-2 text-[12px] text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-          {quote ? `${quote.quoteSource} · ${quote.executionEnv}` : "Fetch a quote to broadcast market context."}
+          {quote
+            ? `${quote.quoteSource} · ${quote.executionEnv}`
+            : "Fetch a quote before applying the Surfpool market preview."}
         </div>
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <Button variant="outline" className="h-10" onClick={() => query.refetch()} disabled={query.isFetching}>
           {query.isFetching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
-          Fetch quote
+          Fetch live quote
         </Button>
         <Button
           className="h-10 bg-primary text-primary-foreground hover:bg-primary-glow"
           onClick={() => run("Surfpool swap simulated", "/demo/surfpool/simulate-swap")}
+          disabled={!quote}
         >
           Simulate on Surfpool
         </Button>

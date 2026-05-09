@@ -17,7 +17,7 @@ import { PublicKey } from "@solana/web3.js";
 import { toast } from "sonner";
 import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
-import { isArcadiaDemoMode, isArcadiaSurfpoolMode } from "@/lib/api";
+import { isArcadiaSurfpoolMode } from "@/lib/api";
 import { DataModeToggle } from "@/components/DataModeToggle";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
 import { LiveJupiterQuotePanel } from "@/components/LiveJupiterQuotePanel";
@@ -79,7 +79,7 @@ const ManagerVault = () => {
   ];
   const allOk = checks.every(c => c.ok);
   const realJupiterEnabled = isRealJupiterEnabled();
-  const surfpoolDemo = isArcadiaDemoMode() && isArcadiaSurfpoolMode();
+  const surfpoolPreview = isArcadiaSurfpoolMode();
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["vaults"] });
@@ -357,7 +357,7 @@ const ManagerVault = () => {
           </div>
 
           <div className="space-y-6">
-            {surfpoolDemo && <LiveJupiterQuotePanel vaultConfigPubkey={v.configPubkey} />}
+            {surfpoolPreview && <LiveJupiterQuotePanel vaultConfigPubkey={v.configPubkey} />}
 
             {v.status === "paper" && (
               <div className="surface rounded-lg p-6">

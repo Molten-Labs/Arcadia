@@ -39,7 +39,6 @@ import {
 import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
-import { DemoTriggerButton } from "@/components/DemoRunner";
 import { useRealtimeStatus } from "@/hooks/realtimeContext";
 import type { Alert } from "@/lib/mockData";
 import { mockStore } from "@/lib/mockStore";
@@ -209,7 +208,6 @@ export const Nav = () => {
                     </nav>
 
                     <div className="flex min-w-0 items-center justify-end gap-2 lg:col-start-3">
-                        <DemoTriggerButton />
                         <ThemeToggle className="hidden sm:inline-flex" />
 
                         {/* Bell notification popover — only shown when connected */}
