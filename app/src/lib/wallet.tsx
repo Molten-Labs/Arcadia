@@ -24,12 +24,12 @@ import {
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { RPC_URL } from "./solana/constants";
+import { RPC_URL, WALLET_NETWORK } from "./solana/constants";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export type Role = "investor" | "trader";
-export type Network = "devnet";
+export type Network = "devnet" | "mainnet-beta" | "surfpool";
 
 interface KilnWalletState {
   connected: boolean;
@@ -51,7 +51,7 @@ const defaultState: KilnWalletState = {
   address: null,
   publicKey: null,
   role: "investor",
-  network: "devnet",
+  network: WALLET_NETWORK as Network,
   walletName: null,
   connection: null,
   connect: async () => {},
@@ -94,7 +94,7 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   }, []);
 
   const [role, setRole] = useState<Role>(stored?.role ?? "investor");
-  const [network, setNetworkState] = useState<Network>("devnet");
+  const [network, setNetworkState] = useState<Network>((WALLET_NETWORK as Network) ?? "devnet");
   const [rememberedWalletName, setRememberedWalletName] = useState<string | null>(stored?.walletName ?? null);
 
   useEffect(() => {
@@ -102,7 +102,7 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   }, [rememberedWalletName, role, network]);
 
   const setNetwork = useCallback((next: Network) => {
-    setNetworkState(next === "devnet" ? "devnet" : "devnet");
+    setNetworkState(next);
   }, []);
 
   useEffect(() => {
@@ -137,7 +137,7 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   const connect = useCallback(
     async (name?: string) => {
       if (!name) {
-        throw new Error("Choose Phantom or Solflare to connect on devnet.");
+        throw new Error("Choose Phantom or Solflare to connect.");
       }
 
       const target = wallets.find((entry) => entry.adapter.name === name);
@@ -153,7 +153,7 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
       }
 
       setDemoWalletName(null);
-      setNetwork("devnet");
+      setNetwork(WALLET_NETWORK as Network);
       setRememberedWalletName(target.adapter.name);
       autoConnectAttemptRef.current = null;
       select(target.adapter.name as WalletName);
@@ -167,7 +167,7 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   const connectDemoWallet = useCallback(() => {
     setDemoWalletName("Recording Wallet");
     setRememberedWalletName(null);
-    setNetwork("devnet");
+    setNetwork(WALLET_NETWORK as Network);
   }, [setNetwork]);
 
   const value: KilnWalletState = useMemo(

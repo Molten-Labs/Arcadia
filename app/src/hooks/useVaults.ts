@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet";
 import { fetchAllVaults, fetchAllManagers } from "@/lib/solana/accounts";
-import { fetchKilnApi, getKilnApiUrl, isArcadiaDevnetProductMode, type ApiItems } from "@/lib/api";
+import { fetchKilnApi, getKilnApiUrl, isArcadiaDevnetProductMode, isArcadiaLocalChainMode, type ApiItems } from "@/lib/api";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockManagerViews, mockVaultViews } from "@/lib/mockViews";
 import type { VaultConfigData, VaultStateData } from "@/lib/solana/accounts";
@@ -136,14 +136,16 @@ export function useVaults() {
   const { connection } = useWallet();
   const { mode, isMock } = useDataMode();
   const apiUrl = getKilnApiUrl();
+  const localChainMode = isArcadiaLocalChainMode();
 
   return useQuery({
-    queryKey: ["vaults", mode, apiUrl || "rpc"],
+    queryKey: ["vaults", mode, localChainMode ? "local-chain" : apiUrl || "rpc"],
     queryFn: async () => {
       if (isMock) return mockVaultViews();
 
-      // Try API first if configured
-      if (apiUrl) {
+      // Local chain mode is for screen recordings where every visible vault
+      // action should be backed by a real transaction on Surfpool.
+      if (!localChainMode && apiUrl) {
         try {
           const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
           if (api && (api.items.length > 0 || !connection || !isArcadiaDevnetProductMode())) {
@@ -183,14 +185,15 @@ export interface ManagerView {
 export function useManagers() {
   const { connection } = useWallet();
   const { mode, isMock } = useDataMode();
+  const localChainMode = isArcadiaLocalChainMode();
 
   return useQuery({
-    queryKey: ["managers", mode, getKilnApiUrl() || "rpc"],
+    queryKey: ["managers", mode, localChainMode ? "local-chain" : getKilnApiUrl() || "rpc"],
     queryFn: async () => {
       if (isMock) return mockManagerViews();
 
-      // Try API first if configured
-      if (getKilnApiUrl()) {
+      // Try API first if configured, except in local chain recording mode.
+      if (!localChainMode && getKilnApiUrl()) {
         try {
           const api = await fetchKilnApi<ApiItems<ManagerView>>("/managers");
           if (api && (api.items.length > 0 || !connection || !isArcadiaDevnetProductMode())) {

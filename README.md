@@ -285,15 +285,19 @@ pnpm dev:app:magicblock-local
 Local browser env:
 
 ```bash
+VITE_ARCADIA_LOCAL_CHAIN_MODE=true
 VITE_ARCADIA_EXECUTION_ENV=surfpool
-VITE_RPC_URL=http://localhost:8899
+VITE_RPC_URL=http://127.0.0.1:8899
+VITE_KILN_API_BASE_URL=http://127.0.0.1:8080
 VITE_MAGICBLOCK_LOCAL_ER=true
-VITE_MAGICBLOCK_ER_RPC_URL=http://localhost:7799
-VITE_MAGICBLOCK_TEE_RPC_URL=http://localhost:7799
+VITE_MAGICBLOCK_ER_RPC_URL=http://127.0.0.1:7799
+VITE_MAGICBLOCK_TEE_RPC_URL=http://127.0.0.1:7799
 VITE_MAGICBLOCK_ER_VALIDATOR=mAGicPQYBMvcYveUZA5F5UNNwyHvfYh5xkLS2Fr1mev
 ```
 
-For this local path, the app intentionally skips `getAuthToken` / TEE integrity verification because `localhost:7799` is a local ER validator, not MagicBlock's TEE endpoint.
+For screen recordings, `VITE_ARCADIA_LOCAL_CHAIN_MODE=true` makes the app read vaults and positions directly from the local Surfpool RPC instead of the backend demo store. Create vault, junior deposit, senior deposit, withdrawal, NAV update, guard-only trade checks, and MagicBlock session instructions are wallet-signed local transactions. Local capital uses the program's lamport-backed path, so the UI displays USDC-equivalent accounting while the wallet is funded by local SOL airdrops.
+
+For this local path, the app intentionally skips `getAuthToken` / TEE integrity verification because `127.0.0.1:7799` is a local ER validator, not MagicBlock's TEE endpoint.
 
 ---
 

@@ -31,6 +31,14 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+    IS_LOCAL_SOLANA_RPC,
+    MAGICBLOCK_DISPLAY_NAME,
+    MAGICBLOCK_ER_RPC_URL,
+    RPC_DISPLAY_NAME,
+    RPC_URL,
+    WALLET_NETWORK,
+} from "@/lib/solana/constants";
 
 type Step = "role" | "wallet" | "connecting" | "success" | "error";
 
@@ -78,6 +86,7 @@ export const ConnectModal = ({
         setNetwork,
     } = useWallet();
     const navigate = useNavigate();
+    const networkLabel = RPC_DISPLAY_NAME;
 
     const [step, setStep] = useState<Step>(connected ? "success" : "role");
     const [chosenRole, setChosenRole] = useState<Role | null>(null);
@@ -127,7 +136,7 @@ export const ConnectModal = ({
             if (chosenRole) setRole(chosenRole);
             setStep("success");
             toast.success(`Connected with ${chosenWallet}`, {
-                description: "Devnet · live wallet",
+                description: `${networkLabel} · live wallet`,
             });
         }
     }, [connected, step, chosenWallet]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -137,12 +146,12 @@ export const ConnectModal = ({
         setStep("connecting");
         setError(null);
         try {
-            setNetwork("devnet");
+            setNetwork(WALLET_NETWORK as Parameters<typeof setNetwork>[0]);
             await connect(name);
             if (chosenRole) setRole(chosenRole);
             setStep("success");
             toast.success(`Connected with ${name}`, {
-                description: `${chosenRole === "trader" ? "Trader" : "Investor"} mode · Devnet`,
+                description: `${chosenRole === "trader" ? "Trader" : "Investor"} mode · ${networkLabel}`,
             });
         } catch (e) {
             setError(e instanceof Error ? e.message : "Connection failed");
@@ -232,14 +241,21 @@ export const ConnectModal = ({
                             <motion.div key="wallet" {...fade}>
                                 <DialogHeader>
                                     <DialogTitle className="font-display text-2xl">
-                                        Connect on devnet
+                                        Connect to {networkLabel}
                                     </DialogTitle>
                                     <DialogDescription className="flex items-center gap-2 flex-wrap">
                                         Continuing as <Pill>{chosenRole}</Pill>{" "}
-                                        on <Pill icon={Globe}>devnet</Pill>.
-                                        Your wallet signs real Arcadia devnet
-                                        transactions.
+                                        on <Pill icon={Globe}>{networkLabel}</Pill>.
+                                        Your wallet signs Arcadia transactions through the app RPC.
                                     </DialogDescription>
+                                    {IS_LOCAL_SOLANA_RPC && (
+                                        <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-foreground/85">
+                                            Screen recording mode is live: wallet transactions route to{" "}
+                                            <span className="font-mono">{RPC_URL}</span>, with{" "}
+                                            <span className="font-mono">{MAGICBLOCK_DISPLAY_NAME}</span> at{" "}
+                                            <span className="font-mono">{MAGICBLOCK_ER_RPC_URL}</span>.
+                                        </div>
+                                    )}
                                 </DialogHeader>
                                 <div className="space-y-2 mt-4">
                                     {WALLETS.map((w) => {
@@ -288,7 +304,7 @@ export const ConnectModal = ({
                                     </SecondaryButton>
                                 </div>
                                 <InfoNote>
-                                    Arcadia never custodies funds. Devnet vault
+                                    Arcadia never custodies funds. Vault
                                     actions are signed by your wallet; Jupiter
                                     exposure previews are simulated with
                                     Surfpool where shown.
@@ -313,10 +329,10 @@ export const ConnectModal = ({
                                 </DialogTitle>
                                 <DialogDescription className="mt-2">
                                     Approve the request in {chosenWallet} to
-                                    continue on Arcadia devnet.
+                                    continue on {networkLabel}.
                                 </DialogDescription>
                                 <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                                    <Globe className="w-3 h-3" /> devnet ·{" "}
+                                    <Globe className="w-3 h-3" /> {networkLabel} ·{" "}
                                     {chosenRole}
                                 </div>
                                 {chosenWallet !== "Demo Wallet" && (
@@ -383,7 +399,7 @@ export const ConnectModal = ({
                                         {walletName
                                             ? ` with ${walletName}`
                                             : ""}{" "}
-                                        on Arcadia devnet.
+                                        on {networkLabel}.
                                     </DialogDescription>
                                 </div>
 
@@ -397,20 +413,22 @@ export const ConnectModal = ({
                                             >
                                                 <Copy className="w-3.5 h-3.5" />
                                             </button>
-                                            <a
-                                                href={`https://solscan.io/account/${address}?cluster=devnet`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-muted-foreground hover:text-foreground p-1 -m-1"
-                                            >
-                                                <ExternalLink className="w-3.5 h-3.5" />
-                                            </a>
+                                            {!IS_LOCAL_SOLANA_RPC && (
+                                                <a
+                                                    href={`https://solscan.io/account/${address}?cluster=devnet`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-muted-foreground hover:text-foreground p-1 -m-1"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                </a>
+                                            )}
                                         </div>
                                     </Detail>
                                     <Detail label="Network">
                                         <span className="inline-flex items-center gap-1.5 text-sm">
                                             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse-glow" />
-                                            devnet
+                                            {networkLabel}
                                         </span>
                                     </Detail>
                                     <Detail label="Role">

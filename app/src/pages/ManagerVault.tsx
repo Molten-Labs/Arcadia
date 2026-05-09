@@ -28,8 +28,10 @@ import { useSubmitPrivateIntent } from "@/hooks/usePrivateIntents";
 import { mockStore } from "@/lib/mockStore";
 import { mergePrivateIntentSnapshot, normalizePrivateIntentSnapshot, type PrivateIntentVaultSnapshot } from "@/lib/privateIntents";
 import { useQueryClient } from "@tanstack/react-query";
+import { ARCADIA_LOCAL_CHAIN_MODE, RPC_DISPLAY_NAME } from "@/lib/solana/constants";
 
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
+const LOCAL_QUICK_USDC_AMOUNTS = [0.5, 1, 2, 2.5] as const;
 
 const ManagerVault = () => {
   const { id } = useParams();
@@ -85,6 +87,7 @@ const ManagerVault = () => {
   const allOk = checks.every(c => c.ok);
   const realJupiterEnabled = isRealJupiterEnabled();
   const surfpoolPreview = isArcadiaSurfpoolMode();
+  const quickAmounts = ARCADIA_LOCAL_CHAIN_MODE ? LOCAL_QUICK_USDC_AMOUNTS : QUICK_USDC_AMOUNTS;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["vaults"] });
@@ -188,7 +191,7 @@ const ManagerVault = () => {
       } else {
         await executeSwap(new PublicKey(v.configPubkey), usdcUnits, 0n);
         setAmount("");
-        toast.success("Devnet guard-only swap check submitted");
+        toast.success(ARCADIA_LOCAL_CHAIN_MODE ? "Local guard trade transaction confirmed" : "Devnet guard-only swap check submitted");
       }
     } catch (e) {
       toast.error("Swap check failed", { description: e instanceof Error ? e.message : "Unknown error" });
@@ -324,6 +327,14 @@ const ManagerVault = () => {
           <StatCard label="Senior" value={`${fmtUSD(v.seniorCapital, { decimals: 2 })} USDC`} />
         </div>
 
+        {ARCADIA_LOCAL_CHAIN_MODE && (
+          <div className="mb-6">
+            <Banner variant="info" title={`${RPC_DISPLAY_NAME} real-click mode`}>
+              Buttons on this page submit real local transactions. Capital is tracked as USDC-equivalent units, backed by SOL lamports on Surfpool so your wallet can sign the full flow without a fake USDC mint.
+            </Banner>
+          </div>
+        )}
+
         <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr] mb-6">
           <LiveVaultKpis vault={v} />
           <VaultActivityFeed vaultConfigPubkey={v.configPubkey} />
@@ -377,7 +388,7 @@ const ManagerVault = () => {
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  {QUICK_USDC_AMOUNTS.map(preset => (
+                  {quickAmounts.map(preset => (
                     <button
                       key={preset}
                       type="button"

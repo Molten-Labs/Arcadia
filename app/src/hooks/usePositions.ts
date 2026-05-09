@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet";
 import { PROGRAM_ID } from "@/lib/solana/constants";
 import { decodeInvestorPosition } from "@/lib/solana/accounts";
-import { fetchKilnApi, getKilnApiUrl, type ApiItems } from "@/lib/api";
+import { fetchKilnApi, getKilnApiUrl, isArcadiaLocalChainMode, type ApiItems } from "@/lib/api";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockPositionViews } from "@/lib/mockViews";
 import type { InvestorPositionData } from "@/lib/solana/accounts";
@@ -94,21 +94,24 @@ export function usePositions() {
   const { connection, publicKey } = useWallet();
   const { data: vaults } = useVaults();
   const { mode, isMock } = useDataMode();
+  const localChainMode = isArcadiaLocalChainMode();
 
   return useQuery({
-    queryKey: ["positions", mode, publicKey?.toBase58() || "mock", getKilnApiUrl() || "rpc"],
+    queryKey: ["positions", mode, publicKey?.toBase58() || "mock", localChainMode ? "local-chain" : getKilnApiUrl() || "rpc"],
     queryFn: async () => {
       if (isMock) return mockPositionViews(vaults);
 
       if (!publicKey) throw new Error("Not connected");
       const wallet = publicKey.toBase58();
 
-      try {
-        const api = await fetchKilnApi<ApiItems<PositionView>>(`/positions/${wallet}`);
-        if (api) return api.items.map(normalizeApiPosition);
-      } catch (error) {
-        if (!connection || !vaults) throw error;
-        console.warn("Arcadia API unavailable; falling back to direct RPC position reads.", error);
+      if (!localChainMode) {
+        try {
+          const api = await fetchKilnApi<ApiItems<PositionView>>(`/positions/${wallet}`);
+          if (api) return api.items.map(normalizeApiPosition);
+        } catch (error) {
+          if (!connection || !vaults) throw error;
+          console.warn("Arcadia API unavailable; falling back to direct RPC position reads.", error);
+        }
       }
 
       if (!connection || !vaults) throw new Error("No connection or Arcadia API configured");

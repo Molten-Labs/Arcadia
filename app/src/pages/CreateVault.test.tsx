@@ -112,6 +112,7 @@ describe("CreateVault transaction flow", () => {
       feeBps: 2_000,
       maxSlippageBps: 200,
       paperWindowSecs: 30 * 24 * 60 * 60,
+      minQualifyingTrades: 10,
     });
     expect(mocks.depositJunior).toHaveBeenCalledWith(expectedConfigPda, 2_500_000n);
     expect(mocks.initManager.mock.invocationCallOrder[0]).toBeLessThan(

@@ -58,6 +58,24 @@ export const SOLANA_CLUSTER =
 export const ARCADIA_EXECUTION_ENV =
   String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || SOLANA_CLUSTER).toLowerCase();
 
+export const IS_LOCAL_SOLANA_RPC = isLocalRpcUrl(RPC_URL);
+export const ARCADIA_LOCAL_CHAIN_MODE =
+  String(import.meta.env.VITE_ARCADIA_LOCAL_CHAIN_MODE || "").toLowerCase() === "true" ||
+  (IS_LOCAL_SOLANA_RPC && ARCADIA_EXECUTION_ENV === "surfpool");
+export const WALLET_NETWORK =
+  IS_LOCAL_SOLANA_RPC || ARCADIA_EXECUTION_ENV === "surfpool"
+    ? "surfpool"
+    : SOLANA_CLUSTER === "mainnet-beta"
+      ? "mainnet-beta"
+      : "devnet";
+export const RPC_DISPLAY_NAME =
+  WALLET_NETWORK === "surfpool"
+    ? "Local Surfpool"
+    : WALLET_NETWORK === "mainnet-beta"
+      ? "Mainnet"
+      : "Devnet";
+export const MAGICBLOCK_DISPLAY_NAME = MAGICBLOCK_LOCAL_ER ? "Local MagicBlock ER" : "MagicBlock PER";
+
 export const KILN_API_BASE_URL =
   import.meta.env.VITE_KILN_API_BASE_URL ||
   import.meta.env.VITE_KILN_API_URL ||

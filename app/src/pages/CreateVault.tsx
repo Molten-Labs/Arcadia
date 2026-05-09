@@ -14,6 +14,7 @@ import { getVaultConfigPDA, getManagerProfilePDA } from "@/lib/solana/pdas";
 import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockStore } from "@/lib/mockStore";
+import { ARCADIA_LOCAL_CHAIN_MODE, RPC_DISPLAY_NAME } from "@/lib/solana/constants";
 
 
 const steps = ["Identity", "Risk setup", "Junior capital", "Paper mode", "Review"];
@@ -28,7 +29,7 @@ const CreateVault = () => {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [risk, setRisk] = useState<"conservative" | "balanced" | "aggressive">("balanced");
-  const [junior, setJunior] = useState("1");
+  const [junior, setJunior] = useState(ARCADIA_LOCAL_CHAIN_MODE ? "25" : "1");
   const [accept, setAccept] = useState(false);
   const [sending, setSending] = useState(false);
   const navigate = useNavigate();
@@ -78,7 +79,8 @@ const CreateVault = () => {
         name: name.slice(0, 32),
         feeBps: profile.feeBps,
         maxSlippageBps: profile.maxSlippageBps,
-        paperWindowSecs: 30 * 24 * 60 * 60,
+        paperWindowSecs: ARCADIA_LOCAL_CHAIN_MODE ? 60 : 30 * 24 * 60 * 60,
+        minQualifyingTrades: ARCADIA_LOCAL_CHAIN_MODE ? 1 : 10,
       });
 
       const [profilePda] = getManagerProfilePDA(publicKey);
@@ -155,10 +157,15 @@ const CreateVault = () => {
             <div className="space-y-4">
               <h2 className="font-display type-h3 font-semibold">Junior capital</h2>
               <p className="text-sm text-muted-foreground">Your first-loss USDC. Required to back the vault.</p>
+              {ARCADIA_LOCAL_CHAIN_MODE && (
+                <Banner variant="info" title={`${RPC_DISPLAY_NAME} real transaction mode`}>
+                  This recording path sends a real local transaction and uses SOL lamports as USDC-equivalent accounting units inside the Arcadia program.
+                </Banner>
+              )}
               <div>
                 <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                   <label className="text-sm font-medium">Junior deposit (USDC)</label>
-                  <span>Base asset: USDC</span>
+                  <span>{ARCADIA_LOCAL_CHAIN_MODE ? "Local backing: SOL lamports" : "Base asset: USDC"}</span>
                 </div>
                 <Input className="mt-1.5 text-lg tabular h-12" value={junior} onChange={e => setJunior(e.target.value)} type="number" step="0.01" min="0" />
               </div>
@@ -190,7 +197,7 @@ const CreateVault = () => {
                 <Row label="Fee" value={`${RISK_PROFILES[risk].feeBps / 100}% above HWM`} />
                 <Row label="Max slippage" value={`${RISK_PROFILES[risk].maxSlippageBps / 100}%`} />
                 <Row label="Junior deposit" value={`${parseFloat(junior || "0").toFixed(4)} USDC`} />
-                <Row label="Paper window" value="30 days" />
+                <Row label="Paper window" value={ARCADIA_LOCAL_CHAIN_MODE ? "60 seconds local" : "30 days"} />
                 <Row label="Estimated gas" value="~0.003 SOL" />
               </dl>
             </div>

@@ -40,7 +40,9 @@ import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
 import { DevnetUsdcFaucet } from "@/components/DevnetUsdcFaucet";
+import { LocalValidatorStatus } from "@/components/LocalValidatorStatus";
 import { useRealtimeStatus } from "@/hooks/realtimeContext";
+import { RPC_DISPLAY_NAME } from "@/lib/solana/constants";
 import type { Alert } from "@/lib/mockData";
 import { mockStore } from "@/lib/mockStore";
 import { formatDistanceToNow } from "date-fns";
@@ -369,7 +371,7 @@ export const Nav = () => {
                                                 <span className="block text-muted-foreground">Network</span>
                                                 <span className="mt-1 flex items-center gap-1.5 font-mono capitalize text-foreground">
                                                     <Globe2 className="h-3 w-3 text-primary/70" />
-                                                    {network}
+                                                    {network === "surfpool" ? RPC_DISPLAY_NAME : network}
                                                 </span>
                                             </div>
                                             <div className="rounded-lg bg-secondary/55 px-2 py-2">
@@ -437,6 +439,8 @@ export const Nav = () => {
                     </div>
                 </div>
             </header>
+
+            <LocalValidatorStatus compact />
 
             {open && (
                 <div className="border-b border-border/40 bg-background/95 backdrop-blur-xl lg:hidden">

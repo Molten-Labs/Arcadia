@@ -10,7 +10,7 @@ import {
 import { Buffer } from "buffer";
 import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { useWallet } from "@/lib/wallet";
-import { PROGRAM_ID } from "@/lib/solana/constants";
+import { ARCADIA_LOCAL_CHAIN_MODE, PROGRAM_ID } from "@/lib/solana/constants";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   ORACLE_PRICE_SEED,
@@ -239,13 +239,30 @@ export function useKilnTransactions() {
     [publicKey, connection, send]
   );
 
-  // Disc 2 USDC: [manager, profile, vault_config, vault_state, treasury, manager_usdc, vault_usdc, token_program, clock, system_program]
+  // Disc 2: local chain mode uses the program's lamport-backed path so every
+  // recording click can be a real Surfpool transaction without a fake USDC mint.
   const depositJunior = useCallback(
     async (vaultConfigPubkey: PublicKey, usdcUnits: bigint) => {
       if (!publicKey) throw new Error("Wallet not connected");
       const [profilePda] = getManagerProfilePDA(publicKey);
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const data = Buffer.alloc(8);
+      data.writeBigUInt64LE(usdcUnits, 0);
+
+      if (ARCADIA_LOCAL_CHAIN_MODE) {
+        const ix = buildInstruction(2, [
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: profilePda, isSigner: false, isWritable: true },
+          { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+          { pubkey: statePda, isSigner: false, isWritable: true },
+          { pubkey: treasuryPda, isSigner: false, isWritable: true },
+          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ], data);
+        return send(ix, "Deposit Junior");
+      }
+
       const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
       const managerUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
       const ensureManagerUsdc = createAssociatedTokenAccountIdempotentInstruction(
@@ -260,9 +277,6 @@ export function useKilnTransactions() {
         treasuryPda,
         USDC_MINT,
       );
-
-      const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(usdcUnits, 0);
 
       const ix = buildInstruction(2, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
@@ -288,6 +302,23 @@ export function useKilnTransactions() {
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
       const [positionPda] = getInvestorPositionPDA(publicKey, vaultConfigPubkey);
+      const data = Buffer.alloc(8);
+      data.writeBigUInt64LE(usdcUnits, 0);
+
+      if (ARCADIA_LOCAL_CHAIN_MODE) {
+        const ix = buildInstruction(5, [
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+          { pubkey: statePda, isSigner: false, isWritable: true },
+          { pubkey: treasuryPda, isSigner: false, isWritable: true },
+          { pubkey: positionPda, isSigner: false, isWritable: true },
+          { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        ], data);
+        return send(ix, "Deposit Senior");
+      }
+
       const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
       const investorUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
       const ensureInvestorUsdc = createAssociatedTokenAccountIdempotentInstruction(
@@ -302,9 +333,6 @@ export function useKilnTransactions() {
         treasuryPda,
         USDC_MINT,
       );
-
-      const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(usdcUnits, 0);
 
       const ix = buildInstruction(5, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
@@ -331,6 +359,21 @@ export function useKilnTransactions() {
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
       const [positionPda] = getInvestorPositionPDA(publicKey, vaultConfigPubkey);
+      const data = Buffer.alloc(8);
+      data.writeBigUInt64LE(amountUsdcUnits, 0);
+
+      if (ARCADIA_LOCAL_CHAIN_MODE) {
+        const ix = buildInstruction(6, [
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+          { pubkey: statePda, isSigner: false, isWritable: true },
+          { pubkey: treasuryPda, isSigner: false, isWritable: true },
+          { pubkey: positionPda, isSigner: false, isWritable: true },
+          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+        ], data);
+        return send(ix, "Withdraw Senior");
+      }
+
       const { vaultUsdc, vaultWsol } = getCustodyTokenAccounts(treasuryPda);
       const investorUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
       const { solPrice, usdcPrice } = getOraclePriceAccounts();
@@ -353,9 +396,6 @@ export function useKilnTransactions() {
         treasuryPda,
         SOL_MINT,
       );
-
-      const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(amountUsdcUnits, 0);
 
       const ix = buildInstruction(6, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
@@ -389,6 +429,21 @@ export function useKilnTransactions() {
       const [profilePda] = getManagerProfilePDA(publicKey);
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const data = Buffer.alloc(8);
+      data.writeBigUInt64LE(amountUsdcUnits, 0);
+
+      if (ARCADIA_LOCAL_CHAIN_MODE) {
+        const ix = buildInstruction(7, [
+          { pubkey: publicKey, isSigner: true, isWritable: true },
+          { pubkey: profilePda, isSigner: false, isWritable: true },
+          { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+          { pubkey: statePda, isSigner: false, isWritable: true },
+          { pubkey: treasuryPda, isSigner: false, isWritable: true },
+          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+        ], data);
+        return send(ix, "Withdraw Junior");
+      }
+
       const { vaultUsdc } = getCustodyTokenAccounts(treasuryPda);
       const managerUsdc = getAssociatedTokenAddress(publicKey, USDC_MINT);
       const ensureManagerUsdc = createAssociatedTokenAccountIdempotentInstruction(
@@ -403,9 +458,6 @@ export function useKilnTransactions() {
         treasuryPda,
         USDC_MINT,
       );
-
-      const data = Buffer.alloc(8);
-      data.writeBigUInt64LE(amountUsdcUnits, 0);
 
       const ix = buildInstruction(7, [
         { pubkey: publicKey, isSigner: true, isWritable: true },
@@ -429,9 +481,22 @@ export function useKilnTransactions() {
       if (!publicKey) throw new Error("Wallet not connected");
       const [statePda] = getVaultStatePDA(vaultConfigPubkey);
       const [treasuryPda] = getTreasuryPDA(vaultConfigPubkey);
+      const data = Buffer.from([0]);
+
+      if (ARCADIA_LOCAL_CHAIN_MODE) {
+        const ix = buildInstruction(3, [
+          { pubkey: publicKey, isSigner: true, isWritable: false },
+          { pubkey: vaultConfigPubkey, isSigner: false, isWritable: false },
+          { pubkey: statePda, isSigner: false, isWritable: true },
+          { pubkey: treasuryPda, isSigner: false, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+        ], data);
+        return send(ix, "Update NAV");
+      }
+
       const { vaultUsdc, vaultWsol } = getCustodyTokenAccounts(treasuryPda);
       const { solPrice, usdcPrice } = getOraclePriceAccounts();
-      const data = Buffer.from([0]);
       const refreshPrices = buildDevnetOracleRefreshIxs(publicKey);
       const ensureVaultUsdc = createAssociatedTokenAccountIdempotentInstruction(
         publicKey,

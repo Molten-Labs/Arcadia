@@ -24,6 +24,10 @@ export function isArcadiaSurfpoolMode(): boolean {
   return String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || "").toLowerCase() === "surfpool";
 }
 
+export function isArcadiaLocalChainMode(): boolean {
+  return ARCADIA_LOCAL_CHAIN_MODE;
+}
+
 export function isArcadiaDevnetProductMode(): boolean {
   const executionEnv = String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || "").toLowerCase();
   const cluster = String(import.meta.env.VITE_SOLANA_CLUSTER || "").toLowerCase();
@@ -89,3 +93,4 @@ export async function postKilnApiOptional<T>(path: string, body?: unknown): Prom
   }
   return response.json() as Promise<T>;
 }
+import { ARCADIA_LOCAL_CHAIN_MODE } from "@/lib/solana/constants";

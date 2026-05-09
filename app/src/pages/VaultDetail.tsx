@@ -27,8 +27,10 @@ import { PrivateIntentVaultGuard } from "@/components/PrivateIntentVaultGuard";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockStore } from "@/lib/mockStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { ARCADIA_LOCAL_CHAIN_MODE, RPC_DISPLAY_NAME } from "@/lib/solana/constants";
 
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
+const LOCAL_QUICK_USDC_AMOUNTS = [10, 25, 50, 100] as const;
 
 const VaultDetail = () => {
   const { id } = useParams();
@@ -60,6 +62,7 @@ const VaultDetail = () => {
   const investorPosition = positions?.find(p => p.vaultConfigPubkey === vault.configPubkey);
   const withdrawableUsdc = investorPosition?.currentValueRaw ?? 0n;
   const juniorPct = vault.tvl > 0 ? Math.round((vault.juniorCapital / vault.tvl) * 100) : 0;
+  const quickAmounts = ARCADIA_LOCAL_CHAIN_MODE ? LOCAL_QUICK_USDC_AMOUNTS : QUICK_USDC_AMOUNTS;
 
   const handleDeposit = async () => {
     if (!connected) { toast.error("Connect a wallet first"); return; }
@@ -197,6 +200,11 @@ const VaultDetail = () => {
           {vault.status === "paper" && (
             <Banner variant="info" title="Paper mode">
               {vault.paperTradeCount}/{vault.minQualifyingTrades} qualifying trades. Investor deposits open after graduation.
+            </Banner>
+          )}
+          {ARCADIA_LOCAL_CHAIN_MODE && (
+            <Banner variant="info" title={`${RPC_DISPLAY_NAME} real-click mode`}>
+              Deposit and withdrawal buttons submit real local transactions. Amounts display as USDC-equivalent accounting units backed by SOL lamports on Surfpool.
             </Banner>
           )}
         </div>
@@ -364,7 +372,7 @@ const VaultDetail = () => {
 
                     {/* Quick amounts */}
                     <div className="grid grid-cols-4 gap-1.5">
-                      {QUICK_USDC_AMOUNTS.map(p => (
+                      {quickAmounts.map(p => (
                         <button
                           key={p}
                           type="button"
