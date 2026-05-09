@@ -27,7 +27,9 @@ export function LiveVaultKpis({ vault, compact = false }: LiveVaultPanelsProps) 
   const investorPrincipal = vault.seniorSharesOutstanding || vault.seniorCapital;
   const investorImpact = Math.max(0, investorPrincipal - vault.seniorCapital);
   const claimableFees = Math.max(0, vault.currentNav - vault.highWaterMark) * (vault.feeBps / 10_000);
-  const liquidUsdc = Math.max(0, vault.seniorCapital * (vault.instantExit ? 0.55 : 0.18));
+  const liquidUsdc = vault.liquidUsdc ?? Math.max(0, vault.seniorCapital * (vault.instantExit ? 0.55 : 0.18));
+  const wsolExposure = vault.wsolExposureValue ?? 0;
+  const reserveOk = (vault.reserveStatus ?? "ok") === "ok";
   const risk = riskState(vault);
 
   const items = [
@@ -36,6 +38,18 @@ export function LiveVaultKpis({ vault, compact = false }: LiveVaultPanelsProps) 
       value: `${fmtUSD(vault.currentNav, { compact: true })}`,
       sub: `${navChange >= 0 ? "+" : ""}${navChange.toFixed(1)}% scenario`,
       tone: navChange >= 0 ? "success" : "danger",
+    },
+    {
+      label: "Liquid USDC",
+      value: `${fmtUSD(liquidUsdc, { compact: true })}`,
+      sub: vault.executionEnv === "surfpool" ? "Surfpool state" : "available reserve",
+      tone: liquidUsdc >= vault.currentNav * 0.1 ? "success" : "warning",
+    },
+    {
+      label: "WSOL exposure",
+      value: `${fmtUSD(wsolExposure, { compact: true })}`,
+      sub: wsolExposure > 0 ? "SOL leg active" : "no open SOL leg",
+      tone: wsolExposure > 0 ? "neutral" : "success",
     },
     {
       label: "Junior buffer",
@@ -50,16 +64,16 @@ export function LiveVaultKpis({ vault, compact = false }: LiveVaultPanelsProps) 
       tone: investorImpact > 0 ? "danger" : "success",
     },
     {
-      label: "Withdrawable",
-      value: `${fmtUSD(liquidUsdc, { compact: true })}`,
-      sub: vault.instantExit ? "exit priority" : "liquid reserve",
-      tone: vault.instantExit ? "warning" : "neutral",
-    },
-    {
       label: "Claimable fees",
       value: claimableFees > 0 ? fmtUSD(claimableFees, { compact: true }) : "0 USDC",
       sub: claimableFees > 0 ? "above HWM" : "no fee in drawdown",
       tone: claimableFees > 0 ? "success" : "neutral",
+    },
+    {
+      label: "Reserve",
+      value: reserveOk ? "OK" : "Watch",
+      sub: "10% liquid rule",
+      tone: reserveOk ? "success" : "warning",
     },
     {
       label: "Risk state",

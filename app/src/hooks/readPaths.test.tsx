@@ -45,6 +45,8 @@ describe("backend-backed read hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("VITE_KILN_API_URL", "http://kiln-api.test");
+    vi.stubEnv("VITE_ARCADIA_DEMO_MODE", "false");
+    vi.stubEnv("VITE_ARCADIA_EXECUTION_ENV", "");
     localStorage.setItem("kiln:data-mode", "real");
     mocks.publicKey = key(1);
     mocks.connection = null;

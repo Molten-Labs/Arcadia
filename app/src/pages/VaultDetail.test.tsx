@@ -34,6 +34,10 @@ vi.mock("@/hooks/useTransactions", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useDataMode", () => ({
+  useDataMode: () => ({ isMock: false, mode: "real" }),
+}));
+
 vi.mock("@/lib/wallet", () => ({
   useWallet: () => ({ connected: true, role: "investor" }),
   shortAddr: (address: string) => `${address.slice(0, 4)}...${address.slice(-4)}`,

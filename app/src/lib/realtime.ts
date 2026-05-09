@@ -1,5 +1,6 @@
 import type { PositionView } from "@/hooks/usePositions";
 import type { ManagerView, VaultView } from "@/hooks/useVaults";
+import type { MarketQuote } from "@/lib/surfpoolDemo";
 
 export interface NavPoint {
   vaultConfigPubkey: string;
@@ -62,6 +63,23 @@ export interface RiskEvent {
   occurredAt: number;
 }
 
+export interface DemoStepEvent {
+  id: string;
+  label: string;
+  stage: "active" | "completed" | "failed" | string;
+  summary: string;
+  actor: "trader" | "investor" | "protocol" | "market" | "operator" | string;
+  metric?: string | null;
+  occurredAt: number;
+}
+
+export interface DemoStorySnapshot {
+  running: boolean;
+  activeStep?: string | null;
+  completedSteps: string[];
+  lastStep?: DemoStepEvent | null;
+}
+
 export type VaultActivityEvent =
   | { id: string; kind: "capital"; label: string; amount?: number; tone: "success" | "warning" | "danger" | "neutral"; occurredAt: number; detail: string }
   | { id: string; kind: "fee"; label: string; amount?: number; tone: "success" | "warning" | "neutral"; occurredAt: number; detail: string }
@@ -80,6 +98,8 @@ export type RealtimeEvent =
   | { type: "withdrawal.event"; item: CapitalEvent; receivedAt: number }
   | { type: "fee.event"; item: FeeEvent; receivedAt: number }
   | { type: "risk.event"; item: RiskEvent; receivedAt: number }
+  | { type: "market.quote"; item: MarketQuote; receivedAt: number }
+  | { type: "demo.step"; item: DemoStepEvent; receivedAt: number }
   | { type: "heartbeat"; receivedAt: number }
   | { type: "resync_required"; topics: string[]; receivedAt: number };
 
@@ -131,6 +151,30 @@ export function eventToActivity(event: RealtimeEvent): VaultActivityEvent | null
       tone: "neutral",
       occurredAt: event.item.occurredAt,
       detail: "Public trader activity recorded.",
+    };
+  }
+
+  if (event.type === "market.quote") {
+    return {
+      id: `quote-${event.item.fetchedAt}`,
+      kind: "trade",
+      label: "Live Jupiter quote",
+      amount: event.item.inputAmount,
+      tone: "success",
+      occurredAt: event.item.fetchedAt,
+      detail: `${event.item.route} quote from ${event.item.quoteSource}; execution remains ${event.item.executionEnv}.`,
+    };
+  }
+
+  if (event.type === "demo.step") {
+    if (event.item.stage !== "completed" && event.item.stage !== "failed") return null;
+    return {
+      id: `story-${event.item.id}-${event.item.occurredAt}`,
+      kind: "status",
+      label: event.item.label,
+      tone: event.item.stage === "failed" ? "danger" : "success",
+      occurredAt: event.item.occurredAt,
+      detail: event.item.summary,
     };
   }
 

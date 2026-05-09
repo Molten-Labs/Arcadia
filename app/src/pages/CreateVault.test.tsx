@@ -22,6 +22,10 @@ vi.mock("@/hooks/useTransactions", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useDataMode", () => ({
+  useDataMode: () => ({ isMock: false, mode: "real" }),
+}));
+
 vi.mock("@/lib/wallet", async () => {
   const { Keypair } =
     await vi.importActual<typeof import("@solana/web3.js")>("@solana/web3.js");

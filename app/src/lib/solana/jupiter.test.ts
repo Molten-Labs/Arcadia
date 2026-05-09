@@ -26,6 +26,6 @@ describe("Jupiter proxy client", () => {
       })
     ).rejects.toThrow("Real Jupiter swaps are mainnet-beta only");
 
-    expect(String(fetchMock.mock.calls[0][0])).toContain("http://localhost:8080/jupiter/quote");
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/jupiter/quote");
   });
 });
