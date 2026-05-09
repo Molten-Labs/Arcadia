@@ -42,6 +42,15 @@ export const DEMO_STEPS: DemoStep[] = [
     route: "/how-it-works",
     duration: 5500,
   },
+  {
+    id: "private-guard",
+    phase: "overview",
+    caption: "Private Intent Vault Guard",
+    subcaption:
+      "Traders submit trade intents privately — strategy, size, and route never touch the blockchain. The guard approves or rejects on-chain. Investors see proof of rule enforcement without seeing the trade.",
+    route: "/#private-guard",
+    duration: 6500,
+  },
 
   // ── Phase 2: Trader Flow ───────────────────────────────────────────────────
   {

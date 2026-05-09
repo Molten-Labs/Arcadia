@@ -27,6 +27,9 @@ import {
   Check,
   ExternalLink,
   Zap,
+  EyeOff,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
@@ -356,7 +359,7 @@ const Landing = () => {
               custom={2}
               className="mt-7 max-w-2xl text-[1.1rem] leading-[1.65] text-foreground/78 md:text-[1.25rem]"
             >
-              Arcadia gives skilled traders a path from their own capital to investor allocation, while investors get visible performance, automatic protection, and orderly exits.
+              Arcadia gives skilled traders a path from their own capital to investor allocation, with private strategy execution so their edge stays protected, while investors get verified on-chain performance, automatic first-loss protection, and orderly exits, all enforced by code without trusting anyone.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
@@ -495,6 +498,141 @@ const Landing = () => {
                   </div>
                   <h3 className="font-display text-base font-semibold">{step.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 3b. Private Intent Vault Guard */}
+      <section id="private-guard" className="relative overflow-hidden border-b border-border/35 py-24 scroll-mt-16">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,hsl(var(--primary)/0.10),transparent_60%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        <div className="container relative">
+
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto mb-14 max-w-3xl text-center"
+          >
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5">
+              <EyeOff className="h-3.5 w-3.5 text-primary" />
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-primary">New Feature</span>
+            </div>
+            <h2 className="font-display type-h2 font-semibold">
+              Private Intent Vault Guard
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+              Traders execute without revealing their strategy. Investors see proof of rule enforcement without seeing the trade. Both get what they need — enforced by code.
+            </p>
+          </motion.div>
+
+          {/* The core tension */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.08 }}
+            className="mx-auto mb-10 max-w-4xl rounded-2xl border border-border/50 bg-card/60 p-1 backdrop-blur-xl"
+          >
+            <div className="grid divide-y divide-border/50 rounded-xl overflow-hidden lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+              {/* Before */}
+              <div className="bg-destructive/5 px-6 py-7">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-destructive/80">Before — forced choice</p>
+                <div className="space-y-2.5">
+                  {[
+                    "Strategy public → front-runners copy it",
+                    "Strategy private → investors can't verify risk",
+                    "Either way, serious traders stay off-chain",
+                  ].map((t) => (
+                    <div key={t} className="flex items-start gap-2.5 text-[13px] text-foreground/70">
+                      <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive/60" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* How it works */}
+              <div className="bg-primary/5 px-6 py-7 flex flex-col justify-center">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-primary">How it works</p>
+                <p className="text-[13px] leading-relaxed text-foreground/75">
+                  A trusted evaluator in a private environment checks each trade intent against Arcadia's risk rules — position limits, reserve floors, cooldown periods — and returns one public result:
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="rounded-lg border border-success/30 bg-success/10 px-3 py-1.5 font-mono text-[11px] font-bold text-success">✓ Approved</span>
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <span className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-1.5 font-mono text-[11px] font-bold text-destructive">✗ Rejected</span>
+                </div>
+                <p className="mt-3 text-[12px] text-muted-foreground">Trade details never touch the blockchain. Only a commitment hash and the guard outcome do.</p>
+              </div>
+
+              {/* After */}
+              <div className="bg-success/5 px-6 py-7">
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-success/80">After — both sides win</p>
+                <div className="space-y-2.5">
+                  {[
+                    "Strategy stays private — edge stays intact",
+                    "Risk rules enforced and verifiable on-chain",
+                    "Junior buffer still absorbs losses first",
+                  ].map((t) => (
+                    <div key={t} className="flex items-start gap-2.5 text-[13px] text-foreground/70">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success/70" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 3 outcome cards */}
+          <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-3">
+            {[
+              {
+                icon: TrendingUp,
+                label: "For Traders",
+                color: "text-warning",
+                bg: "bg-warning/10",
+                border: "border-warning/20",
+                body: "Strategy stays hidden. Front-running and copy-trading become impossible because the details never become public. The only reason not to manage capital on-chain is gone.",
+              },
+              {
+                icon: Shield,
+                label: "For Investors",
+                color: "text-primary",
+                bg: "bg-primary/10",
+                border: "border-primary/20",
+                body: "Nothing changes about your protection. The vault guard still runs. Junior capital still absorbs losses first. Proof that risk rules are followed is public and verifiable.",
+              },
+              {
+                icon: Lock,
+                label: "For DeFi",
+                color: "text-success",
+                bg: "bg-success/10",
+                border: "border-success/20",
+                body: "Transparency and privacy are not opposites. A protocol can be private about strategy execution and fully transparent about risk enforcement at the same time.",
+              },
+            ].map((card, i) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={card.label}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.42, delay: i * 0.08 }}
+                  className="surface rounded-[11px] p-5"
+                >
+                  <div className={`mb-4 flex h-9 w-9 items-center justify-center rounded-lg border ${card.border} ${card.bg}`}>
+                    <Icon className={`h-4 w-4 ${card.color}`} />
+                  </div>
+                  <h3 className={`font-mono text-[10px] font-bold uppercase tracking-[0.18em] ${card.color} mb-2`}>{card.label}</h3>
+                  <p className="text-[13px] leading-relaxed text-muted-foreground">{card.body}</p>
                 </motion.div>
               );
             })}
