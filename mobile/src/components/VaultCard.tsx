@@ -40,9 +40,9 @@ function LivePulse() {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(ring, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(ring, { toValue: 1, duration: 1200, useNativeDriver: Platform.OS !== 'web' }),
         Animated.delay(1000),
-        Animated.timing(ring, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.timing(ring, { toValue: 0, duration: 0, useNativeDriver: Platform.OS !== 'web' }),
       ])
     ).start();
   }, []);
@@ -88,8 +88,8 @@ export function VaultCard({ vault, onPress, sparkData, entryDelay = 0 }: Props) 
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeOp, { toValue: 1, duration: 380, delay: entryDelay, useNativeDriver: true }),
-      Animated.timing(fadeY, { toValue: 0, duration: 380, delay: entryDelay, useNativeDriver: true }),
+      Animated.timing(fadeOp, { toValue: 1, duration: 380, delay: entryDelay, useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(fadeY, { toValue: 0, duration: 380, delay: entryDelay, useNativeDriver: Platform.OS !== 'web' }),
     ]).start();
   }, []);
 

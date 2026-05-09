@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../lib/theme';
+
+const ND = Platform.OS !== 'web';
 
 function LiveDot() {
   const scale = useRef(new Animated.Value(1)).current;
@@ -10,12 +12,12 @@ function LiveDot() {
     Animated.loop(
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(scale, { toValue: 2.0, duration: 800, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0, duration: 800, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 2.0, duration: 800, useNativeDriver: ND }),
+          Animated.timing(opacity, { toValue: 0, duration: 800, useNativeDriver: ND }),
         ]),
         Animated.parallel([
-          Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0.8, duration: 0, useNativeDriver: true }),
+          Animated.timing(scale, { toValue: 1, duration: 0, useNativeDriver: ND }),
+          Animated.timing(opacity, { toValue: 0.8, duration: 0, useNativeDriver: ND }),
         ]),
         Animated.delay(1400),
       ])
@@ -50,8 +52,8 @@ export function MarketTicker() {
     const iv = setInterval(() => {
       setSolPrice(p => {
         Animated.sequence([
-          Animated.timing(flashAnim, { toValue: 1.08, duration: 140, useNativeDriver: true }),
-          Animated.timing(flashAnim, { toValue: 1, duration: 140, useNativeDriver: true }),
+          Animated.timing(flashAnim, { toValue: 1.08, duration: 140, useNativeDriver: ND }),
+          Animated.timing(flashAnim, { toValue: 1, duration: 140, useNativeDriver: ND }),
         ]).start();
         return parseFloat((p + (Math.random() - 0.47) * 0.5).toFixed(2));
       });

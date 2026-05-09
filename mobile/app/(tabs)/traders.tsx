@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  Platform,
   View,
   Text,
   FlatList,
@@ -19,6 +20,8 @@ import { StatusBadge } from '../../src/components/StatusBadge';
 import { EmptyState } from '../../src/components/EmptyState';
 import { FadeSlideIn } from '../../src/components/AnimatedEntry';
 import { formatUSD, truncateAddress, formatAge } from '../../src/lib/format';
+
+const ND = Platform.OS !== 'web';
 
 const RANK_COLORS = [colors.warning, colors.textMuted, '#CD7F32'];
 const RANK_ICONS: React.ComponentProps<typeof Ionicons>['name'][] = ['trophy', 'medal', 'ribbon'];
@@ -42,8 +45,8 @@ function TraderCard({ manager, rank, onPress, delay }: {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(entryOpacity, { toValue: 1, duration: 360, delay, useNativeDriver: true }),
-      Animated.timing(entryY, { toValue: 0, duration: 360, delay, useNativeDriver: true }),
+      Animated.timing(entryOpacity, { toValue: 1, duration: 360, delay, useNativeDriver: ND }),
+      Animated.timing(entryY, { toValue: 0, duration: 360, delay, useNativeDriver: ND }),
     ]).start();
   }, []);
 
@@ -52,8 +55,8 @@ function TraderCard({ manager, rank, onPress, delay }: {
       <Pressable
         style={[styles.card, isTop && styles.cardTop]}
         onPress={onPress}
-        onPressIn={() => Animated.spring(pressScale, { toValue: 0.975, useNativeDriver: true, speed: 50 }).start()}
-        onPressOut={() => Animated.spring(pressScale, { toValue: 1, useNativeDriver: true, speed: 40 }).start()}
+        onPressIn={() => Animated.spring(pressScale, { toValue: 0.975, useNativeDriver: ND, speed: 50 }).start()}
+        onPressOut={() => Animated.spring(pressScale, { toValue: 1, useNativeDriver: ND, speed: 40 }).start()}
       >
         {isTop && (
           <LinearGradient

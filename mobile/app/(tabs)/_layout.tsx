@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../src/lib/theme';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -20,14 +19,14 @@ function TabIcon({ name, focused }: TabIconProps) {
     Animated.parallel([
       Animated.spring(scale, {
         toValue: focused ? 1.10 : 1,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
         damping: 16,
         stiffness: 320,
       }),
       Animated.timing(bgOpacity, {
         toValue: focused ? 1 : 0,
         duration: 180,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }),
     ]).start();
   }, [focused]);
@@ -62,43 +61,28 @@ const styles = StyleSheet.create({
   },
 });
 
-function FloatingTabBar() {
-  const insets = useSafeAreaInsets();
-  return null; // placeholder — styling done via tabBarStyle
-}
-
 export default function TabLayout() {
-  const insets = useSafeAreaInsets();
-  const bottomPad = Platform.OS === 'ios' ? insets.bottom : 8;
-
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
         tabBarStyle: {
-          position: 'absolute',
-          bottom: bottomPad + 12,
-          left: 16,
-          right: 16,
           height: 68,
           borderRadius: 34,
+          marginHorizontal: 16,
+          marginBottom: 16,
           backgroundColor: colors.surface,
           borderTopWidth: 0,
           borderWidth: 1,
           borderColor: colors.border,
           paddingBottom: 0,
           paddingTop: 0,
-          elevation: 0,
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOpacity: 0.30,
-              shadowRadius: 24,
-              shadowOffset: { width: 0, height: 8 },
-            },
-            android: { elevation: 20 },
-          }),
+          elevation: 20,
+          shadowColor: '#000',
+          shadowOpacity: 0.40,
+          shadowRadius: 24,
+          shadowOffset: { width: 0, height: 8 },
         },
         tabBarItemStyle: {
           paddingVertical: 6,

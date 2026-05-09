@@ -47,6 +47,7 @@ export const colors = {
 
   ink: '#020810',
   inkSurface: '#060E18',
+  inkSurfaceElevated: '#0A1822',
   inkBorder: '#12243A',
 };
 

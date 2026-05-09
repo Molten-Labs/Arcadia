@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  Platform,
   View,
   Text,
   ScrollView,
@@ -24,6 +25,8 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { WalletButton } from '../../src/components/WalletButton';
 import { FadeSlideIn } from '../../src/components/AnimatedEntry';
 import { formatUSD, formatPnL, pnlColor, formatAge } from '../../src/lib/format';
+
+const ND = Platform.OS !== 'web';
 
 function AnimatedBalance({ value }: { value: number }) {
   const animVal = useRef(new Animated.Value(0)).current;
@@ -51,8 +54,8 @@ function PositionRow({
       <Pressable
         style={styles.posRow}
         onPress={onPress}
-        onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start()}
-        onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()}
+        onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: ND, speed: 50 }).start()}
+        onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: ND, speed: 50 }).start()}
       >
         <View style={[
           styles.posIcon,

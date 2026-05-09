@@ -4,11 +4,26 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { useFonts } from 'expo-font';
+import { Platform, useEffect } from 'react';
 import { WalletProvider } from '../src/lib/wallet';
 import { colors } from '../src/lib/theme';
 import { GuidedDemoOverlay } from '../src/components/GuidedDemoOverlay';
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg: string = event?.reason?.message ?? '';
+    if (
+      msg === 'A network error occurred.' ||
+      msg.includes('Failed to fetch') ||
+      msg.includes('WebSocket') ||
+      msg.includes('timed out') ||
+      msg.includes('Network request failed')
+    ) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  }, true);
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -19,18 +34,9 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    /* Load every Ionicons glyph set so they render on web */
-    IonIcons: require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
-  });
-
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) return null;
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
