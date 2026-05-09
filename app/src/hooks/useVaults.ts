@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet";
 import { fetchAllVaults, fetchAllManagers } from "@/lib/solana/accounts";
-import { fetchKilnApi, getKilnApiUrl, type ApiItems } from "@/lib/api";
+import { fetchKilnApi, getKilnApiUrl, isArcadiaDevnetProductMode, type ApiItems } from "@/lib/api";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockManagerViews, mockVaultViews } from "@/lib/mockViews";
 import type { VaultConfigData, VaultStateData } from "@/lib/solana/accounts";
@@ -141,7 +141,9 @@ export function useVaults() {
       if (apiUrl) {
         try {
           const api = await fetchKilnApi<ApiItems<ApiVaultView>>("/vaults");
-          if (api) return api.items.map(normalizeVaultView);
+          if (api && (api.items.length > 0 || !connection || !isArcadiaDevnetProductMode())) {
+            return api.items.map(normalizeVaultView);
+          }
         } catch (error) {
           console.warn("Arcadia API unavailable; falling back to direct RPC vault reads.", error);
           if (!connection) throw error;
@@ -186,7 +188,9 @@ export function useManagers() {
       if (getKilnApiUrl()) {
         try {
           const api = await fetchKilnApi<ApiItems<ManagerView>>("/managers");
-          if (api) return api.items;
+          if (api && (api.items.length > 0 || !connection || !isArcadiaDevnetProductMode())) {
+            return api.items;
+          }
         } catch (error) {
           console.warn("Arcadia API unavailable; falling back to direct RPC manager reads.", error);
           if (!connection) throw error;

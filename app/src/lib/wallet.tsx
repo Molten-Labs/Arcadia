@@ -61,6 +61,11 @@ const KilnWalletContext = createContext<KilnWalletState>(defaultState);
 
 const PREFS_KEY = "kiln.wallet.prefs";
 
+interface StoredWalletPrefs {
+  role?: Role;
+  walletName?: string | null;
+}
+
 function KilnWalletInner({ children }: { children: ReactNode }) {
   const {
     connected,
@@ -77,17 +82,18 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   const stored = useMemo(() => {
     try {
       const raw = localStorage.getItem(PREFS_KEY);
-      return raw ? JSON.parse(raw) : null;
+      return raw ? (JSON.parse(raw) as StoredWalletPrefs) : null;
     } catch {
       return null;
     }
   }, []);
 
   const [role, setRole] = useState<Role>(stored?.role ?? "investor");
+  const [rememberedWalletName, setRememberedWalletName] = useState<string | null>(stored?.walletName ?? null);
 
   useEffect(() => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ role }));
-  }, [role]);
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ role, walletName: rememberedWalletName }));
+  }, [rememberedWalletName, role]);
 
   // After select() updates the wallet state, trigger the real connect()
   useEffect(() => {
@@ -98,6 +104,18 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
       });
     }
   }, [pendingConnect, wallet, connected, solConnect]);
+
+  useEffect(() => {
+    if (connected || wallet || demoWalletName || !rememberedWalletName) return;
+    select(rememberedWalletName as WalletName);
+    setPendingConnect(true);
+  }, [connected, demoWalletName, rememberedWalletName, select, wallet]);
+
+  useEffect(() => {
+    if (wallet?.adapter.name) {
+      setRememberedWalletName(wallet.adapter.name);
+    }
+  }, [wallet?.adapter.name]);
 
   const demoAddress = "Dnaz9wQvYpyh1LqL7AxnSmpuPjZLk6xrKfB3cXvjCXVj";
   const isConnected = connected || Boolean(demoWalletName);
@@ -115,14 +133,17 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
       connect: (name?: string) => {
         if (!name || name === "Demo Wallet") {
           setDemoWalletName(name ?? "Demo Wallet");
+          setRememberedWalletName(null);
           return;
         }
         setDemoWalletName(null);
+        setRememberedWalletName(name);
         select(name as WalletName);
         setPendingConnect(true);
       },
       disconnect: () => {
         setDemoWalletName(null);
+        setRememberedWalletName(null);
         solDisconnect();
       },
       setRole,

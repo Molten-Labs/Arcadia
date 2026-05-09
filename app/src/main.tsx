@@ -7,10 +7,10 @@ const globalScope = globalThis as typeof globalThis & {
 };
 const windowScope = window as Window & { Buffer?: typeof Buffer };
 
-if (typeof globalScope.Buffer === "undefined") {
+if (typeof globalScope.Buffer === "undefined" || typeof globalScope.Buffer.alloc !== "function") {
   globalScope.Buffer = Buffer;
 }
-if (typeof windowScope.Buffer === "undefined") {
+if (typeof windowScope.Buffer === "undefined" || typeof windowScope.Buffer.alloc !== "function") {
   windowScope.Buffer = Buffer;
 }
 if (typeof globalScope.global === "undefined") {

@@ -20,6 +20,12 @@ export function isArcadiaDemoMode(): boolean {
   return value === "1" || String(value).toLowerCase() === "true";
 }
 
+export function isArcadiaDevnetProductMode(): boolean {
+  const executionEnv = String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || "").toLowerCase();
+  const cluster = String(import.meta.env.VITE_SOLANA_CLUSTER || "").toLowerCase();
+  return !isArcadiaDemoMode() && (executionEnv === "devnet" || cluster === "devnet");
+}
+
 export async function fetchKilnApi<T>(path: string): Promise<T | null> {
   const baseUrl = getKilnApiUrl();
   if (!baseUrl) return null;
