@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../src/lib/theme';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -13,19 +14,19 @@ interface TabIconProps {
 
 function TabIcon({ name, focused }: TabIconProps) {
   const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const bgOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: focused ? 1.12 : 1,
+        toValue: focused ? 1.10 : 1,
         useNativeDriver: true,
-        damping: 18,
-        stiffness: 350,
+        damping: 16,
+        stiffness: 320,
       }),
-      Animated.timing(opacity, {
+      Animated.timing(bgOpacity, {
         toValue: focused ? 1 : 0,
-        duration: 200,
+        duration: 180,
         useNativeDriver: true,
       }),
     ]).start();
@@ -33,13 +34,11 @@ function TabIcon({ name, focused }: TabIconProps) {
 
   return (
     <View style={styles.iconContainer}>
-      {focused && (
-        <Animated.View style={[styles.indicator, { opacity }]} />
-      )}
+      <Animated.View style={[styles.indicator, { opacity: bgOpacity }]} />
       <Animated.View style={{ transform: [{ scale }] }}>
         <Ionicons
           name={name}
-          size={22}
+          size={21}
           color={focused ? colors.signal : colors.textQuiet}
         />
       </Animated.View>
@@ -51,49 +50,66 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
   },
   indicator: {
     position: 'absolute',
-    top: 0,
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.signalDim,
   },
 });
 
+function FloatingTabBar() {
+  const insets = useSafeAreaInsets();
+  return null; // placeholder — styling done via tabBarStyle
+}
+
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Platform.OS === 'ios' ? insets.bottom : 8;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
         tabBarStyle: {
+          position: 'absolute',
+          bottom: bottomPad + 12,
+          left: 16,
+          right: 16,
+          height: 68,
+          borderRadius: 34,
           backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 72,
-          paddingBottom: Platform.OS === 'ios' ? 26 : 12,
-          paddingTop: 8,
+          borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: colors.border,
+          paddingBottom: 0,
+          paddingTop: 0,
+          elevation: 0,
           ...Platform.select({
             ios: {
               shadowColor: '#000',
-              shadowOpacity: 0.25,
-              shadowRadius: 20,
-              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.30,
+              shadowRadius: 24,
+              shadowOffset: { width: 0, height: 8 },
             },
-            android: { elevation: 24 },
+            android: { elevation: 20 },
           }),
+        },
+        tabBarItemStyle: {
+          paddingVertical: 6,
         },
         tabBarActiveTintColor: colors.signal,
         tabBarInactiveTintColor: colors.textQuiet,
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '600',
-          letterSpacing: 0.3,
-          marginTop: 2,
+          fontSize: 9,
+          fontWeight: '700',
+          letterSpacing: 0.2,
+          marginTop: 0,
         },
       }}
     >
