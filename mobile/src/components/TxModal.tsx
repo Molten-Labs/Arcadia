@@ -9,6 +9,7 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing } from '../lib/theme';
 import { CLUSTER, EXPLORER_BASE } from '../lib/constants';
@@ -49,7 +50,7 @@ function StepDot({ active, done, label }: { active: boolean; done: boolean; labe
   return (
     <View style={styles.stepCol}>
       <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>
-        {done && <Text style={styles.dotCheck}>✓</Text>}
+        {done && <Ionicons name="checkmark" size={18} color={colors.white} />}
         {active && <ActivityIndicator size="small" color={colors.white} />}
       </View>
       <Text style={[styles.stepLabel, (done || active) && { color: colors.text }]}>{label}</Text>
@@ -89,10 +90,15 @@ export function TxModal({ state, onClose, label }: Props) {
 
           {isError ? (
             <View style={styles.body}>
-              <View style={[styles.bigIcon, { borderColor: colors.danger + '50', backgroundColor: colors.dangerDim }]}>
-                <Text style={[styles.bigIconText, { color: colors.danger }]}>
-                  {state.type === 'offline' ? '!' : 'x'}
-                </Text>
+              <View style={[styles.bigIcon, {
+                borderColor: colors.dangerBorder,
+                backgroundColor: colors.dangerDim,
+              }]}>
+                <Ionicons
+                  name={state.type === 'offline' ? 'wifi-outline' : 'close'}
+                  size={36}
+                  color={colors.danger}
+                />
               </View>
               <Text style={styles.title}>{failureTitle}</Text>
               <Text style={styles.hint}>{failureMessage}</Text>
@@ -103,22 +109,28 @@ export function TxModal({ state, onClose, label }: Props) {
 
           ) : isSuccess ? (
             <View style={styles.body}>
-              <View style={[styles.bigIcon, { borderColor: colors.signal + '50', backgroundColor: colors.signalDim }]}>
-                <Text style={[styles.bigIconText, { color: colors.signal }]}>✓</Text>
+              <View style={[styles.bigIcon, {
+                borderColor: colors.signalBorder,
+                backgroundColor: colors.signalDim,
+              }]}>
+                <Ionicons name="checkmark" size={40} color={colors.signal} />
               </View>
               <Text style={styles.title}>Submitted</Text>
               <Text style={styles.subtitle}>{label}</Text>
 
               {(state as any).demo ? (
                 <View style={styles.demoBadge}>
-                  <Text style={styles.demoBadgeText}>DEMO MODE - simulated only</Text>
+                  <Text style={styles.demoBadgeText}>DEMO MODE · simulated only</Text>
                 </View>
               ) : (
                 <Pressable style={styles.explorerRow} onPress={() => openExplorer((state as any).sig)}>
                   <Text style={styles.sigText} numberOfLines={1}>
                     {(state as any).sig.slice(0, 28)}...
                   </Text>
-                  <Text style={styles.explorerLink}>View on Explorer ↗</Text>
+                  <View style={styles.explorerLinkRow}>
+                    <Text style={styles.explorerLink}>View on Explorer</Text>
+                    <Ionicons name="open-outline" size={13} color={colors.signal} />
+                  </View>
                 </Pressable>
               )}
 
@@ -128,7 +140,7 @@ export function TxModal({ state, onClose, label }: Props) {
                   style={styles.btnGrad}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 >
-                <Text style={styles.btnText}>Done</Text>
+                  <Text style={styles.btnText}>Done</Text>
                 </LinearGradient>
               </Pressable>
             </View>
@@ -162,28 +174,28 @@ export function TxModal({ state, onClose, label }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,43,61,0.28)',
+    backgroundColor: 'rgba(2,8,16,0.65)',
     justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: colors.border,
     minHeight: 300,
-    paddingBottom: 40,
+    paddingBottom: 48,
   },
   handle: {
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: radius.full,
     backgroundColor: colors.borderStrong,
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 14,
+    marginBottom: 6,
   },
   body: {
     padding: spacing.xl,
@@ -193,20 +205,16 @@ const styles = StyleSheet.create({
   bigIcon: {
     width: 80,
     height: 80,
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bigIconText: {
-    fontSize: 36,
-    fontWeight: '600',
-  },
   title: {
     fontSize: 22,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 14,
@@ -222,8 +230,8 @@ const styles = StyleSheet.create({
   },
   stepCol: { alignItems: 'center', gap: 6 },
   dot: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
@@ -233,24 +241,23 @@ const styles = StyleSheet.create({
   },
   dotActive: { borderColor: colors.signal, backgroundColor: colors.signal },
   dotDone: { borderColor: colors.signal, backgroundColor: colors.signal },
-  dotCheck: { fontSize: 18, fontWeight: '700', color: colors.white },
   stepLabel: {
     fontSize: 9,
     fontWeight: '600',
     color: colors.textQuiet,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-    fontFamily: 'Courier',
   },
   connector: {
     flex: 1,
     height: 2,
     backgroundColor: colors.border,
-    marginBottom: 18,
+    marginBottom: 20,
   },
   connectorDone: { backgroundColor: colors.signal },
-  hint: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
-  explorerRow: { alignItems: 'center', gap: 4 },
+  hint: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  explorerRow: { alignItems: 'center', gap: 6 },
+  explorerLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   sigText: { fontSize: 11, color: colors.textMuted, fontFamily: 'Courier' },
   explorerLink: { fontSize: 13, color: colors.signal, fontWeight: '600' },
   demoBadge: {
@@ -259,21 +266,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: colors.warning + '40',
+    borderColor: colors.warningBorder,
   },
   demoBadgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.warning,
     letterSpacing: 0.5,
-    fontFamily: 'Courier',
   },
   btn: {
     borderRadius: radius.full,
     overflow: 'hidden',
     width: '100%',
   },
-  btnGrad: { paddingVertical: 16, alignItems: 'center' },
+  btnGrad: { paddingVertical: 17, alignItems: 'center' },
   btnText: { fontSize: 16, fontWeight: '700', color: colors.white },
   btnSecondary: {
     backgroundColor: colors.surfaceElevated,

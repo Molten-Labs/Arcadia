@@ -4,20 +4,37 @@ import { colors, radius } from '../lib/theme';
 
 type Status = 'paper' | 'active' | 'cooldown' | 'frozen' | 'closed';
 
-const STATUS_LABELS: Record<Status, string> = {
-  paper: 'PAPER',
-  active: 'ACTIVE',
-  cooldown: 'COOL',
-  frozen: 'FROZEN',
-  closed: 'CLOSED',
-};
-
-const STATUS_COLORS: Record<Status, string> = {
-  paper: colors.statusPaper,
-  active: colors.statusActive,
-  cooldown: colors.statusCooldown,
-  frozen: colors.statusFrozen,
-  closed: colors.statusClosed,
+const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; border: string }> = {
+  paper: {
+    label: 'Paper',
+    color: colors.textMuted,
+    bg: 'rgba(82,122,147,0.10)',
+    border: 'rgba(82,122,147,0.22)',
+  },
+  active: {
+    label: 'Live',
+    color: colors.signal,
+    bg: colors.signalDim,
+    border: colors.signalBorder,
+  },
+  cooldown: {
+    label: 'Cooldown',
+    color: colors.warning,
+    bg: colors.warningDim,
+    border: colors.warningBorder,
+  },
+  frozen: {
+    label: 'Frozen',
+    color: colors.danger,
+    bg: colors.dangerDim,
+    border: colors.dangerBorder,
+  },
+  closed: {
+    label: 'Closed',
+    color: colors.textQuiet,
+    bg: 'rgba(46,77,99,0.10)',
+    border: 'rgba(46,77,99,0.20)',
+  },
 };
 
 interface Props {
@@ -26,18 +43,26 @@ interface Props {
 }
 
 export function StatusBadge({ status, size = 'md' }: Props) {
-  const color = STATUS_COLORS[status];
-  const small = size === 'sm';
+  const cfg = STATUS_CONFIG[status];
+  const isActive = status === 'active';
 
   return (
     <View style={[
       styles.badge,
-      { borderColor: color + '40', backgroundColor: color + '14' },
-      small && styles.badgeSm,
+      { backgroundColor: cfg.bg, borderColor: cfg.border },
+      size === 'sm' && styles.badgeSm,
     ]}>
-      <View style={[styles.dot, { backgroundColor: color }, small && styles.dotSm]} />
-      <Text style={[styles.label, { color }, small && styles.labelSm]}>
-        {STATUS_LABELS[status]}
+      <View style={[
+        styles.dot,
+        { backgroundColor: cfg.color },
+        isActive && styles.dotActive,
+      ]} />
+      <Text style={[
+        styles.label,
+        { color: cfg.color },
+        size === 'sm' && styles.labelSm,
+      ]}>
+        {cfg.label}
       </Text>
     </View>
   );
@@ -48,8 +73,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
     borderWidth: 1,
     gap: 5,
     alignSelf: 'flex-start',
@@ -63,12 +88,18 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
   },
-  dotSm: { width: 4, height: 4 },
-  label: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.9,
-    fontFamily: 'Courier',
+  dotActive: {
+    shadowColor: colors.signal,
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 0 },
   },
-  labelSm: { fontSize: 9 },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  labelSm: {
+    fontSize: 10,
+  },
 });

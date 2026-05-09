@@ -27,7 +27,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <WalletProvider>
-            <StatusBar style="dark" />
+            <StatusBar style="light" />
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -52,6 +52,7 @@ export default function RootLayout() {
                 options={{
                   headerShown: true,
                   headerTitle: 'Launch Vault',
+                  headerTitleStyle: { color: colors.text, fontWeight: '600' },
                   headerStyle: { backgroundColor: colors.surface },
                   headerTintColor: colors.signal,
                   headerShadowVisible: false,
@@ -62,7 +63,8 @@ export default function RootLayout() {
                 name="manager/vault/[id]"
                 options={{
                   headerShown: true,
-                  headerTitle: 'Manager Vault',
+                  headerTitle: 'Vault Manager',
+                  headerTitleStyle: { color: colors.text, fontWeight: '600' },
                   headerStyle: { backgroundColor: colors.surface },
                   headerTintColor: colors.signal,
                   headerShadowVisible: false,
@@ -73,7 +75,8 @@ export default function RootLayout() {
                 name="trade"
                 options={{
                   headerShown: true,
-                  headerTitle: 'Trade',
+                  headerTitle: 'Trade Terminal',
+                  headerTitleStyle: { color: colors.text, fontWeight: '600' },
                   headerStyle: { backgroundColor: colors.surface },
                   headerTintColor: colors.signal,
                   headerShadowVisible: false,

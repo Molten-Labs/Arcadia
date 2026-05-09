@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +29,8 @@ import { formatUSD, truncateAddress } from '../../src/lib/format';
 import { VaultView } from '../../src/lib/mockData';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function ManagerScreen() {
   const router = useRouter();
@@ -54,9 +57,7 @@ export default function ManagerScreen() {
 
   async function runInitManager() {
     if (!connected) {
-      try {
-        await connect();
-      } catch (err: any) {
+      try { await connect(); } catch (err: any) {
         Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
       }
       return;
@@ -95,129 +96,178 @@ export default function ManagerScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 12 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroShell}>
+        {/* Hero panel */}
+        <View style={styles.heroCard}>
           <LinearGradient
-            colors={['rgba(0,181,164,0.18)', 'rgba(255,255,255,0.86)', 'rgba(0,43,61,0.06)']}
-            locations={[0, 0.55, 1]}
+            colors={['rgba(0,217,140,0.10)', 'rgba(0,217,140,0.02)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
           <View style={styles.heroTop}>
-            <View style={styles.brandMark}>
-              <Text style={styles.brandMarkText}>A</Text>
+            <View style={styles.heroIconWrap}>
+              <Ionicons name="stats-chart" size={22} color={colors.signal} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>TRADER COCKPIT</Text>
+              <Text style={styles.eyebrow}>Trader Cockpit</Text>
               <Text style={styles.walletLine}>
-                {connected ? walletLabel || truncateAddress(publicKey ?? '', 5) : 'Wallet required for signing'}
+                {connected ? walletLabel || truncateAddress(publicKey ?? '', 5) : 'Connect wallet to sign transactions'}
               </Text>
             </View>
-            <View style={[styles.livePill, connected && styles.livePillOn]}>
-              <View style={[styles.liveDot, connected && styles.liveDotOn]} />
-              <Text style={[styles.liveText, connected && styles.liveTextOn]}>
-                {connected ? 'DEVNET' : 'OFFLINE'}
+            <View style={[styles.networkBadge, connected && styles.networkBadgeLive]}>
+              <View style={[styles.networkDot, connected && styles.networkDotLive]} />
+              <Text style={[styles.networkText, connected && styles.networkTextLive]}>
+                {connected ? 'Devnet' : 'Offline'}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.title}>Run the full first-loss vault lifecycle from your phone.</Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.heroTitle}>
+            Run the first-loss vault lifecycle from your phone.
+          </Text>
+          <Text style={styles.heroSub}>
             Create, fund, graduate, guard, and prove the junior-first loss waterfall without leaving the mobile flow.
           </Text>
 
-          {pendingRequest && <Text style={styles.pendingLine}>{pendingRequest}</Text>}
+          {pendingRequest && (
+            <View style={styles.pendingBanner}>
+              <Ionicons name="time-outline" size={13} color={colors.signal} />
+              <Text style={styles.pendingText}>{pendingRequest}</Text>
+            </View>
+          )}
 
           <View style={styles.heroActions}>
             {!connected ? (
               <MotionPressable style={styles.primaryBtn} onPress={handleConnect}>
                 <LinearGradient colors={[colors.signal, colors.signalDeep]} style={styles.primaryGrad}>
-                  <Text style={styles.primaryText}>Connect wallet</Text>
+                  <Ionicons name="wallet-outline" size={16} color={colors.white} />
+                  <Text style={styles.primaryText}>Connect Wallet</Text>
                 </LinearGradient>
               </MotionPressable>
             ) : role !== 'trader' ? (
               <MotionPressable style={styles.primaryBtn} onPress={() => setRole('trader')}>
                 <LinearGradient colors={[colors.signal, colors.signalDeep]} style={styles.primaryGrad}>
-                  <Text style={styles.primaryText}>Enter trader mode</Text>
+                  <Ionicons name="swap-horizontal-outline" size={16} color={colors.white} />
+                  <Text style={styles.primaryText}>Enter Trader Mode</Text>
                 </LinearGradient>
               </MotionPressable>
             ) : (
               <MotionPressable style={styles.primaryBtn} onPress={() => router.push('/manager/create')}>
                 <LinearGradient colors={[colors.signal, colors.signalDeep]} style={styles.primaryGrad}>
-                  <Text style={styles.primaryText}>Launch vault</Text>
+                  <Ionicons name="add-circle-outline" size={16} color={colors.white} />
+                  <Text style={styles.primaryText}>Launch Vault</Text>
                 </LinearGradient>
               </MotionPressable>
             )}
             <MotionPressable style={styles.secondaryBtn} onPress={handleStartDemo}>
-              <Text style={styles.secondaryText}>Play demo</Text>
+              <Ionicons name="play-outline" size={15} color={colors.textSub} />
+              <Text style={styles.secondaryText}>Demo</Text>
             </MotionPressable>
           </View>
         </View>
 
+        {/* KPI grid */}
         <View style={styles.kpiGrid}>
-          <Kpi label="Junior at risk" value={formatUSD(totalJunior, true)} tone="signal" />
-          <Kpi label="Senior protected" value={formatUSD(seniorTvl, true)} tone="ink" />
-          <Kpi label="Live vaults" value={`${activeVaults.length}/${managerVaults.length}`} tone="signal" />
-          <Kpi label="Paper proof" value={`${Math.round(paperProgress * 100)}%`} tone="warning" />
+          <KpiCard
+            label="Junior at risk"
+            value={formatUSD(totalJunior, true)}
+            icon="shield-outline"
+            accent
+          />
+          <KpiCard
+            label="Senior protected"
+            value={formatUSD(seniorTvl, true)}
+            icon="lock-closed-outline"
+          />
+          <KpiCard
+            label="Live vaults"
+            value={`${activeVaults.length}/${managerVaults.length}`}
+            icon="layers-outline"
+            accent={activeVaults.length > 0}
+          />
+          <KpiCard
+            label="Paper progress"
+            value={`${Math.round(paperProgress * 100)}%`}
+            icon="document-text-outline"
+          />
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>PROOF PIPELINE</Text>
-          <Text style={styles.sectionHint}>Hackathon evidence</Text>
-        </View>
+        {/* Proof pipeline */}
+        <SectionHeader label="Proof Pipeline" hint="On-chain lifecycle" />
         <View style={styles.pipelineCard}>
           <PipelineStep
-            index="01"
-            title="Trader posts junior"
-            copy="Own capital sits in the first-loss tranche."
+            index={1}
+            title="Trader posts junior capital"
+            copy="Your own funds sit in the first-loss tranche."
             done={totalJunior > 0}
           />
           <PipelineStep
-            index="02"
+            index={2}
             title="Paper mode graduates"
-            copy={paperVault ? `${paperVault.paperTradeCount}/${paperVault.minQualifyingTrades} qualifying trades` : 'Active vault already graduated'}
+            copy={paperVault
+              ? `${paperVault.paperTradeCount}/${paperVault.minQualifyingTrades} qualifying trades`
+              : 'Vault already graduated'}
             done={paperProgress >= 1}
           />
           <PipelineStep
-            index="03"
-            title="Investor deposits senior"
-            copy="Senior capital enters only after reputation is proven."
+            index={3}
+            title="Investors deposit senior capital"
+            copy="Senior capital enters only after your reputation is proven."
             done={seniorTvl > 0}
           />
           <PipelineStep
-            index="04"
-            title="Vault Guard enforces"
+            index={4}
+            title="Vault Guard enforces risk limits"
             copy="Risky trades are rejected before funds move."
             done={Boolean(leadVault?.tradingEnabled)}
             last
           />
         </View>
 
+        {/* Vault Guard */}
         <View style={styles.guardCard}>
-          <View style={styles.guardCopy}>
-            <Text style={styles.sectionLabel}>VAULT GUARD</Text>
-            <Text style={styles.guardTitle}>Risk stays visible. Strategy stays private.</Text>
-            <Text style={styles.guardSub}>
-              Position limits tighten as junior health falls. Investors only need the proof, not the trader's alpha.
-            </Text>
+          <View style={styles.guardHeader}>
+            <Ionicons name="shield-checkmark-outline" size={18} color={colors.signal} />
+            <Text style={styles.guardTitle}>Vault Guard</Text>
           </View>
+          <Text style={styles.guardSub}>
+            Position limits tighten as junior health falls. Investors see the proof — not the strategy.
+          </Text>
           <View style={styles.healthPanel}>
-            <HealthMeter health={avgHealth} height={9} />
+            <HealthMeter health={avgHealth} height={8} />
             <View style={styles.limitRow}>
-              <Text style={styles.limitLabel}>Max trade</Text>
-              <Text style={styles.limitValue}>{avgHealth < 0.45 ? 'locked' : avgHealth < 0.7 ? '5% TVL' : '15% TVL'}</Text>
+              <Text style={styles.limitLabel}>Max trade size</Text>
+              <Text style={[styles.limitValue, { color: avgHealth < 0.45 ? colors.danger : colors.signal }]}>
+                {avgHealth < 0.45 ? 'Locked' : avgHealth < 0.7 ? '5% TVL' : '15% TVL'}
+              </Text>
             </View>
           </View>
         </View>
 
+        {/* Quick actions */}
         <View style={styles.quickGrid}>
-          <QuickAction title="Initialize" copy="Create manager PDA" onPress={runInitManager} />
-          <QuickAction title="Guard swap" copy="Open terminal" onPress={() => router.push('/trade')} />
-          <QuickAction title="Create vault" copy="Paper mode first" onPress={() => router.push('/manager/create')} />
+          <QuickAction
+            title="Initialize"
+            copy="Create manager account"
+            icon="person-add-outline"
+            onPress={runInitManager}
+          />
+          <QuickAction
+            title="Trade"
+            copy="Open terminal"
+            icon="swap-horizontal-outline"
+            onPress={() => router.push('/trade')}
+          />
+          <QuickAction
+            title="New Vault"
+            copy="Paper mode first"
+            icon="add-circle-outline"
+            onPress={() => router.push('/manager/create')}
+          />
         </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>MANAGED VAULTS</Text>
-          <Text style={styles.sectionHint}>{managerVaults.length} total</Text>
-        </View>
+        {/* Managed vaults */}
+        <SectionHeader label="Managed Vaults" hint={`${managerVaults.length} total`} />
+
         {isLoading ? (
           <View style={styles.loadingCard}>
             <ActivityIndicator color={colors.signal} />
@@ -225,8 +275,13 @@ export default function ManagerScreen() {
           </View>
         ) : managerVaults.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No manager vaults yet</Text>
-            <Text style={styles.emptySub}>Start the guided demo or launch a paper vault to build a public track record.</Text>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="layers-outline" size={24} color={colors.textMuted} />
+            </View>
+            <Text style={styles.emptyTitle}>No managed vaults</Text>
+            <Text style={styles.emptySub}>
+              Start the guided demo or launch a paper vault to build your track record.
+            </Text>
             <Pressable style={styles.emptyBtn} onPress={handleStartDemo}>
               <Text style={styles.emptyBtnText}>Run guided lifecycle</Text>
             </Pressable>
@@ -243,11 +298,17 @@ export default function ManagerScreen() {
   );
 }
 
+function SectionHeader({ label, hint }: { label: string; hint?: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionLabel}>{label}</Text>
+      {hint && <Text style={styles.sectionHint}>{hint}</Text>}
+    </View>
+  );
+}
+
 function MotionPressable({
-  children,
-  disabled,
-  onPress,
-  style,
+  children, disabled, onPress, style,
 }: {
   children: React.ReactNode;
   disabled?: boolean;
@@ -255,20 +316,18 @@ function MotionPressable({
   style?: StyleProp<ViewStyle>;
 }) {
   const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   return (
     <AnimatedPressable
       disabled={disabled}
       onPress={onPress}
       onPressIn={() => {
-        scale.value = withSpring(0.97, { damping: 16, stiffness: 320 });
+        scale.value = withSpring(0.97, { damping: 18, stiffness: 350 });
         if (Platform.OS !== 'web') Haptics.selectionAsync();
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+        scale.value = withSpring(1, { damping: 14, stiffness: 280 });
       }}
       style={[style, animatedStyle, disabled && styles.disabled]}
     >
@@ -277,24 +336,25 @@ function MotionPressable({
   );
 }
 
-function Kpi({ label, value, tone }: { label: string; value: string; tone: 'signal' | 'warning' | 'ink' }) {
-  const color = tone === 'warning' ? colors.warning : tone === 'ink' ? colors.text : colors.signal;
+function KpiCard({ label, value, icon, accent }: {
+  label: string;
+  value: string;
+  icon: IoniconName;
+  accent?: boolean;
+}) {
   return (
-    <View style={styles.kpiCard}>
+    <View style={[styles.kpiCard, accent && styles.kpiCardAccent]}>
+      <View style={[styles.kpiIconWrap, accent && styles.kpiIconWrapAccent]}>
+        <Ionicons name={icon} size={14} color={accent ? colors.signal : colors.textMuted} />
+      </View>
+      <Text style={[styles.kpiValue, accent && { color: colors.signal }]}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
-      <Text style={[styles.kpiValue, { color }]}>{value}</Text>
     </View>
   );
 }
 
-function PipelineStep({
-  index,
-  title,
-  copy,
-  done,
-  last,
-}: {
-  index: string;
+function PipelineStep({ index, title, copy, done, last }: {
+  index: number;
   title: string;
   copy: string;
   done: boolean;
@@ -304,11 +364,15 @@ function PipelineStep({
     <View style={styles.pipelineStep}>
       <View style={styles.pipelineRail}>
         <View style={[styles.pipelineDot, done && styles.pipelineDotDone]}>
-          <Text style={[styles.pipelineDotText, done && styles.pipelineDotTextDone]}>{done ? 'OK' : index}</Text>
+          {done ? (
+            <Ionicons name="checkmark" size={13} color={colors.white} />
+          ) : (
+            <Text style={styles.pipelineNum}>{index}</Text>
+          )}
         </View>
         {!last && <View style={[styles.pipelineLine, done && styles.pipelineLineDone]} />}
       </View>
-      <View style={styles.pipelineText}>
+      <View style={styles.pipelineContent}>
         <Text style={styles.pipelineTitle}>{title}</Text>
         <Text style={styles.pipelineCopy}>{copy}</Text>
       </View>
@@ -316,9 +380,17 @@ function PipelineStep({
   );
 }
 
-function QuickAction({ title, copy, onPress }: { title: string; copy: string; onPress: () => void }) {
+function QuickAction({ title, copy, icon, onPress }: {
+  title: string;
+  copy: string;
+  icon: IoniconName;
+  onPress: () => void;
+}) {
   return (
     <MotionPressable style={styles.quickCard} onPress={onPress}>
+      <View style={styles.quickIcon}>
+        <Ionicons name={icon} size={18} color={colors.signal} />
+      </View>
       <Text style={styles.quickTitle}>{title}</Text>
       <Text style={styles.quickCopy}>{copy}</Text>
     </MotionPressable>
@@ -327,110 +399,126 @@ function QuickAction({ title, copy, onPress }: { title: string; copy: string; on
 
 function ManagerVaultCard({ vault, onPress }: { vault: VaultView; onPress: () => void }) {
   const navChange = vault.currentNav - 1;
-  const navColor = navChange >= 0 ? colors.signal : colors.danger;
+  const navPositive = navChange >= 0;
+
   return (
     <MotionPressable style={styles.vaultCard} onPress={onPress}>
       <View style={styles.vaultTop}>
-        <View style={styles.vaultIcon}>
-          <Text style={styles.vaultIconText}>{vault.name.charAt(0)}</Text>
+        <View style={styles.vaultAvatar}>
+          <Text style={styles.vaultAvatarText}>{vault.name.charAt(0)}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.vaultName}>{vault.name}</Text>
-          <Text style={styles.vaultMeta}>Manager {truncateAddress(vault.managerPubkey, 5)}</Text>
+          <Text style={styles.vaultMeta}>{truncateAddress(vault.managerPubkey, 5)}</Text>
         </View>
         <StatusBadge status={vault.status} size="sm" />
       </View>
       <View style={styles.vaultNumbers}>
         <View>
-          <Text style={styles.vaultNumberLabel}>NAV</Text>
-          <Text style={styles.vaultNumberValue}>{vault.currentNav.toFixed(4)}</Text>
+          <Text style={styles.vaultNumLabel}>NAV</Text>
+          <Text style={styles.vaultNumVal}>{vault.currentNav.toFixed(4)}</Text>
         </View>
         <View>
-          <Text style={styles.vaultNumberLabel}>JUNIOR</Text>
-          <Text style={styles.vaultNumberValue}>{formatUSD(vault.juniorCapital, true)}</Text>
+          <Text style={styles.vaultNumLabel}>Junior Capital</Text>
+          <Text style={styles.vaultNumVal}>{formatUSD(vault.juniorCapital, true)}</Text>
         </View>
         <View>
-          <Text style={styles.vaultNumberLabel}>MOVE</Text>
-          <Text style={[styles.vaultNumberValue, { color: navColor }]}>
-            {(navChange >= 0 ? '+' : '')}{(navChange * 100).toFixed(1)}%
+          <Text style={styles.vaultNumLabel}>Change</Text>
+          <Text style={[styles.vaultNumVal, { color: navPositive ? colors.signal : colors.danger }]}>
+            {navPositive ? '+' : ''}{(navChange * 100).toFixed(1)}%
           </Text>
         </View>
       </View>
-      <HealthMeter health={vault.juniorHealth} height={7} />
+      <HealthMeter health={vault.juniorHealth} height={5} />
     </MotionPressable>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  scroll: { padding: spacing.md, gap: 16, paddingBottom: 112 },
-  heroShell: {
-    borderRadius: 28,
+  scroll: { padding: spacing.md, gap: 14, paddingBottom: 80 },
+
+  heroCard: {
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.signalBorder,
     overflow: 'hidden',
     padding: 20,
-    gap: 16,
-    shadowColor: colors.signal,
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 16 },
+    gap: 14,
+    backgroundColor: colors.surface,
   },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  brandMark: {
-    width: 42,
-    height: 42,
-    borderRadius: 15,
-    backgroundColor: colors.ink,
+  heroIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.signalDim,
+    borderWidth: 1,
+    borderColor: colors.signalBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandMarkText: { color: colors.white, fontFamily: 'Courier', fontSize: 18, fontWeight: '800' },
-  eyebrow: { fontSize: 10, color: colors.signal, fontWeight: '800', letterSpacing: 1.2, fontFamily: 'Courier' },
+  eyebrow: { fontSize: 11, color: colors.signal, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
   walletLine: { marginTop: 2, color: colors.textMuted, fontSize: 11, fontFamily: 'Courier' },
-  livePill: {
+  networkBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderRadius: radius.full,
+    gap: 5,
+    borderRadius: radius.pill,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  livePillOn: { backgroundColor: colors.signalDim, borderColor: colors.signal + '30' },
-  liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.textQuiet },
-  liveDotOn: { backgroundColor: colors.signal },
-  liveText: { fontSize: 9, color: colors.textQuiet, fontWeight: '800', fontFamily: 'Courier' },
-  liveTextOn: { color: colors.signalDeep },
-  title: { color: colors.text, fontSize: 32, lineHeight: 35, fontWeight: '800', letterSpacing: -1.1 },
-  subtitle: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
-  pendingLine: {
-    color: colors.signalDeep,
-    fontSize: 11,
-    fontFamily: 'Courier',
+  networkBadgeLive: { backgroundColor: colors.signalDim, borderColor: colors.signalBorder },
+  networkDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.textQuiet },
+  networkDotLive: { backgroundColor: colors.signal },
+  networkText: { fontSize: 10, color: colors.textQuiet, fontWeight: '700' },
+  networkTextLive: { color: colors.signal },
+  heroTitle: {
+    color: colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  heroSub: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     backgroundColor: colors.signalDim,
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 8,
     alignSelf: 'flex-start',
   },
+  pendingText: { color: colors.signal, fontSize: 11, fontFamily: 'Courier', fontWeight: '600' },
   heroActions: { flexDirection: 'row', gap: 10 },
-  primaryBtn: { flex: 1, borderRadius: radius.full, overflow: 'hidden' },
-  primaryGrad: { minHeight: 52, alignItems: 'center', justifyContent: 'center' },
-  primaryText: { color: colors.white, fontSize: 15, fontWeight: '900' },
-  secondaryBtn: {
-    minHeight: 52,
-    paddingHorizontal: 18,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: colors.surface,
+  primaryBtn: { flex: 1, borderRadius: radius.pill, overflow: 'hidden' },
+  primaryGrad: {
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
   },
-  secondaryText: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  primaryText: { color: colors.white, fontSize: 14, fontWeight: '700' },
+  secondaryBtn: {
+    minHeight: 50,
+    paddingHorizontal: 20,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  secondaryText: { color: colors.textSub, fontSize: 13, fontWeight: '600' },
+
   kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   kpiCard: {
     width: '48.5%',
@@ -438,17 +526,46 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    padding: 14,
     gap: 6,
   },
-  kpiLabel: { color: colors.textQuiet, fontSize: 9, fontWeight: '800', letterSpacing: 0.8, fontFamily: 'Courier' },
-  kpiValue: { color: colors.text, fontSize: 20, fontWeight: '900', fontFamily: 'Courier' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 },
-  sectionLabel: { color: colors.textMuted, fontSize: 10, fontFamily: 'Courier', fontWeight: '900', letterSpacing: 1.1 },
-  sectionHint: { color: colors.textQuiet, fontSize: 11, fontFamily: 'Courier' },
+  kpiCardAccent: {
+    borderColor: colors.signalBorder,
+    backgroundColor: colors.signalDim,
+  },
+  kpiIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  kpiIconWrapAccent: { backgroundColor: 'rgba(0,217,140,0.16)' },
+  kpiLabel: { color: colors.textQuiet, fontSize: 10, fontWeight: '500', lineHeight: 14 },
+  kpiValue: { color: colors.text, fontSize: 20, fontWeight: '700', fontFamily: 'Courier' },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  sectionHint: { fontSize: 11, color: colors.textQuiet },
+
   pipelineCard: {
-    backgroundColor: colors.ink,
-    borderRadius: 26,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: 18,
     gap: 0,
     overflow: 'hidden',
@@ -458,49 +575,65 @@ const styles = StyleSheet.create({
   pipelineDot: {
     width: 34,
     height: 34,
-    borderRadius: 12,
-    backgroundColor: colors.inkSurface,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceHigh,
     borderWidth: 1,
-    borderColor: colors.inkBorder,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pipelineDotDone: { backgroundColor: colors.signal, borderColor: colors.signal },
-  pipelineDotText: { color: colors.textQuiet, fontFamily: 'Courier', fontSize: 9, fontWeight: '900' },
-  pipelineDotTextDone: { color: colors.white },
-  pipelineLine: { width: 1, flex: 1, minHeight: 34, backgroundColor: colors.inkBorder },
+  pipelineNum: { color: colors.textMuted, fontSize: 12, fontWeight: '700', fontFamily: 'Courier' },
+  pipelineLine: { width: 1, flex: 1, minHeight: 28, backgroundColor: colors.border, marginVertical: 4 },
   pipelineLineDone: { backgroundColor: colors.signal },
-  pipelineText: { flex: 1, paddingBottom: 18 },
-  pipelineTitle: { color: colors.white, fontSize: 15, fontWeight: '800' },
-  pipelineCopy: { color: '#AFC5CA', fontSize: 12, lineHeight: 18, marginTop: 3 },
+  pipelineContent: { flex: 1, paddingBottom: 18, paddingTop: 6 },
+  pipelineTitle: { color: colors.text, fontSize: 14, fontWeight: '700', letterSpacing: -0.2 },
+  pipelineCopy: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 3 },
+
   guardCard: {
     backgroundColor: colors.surface,
-    borderRadius: 26,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 18,
-    gap: 16,
+    gap: 14,
   },
-  guardCopy: { gap: 8 },
-  guardTitle: { color: colors.text, fontSize: 20, lineHeight: 24, fontWeight: '900', letterSpacing: -0.4 },
+  guardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  guardTitle: { color: colors.text, fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
   guardSub: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  healthPanel: { backgroundColor: colors.surfaceElevated, borderRadius: 20, padding: 16, gap: 14 },
+  healthPanel: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
+    padding: 14,
+    gap: 12,
+  },
   limitRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  limitLabel: { color: colors.textQuiet, fontSize: 10, fontFamily: 'Courier', fontWeight: '900', letterSpacing: 0.8 },
-  limitValue: { color: colors.signalDeep, fontSize: 16, fontFamily: 'Courier', fontWeight: '900' },
+  limitLabel: { color: colors.textQuiet, fontSize: 11, fontWeight: '500' },
+  limitValue: { fontSize: 14, fontFamily: 'Courier', fontWeight: '700' },
+
   quickGrid: { flexDirection: 'row', gap: 10 },
   quickCard: {
     flex: 1,
-    minHeight: 88,
+    minHeight: 96,
     backgroundColor: colors.surface,
-    borderRadius: 22,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 14,
-    justifyContent: 'space-between',
+    gap: 6,
   },
-  quickTitle: { color: colors.text, fontSize: 13, fontWeight: '900' },
-  quickCopy: { color: colors.textQuiet, fontSize: 10, lineHeight: 14, fontFamily: 'Courier' },
+  quickIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: colors.signalDim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  quickTitle: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  quickCopy: { color: colors.textQuiet, fontSize: 10, lineHeight: 14 },
+
   loadingCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
@@ -509,51 +642,77 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: 'center',
     gap: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  loadingText: { color: colors.textMuted, fontSize: 12, fontFamily: 'Courier' },
+  loadingText: { color: colors.textMuted, fontSize: 13 },
+
   emptyCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: 12,
+    padding: spacing.xl,
+    gap: 10,
     alignItems: 'center',
   },
-  emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '900', textAlign: 'center' },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: { color: colors.text, fontSize: 17, fontWeight: '700', textAlign: 'center' },
   emptySub: { color: colors.textQuiet, fontSize: 13, textAlign: 'center', lineHeight: 19 },
-  emptyBtn: { backgroundColor: colors.signalDim, borderRadius: radius.full, paddingHorizontal: 16, paddingVertical: 10 },
-  emptyBtnText: { color: colors.signalDeep, fontSize: 13, fontWeight: '900' },
+  emptyBtn: {
+    backgroundColor: colors.signalDim,
+    borderRadius: radius.pill,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.signalBorder,
+    marginTop: 4,
+  },
+  emptyBtnText: { color: colors.signal, fontSize: 13, fontWeight: '700' },
+
   vaultCard: {
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
     gap: 14,
   },
   vaultTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  vaultIcon: {
+  vaultAvatar: {
     width: 42,
     height: 42,
-    borderRadius: 15,
+    borderRadius: 13,
     backgroundColor: colors.signalDim,
     borderWidth: 1,
-    borderColor: colors.signal + '25',
+    borderColor: colors.signalBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  vaultIconText: { color: colors.signalDeep, fontFamily: 'Courier', fontSize: 17, fontWeight: '900' },
-  vaultName: { color: colors.text, fontSize: 16, fontWeight: '900' },
-  vaultMeta: { color: colors.textQuiet, fontSize: 10, fontFamily: 'Courier', marginTop: 3 },
+  vaultAvatarText: { color: colors.signal, fontSize: 17, fontWeight: '700' },
+  vaultName: { color: colors.text, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  vaultMeta: { color: colors.textQuiet, fontSize: 10, fontFamily: 'Courier', marginTop: 2 },
   vaultNumbers: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 18,
+    borderRadius: radius.md,
     padding: 12,
   },
-  vaultNumberLabel: { color: colors.textQuiet, fontSize: 8, fontFamily: 'Courier', fontWeight: '900', letterSpacing: 0.8 },
-  vaultNumberValue: { color: colors.text, fontSize: 13, fontFamily: 'Courier', fontWeight: '900', marginTop: 3 },
+  vaultNumLabel: { color: colors.textQuiet, fontSize: 9, fontWeight: '500', textTransform: 'uppercase', letterSpacing: 0.4 },
+  vaultNumVal: { color: colors.text, fontSize: 13, fontFamily: 'Courier', fontWeight: '700', marginTop: 3 },
+
   disabled: { opacity: 0.45 },
+
+  textSub: { color: colors.textSub },
 });

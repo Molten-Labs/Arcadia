@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../src/lib/theme';
@@ -27,7 +28,7 @@ type Sort = 'tvl' | 'apy' | 'health';
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
+  { key: 'active', label: 'Live' },
   { key: 'paper', label: 'Paper' },
   { key: 'cooldown', label: 'Cooldown' },
 ];
@@ -53,13 +54,11 @@ function AnimatedTVL({ value }: { value: number }) {
   const [display, setDisplay] = useState('$0');
 
   useEffect(() => {
-    animVal.addListener(({ value: v }) => {
-      setDisplay(formatUSD(v));
-    });
+    animVal.addListener(({ value: v }) => setDisplay(formatUSD(v)));
     Animated.timing(animVal, {
       toValue: value,
-      duration: 1200,
-      delay: 200,
+      duration: 1400,
+      delay: 300,
       useNativeDriver: false,
     }).start();
     return () => animVal.removeAllListeners();
@@ -74,14 +73,6 @@ export default function VaultsScreen() {
   const { data: vaults, isLoading, refetch, isRefetching } = useVaults();
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('tvl');
-
-  const spinAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinAnim, { toValue: 1, duration: 3000, useNativeDriver: true })
-    ).start();
-  }, []);
 
   const filtered = (vaults ?? []).filter(v =>
     filter === 'all' ? true : v.status === filter
@@ -106,60 +97,64 @@ export default function VaultsScreen() {
 
   const Header = () => (
     <>
+      {/* Navbar */}
       <FadeSlideIn delay={0}>
-        <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
+        <View style={[styles.navbar, { paddingTop: insets.top + 10 }]}>
           <View>
-            <Text style={styles.wordmark}>ARCADIA</Text>
-            <Text style={styles.tagline}>first-loss managed vaults · solana</Text>
+            <Text style={styles.wordmark}>Arcadia</Text>
+            <Text style={styles.tagline}>Proof-gated vaults · Solana</Text>
           </View>
           <WalletButton />
         </View>
       </FadeSlideIn>
 
-      <FadeSlideIn delay={80}>
-        <View style={[styles.tickerWrap]}>
+      {/* Market ticker */}
+      <FadeSlideIn delay={60}>
+        <View style={styles.tickerWrap}>
           <MarketTicker />
         </View>
       </FadeSlideIn>
 
-      <FadeSlideIn delay={160}>
+      {/* Hero TVL card */}
+      <FadeSlideIn delay={130}>
         <View style={styles.heroCard}>
           <LinearGradient
-            colors={['rgba(0,200,150,0.12)', 'rgba(0,200,150,0.04)', 'transparent']}
+            colors={['rgba(0,217,140,0.10)', 'rgba(0,217,140,0.02)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          <Text style={styles.heroLabel}>Total Protocol TVL</Text>
+          <Text style={styles.heroLabel}>Protocol TVL</Text>
           <AnimatedTVL value={totalTvl} />
 
-          <View style={styles.heroBento}>
-            <View style={styles.heroBentoCell}>
-              <Text style={[styles.heroBentoValue, { color: colors.signal }]}>{activeCount}</Text>
-              <Text style={styles.heroBentoLabel}>Active Vaults</Text>
+          <View style={styles.heroStats}>
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { color: colors.signal }]}>{activeCount}</Text>
+              <Text style={styles.heroStatLabel}>Live Vaults</Text>
             </View>
-            <View style={styles.heroBentoDivider} />
-            <View style={styles.heroBentoCell}>
-              <Text style={styles.heroBentoValue}>{(vaults ?? []).length}</Text>
-              <Text style={styles.heroBentoLabel}>Total Vaults</Text>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={styles.heroStatValue}>{(vaults ?? []).length}</Text>
+              <Text style={styles.heroStatLabel}>Total Vaults</Text>
             </View>
-            <View style={styles.heroBentoDivider} />
-            <View style={styles.heroBentoCell}>
-              <Text style={[styles.heroBentoValue, { color: colors.signal }]}>{avgNav}</Text>
-              <Text style={styles.heroBentoLabel}>Avg NAV</Text>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatCell}>
+              <Text style={[styles.heroStatValue, { color: colors.signal }]}>{avgNav}</Text>
+              <Text style={styles.heroStatLabel}>Avg NAV</Text>
             </View>
           </View>
         </View>
       </FadeSlideIn>
 
-      <FadeSlideIn delay={240}>
+      {/* Filters */}
+      <FadeSlideIn delay={200}>
         <View style={styles.filterRow}>
           {FILTERS.map(f => (
             <Pressable
               key={f.key}
-              style={[styles.chip, filter === f.key && styles.chipActive]}
+              style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
               onPress={() => setFilter(f.key)}
             >
-              <Text style={[styles.chipText, filter === f.key && styles.chipTextActive]}>
+              <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
                 {f.label}
               </Text>
             </Pressable>
@@ -167,12 +162,14 @@ export default function VaultsScreen() {
         </View>
       </FadeSlideIn>
 
-      <FadeSlideIn delay={300}>
+      {/* Sort + count */}
+      <FadeSlideIn delay={250}>
         <View style={styles.sortRow}>
-          <Text style={styles.sectionHeader}>
+          <Text style={styles.countLabel}>
             {sorted.length} vault{sorted.length !== 1 ? 's' : ''}
           </Text>
-          <View style={styles.sortChips}>
+          <View style={styles.sortGroup}>
+            <Text style={styles.sortLabel}>Sort</Text>
             {SORTS.map(s => (
               <Pressable
                 key={s.key}
@@ -192,9 +189,11 @@ export default function VaultsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.screen, styles.center]}>
-        <Text style={styles.loadingGlyph}>⬡</Text>
-        <Text style={styles.loadingText}>Syncing vaults...</Text>
+      <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
+        <View style={styles.loadingIcon}>
+          <Ionicons name="layers-outline" size={32} color={colors.signal} />
+        </View>
+        <Text style={styles.loadingText}>Loading vaults...</Text>
       </View>
     );
   }
@@ -209,14 +208,18 @@ export default function VaultsScreen() {
             vault={item}
             onPress={() => handleVaultPress(item)}
             sparkData={mockNavHistory(item.configPubkey).map(p => p.nav)}
-            entryDelay={Math.min(index * 60, 300)}
+            entryDelay={Math.min(index * 50, 260)}
           />
         )}
         ListHeaderComponent={Header}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListEmptyComponent={
-          <EmptyState icon="⬡" title="No vaults" subtitle="Try a different filter" />
+          <EmptyState
+            iconName="layers-outline"
+            title="No vaults found"
+            subtitle="Try a different filter"
+          />
         }
         refreshControl={
           <RefreshControl
@@ -233,31 +236,43 @@ export default function VaultsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  center: { alignItems: 'center', justifyContent: 'center', gap: 12 },
+  center: { alignItems: 'center', justifyContent: 'center', gap: 14 },
   list: { paddingHorizontal: spacing.md, paddingBottom: 48 },
-  loadingGlyph: { fontSize: 36, color: colors.signal },
-  loadingText: { fontSize: 12, color: colors.textMuted, fontFamily: 'Courier' },
+
+  loadingIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
 
   navbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: spacing.md,
-    paddingBottom: 12,
+    paddingBottom: 14,
   },
   wordmark: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: 4,
-    fontFamily: 'Courier',
+    letterSpacing: -0.5,
   },
   tagline: {
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textQuiet,
-    marginTop: 3,
-    fontFamily: 'Courier',
-    letterSpacing: 0.3,
+    marginTop: 2,
+    letterSpacing: 0.1,
   },
 
   tickerWrap: {
@@ -270,48 +285,56 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.signalBorder,
     padding: spacing.lg,
-    gap: 8,
+    gap: 6,
     overflow: 'hidden',
     marginBottom: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.signal,
+        shadowOpacity: 0.10,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 4 },
+      },
+    }),
   },
   heroLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    fontFamily: 'Courier',
   },
   heroBalance: {
-    fontSize: 40,
-    fontWeight: '500',
+    fontSize: 42,
+    fontWeight: '700',
     color: colors.text,
     letterSpacing: -1.5,
     fontFamily: 'Courier',
+    lineHeight: 50,
   },
-  heroBento: {
+  heroStats: {
     flexDirection: 'row',
-    marginTop: 6,
+    marginTop: 8,
     backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
-  heroBentoCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 2 },
-  heroBentoDivider: { width: 1, backgroundColor: colors.border },
-  heroBentoValue: {
+  heroStatCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 3 },
+  heroStatDivider: { width: 1, backgroundColor: colors.border },
+  heroStatValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
     fontFamily: 'Courier',
   },
-  heroBentoLabel: {
+  heroStatLabel: {
     fontSize: 9,
     color: colors.textQuiet,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    fontFamily: 'Courier',
+    letterSpacing: 0.5,
+    fontWeight: '500',
   },
 
   filterRow: {
@@ -319,55 +342,61 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: spacing.md,
     paddingBottom: 10,
-    paddingTop: 2,
   },
-  chip: {
+  filterChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
   },
-  chipActive: {
-    borderColor: colors.signal + '60',
+  filterChipActive: {
+    borderColor: colors.signalBorder,
     backgroundColor: colors.signalDim,
   },
-  chipText: {
+  filterText: {
     fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
-    fontFamily: 'Courier',
   },
-  chipTextActive: { color: colors.signal },
+  filterTextActive: { color: colors.signal },
 
   sortRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  sectionHeader: {
-    fontSize: 10,
-    fontWeight: '600',
+  countLabel: {
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.textQuiet,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontFamily: 'Courier',
   },
-  sortChips: { flexDirection: 'row', gap: 4 },
+  sortGroup: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sortLabel: {
+    fontSize: 11,
+    color: colors.textQuiet,
+    fontWeight: '500',
+    marginRight: 2,
+  },
   sortChip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
   },
   sortChipActive: {
     backgroundColor: colors.signalDim,
-    borderColor: colors.signal + '50',
+    borderColor: colors.signalBorder,
   },
-  sortChipText: { fontSize: 9, fontWeight: '700', color: colors.textQuiet, fontFamily: 'Courier' },
+  sortChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textQuiet,
+  },
   sortChipTextActive: { color: colors.signal },
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,18 +21,30 @@ import {
 } from '../../src/lib/constants';
 import { API_BASE } from '../../src/lib/api';
 
-function SettingRow({ label, right, onPress }: {
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function SettingRow({ label, right, onPress, icon }: {
   label: string;
   right: React.ReactNode;
   onPress?: () => void;
+  icon?: IoniconName;
 }) {
   const inner = (
     <View style={styles.row}>
+      {icon && (
+        <View style={styles.rowIcon}>
+          <Ionicons name={icon} size={15} color={colors.textMuted} />
+        </View>
+      )}
       <Text style={styles.rowLabel}>{label}</Text>
-      <View>{right}</View>
+      <View style={styles.rowRight}>{right}</View>
     </View>
   );
-  if (onPress) return <Pressable onPress={onPress}>{inner}</Pressable>;
+  if (onPress) return (
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+      {inner}
+    </Pressable>
+  );
   return inner;
 }
 
@@ -56,9 +69,7 @@ export default function SettingsScreen() {
   const [txState, setTxState] = useState<TxState>({ type: 'idle' });
 
   async function handleConnect() {
-    try {
-      await connect();
-    } catch (err: any) {
+    try { await connect(); } catch (err: any) {
       Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
     }
   }
@@ -87,6 +98,8 @@ export default function SettingsScreen() {
     startGuidedMobileDemo();
   }
 
+  const isConnected = connected;
+
   return (
     <>
       <TxModal state={txState} onClose={() => setTxState({ type: 'idle' })} label="Init Manager" />
@@ -101,57 +114,55 @@ export default function SettingsScreen() {
         {/* Wallet card */}
         <View style={styles.walletCard}>
           <LinearGradient
-            colors={connected
-              ? ['rgba(0,181,164,0.12)', 'transparent']
-              : ['rgba(0,43,61,0.05)', 'transparent']}
+            colors={isConnected
+              ? ['rgba(0,217,140,0.08)', 'transparent']
+              : ['rgba(9,21,36,0.4)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
           />
+          <View style={styles.walletHeader}>
+            <View style={[styles.walletAvatar, isConnected && styles.walletAvatarConnected]}>
+              {isConnected ? (
+                <Text style={styles.walletAvatarText}>
+                  {publicKey?.slice(0, 2).toUpperCase() ?? '—'}
+                </Text>
+              ) : (
+                <Ionicons name="wallet-outline" size={22} color={colors.textQuiet} />
+              )}
+            </View>
 
-          {/* Avatar row */}
-          <View style={styles.walletAvatarRow}>
-            <LinearGradient
-              colors={connected
-                ? [colors.signal, colors.signalDeep]
-                : [colors.surfaceHigh, colors.surfaceElevated]}
-              style={styles.walletAvatar}
-            >
-              <Text style={[styles.walletAvatarText, { color: connected ? colors.white : colors.textQuiet }]}>
-                {connected && publicKey ? publicKey.slice(0, 2).toUpperCase() : '—'}
-              </Text>
-            </LinearGradient>
-
-            <View style={styles.walletMeta}>
+            <View style={styles.walletInfo}>
               <View style={styles.walletStatusRow}>
                 <View style={[styles.statusDot, {
-                  backgroundColor: connected
+                  backgroundColor: isConnected
                     ? (isDemoWallet ? colors.warning : colors.signal)
-                    : colors.textQuiet
+                    : colors.textQuiet,
                 }]} />
                 <Text style={styles.walletStatus}>
-                  {connected ? (isDemoWallet ? 'Demo Wallet' : 'Connected') : 'Disconnected'}
+                  {isConnected ? (isDemoWallet ? 'Demo Wallet' : 'Connected') : 'Not connected'}
                 </Text>
-                {walletLabel && <Text style={styles.walletLabel}>{walletLabel}</Text>}
-                {pendingRequest && <Text style={styles.walletLabel}>{pendingRequest}</Text>}
+                {walletLabel && (
+                  <Text style={styles.walletLabelText}>· {walletLabel}</Text>
+                )}
               </View>
-              {connected && publicKey && (
-                <Pressable onPress={copyAddress}>
-                  <Text style={styles.walletAddr}>{truncateAddress(publicKey, 10)} ⧉</Text>
+              {isConnected && publicKey && (
+                <Pressable onPress={copyAddress} style={styles.addrRow}>
+                  <Text style={styles.walletAddr}>{truncateAddress(publicKey, 10)}</Text>
+                  <Ionicons name="copy-outline" size={11} color={colors.signal} />
                 </Pressable>
               )}
             </View>
 
             <Pressable
-              style={[styles.walletAction, connected && styles.walletActionDanger]}
-              onPress={connected ? disconnect : handleConnect}
+              style={[styles.walletAction, isConnected && styles.walletActionDisconnect]}
+              onPress={isConnected ? disconnect : handleConnect}
             >
-              <Text style={[styles.walletActionText, connected && { color: colors.danger }]}>
-                {connected ? 'Disconnect' : 'Connect'}
+              <Text style={[styles.walletActionText, isConnected && { color: colors.danger }]}>
+                {isConnected ? 'Disconnect' : 'Connect'}
               </Text>
             </Pressable>
           </View>
 
-          {/* Token balances */}
-          {connected && balance && (
+          {isConnected && balance && (
             <View style={styles.tokenGrid}>
               <View style={styles.tokenCell}>
                 <Text style={styles.tokenAmt}>{balance.sol.toFixed(4)}</Text>
@@ -166,25 +177,30 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Guided demo */}
+        {/* Demo card */}
         <View style={styles.demoCard}>
           <LinearGradient
-            colors={['rgba(0,181,164,0.14)', 'rgba(255,255,255,0)']}
+            colors={['rgba(0,217,140,0.08)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
           />
-          <Text style={styles.sectionLabel}>MOBILE DEMO</Text>
-          <Text style={styles.demoTitle}>Run the Frontier proof flow</Text>
-          <Text style={styles.demoSub}>
-            Trader funding, paper mode, graduation, investor deposit, guard approval, and junior-first loss in one guided loop.
-          </Text>
+          <View style={styles.demoHeader}>
+            <View style={styles.demoIconWrap}>
+              <Ionicons name="play-circle-outline" size={22} color={colors.signal} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.demoTitle}>Guided Demo</Text>
+              <Text style={styles.demoCopy}>Experience the full first-loss vault lifecycle</Text>
+            </View>
+          </View>
           <Pressable style={styles.demoButton} onPress={handleDemo}>
-            <Text style={styles.demoButtonText}>Start guided lifecycle</Text>
+            <Text style={styles.demoButtonText}>Start lifecycle demo</Text>
+            <Ionicons name="arrow-forward" size={14} color={colors.white} />
           </Pressable>
         </View>
 
-        {/* Role selector */}
+        {/* Role */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ROLE</Text>
+          <Text style={styles.sectionLabel}>Role</Text>
           <View style={styles.roleCard}>
             {(['investor', 'trader'] as Role[]).map(r => {
               const active = role === r;
@@ -192,7 +208,10 @@ export default function SettingsScreen() {
                 <Pressable
                   key={r}
                   style={[styles.roleBtn, active && styles.roleBtnActive]}
-                  onPress={() => { setRole(r); if (Platform.OS !== 'web') Haptics.selectionAsync(); }}
+                  onPress={() => {
+                    setRole(r);
+                    if (Platform.OS !== 'web') Haptics.selectionAsync();
+                  }}
                 >
                   {active && (
                     <LinearGradient
@@ -200,9 +219,11 @@ export default function SettingsScreen() {
                       style={StyleSheet.absoluteFillObject}
                     />
                   )}
-                  <Text style={[styles.roleIcon, active && { color: colors.signal }]}>
-                    {r === 'investor' ? '◈' : '◎'}
-                  </Text>
+                  <Ionicons
+                    name={r === 'investor' ? 'briefcase-outline' : 'stats-chart-outline'}
+                    size={20}
+                    color={active ? colors.signal : colors.textQuiet}
+                  />
                   <Text style={[styles.roleLabel, active && { color: colors.signal }]}>
                     {r === 'investor' ? 'Investor' : 'Trader'}
                   </Text>
@@ -215,79 +236,63 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Trader actions */}
+        {/* Manager actions */}
         {role === 'trader' && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>MANAGER</Text>
+            <Text style={styles.sectionLabel}>Manager</Text>
             <View style={styles.card}>
-              <Pressable style={styles.actionRow} onPress={handleInitManager}>
-                <View style={styles.actionIcon}>
-                  <Text style={{ fontSize: 18, color: colors.signal }}>◎</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.actionLabel}>Initialize Manager Profile</Text>
-                  <Text style={styles.actionSub}>One-time on-chain account creation</Text>
-                </View>
-                <Text style={{ fontSize: 16, color: colors.textQuiet }}>→</Text>
-              </Pressable>
+              <SettingRow
+                label="Initialize Manager Profile"
+                icon="person-add-outline"
+                right={<Ionicons name="chevron-forward" size={14} color={colors.textQuiet} />}
+                onPress={handleInitManager}
+              />
             </View>
           </View>
         )}
 
         {/* Network */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>NETWORK</Text>
+          <Text style={styles.sectionLabel}>Network</Text>
           <View style={styles.card}>
             <SettingRow
-              label="MWA available"
-              right={<Text style={styles.monoText}>{isMwaAvailable ? 'Android yes' : 'Read-only platform'}</Text>}
+              label="MWA"
+              icon="phone-portrait-outline"
+              right={<Text style={styles.monoText}>{isMwaAvailable ? 'Available' : 'Web only'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
-              label="Wallet target"
-              right={<Text style={styles.monoText}>Solflare / Phantom via MWA</Text>}
-            />
-            <View style={styles.divider} />
-            <SettingRow
-              label="RPC Endpoint"
-              right={
-                <Text style={styles.monoText}>
-                  {shortUrl(RPC_URL)}
-                </Text>
-              }
+              label="RPC"
+              icon="server-outline"
+              right={<Text style={styles.monoText}>{shortUrl(RPC_URL)}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Cluster"
+              icon="globe-outline"
               right={
                 <View style={[styles.clusterChip, {
-                  borderColor: cluster === 'devnet' ? colors.warning + '50' : colors.signal + '50',
+                  borderColor: cluster === 'devnet' ? colors.warningBorder : colors.signalBorder,
                   backgroundColor: cluster === 'devnet' ? colors.warningDim : colors.signalDim,
                 }]}>
-                  <Text style={[styles.clusterText, { color: cluster === 'devnet' ? colors.warning : colors.signal }]}>
-                    {cluster === 'devnet' ? 'DEVNET' : 'MAINNET'}
+                  <Text style={[styles.clusterText, {
+                    color: cluster === 'devnet' ? colors.warning : colors.signal,
+                  }]}>
+                    {cluster === 'devnet' ? 'Devnet' : 'Mainnet'}
                   </Text>
                 </View>
               }
             />
             <View style={styles.divider} />
             <SettingRow
-              label="Auth token"
-              right={<Text style={styles.monoText}>{authToken ? 'Stored' : 'None'}</Text>}
-            />
-            <View style={styles.divider} />
-            <SettingRow
               label="API"
-              right={<Text style={styles.monoText}>{API_BASE ? shortUrl(API_BASE) : 'Mock fallback'}</Text>}
-            />
-            <View style={styles.divider} />
-            <SettingRow
-              label="Pyth feeds"
-              right={<Text style={styles.monoText}>{PYTH_SOL_USD_ACCOUNT && PYTH_USDC_USD_ACCOUNT ? 'Configured' : 'Missing'}</Text>}
+              icon="cloud-outline"
+              right={<Text style={styles.monoText}>{API_BASE ? shortUrl(API_BASE) : 'Mock mode'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Jupiter"
+              icon="swap-horizontal-outline"
               right={<Text style={styles.monoText}>{shortUrl(JUPITER_API_URL)}</Text>}
             />
           </View>
@@ -295,19 +300,31 @@ export default function SettingsScreen() {
 
         {/* About */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ABOUT</Text>
+          <Text style={styles.sectionLabel}>About</Text>
           <View style={styles.card}>
-            <SettingRow label="Version" right={<Text style={styles.monoText}>1.0.0</Text>} />
+            <SettingRow
+              label="Version"
+              icon="information-circle-outline"
+              right={<Text style={styles.monoText}>1.0.0</Text>}
+            />
             <View style={styles.divider} />
-            <SettingRow label="Program" right={<Text style={styles.monoText}>{truncateAddress(PROGRAM_ID.toBase58(), 5)}</Text>} />
+            <SettingRow
+              label="Program"
+              icon="code-slash-outline"
+              right={<Text style={styles.monoText}>{truncateAddress(PROGRAM_ID.toBase58(), 5)}</Text>}
+            />
             <View style={styles.divider} />
-            <SettingRow label="Protocol" right={<Text style={styles.monoText}>Arcadia</Text>} />
+            <SettingRow
+              label="Protocol"
+              icon="shield-checkmark-outline"
+              right={<Text style={styles.monoText}>Arcadia</Text>}
+            />
           </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerLogo}>◈ ARCADIA</Text>
+          <Text style={styles.footerLogo}>Arcadia Protocol</Text>
           <Text style={styles.footerSub}>Non-custodial · Proof-gated · On-chain</Text>
         </View>
       </ScrollView>
@@ -316,27 +333,30 @@ export default function SettingsScreen() {
 }
 
 function shortUrl(value: string): string {
-  return value
-    .replace(/^https?:\/\//, '')
-    .replace(/\/$/, '')
-    .slice(0, 28);
+  return value.replace(/^https?:\/\//, '').replace(/\/$/, '').slice(0, 26);
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  scroll: { paddingHorizontal: spacing.md, gap: 20, paddingBottom: 60 },
-  pageTitle: { fontSize: 28, fontWeight: '600', color: colors.text, letterSpacing: -0.6, marginBottom: 4 },
+  scroll: { paddingHorizontal: spacing.md, gap: 16, paddingBottom: 60 },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.8,
+    marginBottom: 4,
+  },
+
   sectionLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontFamily: 'Courier',
+    letterSpacing: 0.8,
     marginBottom: 8,
-    paddingHorizontal: 2,
   },
   section: { gap: 0 },
+
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
@@ -354,65 +374,84 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: 16,
   },
-  walletAvatarRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  walletHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   walletAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  walletAvatarText: { fontSize: 18, fontWeight: '700', fontFamily: 'Courier' },
-  walletMeta: { flex: 1, gap: 3 },
+  walletAvatarConnected: {
+    backgroundColor: colors.signalDim,
+    borderColor: colors.signalBorder,
+  },
+  walletAvatarText: { fontSize: 16, fontWeight: '700', color: colors.signal, fontFamily: 'Courier' },
+  walletInfo: { flex: 1, gap: 4 },
   walletStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
   walletStatus: { fontSize: 14, fontWeight: '600', color: colors.text },
-  walletLabel: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier' },
+  walletLabelText: { fontSize: 11, color: colors.textQuiet },
+  addrRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   walletAddr: { fontSize: 11, color: colors.signal, fontFamily: 'Courier' },
   walletAction: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     backgroundColor: colors.signalDim,
     borderWidth: 1,
-    borderColor: colors.signal + '40',
+    borderColor: colors.signalBorder,
   },
-  walletActionDanger: {
+  walletActionDisconnect: {
     backgroundColor: colors.dangerDim,
-    borderColor: colors.danger + '40',
+    borderColor: colors.dangerBorder,
   },
   walletActionText: { fontSize: 12, fontWeight: '700', color: colors.signal },
+
   tokenGrid: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
-  tokenCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 2 },
+  tokenCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 3 },
   tokenCellDivider: { width: 1, backgroundColor: colors.border },
-  tokenAmt: { fontSize: 18, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
-  tokenTicker: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Courier' },
+  tokenAmt: { fontSize: 16, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  tokenTicker: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6 },
 
   demoCard: {
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.signalBorder,
     padding: spacing.md,
-    gap: 10,
+    gap: 14,
     overflow: 'hidden',
   },
-  demoTitle: { color: colors.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
-  demoSub: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  demoButton: {
-    marginTop: 4,
-    minHeight: 48,
-    borderRadius: radius.full,
-    backgroundColor: colors.signal,
+  demoHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  demoIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.signalDim,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  demoButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
+  demoTitle: { fontSize: 16, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
+  demoCopy: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  demoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.signal,
+  },
+  demoButtonText: { color: colors.white, fontSize: 14, fontWeight: '700' },
 
   roleCard: {
     flexDirection: 'row',
@@ -431,46 +470,37 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   roleBtnActive: { borderBottomWidth: 2, borderBottomColor: colors.signal },
-  roleIcon: { fontSize: 20, color: colors.textQuiet },
   roleLabel: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
-  roleDesc: { fontSize: 10, color: colors.textQuiet, textAlign: 'center', fontFamily: 'Courier' },
-
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: spacing.md,
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: colors.signalDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
-  actionSub: { fontSize: 11, color: colors.textQuiet, marginTop: 1, fontFamily: 'Courier' },
+  roleDesc: { fontSize: 10, color: colors.textQuiet, textAlign: 'center', lineHeight: 14 },
 
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
+    gap: 10,
   },
-  rowLabel: { fontSize: 14, color: colors.text, fontWeight: '500' },
+  rowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowLabel: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '500' },
+  rowRight: {},
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
   monoText: { fontSize: 11, color: colors.textMuted, fontFamily: 'Courier' },
   clusterChip: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     borderWidth: 1,
   },
-  clusterText: { fontSize: 9, fontWeight: '700', letterSpacing: 1, fontFamily: 'Courier' },
+  clusterText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
 
-  footer: { alignItems: 'center', gap: 6, paddingTop: 8, paddingBottom: 8 },
-  footerLogo: { fontSize: 14, fontWeight: '700', color: colors.textQuiet, letterSpacing: 3, fontFamily: 'Courier' },
-  footerSub: { fontSize: 10, color: colors.textQuiet, textAlign: 'center', fontFamily: 'Courier' },
+  footer: { alignItems: 'center', gap: 5, paddingTop: 8, paddingBottom: 12 },
+  footerLogo: { fontSize: 13, fontWeight: '700', color: colors.textQuiet, letterSpacing: 0.5 },
+  footerSub: { fontSize: 10, color: colors.textDim, textAlign: 'center' },
 });

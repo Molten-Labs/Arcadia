@@ -26,6 +26,7 @@ import { HealthMeter } from '../../src/components/HealthMeter';
 import { CapitalStack } from '../../src/components/CapitalStack';
 import { EmptyState } from '../../src/components/EmptyState';
 import { TxModal, TxState, txFailureState } from '../../src/components/TxModal';
+import { Ionicons } from '@expo/vector-icons';
 import { formatUSD, formatBps, formatNav, formatAge, truncateAddress } from '../../src/lib/format';
 import { parseUsdcToUnits } from '../../src/lib/amounts';
 
@@ -85,7 +86,7 @@ export default function VaultDetailScreen() {
       </View>
     );
   }
-  if (!vault) return <EmptyState icon="⬡" title="Vault not found" />;
+  if (!vault) return <EmptyState iconName="layers-outline" title="Vault not found" />;
 
   const navChange = vault.currentNav - 1;
   const navPositive = navChange >= 0;
@@ -212,8 +213,13 @@ export default function VaultDetailScreen() {
               { backgroundColor: navPositive ? colors.signalDim : colors.dangerDim,
                 borderColor: navPositive ? colors.signal + '40' : colors.danger + '40' }
             ]}>
+              <Ionicons
+                name={navPositive ? 'trending-up' : 'trending-down'}
+                size={12}
+                color={navPositive ? colors.signal : colors.danger}
+              />
               <Text style={[styles.navDeltaText, { color: navPositive ? colors.signal : colors.danger }]}>
-                {navPositive ? '▲' : '▼'} {Math.abs(navChange * 100).toFixed(2)}%
+                {Math.abs(navChange * 100).toFixed(2)}%
               </Text>
             </View>
           </View>
@@ -306,7 +312,7 @@ export default function VaultDetailScreen() {
           {([
             ['Max Slippage', formatBps(vault.maxSlippageBps)],
             ['High Water Mark', formatNav(vault.highWaterMark)],
-            ['Exit Type', vault.instantExit ? '⚡ Instant' : '⏳ Cooldown'],
+            ['Exit Type', vault.instantExit ? 'Instant' : 'Cooldown'],
             ['Paper Trades', `${vault.paperTradeCount} / ${vault.minQualifyingTrades}`],
             ['Vault Age', formatAge(vault.createdAt) + ' ago'],
             ['Graduated', vault.graduatedAt ? formatAge(vault.graduatedAt) + ' ago' : '—'],
@@ -408,7 +414,7 @@ export default function VaultDetailScreen() {
                   {tab === 'withdraw' && (
                     <View style={styles.exitNote}>
                       <Text style={styles.exitNoteText}>
-                        {vault.instantExit ? '⚡ Instant exit — no cooldown' : '⏳ Pro-rata cooldown exit'}
+                        {vault.instantExit ? 'Instant exit · no cooldown' : 'Pro-rata cooldown exit'}
                       </Text>
                     </View>
                   )}
@@ -480,7 +486,7 @@ const styles = StyleSheet.create({
   },
   navHeroLabel: {
     fontSize: 9, fontWeight: '700', color: colors.textQuiet,
-    textTransform: 'uppercase', letterSpacing: 0.7, fontFamily: 'Courier', marginBottom: 4,
+    textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 4,
   },
   navHeroValue: {
     fontSize: 40, fontWeight: '600', color: colors.text,
@@ -489,6 +495,7 @@ const styles = StyleSheet.create({
   navDeltaBadge: {
     paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: radius.full, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
   },
   navDeltaText: { fontSize: 14, fontWeight: '800', fontFamily: 'Courier' },
 
@@ -502,7 +509,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chartTitle: { fontSize: 9, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Courier' },
+  chartTitle: { fontSize: 9, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase' },
   chartRange: { fontSize: 9, color: colors.textQuiet, fontFamily: 'Courier' },
   chartBars: { flexDirection: 'row', alignItems: 'flex-end', height: 88, gap: 2 },
   barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' },
@@ -531,7 +538,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 9, fontWeight: '700', color: colors.textMuted,
-    letterSpacing: 0.8, textTransform: 'uppercase', fontFamily: 'Courier', marginBottom: 12,
+    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 12,
   },
   paramRow: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -554,7 +561,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
   tabBtnActive: { borderBottomColor: colors.signal },
-  tabText: { fontSize: 11, fontWeight: '700', color: colors.textMuted, fontFamily: 'Courier', letterSpacing: 0.4 },
+  tabText: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 0.4 },
   tabTextActive: { color: colors.signal },
   tabBody: { padding: 20, gap: 16 },
 

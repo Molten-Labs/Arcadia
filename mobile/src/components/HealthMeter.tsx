@@ -16,13 +16,13 @@ function healthColor(h: number): string {
   return colors.danger;
 }
 
-export function HealthMeter({ health, showLabel = true, height = 6 }: Props) {
+export function HealthMeter({ health, showLabel = true, height = 5 }: Props) {
   const pct = Math.max(0, Math.min(1, health));
   const color = healthColor(pct);
   const progress = useSharedValue(pct);
 
   useEffect(() => {
-    progress.value = withTiming(pct, { duration: 520 });
+    progress.value = withTiming(pct, { duration: 600 });
   }, [pct, progress]);
 
   const fillStyle = useAnimatedStyle(() => ({
@@ -33,31 +33,40 @@ export function HealthMeter({ health, showLabel = true, height = 6 }: Props) {
     <View style={styles.container}>
       {showLabel && (
         <View style={styles.labelRow}>
-          <Text style={styles.labelText}>JR. HEALTH</Text>
+          <Text style={styles.labelText}>Junior Health</Text>
           <Text style={[styles.valueText, { color }]}>{formatPct(pct, 0)}</Text>
         </View>
       )}
       <View style={[styles.track, { height }]}>
-        <Animated.View style={[styles.fill, fillStyle, { backgroundColor: color, height }]} />
+        <Animated.View style={[
+          styles.fill,
+          fillStyle,
+          {
+            backgroundColor: color,
+            height,
+            shadowColor: color,
+            shadowOpacity: 0.5,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 0 },
+          },
+        ]} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 6 },
+  container: { gap: 8 },
   labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   labelText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: colors.textMuted,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    fontFamily: 'Courier',
+    letterSpacing: 0.1,
   },
   valueText: {
     fontSize: 13,

@@ -27,7 +27,7 @@ export default function TraderProfileScreen() {
       </View>
     );
   }
-  if (!manager) return <EmptyState icon="◎" title="Trader not found" />;
+  if (!manager) return <EmptyState iconName="person-outline" title="Trader not found" />;
 
   const totalTvl = manager.vaults.reduce((s, v) => s + v.tvl, 0);
   const avgHealth = manager.vaults.length > 0
@@ -35,9 +35,9 @@ export default function TraderProfileScreen() {
   const avgNav = manager.vaults.length > 0
     ? manager.vaults.reduce((s, v) => s + v.currentNav, 0) / manager.vaults.length : 1;
   const hColor = avgHealth >= 0.8 ? colors.signal : avgHealth >= 0.6 ? colors.warning : colors.danger;
-  const tier = totalTvl > 100_000 ? { label: '★ Proven', color: colors.signal }
-    : totalTvl > 50_000 ? { label: '◆ Active', color: colors.warning }
-    : { label: '● New', color: colors.textMuted };
+  const tier = totalTvl > 100_000 ? { label: 'Proven', color: colors.signal }
+    : totalTvl > 50_000 ? { label: 'Active', color: colors.warning }
+    : { label: 'New', color: colors.textMuted };
   const initial = manager.owner.slice(0, 2).toUpperCase();
 
   return (
@@ -101,7 +101,7 @@ export default function TraderProfileScreen() {
       <Text style={styles.sectionTitle}>Vaults ({manager.vaults.length})</Text>
 
       {manager.vaults.length === 0
-        ? <EmptyState icon="⬡" title="No vaults" subtitle="This manager hasn't created any vaults yet" />
+        ? <EmptyState iconName="layers-outline" title="No vaults" subtitle="This manager hasn't created any vaults yet" />
         : manager.vaults.map((vault: VaultView) => (
           <VaultCard
             key={vault.id}
@@ -138,17 +138,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '700', color: colors.white, fontFamily: 'Courier' },
+  avatarText: { fontSize: 18, fontWeight: '700', color: colors.white },
   profileInfo: { flex: 1, gap: 3 },
   profileAddr: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
-  profileSince: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+  profileSince: { fontSize: 11, color: colors.textQuiet },
   tierBadge: {
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: radius.full,
     borderWidth: 1,
   },
-  tierText: { fontSize: 11, fontWeight: '700', fontFamily: 'Courier' },
+  tierText: { fontSize: 11, fontWeight: '700' },
 
   statsGrid: { flexDirection: 'row', gap: 10, marginHorizontal: spacing.md },
 
@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    fontFamily: 'Courier',
     marginBottom: 10,
   },
   detailRow: {
@@ -185,7 +184,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    fontFamily: 'Courier',
     marginHorizontal: spacing.md,
     marginTop: 4,
   },

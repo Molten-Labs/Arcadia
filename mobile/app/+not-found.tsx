@@ -1,16 +1,25 @@
 import { Link, Stack } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing } from '../src/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, radius } from '../src/lib/theme';
 
 export default function NotFoundScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Not Found', headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text }} />
+      <Stack.Screen options={{
+        title: 'Not Found',
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        headerShadowVisible: false,
+      }} />
       <View style={styles.container}>
-        <Text style={styles.icon}>⬡</Text>
+        <View style={styles.iconWrap}>
+          <Ionicons name="compass-outline" size={36} color={colors.textMuted} />
+        </View>
         <Text style={styles.title}>Screen not found</Text>
+        <Text style={styles.sub}>This page doesn't exist or was moved.</Text>
         <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to Vaults →</Text>
+          <Text style={styles.linkText}>Back to Vaults</Text>
         </Link>
       </View>
     </>
@@ -18,9 +27,32 @@ export default function NotFoundScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, gap: 12, padding: spacing.xl },
-  icon: { fontSize: 48, color: colors.textQuiet },
-  title: { fontSize: 18, fontWeight: '600', color: colors.textMuted },
-  link: { marginTop: 8 },
-  linkText: { fontSize: 14, color: colors.signal, fontWeight: '600' },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg,
+    gap: 10,
+    padding: spacing.xl,
+  },
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  title: { fontSize: 20, fontWeight: '700', color: colors.text, letterSpacing: -0.4 },
+  sub: { fontSize: 14, color: colors.textMuted, textAlign: 'center' },
+  link: { marginTop: 12 },
+  linkText: {
+    fontSize: 14,
+    color: colors.signal,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
 });

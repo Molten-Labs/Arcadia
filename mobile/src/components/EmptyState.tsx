@@ -1,18 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../lib/theme';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface Props {
   icon?: string;
+  iconName?: IoniconName;
   title: string;
   subtitle?: string;
 }
 
-export function EmptyState({ icon = '◇', title, subtitle }: Props) {
+export function EmptyState({ icon, iconName, title, subtitle }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        <Text style={styles.icon}>{icon}</Text>
+        {iconName ? (
+          <Ionicons name={iconName} size={28} color={colors.textQuiet} />
+        ) : (
+          <Text style={styles.iconText}>{icon ?? '○'}</Text>
+        )}
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -26,22 +34,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xxl,
-    gap: 12,
-    minHeight: 200,
+    gap: 10,
+    minHeight: 220,
   },
   iconWrap: {
     width: 64,
     height: 64,
     borderRadius: radius.xl,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  icon: {
-    fontSize: 28,
+  iconText: {
+    fontSize: 26,
     color: colors.textQuiet,
   },
   title: {
@@ -49,12 +57,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textMuted,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 13,
     color: colors.textQuiet,
     textAlign: 'center',
     lineHeight: 20,
-    maxWidth: 260,
+    maxWidth: 240,
   },
 });

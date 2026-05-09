@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../lib/theme';
 import { useWallet } from '../lib/wallet';
 import { truncateAddress } from '../lib/format';
@@ -26,21 +27,28 @@ export function WalletButton({ onPress }: Props) {
   if (connected && publicKey) {
     return (
       <Pressable
-        style={({ pressed }) => [styles.connectedBtn, pressed && { opacity: 0.7 }]}
+        style={({ pressed }) => [styles.connectedBtn, pressed && styles.pressed]}
         onPress={handlePress}
       >
-        <View style={[styles.statusDot, { backgroundColor: isDemoWallet ? colors.warning : colors.signal }]} />
+        <View style={[
+          styles.statusDot,
+          { backgroundColor: isDemoWallet ? colors.warning : colors.signal },
+        ]} />
         <Text style={styles.connectedAddr}>
           {truncateAddress(publicKey, 4)}
-          {isDemoWallet ? ' ◐' : ''}
         </Text>
+        {isDemoWallet && (
+          <View style={styles.demoPill}>
+            <Text style={styles.demoLabel}>DEMO</Text>
+          </View>
+        )}
       </Pressable>
     );
   }
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.connectBtn, pressed && { opacity: 0.85 }]}
+      style={({ pressed }) => [styles.connectBtn, pressed && styles.pressed]}
       onPress={handlePress}
       disabled={connecting}
     >
@@ -50,10 +58,14 @@ export function WalletButton({ onPress }: Props) {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
       >
-        {connecting
-          ? <ActivityIndicator size="small" color={colors.white} />
-          : <Text style={styles.connectText}>Connect</Text>
-        }
+        {connecting ? (
+          <ActivityIndicator size="small" color={colors.white} />
+        ) : (
+          <View style={styles.connectInner}>
+            <Ionicons name="wallet-outline" size={14} color={colors.white} />
+            <Text style={styles.connectText}>Connect</Text>
+          </View>
+        )}
       </LinearGradient>
     </Pressable>
   );
@@ -64,38 +76,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
     paddingVertical: 8,
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
   },
   statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   connectedAddr: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textMuted,
+    color: colors.textSub,
     fontFamily: 'Courier',
   },
+  demoPill: {
+    backgroundColor: colors.warningDim,
+    borderRadius: radius.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  demoLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: colors.warning,
+    letterSpacing: 0.5,
+  },
   connectBtn: {
-    borderRadius: radius.full,
+    borderRadius: radius.pill,
     overflow: 'hidden',
   },
   gradient: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 80,
+    minWidth: 90,
+  },
+  connectInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   connectText: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.white,
+  },
+  pressed: {
+    opacity: 0.75,
   },
 });

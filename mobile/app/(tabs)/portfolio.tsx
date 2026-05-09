@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../src/lib/theme';
 import { useWallet } from '../../src/lib/wallet';
@@ -30,7 +31,7 @@ function AnimatedBalance({ value }: { value: number }) {
 
   useEffect(() => {
     animVal.addListener(({ value: v }) => setDisplay(formatUSD(v)));
-    Animated.timing(animVal, { toValue: value, duration: 1100, delay: 300, useNativeDriver: false }).start();
+    Animated.timing(animVal, { toValue: value, duration: 1200, delay: 300, useNativeDriver: false }).start();
     return () => animVal.removeAllListeners();
   }, [value]);
 
@@ -44,6 +45,7 @@ function PositionRow({
   returnStr: string; positive: boolean; onPress: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
+
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
@@ -52,10 +54,15 @@ function PositionRow({
         onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start()}
         onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()}
       >
-        <View style={[styles.posDot, { backgroundColor: positive ? colors.signalDim : colors.dangerDim }]}>
-          <Text style={{ fontSize: 18, color: positive ? colors.signal : colors.danger }}>
-            {positive ? '↑' : '↓'}
-          </Text>
+        <View style={[
+          styles.posIcon,
+          { backgroundColor: positive ? colors.signalDim : colors.dangerDim },
+        ]}>
+          <Ionicons
+            name={positive ? 'trending-up' : 'trending-down'}
+            size={18}
+            color={positive ? colors.signal : colors.danger}
+          />
         </View>
         <View style={styles.posInfo}>
           <Text style={styles.posLabel}>{label}</Text>
@@ -103,9 +110,9 @@ export default function PortfolioScreen() {
           </View>
         </FadeSlideIn>
         <EmptyState
-          icon="◈"
+          iconName="briefcase-outline"
           title="Connect your wallet"
-          subtitle="View positions, P&L, and manage your capital"
+          subtitle="See your positions, P&L, and capital at work"
         />
         <FadeSlideIn delay={200} style={{ paddingHorizontal: spacing.md, paddingBottom: insets.bottom + 24 }}>
           <Pressable style={styles.connectBtn} onPress={handleConnect}>
@@ -114,6 +121,7 @@ export default function PortfolioScreen() {
               style={styles.connectBtnGrad}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             >
+              <Ionicons name="wallet-outline" size={18} color={colors.white} />
               <Text style={styles.connectBtnText}>Connect Wallet</Text>
             </LinearGradient>
           </Pressable>
@@ -141,31 +149,37 @@ export default function PortfolioScreen() {
         {isDemoWallet && (
           <FadeSlideIn delay={60} style={{ marginHorizontal: spacing.md }}>
             <View style={styles.demoBanner}>
-              <Text style={styles.demoBannerText}>◐ Demo wallet · simulated data</Text>
+              <Ionicons name="flask-outline" size={12} color={colors.warning} />
+              <Text style={styles.demoBannerText}>Demo wallet · simulated data</Text>
             </View>
           </FadeSlideIn>
         )}
 
-        {/* Balance hero — the primary "peak" moment */}
+        {/* Balance hero */}
         <FadeSlideIn delay={100}>
           <View style={styles.balanceHero}>
             <LinearGradient
-              colors={['rgba(0,200,150,0.10)', 'rgba(0,200,150,0.02)', 'transparent']}
+              colors={['rgba(0,217,140,0.08)', 'rgba(0,217,140,0.01)', 'transparent']}
               style={StyleSheet.absoluteFillObject}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             />
-            <Text style={styles.balanceLabel}>Total Balance</Text>
+            <Text style={styles.balanceLabel}>Portfolio Value</Text>
             <AnimatedBalance value={totalCurrent} />
-
-            {/* P&L pill under the balance */}
             <View style={styles.pnlRow}>
               <View style={[
                 styles.pnlPill,
-                { backgroundColor: pnlPositive ? colors.signalDim : colors.dangerDim,
-                  borderColor: pnlPositive ? colors.signal + '40' : colors.danger + '40' }
+                {
+                  backgroundColor: pnlPositive ? colors.signalDim : colors.dangerDim,
+                  borderColor: pnlPositive ? colors.signalBorder : colors.dangerBorder,
+                },
               ]}>
+                <Ionicons
+                  name={pnlPositive ? 'arrow-up' : 'arrow-down'}
+                  size={10}
+                  color={pnlPositive ? colors.signal : colors.danger}
+                />
                 <Text style={[styles.pnlPillText, { color: pnlPositive ? colors.signal : colors.danger }]}>
-                  {pnlPositive ? '▲' : '▼'} {Math.abs(Number(pnlPct))}% all time
+                  {Math.abs(Number(pnlPct))}% all time
                 </Text>
               </View>
               <Text style={[styles.pnlAbs, { color: pnlC }]}>
@@ -178,11 +192,11 @@ export default function PortfolioScreen() {
         {/* Wallet tokens */}
         {balance && (
           <FadeSlideIn delay={160}>
-            <View style={styles.tokensCard}>
-              <Text style={styles.sectionLabel}>Wallet</Text>
+            <View style={styles.card}>
+              <Text style={styles.sectionLabel}>Wallet Balances</Text>
               <View style={styles.tokenRow}>
                 <View style={[styles.tokenIcon, { backgroundColor: colors.signalDim }]}>
-                  <Text style={[styles.tokenIconText, { color: colors.signal }]}>◎</Text>
+                  <Ionicons name="logo-bitcoin" size={18} color={colors.signal} />
                 </View>
                 <View style={styles.tokenInfo}>
                   <Text style={styles.tokenName}>Solana</Text>
@@ -196,7 +210,7 @@ export default function PortfolioScreen() {
               <View style={styles.tokenDivider} />
               <View style={styles.tokenRow}>
                 <View style={[styles.tokenIcon, { backgroundColor: colors.surfaceHigh }]}>
-                  <Text style={[styles.tokenIconText, { color: colors.textMuted }]}>$</Text>
+                  <Text style={[styles.tokenIconSymbol, { color: colors.textMuted }]}>$</Text>
                 </View>
                 <View style={styles.tokenInfo}>
                   <Text style={styles.tokenName}>USD Coin</Text>
@@ -211,25 +225,25 @@ export default function PortfolioScreen() {
           </FadeSlideIn>
         )}
 
-        {/* Stats strip — values big */}
+        {/* Stats strip */}
         {(positions ?? []).length > 0 && (
           <FadeSlideIn delay={220}>
             <View style={styles.statsStrip}>
               <View style={styles.statsCell}>
                 <Text style={styles.statsValue}>{formatUSD(totalDeposited, true)}</Text>
-                <Text style={styles.statsLabel}>DEPOSITED</Text>
+                <Text style={styles.statsLabel}>Deposited</Text>
               </View>
               <View style={styles.statsDivider} />
               <View style={styles.statsCell}>
                 <Text style={[styles.statsValue, { color: pnlC }]}>
                   {pnlPositive ? '+' : ''}{formatUSD(totalPnL, true)}
                 </Text>
-                <Text style={styles.statsLabel}>TOTAL P&L</Text>
+                <Text style={styles.statsLabel}>Total P&L</Text>
               </View>
               <View style={styles.statsDivider} />
               <View style={styles.statsCell}>
                 <Text style={styles.statsValue}>{(positions ?? []).length}</Text>
-                <Text style={styles.statsLabel}>POSITIONS</Text>
+                <Text style={styles.statsLabel}>Positions</Text>
               </View>
             </View>
           </FadeSlideIn>
@@ -243,7 +257,7 @@ export default function PortfolioScreen() {
           <ActivityIndicator color={colors.signal} style={{ marginTop: 24 }} />
         ) : (positions ?? []).length === 0 ? (
           <EmptyState
-            icon="◈"
+            iconName="briefcase-outline"
             title="No positions yet"
             subtitle="Deposit into a graduated vault to start earning"
           />
@@ -298,131 +312,162 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: 16,
   },
-  pageTitle: { fontSize: 32, fontWeight: '700', color: colors.text, letterSpacing: -0.8 },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.8,
+  },
 
   demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.warningDim,
-    borderRadius: radius.full,
-    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: colors.warning + '40',
+    borderColor: colors.warningBorder,
     alignSelf: 'flex-start',
     marginBottom: 4,
   },
-  demoBannerText: { fontSize: 11, color: colors.warning, fontWeight: '600', fontFamily: 'Courier' },
+  demoBannerText: { fontSize: 12, color: colors.warning, fontWeight: '600' },
 
-  connectBtn: { borderRadius: radius.full, overflow: 'hidden' },
-  connectBtnGrad: { paddingVertical: 18, alignItems: 'center' },
-  connectBtnText: { fontSize: 17, fontWeight: '700', color: colors.white },
+  connectBtn: { borderRadius: radius.pill, overflow: 'hidden' },
+  connectBtnGrad: {
+    paddingVertical: 18,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  connectBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
 
-  /* Balance hero */
   balanceHero: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.signal + '20',
+    borderColor: colors.signalBorder,
     padding: 24,
     gap: 8,
     overflow: 'hidden',
-    shadowColor: colors.signal,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
   },
   balanceLabel: {
-    fontSize: 11, fontWeight: '700', color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Courier',
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   balanceBig: {
     fontSize: 48,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
     letterSpacing: -2,
     fontFamily: 'Courier',
+    lineHeight: 56,
   },
   pnlRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 },
   pnlPill: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: radius.full, borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    borderWidth: 1,
   },
   pnlPillText: { fontSize: 12, fontWeight: '700', fontFamily: 'Courier' },
   pnlAbs: { fontSize: 14, fontWeight: '700', fontFamily: 'Courier' },
 
-  /* Wallet tokens */
-  tokensCard: {
+  card: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 20,
+    padding: 18,
     gap: 4,
   },
   sectionLabel: {
-    fontSize: 9, fontWeight: '700', color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'Courier',
-    marginBottom: 8,
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
   },
-  tokenRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8 },
-  tokenDivider: { height: 1, backgroundColor: colors.border, marginVertical: 2 },
+  tokenRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 6 },
+  tokenDivider: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
   tokenIcon: {
-    width: 40, height: 40, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tokenIconText: { fontSize: 16, fontWeight: '800' },
+  tokenIconSymbol: { fontSize: 18, fontWeight: '700' },
   tokenInfo: { flex: 1 },
-  tokenName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  tokenTicker: { fontSize: 10, color: colors.textQuiet, fontFamily: 'Courier', marginTop: 1 },
+  tokenName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  tokenTicker: { fontSize: 10, color: colors.textQuiet, marginTop: 1, letterSpacing: 0.3 },
   tokenRight: { alignItems: 'flex-end' },
-  tokenAmount: { fontSize: 16, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  tokenAmount: { fontSize: 15, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
 
-  /* Stats strip */
   statsStrip: {
     marginHorizontal: spacing.md,
     flexDirection: 'row',
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   statsCell: { flex: 1, alignItems: 'center', paddingVertical: 16, gap: 4 },
   statsDivider: { width: 1, backgroundColor: colors.border },
-  statsValue: { fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  statsValue: { fontSize: 17, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
   statsLabel: {
-    fontSize: 7, fontWeight: '700', color: colors.textQuiet,
-    textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Courier',
+    fontSize: 9,
+    fontWeight: '500',
+    color: colors.textQuiet,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   sectionTitle: {
-    fontSize: 10, fontWeight: '700', color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'Courier',
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
     paddingHorizontal: spacing.md,
+    marginTop: 4,
   },
 
-  /* Positions */
   positionsCard: {
     marginHorizontal: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   posDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
-  posRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 20 },
-  posDot: { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  posRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18 },
+  posIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   posInfo: { flex: 1 },
-  posLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
+  posLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
   posSub: { fontSize: 11, color: colors.textQuiet, marginTop: 2, fontFamily: 'Courier' },
   posRight: { alignItems: 'flex-end', gap: 2 },
-  posValue: { fontSize: 15, fontWeight: '700', fontFamily: 'Courier' },
-  posReturn: { fontSize: 11, fontWeight: '700', fontFamily: 'Courier' },
+  posValue: { fontSize: 14, fontWeight: '700', fontFamily: 'Courier' },
+  posReturn: { fontSize: 11, fontWeight: '600', fontFamily: 'Courier' },
   posHealth: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 20, paddingBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
   },
-  posVal: { fontSize: 12, fontWeight: '600', color: colors.textMuted, fontFamily: 'Courier' },
+  posVal: { fontSize: 11, fontWeight: '600', color: colors.textMuted, fontFamily: 'Courier' },
 });

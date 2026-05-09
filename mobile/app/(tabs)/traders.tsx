@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../src/lib/theme';
 import { useManagers, ManagerWithVaults } from '../../src/hooks/useManagers';
@@ -19,10 +20,10 @@ import { EmptyState } from '../../src/components/EmptyState';
 import { FadeSlideIn } from '../../src/components/AnimatedEntry';
 import { formatUSD, truncateAddress, formatAge } from '../../src/lib/format';
 
-const RANK_ICONS = ['★', '◆', '●'];
-const RANK_LABELS = ['#1', '#2', '#3'];
+const RANK_COLORS = [colors.warning, colors.textMuted, '#CD7F32'];
+const RANK_ICONS: React.ComponentProps<typeof Ionicons>['name'][] = ['trophy', 'medal', 'ribbon'];
 
-function AnimatedTraderCard({ manager, rank, onPress, delay }: {
+function TraderCard({ manager, rank, onPress, delay }: {
   manager: ManagerWithVaults;
   rank: number;
   onPress: () => void;
@@ -36,13 +37,13 @@ function AnimatedTraderCard({ manager, rank, onPress, delay }: {
   const initial = manager.owner.slice(0, 2).toUpperCase();
 
   const entryOpacity = useRef(new Animated.Value(0)).current;
-  const entryY = useRef(new Animated.Value(24)).current;
+  const entryY = useRef(new Animated.Value(20)).current;
   const pressScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(entryOpacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
-      Animated.timing(entryY, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
+      Animated.timing(entryOpacity, { toValue: 1, duration: 360, delay, useNativeDriver: true }),
+      Animated.timing(entryY, { toValue: 0, duration: 360, delay, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -56,26 +57,30 @@ function AnimatedTraderCard({ manager, rank, onPress, delay }: {
       >
         {isTop && (
           <LinearGradient
-            colors={['rgba(0,200,150,0.08)', 'transparent']}
+            colors={['rgba(0,217,140,0.06)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
         )}
 
-        {/* Header: avatar + name + TVL */}
+        {/* Header */}
         <View style={styles.cardHeader}>
-          <View style={styles.avatarArea}>
-            <LinearGradient
-              colors={isTop ? [colors.signal + 'CC', colors.signalDeep] : [colors.surfaceHigh, colors.surfaceElevated]}
-              style={styles.avatar}
-            >
-              <Text style={[styles.avatarText, { color: isTop ? colors.white : colors.textMuted }]}>
+          <View style={styles.avatarWrap}>
+            <View style={[
+              styles.avatar,
+              isTop && { backgroundColor: colors.signalDim, borderColor: colors.signalBorder },
+            ]}>
+              <Text style={[styles.avatarText, isTop && { color: colors.signal }]}>
                 {initial}
               </Text>
-            </LinearGradient>
-            {isTop && (
-              <View style={styles.rankPin}>
-                <Text style={styles.rankPinText}>{RANK_ICONS[rank - 1]}</Text>
+            </View>
+            {rank <= 3 && (
+              <View style={[styles.rankPin, { backgroundColor: colors.bg }]}>
+                <Ionicons
+                  name={RANK_ICONS[rank - 1]}
+                  size={9}
+                  color={RANK_COLORS[rank - 1]}
+                />
               </View>
             )}
           </View>
@@ -83,44 +88,45 @@ function AnimatedTraderCard({ manager, rank, onPress, delay }: {
           <View style={styles.cardMeta}>
             <View style={styles.nameRow}>
               <Text style={styles.cardAddr}>{truncateAddress(manager.owner, 8)}</Text>
-              {isTop && (
-                <View style={styles.rankBadge}>
-                  <Text style={styles.rankBadgeText}>{RANK_LABELS[rank - 1]}</Text>
+              {rank <= 3 && (
+                <View style={[styles.rankBadge, { borderColor: RANK_COLORS[rank - 1] + '40' }]}>
+                  <Text style={[styles.rankBadgeText, { color: RANK_COLORS[rank - 1] }]}>
+                    #{rank}
+                  </Text>
                 </View>
               )}
             </View>
             <Text style={styles.cardSub}>
-              {manager.activeVaults} active · joined {formatAge(manager.createdAt)} ago
+              {manager.activeVaults} live · joined {formatAge(manager.createdAt)} ago
             </Text>
           </View>
 
-          {/* TVL — value bigger than label */}
           <View style={styles.tvlBlock}>
             <Text style={styles.tvlValue}>{formatUSD(totalTvl, true)}</Text>
             <Text style={styles.tvlLabel}>TVL</Text>
           </View>
         </View>
 
-        {/* Stats bento — values intentionally much bigger than labels */}
+        {/* Stats bento */}
         <View style={styles.bento}>
           <View style={styles.bentoCell}>
             <Text style={styles.bentoVal}>{manager.totalVaults}</Text>
-            <Text style={styles.bentoKey}>VAULTS</Text>
+            <Text style={styles.bentoKey}>Vaults</Text>
           </View>
           <View style={styles.bentoDivider} />
           <View style={styles.bentoCell}>
             <Text style={[styles.bentoVal, { color: colors.signal }]}>{manager.activeVaults}</Text>
-            <Text style={styles.bentoKey}>LIVE</Text>
+            <Text style={styles.bentoKey}>Live</Text>
           </View>
           <View style={styles.bentoDivider} />
           <View style={styles.bentoCell}>
             <Text style={styles.bentoVal}>{formatUSD(manager.totalJuniorDeposited, true)}</Text>
-            <Text style={styles.bentoKey}>SKIN</Text>
+            <Text style={styles.bentoKey}>Skin</Text>
           </View>
           <View style={styles.bentoDivider} />
           <View style={styles.bentoCell}>
             <Text style={[styles.bentoVal, { color: hColor }]}>{(avgHealth * 100).toFixed(0)}%</Text>
-            <Text style={styles.bentoKey}>HEALTH</Text>
+            <Text style={styles.bentoKey}>Health</Text>
           </View>
         </View>
 
@@ -153,7 +159,7 @@ export default function TradersScreen() {
 
   const Header = () => (
     <FadeSlideIn delay={0}>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.pageTitle}>Traders</Text>
         <Text style={styles.pageSub}>{sorted.length} verified managers · ranked by TVL</Text>
       </View>
@@ -175,16 +181,18 @@ export default function TradersScreen() {
         keyExtractor={m => m.pubkey}
         ListHeaderComponent={Header}
         renderItem={({ item, index }) => (
-          <AnimatedTraderCard
+          <TraderCard
             manager={item}
             rank={index + 1}
-            delay={Math.min(index * 70, 280)}
+            delay={Math.min(index * 60, 240)}
             onPress={() => router.push(`/trader/${item.pubkey}`)}
           />
         )}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        ListEmptyComponent={<EmptyState icon="◎" title="No traders yet" />}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ListEmptyComponent={
+          <EmptyState iconName="people-outline" title="No traders yet" />
+        }
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.signal} />
         }
@@ -197,94 +205,90 @@ export default function TradersScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { paddingHorizontal: spacing.md, paddingBottom: 20, gap: 4 },
-  pageTitle: { fontSize: 32, fontWeight: '700', color: colors.text, letterSpacing: -0.8 },
-  pageSub: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+  header: { paddingHorizontal: spacing.md, paddingBottom: 18, gap: 4 },
+  pageTitle: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.8 },
+  pageSub: { fontSize: 12, color: colors.textQuiet, fontWeight: '400' },
   list: { paddingHorizontal: spacing.md, paddingBottom: 48 },
 
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 20,
-    gap: 16,
+    padding: 18,
+    gap: 14,
     overflow: 'hidden',
   },
   cardTop: {
-    borderColor: colors.signal + '28',
-    shadowColor: colors.signal,
-    shadowOpacity: 0.10,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 4 },
+    borderColor: colors.signalBorder,
   },
 
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatarArea: { position: 'relative' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarWrap: { position: 'relative' },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceHigh,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '800', fontFamily: 'Courier' },
+  avatarText: { fontSize: 16, fontWeight: '700', color: colors.textMuted },
   rankPin: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.bg,
+    bottom: -5,
+    right: -5,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.signal + '40',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rankPinText: { fontSize: 9 },
 
-  cardMeta: { flex: 1, gap: 4 },
+  cardMeta: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardAddr: { fontSize: 15, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  cardAddr: { fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
   rankBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.signalDim,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,184,48,0.08)',
     borderWidth: 1,
-    borderColor: colors.signal + '40',
   },
-  rankBadgeText: { fontSize: 9, fontWeight: '800', color: colors.signal, fontFamily: 'Courier' },
-  cardSub: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },
+  rankBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  cardSub: { fontSize: 11, color: colors.textQuiet },
 
   tvlBlock: { alignItems: 'flex-end', gap: 2 },
-  tvlValue: { fontSize: 20, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  tvlLabel: {
-    fontSize: 8, color: colors.textQuiet, textTransform: 'uppercase',
-    letterSpacing: 0.6, fontFamily: 'Courier', fontWeight: '700',
-  },
+  tvlValue: { fontSize: 18, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  tvlLabel: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: '500' },
 
   bento: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 14,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
-  bentoCell: { flex: 1, alignItems: 'center', paddingVertical: 14, gap: 4 },
+  bentoCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 3 },
   bentoDivider: { width: 1, backgroundColor: colors.border },
-  bentoVal: { fontSize: 17, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
-  bentoKey: {
-    fontSize: 7, fontWeight: '700', color: colors.textQuiet,
-    textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Courier',
-  },
+  bentoVal: { fontSize: 15, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
+  bentoKey: { fontSize: 9, fontWeight: '500', color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.4 },
 
   chips: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.surfaceElevated, borderRadius: radius.full,
-    paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1,
-    borderColor: colors.border, maxWidth: 180,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxWidth: 180,
   },
-  chipName: { fontSize: 11, color: colors.textMuted },
+  chipName: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
 });

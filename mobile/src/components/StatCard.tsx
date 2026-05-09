@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   cardAccent: {
-    borderColor: colors.signal + '50',
+    borderColor: colors.signalBorder,
     backgroundColor: colors.signalDim,
   },
   value: {
@@ -49,11 +49,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    fontFamily: 'Courier',
   },
   sub: {
     fontSize: 11,

@@ -1,86 +1,66 @@
 import { Tabs } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, Text, StyleSheet, Platform } from 'react-native';
+import { Animated, View, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/lib/theme';
 
-function TabIcon({ glyph, focused, label }: { glyph: string; focused: boolean; label: string }) {
-  const glow = useRef(new Animated.Value(0)).current;
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+interface TabIconProps {
+  name: IoniconName;
+  focused: boolean;
+}
+
+function TabIcon({ name, focused }: TabIconProps) {
   const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: focused ? 1.18 : 1,
+        toValue: focused ? 1.12 : 1,
         useNativeDriver: true,
-        damping: 14,
-        stiffness: 300,
+        damping: 18,
+        stiffness: 350,
       }),
-      Animated.timing(glow, {
+      Animated.timing(opacity, {
         toValue: focused ? 1 : 0,
-        duration: 220,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start();
   }, [focused]);
 
-  const glowStyle = {
-    opacity: glow,
-    shadowColor: colors.signal,
-    shadowOpacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.8] }),
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-  };
-
   return (
-    <View style={tabStyles.wrap}>
-      <Animated.View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive, { transform: [{ scale }] }]}>
-        <Animated.Text style={[tabStyles.icon, { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 1] }) }, tabStyles.iconGlow]}>
-          {glyph}
-        </Animated.Text>
-        <Text style={[tabStyles.icon, tabStyles.iconBase, focused && tabStyles.iconActive]}>
-          {glyph}
-        </Text>
-      </Animated.View>
+    <View style={styles.iconContainer}>
       {focused && (
-        <Animated.View style={[tabStyles.dot, { opacity: glow }]} />
+        <Animated.View style={[styles.indicator, { opacity }]} />
       )}
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Ionicons
+          name={name}
+          size={22}
+          color={focused ? colors.signal : colors.textQuiet}
+        />
+      </Animated.View>
     </View>
   );
 }
 
-const tabStyles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: 4 },
-  iconWrap: {
-    width: 40,
-    height: 32,
+const styles = StyleSheet.create({
+  iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
+    width: 44,
+    height: 44,
   },
-  iconWrapActive: {
-    backgroundColor: colors.signalDim,
-  },
-  iconBase: { position: 'absolute' },
-  iconGlow: {
+  indicator: {
     position: 'absolute',
-    fontSize: 19,
-    color: colors.signal,
-    ...Platform.select({
-      web: { filter: 'blur(6px)' },
-    }),
-  },
-  icon: {
-    fontSize: 18,
-    color: colors.textQuiet,
-  },
-  iconActive: {
-    color: colors.signal,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.signal,
+    top: 0,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.signalDim,
   },
 });
 
@@ -91,27 +71,29 @@ export default function TabLayout() {
         headerShown: false,
         tabBarShowLabel: true,
         tabBarStyle: {
-          backgroundColor: colors.surfaceElevated,
+          backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 82,
-          paddingBottom: 18,
-          paddingTop: 6,
-          shadowColor: colors.signal,
-          shadowOpacity: 0.06,
-          shadowRadius: 32,
-          shadowOffset: { width: 0, height: -4 },
-          elevation: 20,
+          height: Platform.OS === 'ios' ? 88 : 72,
+          paddingBottom: Platform.OS === 'ios' ? 26 : 12,
+          paddingTop: 8,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: -4 },
+            },
+            android: { elevation: 24 },
+          }),
         },
         tabBarActiveTintColor: colors.signal,
         tabBarInactiveTintColor: colors.textQuiet,
         tabBarLabelStyle: {
-          fontSize: 9,
-          fontWeight: '700',
-          letterSpacing: 0.8,
-          textTransform: 'uppercase',
-          fontFamily: 'Courier',
-          marginTop: -2,
+          fontSize: 10,
+          fontWeight: '600',
+          letterSpacing: 0.3,
+          marginTop: 2,
         },
       }}
     >
@@ -119,35 +101,45 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Vaults',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="⬡" focused={focused} label="Vaults" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'layers' : 'layers-outline'} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="portfolio"
         options={{
           title: 'Portfolio',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="◈" focused={focused} label="Portfolio" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'briefcase' : 'briefcase-outline'} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="traders"
         options={{
           title: 'Traders',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="◎" focused={focused} label="Traders" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'people' : 'people-outline'} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="manager"
         options={{
-          title: 'Manager',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="▣" focused={focused} label="Manager" />,
+          title: 'Manage',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'stats-chart' : 'stats-chart-outline'} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => <TabIcon glyph="◉" focused={focused} label="Settings" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name={focused ? 'settings' : 'settings-outline'} focused={focused} />
+          ),
         }}
       />
     </Tabs>
