@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchKilnApi, getArcadiaRealtimeUrl, isArcadiaDemoMode, postKilnApi } from "./api";
+import { fetchKilnApi, fetchKilnApiOptional, getArcadiaRealtimeUrl, isArcadiaDemoMode, postKilnApi } from "./api";
 
 describe("Arcadia API client", () => {
   afterEach(() => {
@@ -72,5 +72,12 @@ describe("Arcadia API client", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 500 })));
 
     await expect(postKilnApi("/demo/run-full")).rejects.toThrow("Arcadia API request failed: 500");
+  });
+
+  it("lets optional feature endpoints disappear without noisy fallback errors", async () => {
+    vi.stubEnv("VITE_KILN_API_URL", "http://127.0.0.1:8787");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("missing", { status: 404 })));
+
+    await expect(fetchKilnApiOptional("/private-intents/vaults/demo")).resolves.toBeNull();
   });
 });

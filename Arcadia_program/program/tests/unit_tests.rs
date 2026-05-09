@@ -5,6 +5,12 @@ use Kiln_program::{
         enforce_liquid_reserve, min_liquid_usdc, nav_usdc, wsol_needed_for_usdc, wsol_value_usdc,
         PRICE_SCALE, USDC_DECIMALS, WSOL_DECIMALS,
     },
+    instructions::execute_swap::{
+        is_guard_only_swap_data, parse_guard_only_swap_args, parse_jupiter_swap_args,
+        parse_private_intent_session, validate_private_intent_session,
+        MAGICBLOCK_PRIVATE_INTENT_VERSION, PRIVATE_INTENT_PROOF_KIND_ER,
+        PRIVATE_INTENT_SESSION_LEN, PRIVATE_INTENT_SESSION_MAGIC, ROUTE_USDC_TO_SOL,
+    },
     instructions::vault_guard::{
         apply_post_swap_cooldown, effective_health_bps, max_position_bps, run_guards,
         run_guards_with_notional,
@@ -39,6 +45,131 @@ fn make_state(junior: u64, original_junior: u64, senior: u64, nav: u64) -> Vault
         rolling_24h_loss_bps: 0,
         rolling_7d_loss_bps: 0,
     }
+}
+
+fn private_intent_session_bytes(max_in_amount: u64, expires_at: i64) -> [u8; 152] {
+    assert_eq!(PRIVATE_INTENT_SESSION_LEN, 152);
+    let mut data = [0_u8; 152];
+    data[0..4].copy_from_slice(&PRIVATE_INTENT_SESSION_MAGIC);
+    data[4] = MAGICBLOCK_PRIVATE_INTENT_VERSION;
+    data[5] = 0b0000_0001;
+    data[6..8].copy_from_slice(&PRIVATE_INTENT_PROOF_KIND_ER.to_le_bytes());
+    data[8..40].copy_from_slice(&[1_u8; 32]);
+    data[40..72].copy_from_slice(&[2_u8; 32]);
+    data[72..104].copy_from_slice(&[3_u8; 32]);
+    data[104..136].copy_from_slice(&[4_u8; 32]);
+    data[136..144].copy_from_slice(&max_in_amount.to_le_bytes());
+    data[144..152].copy_from_slice(&expires_at.to_le_bytes());
+    data
+}
+
+// ======================== MagicBlock private intent parsing ========================
+
+#[test]
+fn parses_private_intent_session() {
+    let data = private_intent_session_bytes(1_000, 5_000);
+    let session = parse_private_intent_session(&data).expect("private intent session");
+
+    assert_eq!(session.version, MAGICBLOCK_PRIVATE_INTENT_VERSION);
+    assert_eq!(session.flags, 0b0000_0001);
+    assert_eq!(session.proof_kind, PRIVATE_INTENT_PROOF_KIND_ER);
+    assert_eq!(session.session_id, &[1_u8; 32]);
+    assert_eq!(session.intent_commitment, &[2_u8; 32]);
+    assert_eq!(session.proof_hash, &[3_u8; 32]);
+    assert_eq!(session.er_state_root, &[4_u8; 32]);
+    assert_eq!(session.max_in_amount, 1_000);
+    assert_eq!(session.expires_at, 5_000);
+}
+
+#[test]
+fn private_intent_session_rejects_zero_proof_material() {
+    let mut data = private_intent_session_bytes(1_000, 5_000);
+    data[72..104].fill(0);
+
+    let err = parse_private_intent_session(&data).unwrap_err();
+    assert_eq!(
+        err,
+        ProgramError::Custom(KilnError::InvalidPrivateIntentSession as u32)
+    );
+}
+
+#[test]
+fn private_intent_guard_checks_expiry_and_amount() {
+    let data = private_intent_session_bytes(1_000, 5_000);
+    let session = parse_private_intent_session(&data).expect("private intent session");
+
+    assert!(validate_private_intent_session(&session, 1_000, 5_000).is_ok());
+    assert_eq!(
+        validate_private_intent_session(&session, 1_001, 5_000).unwrap_err(),
+        ProgramError::Custom(KilnError::PrivateIntentAmountExceeded as u32)
+    );
+    assert_eq!(
+        validate_private_intent_session(&session, 1_000, 5_001).unwrap_err(),
+        ProgramError::Custom(KilnError::PrivateIntentExpired as u32)
+    );
+}
+
+#[test]
+fn guard_only_swap_accepts_private_intent_trailer() {
+    let mut data = Vec::new();
+    data.extend_from_slice(&500_u64.to_le_bytes());
+    data.extend_from_slice(&0_u64.to_le_bytes());
+    data.extend_from_slice(&private_intent_session_bytes(1_000, 5_000));
+
+    assert!(is_guard_only_swap_data(&data));
+    let parsed = parse_guard_only_swap_args(&data).expect("guard-only args");
+    assert_eq!(parsed.args.in_amount, 500);
+    assert_eq!(parsed.args.minimum_amount_out, 0);
+    assert_eq!(
+        parsed
+            .private_intent_session
+            .expect("private intent")
+            .max_in_amount,
+        1_000
+    );
+}
+
+#[test]
+fn jupiter_v1_parser_remains_backwards_compatible() {
+    let mut data = vec![0_u8; 32];
+    data[0] = ROUTE_USDC_TO_SOL;
+    data[2..4].copy_from_slice(&50_u16.to_le_bytes());
+    data[8..16].copy_from_slice(&1_000_u64.to_le_bytes());
+    data[16..24].copy_from_slice(&990_u64.to_le_bytes());
+    data[24..32].copy_from_slice(&5_000_i64.to_le_bytes());
+    data.extend_from_slice(&[0xaa, 0xbb, 0xcc]);
+
+    let parsed = parse_jupiter_swap_args(&data).expect("jupiter v1 args");
+    assert_eq!(parsed.route, ROUTE_USDC_TO_SOL);
+    assert_eq!(parsed.max_slippage_bps, 50);
+    assert_eq!(parsed.in_amount, 1_000);
+    assert_eq!(parsed.minimum_amount_out, 990);
+    assert_eq!(parsed.quote_slot_or_expiry, 5_000);
+    assert_eq!(parsed.jupiter_instruction_data, &[0xaa, 0xbb, 0xcc]);
+    assert!(parsed.private_intent_session.is_none());
+}
+
+#[test]
+fn jupiter_v2_parser_extracts_private_intent_and_cpi_payload() {
+    let session = private_intent_session_bytes(1_500, 5_000);
+    let jupiter_payload = [0xde, 0xad, 0xbe, 0xef];
+    let mut data = vec![0_u8; 32];
+    data[0] = ROUTE_USDC_TO_SOL;
+    data[1] = MAGICBLOCK_PRIVATE_INTENT_VERSION;
+    data[2..4].copy_from_slice(&50_u16.to_le_bytes());
+    data[4..6].copy_from_slice(&(PRIVATE_INTENT_SESSION_LEN as u16).to_le_bytes());
+    data[6..8].copy_from_slice(&(jupiter_payload.len() as u16).to_le_bytes());
+    data[8..16].copy_from_slice(&1_000_u64.to_le_bytes());
+    data[16..24].copy_from_slice(&990_u64.to_le_bytes());
+    data[24..32].copy_from_slice(&5_000_i64.to_le_bytes());
+    data.extend_from_slice(&session);
+    data.extend_from_slice(&jupiter_payload);
+
+    let parsed = parse_jupiter_swap_args(&data).expect("jupiter v2 args");
+    let parsed_session = parsed.private_intent_session.expect("private intent");
+    assert_eq!(parsed.jupiter_instruction_data, &jupiter_payload);
+    assert_eq!(parsed_session.max_in_amount, 1_500);
+    assert_eq!(parsed_session.expires_at, 5_000);
 }
 
 // ======================== max_position_bps ========================

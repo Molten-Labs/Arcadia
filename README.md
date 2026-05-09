@@ -200,6 +200,14 @@ PORT=8080
 
 # Optional (mainnet only)
 JUPITER_API_KEY=your_jupiter_key
+
+# Optional private-intent execution
+MAGICBLOCK_PRIVATE_ER_ENDPOINT=https://your-magicblock-executor.example
+MAGICBLOCK_AUTH_TOKEN=your_magicblock_token
+MAGICBLOCK_ER_RPC_URL=https://devnet-router.magicblock.app
+MAGICBLOCK_ER_VALIDATOR=
+MAGICBLOCK_ER_SKIP_PREFLIGHT=true
+MAGICBLOCK_ALLOW_LOCAL_FALLBACK=true
 ```
 
 > **Never commit secrets.** Use environment variables or a secrets manager.
@@ -228,6 +236,14 @@ Endpoints:
 | `GET /positions/wallet` | Investor positions |
 | `GET /jupiter/quote` | Guarded Jupiter quote proxy |
 | `POST /jupiter/swap-instructions` | Swap instruction builder |
+| `GET /magicblock/executor-config` | Redacted MagicBlock executor configuration |
+| `POST /private/intents` | Submit private intent, MagicBlock-first with local fallback |
+| `GET /private/intents/{intentId}` | Redacted private intent lifecycle record |
+| `GET /private/intents/{intentId}/proof-events` | Redacted proof event history |
+| `POST /private/intents/{intentId}/proof-events` | Append lifecycle/proof transition |
+| `POST /private-intents/submit` | Legacy redacted private intent lifecycle demo route |
+
+MagicBlock boundary: Arcadia only delegates the private intent/session proof path to ER. Vault creation, custody, deposits, withdrawals, graduation, investor share accounting, and first-loss state remain on public Solana so investors can audit safety.
 
 ---
 

@@ -91,6 +91,11 @@ pub fn run_guards_with_notional(
     Ok(())
 }
 
+pub fn guard_public_snapshot(state: &VaultState) -> Result<(u64, u16), ProgramError> {
+    let health = effective_health_bps(state)?;
+    Ok((health, max_position_bps(health)))
+}
+
 pub fn enforce_usdc_reserve_after_swap(
     usdc_after: u64,
     nav_after: u64,

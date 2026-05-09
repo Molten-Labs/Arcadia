@@ -47,6 +47,18 @@ export async function fetchKilnApi<T>(path: string): Promise<T | null> {
   }
 }
 
+export async function fetchKilnApiOptional<T>(path: string): Promise<T | null> {
+  const baseUrl = getKilnApiUrl();
+  if (!baseUrl) return null;
+
+  const response = await fetch(`${baseUrl}${path}`);
+  if (response.status === 404 || response.status === 405) return null;
+  if (!response.ok) {
+    throw new Error(`Arcadia API request failed: ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function postKilnApi<T>(path: string, body?: unknown): Promise<T | null> {
   const baseUrl = getKilnApiUrl();
   if (!baseUrl) return null;
@@ -56,6 +68,22 @@ export async function postKilnApi<T>(path: string, body?: unknown): Promise<T | 
     headers: body === undefined ? undefined : { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (!response.ok) {
+    throw new Error(`Arcadia API request failed: ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export async function postKilnApiOptional<T>(path: string, body?: unknown): Promise<T | null> {
+  const baseUrl = getKilnApiUrl();
+  if (!baseUrl) return null;
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: body === undefined ? undefined : { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (response.status === 404 || response.status === 405) return null;
   if (!response.ok) {
     throw new Error(`Arcadia API request failed: ${response.status}`);
   }

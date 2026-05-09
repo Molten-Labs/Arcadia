@@ -27,6 +27,7 @@ import { CapitalStack } from '../../src/components/CapitalStack';
 import { StatCard } from '../../src/components/StatCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { TxModal, TxState } from '../../src/components/TxModal';
+import { PrivateIntentPanel } from '../../src/components/PrivateIntentPanel';
 import { formatUSD, formatBps, formatNav, formatAge, truncateAddress } from '../../src/lib/format';
 import { parseUsdcToUnits } from '../../src/lib/amounts';
 
@@ -251,6 +252,9 @@ export default function VaultDetailScreen() {
 
         <View style={styles.card}><HealthMeter health={vault.juniorHealth} /></View>
         <View style={styles.card}><CapitalStack juniorCapital={vault.juniorCapital} seniorCapital={vault.seniorCapital} /></View>
+        <View style={styles.privateIntentWrap}>
+          <PrivateIntentPanel vaultConfigPubkey={vault.configPubkey} mode="investor" />
+        </View>
 
         {/* Risk detail */}
         <View style={styles.card}>
@@ -445,6 +449,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
   },
+  privateIntentWrap: { marginHorizontal: spacing.md },
   cardTitle: {
     fontSize: 9,
     fontWeight: '700',

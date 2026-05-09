@@ -43,6 +43,9 @@ pub enum KilnError {
     InvalidPriceFeed,
     LiquidReserveViolation,
     InvalidCustodyAccount,
+    InvalidPrivateIntentSession,
+    PrivateIntentExpired,
+    PrivateIntentAmountExceeded,
 }
 
 impl From<KilnError> for ProgramError {

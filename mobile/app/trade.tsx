@@ -9,11 +9,14 @@ import { useArcadiaTransactions } from '../src/hooks/useTransactions';
 import { parseUsdcToUnits } from '../src/lib/amounts';
 import { TxModal, TxState } from '../src/components/TxModal';
 import { formatUSD } from '../src/lib/format';
+import { PrivateIntentPanel } from '../src/components/PrivateIntentPanel';
+import { useSubmitPrivateIntent } from '../src/hooks/usePrivateIntents';
 
 export default function TradeScreen() {
   const { connected, connect, role, setRole, isDemoWallet, cluster } = useWallet();
   const { data: vaults } = useVaults();
   const { executeGuardedSwap } = useArcadiaTransactions();
+  const privateIntent = useSubmitPrivateIntent();
   const [vaultId, setVaultId] = useState<string | null>(null);
   const [amount, setAmount] = useState('100');
   const [direction, setDirection] = useState<'USDC_TO_WSOL' | 'WSOL_TO_USDC'>('USDC_TO_WSOL');
@@ -58,6 +61,34 @@ export default function TradeScreen() {
     }
   }
 
+  async function sealPrivateIntent() {
+    if (!selected) { Alert.alert('No vault selected'); return; }
+    if (!amountUnits || amountUnits <= 0n) { Alert.alert('Invalid amount'); return; }
+    if (!connected) {
+      try {
+        await connect();
+      } catch (err: any) {
+        Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+      }
+      return;
+    }
+    if (role !== 'trader') { setRole('trader'); Alert.alert('Trader mode enabled', 'Submit again to continue.'); return; }
+    try {
+      await privateIntent.mutateAsync({
+        vaultConfigPubkey: selected.configPubkey,
+        managerPubkey: selected.managerPubkey,
+        amountUsdc: Number(amountUnits) / 1_000_000,
+        side: direction,
+        maxSlippageBps: selected.maxSlippageBps,
+        clientRequestId: `mobile-terminal-${Date.now()}`,
+        demoFallback: isDemoWallet,
+      });
+      Alert.alert('Private intent sealed', 'The route and exact amount are redacted while the vault guard proof updates.');
+    } catch (err: any) {
+      Alert.alert('Private intent unavailable', err?.message ?? 'Unable to seal private intent');
+    }
+  }
+
   return (
     <>
       <TxModal state={txState} onClose={() => setTxState({ type: 'idle' })} label="Guarded Swap" />
@@ -75,6 +106,15 @@ export default function TradeScreen() {
             </Pressable>
           ))}
         </View>
+
+        <PrivateIntentPanel
+          vaultConfigPubkey={selected?.configPubkey}
+          mode="terminal"
+          onSubmit={sealPrivateIntent}
+          submitLabel="Seal Intent First"
+          submitDisabled={!selected || !amountUnits || amountUnits <= 0n}
+          submitting={privateIntent.isPending}
+        />
 
         <View style={styles.card}>
           <Text style={styles.section}>Route</Text>

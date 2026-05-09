@@ -9,7 +9,8 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::{
     collections::{HashMap, HashSet},
@@ -37,6 +38,7 @@ struct AppState {
     webhook_secret: Option<String>,
     jupiter_api_key: Option<String>,
     jupiter_swap_base_url: String,
+    magicblock: MagicBlockConfig,
     demo_mode: bool,
     surfpool_mode: bool,
     devnet_faucet: DevnetFaucetConfig,
@@ -44,6 +46,18 @@ struct AppState {
     quote_cache: Arc<Mutex<HashMap<String, CachedQuote>>>,
     demo_story: Arc<Mutex<DemoStoryState>>,
     realtime: RealtimeHub,
+}
+
+#[derive(Clone, Debug)]
+struct MagicBlockConfig {
+    private_er_endpoint: Option<String>,
+    auth_token: Option<String>,
+    app_id: String,
+    er_rpc_url: Option<String>,
+    er_validator: Option<String>,
+    fallback_enabled: bool,
+    timeout_ms: u64,
+    skip_preflight: bool,
 }
 
 #[derive(Clone)]
@@ -128,6 +142,13 @@ impl RealtimeHub {
                     });
                 }
             }
+            if let Some(intent) = &update.private_intent {
+                self.publish(RealtimeEvent::PrivateIntentEvent {
+                    vault_config_pubkey: intent.vault_config_pubkey.clone(),
+                    item: intent.clone(),
+                    received_at,
+                });
+            }
             if let Some(status) = &update.status {
                 self.publish(RealtimeEvent::StatusEvent {
                     vault_config_pubkey: status.vault_config_pubkey.clone(),
@@ -152,12 +173,16 @@ struct MaterializedState {
     raw_event_keys: HashSet<String>,
     nav_event_keys: HashSet<String>,
     trade_event_keys: HashSet<String>,
+    private_intent_event_keys: HashSet<String>,
     status_event_keys: HashSet<String>,
     managers: HashMap<String, ManagerView>,
     vaults: HashMap<String, VaultView>,
     positions: HashMap<String, PositionView>,
     nav_points: Vec<NavPoint>,
     trades: Vec<TradeEvent>,
+    private_intents: Vec<PrivateIntentEvent>,
+    private_intent_records: HashMap<String, PrivateIntentView>,
+    proof_events: Vec<ProofEventView>,
     status_events: Vec<StatusEvent>,
 }
 
@@ -289,6 +314,119 @@ struct TradeEvent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct PrivateIntentRiskLimits {
+    health_band: String,
+    max_position_bps: i32,
+    requested_notional_band: String,
+    senior_protected: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PrivateIntentEvent {
+    vault_config_pubkey: String,
+    intent_id: String,
+    trader: String,
+    commitment_hash: String,
+    status: String,
+    guard_decision: Option<String>,
+    executor: String,
+    er_session: Option<String>,
+    er_commitment: Option<String>,
+    risk_limits: PrivateIntentRiskLimits,
+    settlement_signature: Option<String>,
+    junior_delta: f64,
+    senior_delta: f64,
+    public_summary: String,
+    occurred_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PrivateIntentView {
+    intent_id: String,
+    client_request_id: Option<String>,
+    manager_pubkey: String,
+    vault_config_pubkey: String,
+    intent_type: String,
+    status: String,
+    executor: String,
+    executor_request_id: Option<String>,
+    request_hash: String,
+    redacted_request: Value,
+    response_hash: Option<String>,
+    redacted_response: Option<Value>,
+    signature: Option<String>,
+    error: Option<String>,
+    created_at: i64,
+    updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProofEventView {
+    event_id: String,
+    intent_id: String,
+    vault_config_pubkey: String,
+    stage: String,
+    status: String,
+    executor: String,
+    proof_hash: String,
+    redacted_payload: Value,
+    occurred_at: i64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PrivateIntentRequest {
+    manager_pubkey: String,
+    vault_config_pubkey: String,
+    intent_type: String,
+    client_request_id: Option<String>,
+    #[serde(default)]
+    payload: Value,
+    #[serde(default)]
+    proof: Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PrivateIntentLifecycleRequest {
+    status: String,
+    stage: Option<String>,
+    executor: Option<String>,
+    executor_request_id: Option<String>,
+    signature: Option<String>,
+    error: Option<String>,
+    #[serde(default)]
+    proof: Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MagicBlockExecutorStatus {
+    primary_configured: bool,
+    primary_endpoint: Option<String>,
+    er_rpc_url: Option<String>,
+    er_validator: Option<String>,
+    local_fallback_enabled: bool,
+    timeout_ms: u64,
+    skip_preflight: bool,
+    delegation_model: &'static str,
+}
+
+#[derive(Debug)]
+struct PrivateIntentExecution {
+    status: String,
+    executor: String,
+    executor_request_id: Option<String>,
+    signature: Option<String>,
+    response: Value,
+    error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct StatusEvent {
     vault_config_pubkey: String,
     occurred_at: i64,
@@ -411,6 +549,22 @@ enum RealtimeEvent {
         #[serde(rename = "vaultConfigPubkey")]
         vault_config_pubkey: String,
         item: TradeEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "private_intent.event")]
+    PrivateIntentEvent {
+        #[serde(rename = "vaultConfigPubkey")]
+        vault_config_pubkey: String,
+        item: PrivateIntentEvent,
+        #[serde(rename = "receivedAt")]
+        received_at: i64,
+    },
+    #[serde(rename = "proof.event")]
+    ProofEvent {
+        #[serde(rename = "vaultConfigPubkey")]
+        vault_config_pubkey: String,
+        item: ProofEventView,
         #[serde(rename = "receivedAt")]
         received_at: i64,
     },
@@ -606,6 +760,7 @@ async fn main() -> anyhow::Result<()> {
         .filter(|value| !value.is_empty());
     let jupiter_swap_base_url = env::var("JUPITER_SWAP_BASE_URL")
         .unwrap_or_else(|_| "https://api.jup.ag/swap/v1".to_string());
+    let magicblock = magicblock_config_from_env();
     let demo_mode = env::var("ARCADIA_DEMO_MODE")
         .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
@@ -639,6 +794,7 @@ async fn main() -> anyhow::Result<()> {
         webhook_secret,
         jupiter_api_key,
         jupiter_swap_base_url,
+        magicblock,
         demo_mode,
         surfpool_mode,
         devnet_faucet,
@@ -675,6 +831,43 @@ fn build_app(state: AppState) -> Router {
             get(nav_history_handler),
         )
         .route("/vaults/:config_address/trades", get(trades_handler))
+        .route(
+            "/vaults/:config_address/private-intents",
+            get(private_intents_handler),
+        )
+        .route(
+            "/magicblock/executor-config",
+            get(magicblock_executor_config_handler),
+        )
+        .route("/private/intents", post(private_intent_create_handler))
+        .route(
+            "/private/intents/vault/:config_address",
+            get(private_intent_records_for_vault_handler),
+        )
+        .route(
+            "/private/intents/:intent_id",
+            get(private_intent_get_handler),
+        )
+        .route(
+            "/private/intents/:intent_id/proof-events",
+            get(private_intent_proof_events_handler).post(private_intent_lifecycle_handler),
+        )
+        .route(
+            "/private-intents/submit",
+            post(private_intent_submit_handler),
+        )
+        .route(
+            "/private-intents/:intent_id/guard",
+            post(private_intent_guard_handler),
+        )
+        .route(
+            "/private-intents/:intent_id/reject",
+            post(private_intent_reject_handler),
+        )
+        .route(
+            "/private-intents/:intent_id/settle",
+            post(private_intent_settle_handler),
+        )
         .route("/managers", get(list_managers_handler))
         .route("/managers/:address", get(get_manager_handler))
         .route("/positions/:wallet", get(positions_handler))
@@ -752,6 +945,34 @@ fn devnet_faucet_config_from_env() -> DevnetFaucetConfig {
             .ok()
             .and_then(|value| value.parse().ok())
             .unwrap_or(60),
+    }
+}
+
+fn magicblock_config_from_env() -> MagicBlockConfig {
+    MagicBlockConfig {
+        private_er_endpoint: env::var("MAGICBLOCK_PRIVATE_ER_ENDPOINT")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        auth_token: env::var("MAGICBLOCK_AUTH_TOKEN")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        app_id: env::var("MAGICBLOCK_APP_ID").unwrap_or_else(|_| "arcadia-kiln".to_string()),
+        er_rpc_url: env::var("MAGICBLOCK_ER_RPC_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        er_validator: env::var("MAGICBLOCK_ER_VALIDATOR")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        fallback_enabled: env::var("MAGICBLOCK_ALLOW_LOCAL_FALLBACK")
+            .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+            .unwrap_or(true),
+        timeout_ms: env::var("MAGICBLOCK_EXECUTOR_TIMEOUT_MS")
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(1_500),
+        skip_preflight: env::var("MAGICBLOCK_ER_SKIP_PREFLIGHT")
+            .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+            .unwrap_or(true),
     }
 }
 
@@ -1084,6 +1305,169 @@ async fn positions_handler(
     Ok(Json(Items {
         items: state.positions(&wallet).await?,
     }))
+}
+
+async fn magicblock_executor_config_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<MagicBlockExecutorStatus>, AppError> {
+    Ok(Json(MagicBlockExecutorStatus {
+        primary_configured: state.magicblock.private_er_endpoint.is_some(),
+        primary_endpoint: state
+            .magicblock
+            .private_er_endpoint
+            .as_deref()
+            .map(redact_endpoint),
+        er_rpc_url: state.magicblock.er_rpc_url.clone(),
+        er_validator: state.magicblock.er_validator.clone(),
+        local_fallback_enabled: state.magicblock.fallback_enabled,
+        timeout_ms: state.magicblock.timeout_ms,
+        skip_preflight: state.magicblock.skip_preflight,
+        delegation_model: "private_intent_session_only",
+    }))
+}
+
+async fn private_intent_create_handler(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PrivateIntentRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state.create_private_intent(request).await?;
+    Ok((StatusCode::ACCEPTED, Json(intent)))
+}
+
+async fn private_intent_get_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+) -> Result<Json<PrivateIntentView>, AppError> {
+    state
+        .get_private_intent(&intent_id)
+        .await?
+        .map(Json)
+        .ok_or(AppError::NotFound)
+}
+
+async fn private_intent_records_for_vault_handler(
+    State(state): State<Arc<AppState>>,
+    Path(config_address): Path<String>,
+) -> Result<Json<Items<PrivateIntentView>>, AppError> {
+    Ok(Json(Items {
+        items: state.private_intents_for_vault(&config_address).await?,
+    }))
+}
+
+async fn private_intent_proof_events_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+) -> Result<Json<Items<ProofEventView>>, AppError> {
+    Ok(Json(Items {
+        items: state.private_intent_proof_events(&intent_id).await?,
+    }))
+}
+
+async fn private_intent_lifecycle_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+    Json(request): Json<PrivateIntentLifecycleRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state
+        .record_private_intent_lifecycle(&intent_id, request)
+        .await?;
+    Ok((StatusCode::OK, Json(intent)))
+}
+
+async fn private_intents_handler(
+    State(state): State<Arc<AppState>>,
+    Path(config_address): Path<String>,
+) -> Result<Json<Items<PrivateIntentView>>, AppError> {
+    Ok(Json(Items {
+        items: state.private_intents_for_vault(&config_address).await?,
+    }))
+}
+
+async fn private_intent_submit_handler(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PrivateIntentRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state.create_private_intent(request).await?;
+    Ok((StatusCode::ACCEPTED, Json(intent)))
+}
+
+async fn private_intent_guard_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+    Json(proof): Json<Value>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state
+        .record_private_intent_lifecycle(
+            &intent_id,
+            PrivateIntentLifecycleRequest {
+                status: "executing".to_string(),
+                stage: Some("guard".to_string()),
+                executor: Some("magicblock_guard".to_string()),
+                executor_request_id: string(
+                    &proof,
+                    &["executorRequestId", "requestId", "sessionId"],
+                ),
+                signature: None,
+                error: None,
+                proof,
+            },
+        )
+        .await?;
+    Ok((StatusCode::OK, Json(intent)))
+}
+
+async fn private_intent_reject_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+    Json(proof): Json<Value>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state
+        .record_private_intent_lifecycle(
+            &intent_id,
+            PrivateIntentLifecycleRequest {
+                status: "failed".to_string(),
+                stage: Some("rejected".to_string()),
+                executor: Some("vault_guard".to_string()),
+                executor_request_id: string(
+                    &proof,
+                    &["executorRequestId", "requestId", "sessionId"],
+                ),
+                signature: None,
+                error: string(&proof, &["reason", "error"])
+                    .or_else(|| Some("Vault Guard rejected private intent".to_string())),
+                proof,
+            },
+        )
+        .await?;
+    Ok((StatusCode::OK, Json(intent)))
+}
+
+async fn private_intent_settle_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+    Json(proof): Json<Value>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state
+        .record_private_intent_lifecycle(
+            &intent_id,
+            PrivateIntentLifecycleRequest {
+                status: "settled".to_string(),
+                stage: Some("settled".to_string()),
+                executor: Some("magicblock_settlement".to_string()),
+                executor_request_id: string(
+                    &proof,
+                    &["executorRequestId", "requestId", "sessionId"],
+                ),
+                signature: string(
+                    &proof,
+                    &["signature", "settlementSignature", "transactionSignature"],
+                ),
+                error: None,
+                proof,
+            },
+        )
+        .await?;
+    Ok((StatusCode::OK, Json(intent)))
 }
 
 async fn demo_reset_handler(
@@ -2125,6 +2509,376 @@ impl AppState {
         }
     }
 
+    async fn create_private_intent(
+        &self,
+        request: PrivateIntentRequest,
+    ) -> Result<PrivateIntentView, AppError> {
+        validate_private_intent_request(&request)?;
+
+        let now = now_ts();
+        let request_payload = private_intent_request_payload(&request);
+        let request_hash = sha256_value(&request_payload);
+        let intent_id = format!("intent-{}-{}", &request_hash[..16], now_nonce());
+        let redacted_request = redact_value(&request_payload);
+        let mut intent = PrivateIntentView {
+            intent_id: intent_id.clone(),
+            client_request_id: request.client_request_id.clone(),
+            manager_pubkey: request.manager_pubkey.clone(),
+            vault_config_pubkey: request.vault_config_pubkey.clone(),
+            intent_type: request.intent_type.clone(),
+            status: "received".to_string(),
+            executor: "pending".to_string(),
+            executor_request_id: None,
+            request_hash: request_hash.clone(),
+            redacted_request: redacted_request.clone(),
+            response_hash: None,
+            redacted_response: None,
+            signature: None,
+            error: None,
+            created_at: now,
+            updated_at: now,
+        };
+        let received_event = proof_event_from_payload(
+            &intent,
+            "received",
+            "received",
+            "pending",
+            &json!({
+                "requestHash": request_hash,
+                "request": redacted_request
+            }),
+            now,
+        );
+
+        self.insert_private_intent(intent.clone()).await?;
+        self.insert_proof_event(received_event).await?;
+
+        let execution = self.dispatch_private_intent(&intent, &request).await;
+        let event_payload = private_intent_execution_payload(&execution);
+        let event = proof_event_from_payload(
+            &intent,
+            execution.status.as_str(),
+            execution.status.as_str(),
+            execution.executor.as_str(),
+            &event_payload,
+            now_ts(),
+        );
+        intent.status = execution.status;
+        intent.executor = execution.executor;
+        intent.executor_request_id = execution.executor_request_id;
+        intent.signature = execution.signature;
+        intent.error = execution.error;
+        intent.response_hash = Some(sha256_value(&execution.response));
+        intent.redacted_response = Some(redact_value(&execution.response));
+        intent.updated_at = now_ts();
+
+        self.update_private_intent(intent.clone()).await?;
+        self.insert_proof_event(event).await?;
+        Ok(intent)
+    }
+
+    async fn get_private_intent(
+        &self,
+        intent_id: &str,
+    ) -> Result<Option<PrivateIntentView>, AppError> {
+        match &self.store {
+            Store::Postgres(pool) => {
+                let row = sqlx::query(
+                    "SELECT intent_id, client_request_id, manager_pubkey, vault_config_pubkey,
+                            intent_type, status, executor, executor_request_id, request_hash,
+                            redacted_request, response_hash, redacted_response, signature, error,
+                            created_at, updated_at
+                     FROM private_intents WHERE intent_id = $1",
+                )
+                .bind(intent_id)
+                .fetch_optional(pool)
+                .await?;
+                Ok(row.map(row_to_private_intent_view))
+            }
+            Store::Memory(state) => {
+                let state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                Ok(state.private_intent_records.get(intent_id).cloned())
+            }
+        }
+    }
+
+    async fn private_intents_for_vault(
+        &self,
+        config_address: &str,
+    ) -> Result<Vec<PrivateIntentView>, AppError> {
+        match &self.store {
+            Store::Postgres(pool) => {
+                let rows = sqlx::query(
+                    "SELECT intent_id, client_request_id, manager_pubkey, vault_config_pubkey,
+                            intent_type, status, executor, executor_request_id, request_hash,
+                            redacted_request, response_hash, redacted_response, signature, error,
+                            created_at, updated_at
+                     FROM private_intents WHERE vault_config_pubkey = $1 ORDER BY created_at DESC",
+                )
+                .bind(config_address)
+                .fetch_all(pool)
+                .await?;
+                Ok(rows.into_iter().map(row_to_private_intent_view).collect())
+            }
+            Store::Memory(state) => {
+                let state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                let mut intents: Vec<_> = state
+                    .private_intent_records
+                    .values()
+                    .filter(|intent| intent.vault_config_pubkey == config_address)
+                    .cloned()
+                    .collect();
+                intents.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                Ok(intents)
+            }
+        }
+    }
+
+    async fn private_intent_proof_events(
+        &self,
+        intent_id: &str,
+    ) -> Result<Vec<ProofEventView>, AppError> {
+        match &self.store {
+            Store::Postgres(pool) => {
+                let rows = sqlx::query(
+                    "SELECT event_id, intent_id, vault_config_pubkey, stage, status, executor,
+                            proof_hash, redacted_payload, occurred_at
+                     FROM proof_events WHERE intent_id = $1 ORDER BY occurred_at ASC",
+                )
+                .bind(intent_id)
+                .fetch_all(pool)
+                .await?;
+                Ok(rows.into_iter().map(row_to_proof_event).collect())
+            }
+            Store::Memory(state) => {
+                let state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                let mut events: Vec<_> = state
+                    .proof_events
+                    .iter()
+                    .filter(|event| event.intent_id == intent_id)
+                    .cloned()
+                    .collect();
+                events.sort_by(|a, b| a.occurred_at.cmp(&b.occurred_at));
+                Ok(events)
+            }
+        }
+    }
+
+    async fn record_private_intent_lifecycle(
+        &self,
+        intent_id: &str,
+        request: PrivateIntentLifecycleRequest,
+    ) -> Result<PrivateIntentView, AppError> {
+        let Some(mut intent) = self.get_private_intent(intent_id).await? else {
+            return Err(AppError::NotFound);
+        };
+        let next_status = normalize_private_intent_status(&request.status)?;
+        if !can_transition_private_intent(&intent.status, next_status) {
+            return Err(AppError::BadRequest(format!(
+                "invalid private intent transition from {} to {next_status}",
+                intent.status
+            )));
+        }
+
+        let now = now_ts();
+        let stage = request
+            .stage
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| next_status.to_string());
+        let executor = request
+            .executor
+            .clone()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| intent.executor.clone());
+        let event_payload = json!({
+            "stage": stage,
+            "status": next_status,
+            "executor": executor,
+            "executorRequestId": request.executor_request_id,
+            "signature": request.signature,
+            "error": request.error,
+            "proof": request.proof,
+        });
+        let event =
+            proof_event_from_payload(&intent, &stage, next_status, &executor, &event_payload, now);
+
+        intent.status = next_status.to_string();
+        intent.executor = executor;
+        if request.executor_request_id.is_some() {
+            intent.executor_request_id = request.executor_request_id;
+        }
+        if request.signature.is_some() {
+            intent.signature = request.signature;
+        }
+        if request.error.is_some() {
+            intent.error = request.error;
+        }
+        intent.updated_at = now;
+        self.update_private_intent(intent.clone()).await?;
+        self.insert_proof_event(event).await?;
+        Ok(intent)
+    }
+
+    async fn insert_private_intent(&self, intent: PrivateIntentView) -> Result<(), AppError> {
+        match &self.store {
+            Store::Postgres(pool) => {
+                upsert_private_intent_postgres(pool, &intent).await?;
+            }
+            Store::Memory(state) => {
+                let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                state
+                    .private_intent_records
+                    .insert(intent.intent_id.clone(), intent);
+            }
+        }
+        Ok(())
+    }
+
+    async fn update_private_intent(&self, intent: PrivateIntentView) -> Result<(), AppError> {
+        self.insert_private_intent(intent).await
+    }
+
+    async fn insert_proof_event(&self, event: ProofEventView) -> Result<(), AppError> {
+        match &self.store {
+            Store::Postgres(pool) => {
+                insert_proof_event_postgres(pool, &event).await?;
+            }
+            Store::Memory(state) => {
+                let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                state.proof_events.push(event.clone());
+            }
+        }
+        self.realtime.publish(RealtimeEvent::ProofEvent {
+            vault_config_pubkey: event.vault_config_pubkey.clone(),
+            item: event,
+            received_at: now_ts(),
+        });
+        Ok(())
+    }
+
+    async fn dispatch_private_intent(
+        &self,
+        intent: &PrivateIntentView,
+        request: &PrivateIntentRequest,
+    ) -> PrivateIntentExecution {
+        if let Some(endpoint) = &self.magicblock.private_er_endpoint {
+            match self
+                .submit_private_intent_to_magicblock(endpoint, intent, request)
+                .await
+            {
+                Ok(execution) => return execution,
+                Err(error) if !self.magicblock.fallback_enabled => {
+                    return PrivateIntentExecution {
+                        status: "failed".to_string(),
+                        executor: "magicblock".to_string(),
+                        executor_request_id: None,
+                        signature: None,
+                        response: json!({ "error": error }),
+                        error: Some(error),
+                    };
+                }
+                Err(error) => {
+                    return self.local_private_intent_execution(
+                        intent,
+                        Some(format!("MagicBlock executor unavailable: {error}")),
+                    );
+                }
+            }
+        }
+
+        self.local_private_intent_execution(
+            intent,
+            Some("MagicBlock executor not configured".to_string()),
+        )
+    }
+
+    async fn submit_private_intent_to_magicblock(
+        &self,
+        endpoint: &str,
+        intent: &PrivateIntentView,
+        request: &PrivateIntentRequest,
+    ) -> Result<PrivateIntentExecution, String> {
+        let url = magicblock_intents_url(endpoint);
+        let body = json!({
+            "appId": self.magicblock.app_id.as_str(),
+            "intentId": intent.intent_id.as_str(),
+            "clientRequestId": intent.client_request_id.clone(),
+            "managerPubkey": intent.manager_pubkey.as_str(),
+            "vaultConfigPubkey": intent.vault_config_pubkey.as_str(),
+            "intentType": intent.intent_type.as_str(),
+            "requestHash": intent.request_hash.as_str(),
+            "payload": request.payload.clone(),
+            "proof": request.proof.clone(),
+            "erRpcUrl": self.magicblock.er_rpc_url.clone(),
+            "erValidator": self.magicblock.er_validator.clone(),
+            "skipPreflight": self.magicblock.skip_preflight,
+            "delegationModel": "private_intent_session_only",
+            "publicBaseLayerState": [
+                "vault creation",
+                "custody",
+                "junior and senior deposits",
+                "graduation",
+                "first-loss accounting"
+            ],
+        });
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_millis(self.magicblock.timeout_ms))
+            .build()
+            .map_err(|error| error.to_string())?;
+        let mut outbound = client.post(url).json(&body);
+        if let Some(token) = &self.magicblock.auth_token {
+            outbound = outbound.bearer_auth(token);
+        }
+        let response = outbound.send().await.map_err(|error| error.to_string())?;
+        let status = response.status();
+        let response_body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
+        if !status.is_success() {
+            return Err(format!("status {status}: {}", redact_value(&response_body)));
+        }
+
+        let normalized_status = response_body
+            .get("status")
+            .and_then(Value::as_str)
+            .and_then(|status| normalize_private_intent_status(status).ok())
+            .unwrap_or("accepted");
+        Ok(PrivateIntentExecution {
+            status: normalized_status.to_string(),
+            executor: "magicblock".to_string(),
+            executor_request_id: string(
+                &response_body,
+                &["executorRequestId", "requestId", "sessionId", "id"],
+            ),
+            signature: string(
+                &response_body,
+                &["signature", "settlementSignature", "transactionSignature"],
+            ),
+            response: response_body,
+            error: None,
+        })
+    }
+
+    fn local_private_intent_execution(
+        &self,
+        intent: &PrivateIntentView,
+        fallback_reason: Option<String>,
+    ) -> PrivateIntentExecution {
+        let signature = format!("local-{}", &intent.request_hash[..32]);
+        PrivateIntentExecution {
+            status: "accepted".to_string(),
+            executor: "local_fallback".to_string(),
+            executor_request_id: Some(format!("local-{}", intent.intent_id)),
+            signature: Some(signature.clone()),
+            response: json!({
+                "mode": "local_fallback",
+                "signature": signature,
+                "fallbackReason": fallback_reason,
+                "message": "Private intent accepted locally; MagicBlock execution can replay from the redacted proof hash."
+            }),
+            error: fallback_reason,
+        }
+    }
+
     async fn reset_demo(&self) -> Result<(), AppError> {
         if !self.demo_mode {
             return Err(AppError::BadRequest("demo mode disabled".to_string()));
@@ -2534,6 +3288,7 @@ struct MaterializedUpdate {
     position: Option<PositionView>,
     nav_point: Option<NavPoint>,
     trade: Option<TradeEvent>,
+    private_intent: Option<PrivateIntentEvent>,
     status: Option<StatusEvent>,
 }
 
@@ -2566,6 +3321,10 @@ impl MaterializedUpdate {
                 .and_then(parse_nav_point)
                 .or_else(|| vault.as_ref().map(vault_to_nav_point));
             let trade = data.get("trade").and_then(parse_trade);
+            let private_intent = data
+                .get("privateIntent")
+                .or_else(|| data.get("privateIntentEvent"))
+                .and_then(parse_private_intent);
             let status = data.get("statusEvent").and_then(parse_status_event);
 
             if manager.is_some()
@@ -2573,6 +3332,7 @@ impl MaterializedUpdate {
                 || position.is_some()
                 || nav_point.is_some()
                 || trade.is_some()
+                || private_intent.is_some()
                 || status.is_some()
             {
                 updates.push(Self {
@@ -2582,6 +3342,7 @@ impl MaterializedUpdate {
                     position,
                     nav_point,
                     trade,
+                    private_intent,
                     status,
                 });
             }
@@ -3531,6 +4292,14 @@ impl MaterializedState {
                     self.trades.push(trade);
                 }
             }
+            if let Some(private_intent) = update.private_intent {
+                if self
+                    .private_intent_event_keys
+                    .insert(format!("{}:private_intent", update.event_key))
+                {
+                    self.private_intents.push(private_intent);
+                }
+            }
             if let Some(status) = update.status {
                 if self
                     .status_event_keys
@@ -3647,6 +4416,14 @@ async fn apply_update_postgres(
         .execute(pool)
         .await?;
         }
+        if let Some(intent) = update.private_intent {
+            insert_private_intent_postgres(
+                pool,
+                &format!("{}:private_intent", update.event_key),
+                &intent,
+            )
+            .await?;
+        }
         if let Some(status) = update.status {
             sqlx::query(
             "INSERT INTO status_events (event_key, vault_config_pubkey, occurred_at, status, reason)
@@ -3662,6 +4439,161 @@ async fn apply_update_postgres(
         .await?;
         }
     }
+    Ok(())
+}
+
+async fn upsert_private_intent_postgres(
+    pool: &PgPool,
+    intent: &PrivateIntentView,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO private_intents
+         (intent_id, client_request_id, manager_pubkey, vault_config_pubkey, intent_type, status,
+          executor, executor_request_id, request_hash, redacted_request, response_hash,
+          redacted_response, signature, error, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         ON CONFLICT (intent_id) DO UPDATE SET
+           client_request_id = EXCLUDED.client_request_id,
+           manager_pubkey = EXCLUDED.manager_pubkey,
+           vault_config_pubkey = EXCLUDED.vault_config_pubkey,
+           intent_type = EXCLUDED.intent_type,
+           status = EXCLUDED.status,
+           executor = EXCLUDED.executor,
+           executor_request_id = EXCLUDED.executor_request_id,
+           request_hash = EXCLUDED.request_hash,
+           redacted_request = EXCLUDED.redacted_request,
+           response_hash = EXCLUDED.response_hash,
+           redacted_response = EXCLUDED.redacted_response,
+           signature = EXCLUDED.signature,
+           error = EXCLUDED.error,
+           updated_at = EXCLUDED.updated_at",
+    )
+    .bind(&intent.intent_id)
+    .bind(&intent.client_request_id)
+    .bind(&intent.manager_pubkey)
+    .bind(&intent.vault_config_pubkey)
+    .bind(&intent.intent_type)
+    .bind(&intent.status)
+    .bind(&intent.executor)
+    .bind(&intent.executor_request_id)
+    .bind(&intent.request_hash)
+    .bind(&intent.redacted_request)
+    .bind(&intent.response_hash)
+    .bind(&intent.redacted_response)
+    .bind(&intent.signature)
+    .bind(&intent.error)
+    .bind(intent.created_at)
+    .bind(intent.updated_at)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn insert_proof_event_postgres(
+    pool: &PgPool,
+    event: &ProofEventView,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO proof_events
+         (event_id, intent_id, vault_config_pubkey, stage, status, executor, proof_hash,
+          redacted_payload, occurred_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (event_id) DO NOTHING",
+    )
+    .bind(&event.event_id)
+    .bind(&event.intent_id)
+    .bind(&event.vault_config_pubkey)
+    .bind(&event.stage)
+    .bind(&event.status)
+    .bind(&event.executor)
+    .bind(&event.proof_hash)
+    .bind(&event.redacted_payload)
+    .bind(event.occurred_at)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn insert_private_intent_postgres(
+    pool: &PgPool,
+    event_key: &str,
+    event: &PrivateIntentEvent,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO private_intent_events
+         (event_key, vault_config_pubkey, intent_id, trader, commitment_hash, status,
+          guard_decision, executor, er_session, er_commitment, risk_limits, settlement_signature,
+          junior_delta, senior_delta, public_summary, occurred_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         ON CONFLICT (event_key) DO NOTHING",
+    )
+    .bind(event_key)
+    .bind(&event.vault_config_pubkey)
+    .bind(&event.intent_id)
+    .bind(&event.trader)
+    .bind(&event.commitment_hash)
+    .bind(&event.status)
+    .bind(&event.guard_decision)
+    .bind(&event.executor)
+    .bind(&event.er_session)
+    .bind(&event.er_commitment)
+    .bind(json!(&event.risk_limits))
+    .bind(&event.settlement_signature)
+    .bind(event.junior_delta)
+    .bind(event.senior_delta)
+    .bind(&event.public_summary)
+    .bind(event.occurred_at)
+    .execute(pool)
+    .await?;
+
+    let payload = json!({
+        "vaultConfigPubkey": event.vault_config_pubkey.as_str(),
+        "intentId": event.intent_id.as_str(),
+        "trader": event.trader.as_str(),
+        "commitmentHash": event.commitment_hash.as_str(),
+        "status": event.status.as_str(),
+        "guardDecision": event.guard_decision.clone(),
+        "executor": event.executor.as_str(),
+        "erSession": event.er_session.clone(),
+        "erCommitment": event.er_commitment.clone(),
+        "riskLimits": event.risk_limits.clone(),
+        "settlementSignature": event.settlement_signature.clone(),
+        "juniorDelta": event.junior_delta,
+        "seniorDelta": event.senior_delta,
+        "publicSummary": event.public_summary.as_str(),
+        "occurredAt": event.occurred_at,
+    });
+    let intent = PrivateIntentView {
+        intent_id: event.intent_id.clone(),
+        client_request_id: None,
+        manager_pubkey: event.trader.clone(),
+        vault_config_pubkey: event.vault_config_pubkey.clone(),
+        intent_type: "webhook_private_intent".to_string(),
+        status: event.status.clone(),
+        executor: event.executor.clone(),
+        executor_request_id: event.er_session.clone(),
+        request_hash: event.commitment_hash.clone(),
+        redacted_request: redact_value(&payload),
+        response_hash: event.er_commitment.clone(),
+        redacted_response: Some(redact_value(&payload)),
+        signature: event.settlement_signature.clone(),
+        error: None,
+        created_at: event.occurred_at,
+        updated_at: event.occurred_at,
+    };
+    upsert_private_intent_postgres(pool, &intent).await?;
+    let proof = ProofEventView {
+        event_id: event_key.to_string(),
+        intent_id: event.intent_id.clone(),
+        vault_config_pubkey: event.vault_config_pubkey.clone(),
+        stage: event.status.clone(),
+        status: event.status.clone(),
+        executor: event.executor.clone(),
+        proof_hash: sha256_value(&payload),
+        redacted_payload: redact_value(&payload),
+        occurred_at: event.occurred_at,
+    };
+    insert_proof_event_postgres(pool, &proof).await?;
     Ok(())
 }
 
@@ -3845,6 +4777,41 @@ fn row_to_position(row: sqlx::postgres::PgRow, vault: Option<VaultView>) -> Posi
     }
 }
 
+fn row_to_private_intent_view(row: sqlx::postgres::PgRow) -> PrivateIntentView {
+    PrivateIntentView {
+        intent_id: row.get("intent_id"),
+        client_request_id: row.get("client_request_id"),
+        manager_pubkey: row.get("manager_pubkey"),
+        vault_config_pubkey: row.get("vault_config_pubkey"),
+        intent_type: row.get("intent_type"),
+        status: row.get("status"),
+        executor: row.get("executor"),
+        executor_request_id: row.get("executor_request_id"),
+        request_hash: row.get("request_hash"),
+        redacted_request: row.get("redacted_request"),
+        response_hash: row.get("response_hash"),
+        redacted_response: row.get("redacted_response"),
+        signature: row.get("signature"),
+        error: row.get("error"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+    }
+}
+
+fn row_to_proof_event(row: sqlx::postgres::PgRow) -> ProofEventView {
+    ProofEventView {
+        event_id: row.get("event_id"),
+        intent_id: row.get("intent_id"),
+        vault_config_pubkey: row.get("vault_config_pubkey"),
+        stage: row.get("stage"),
+        status: row.get("status"),
+        executor: row.get("executor"),
+        proof_hash: row.get("proof_hash"),
+        redacted_payload: row.get("redacted_payload"),
+        occurred_at: row.get("occurred_at"),
+    }
+}
+
 fn parse_manager(value: &Value) -> Option<ManagerView> {
     Some(ManagerView {
         pubkey: string(value, &["pubkey", "address"])?,
@@ -3986,6 +4953,38 @@ fn parse_trade(value: &Value) -> Option<TradeEvent> {
     })
 }
 
+fn parse_private_intent(value: &Value) -> Option<PrivateIntentEvent> {
+    let risk_limits = value
+        .get("riskLimits")
+        .cloned()
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_else(|| PrivateIntentRiskLimits {
+            health_band: string(value, &["healthBand"]).unwrap_or_else(|| "unknown".to_string()),
+            max_position_bps: i32_value(value, &["maxPositionBps"]).unwrap_or_default(),
+            requested_notional_band: string(value, &["requestedNotionalBand"])
+                .unwrap_or_else(|| "redacted".to_string()),
+            senior_protected: bool_value(value, &["seniorProtected"]).unwrap_or(true),
+        });
+    Some(PrivateIntentEvent {
+        vault_config_pubkey: string(value, &["vaultConfigPubkey", "vaultConfig"])?,
+        intent_id: string(value, &["intentId", "id"])?,
+        trader: string(value, &["trader"]).unwrap_or_default(),
+        commitment_hash: string(value, &["commitmentHash", "commitment"])?,
+        status: string(value, &["status"]).unwrap_or_else(|| "submitted".to_string()),
+        guard_decision: string(value, &["guardDecision"]),
+        executor: string(value, &["executor"]).unwrap_or_else(|| "magicblock".to_string()),
+        er_session: string(value, &["erSession"]),
+        er_commitment: string(value, &["erCommitment"]),
+        risk_limits,
+        settlement_signature: string(value, &["settlementSignature"]),
+        junior_delta: f64_value(value, &["juniorDelta"]).unwrap_or_default(),
+        senior_delta: f64_value(value, &["seniorDelta"]).unwrap_or_default(),
+        public_summary: string(value, &["publicSummary"])
+            .unwrap_or_else(|| "Private intent proof recorded.".to_string()),
+        occurred_at: i64_value(value, &["occurredAt", "timestamp"]).unwrap_or_else(now_ts),
+    })
+}
+
 fn parse_status_event(value: &Value) -> Option<StatusEvent> {
     Some(StatusEvent {
         vault_config_pubkey: string(value, &["vaultConfigPubkey", "vaultConfig"])?,
@@ -4033,6 +5032,227 @@ fn bool_value(value: &Value, keys: &[&str]) -> Option<bool> {
         .and_then(|v| v.as_bool().or_else(|| v.as_str()?.parse().ok()))
 }
 
+fn validate_private_intent_request(request: &PrivateIntentRequest) -> Result<(), AppError> {
+    validate_pubkey_like(&request.manager_pubkey, "managerPubkey")?;
+    validate_pubkey_like(&request.vault_config_pubkey, "vaultConfigPubkey")?;
+    let intent_type = request.intent_type.trim();
+    if intent_type.is_empty() || intent_type.len() > 64 {
+        return Err(AppError::BadRequest(
+            "intentType must be 1-64 characters".to_string(),
+        ));
+    }
+    if !intent_type
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.' | ':'))
+    {
+        return Err(AppError::BadRequest(
+            "intentType may only contain letters, numbers, _, -, ., or :".to_string(),
+        ));
+    }
+    if let Some(client_request_id) = &request.client_request_id {
+        if client_request_id.len() > 128 {
+            return Err(AppError::BadRequest(
+                "clientRequestId must be at most 128 characters".to_string(),
+            ));
+        }
+    }
+    if json_size(&request.payload) > 65_536 || json_size(&request.proof) > 65_536 {
+        return Err(AppError::BadRequest(
+            "private intent payloads must be at most 64KiB each".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn private_intent_request_payload(request: &PrivateIntentRequest) -> Value {
+    json!({
+        "managerPubkey": request.manager_pubkey.as_str(),
+        "vaultConfigPubkey": request.vault_config_pubkey.as_str(),
+        "intentType": request.intent_type.as_str(),
+        "clientRequestId": request.client_request_id.clone(),
+        "payload": request.payload.clone(),
+        "proof": request.proof.clone(),
+    })
+}
+
+fn private_intent_execution_payload(execution: &PrivateIntentExecution) -> Value {
+    json!({
+        "status": execution.status.as_str(),
+        "executor": execution.executor.as_str(),
+        "executorRequestId": execution.executor_request_id.clone(),
+        "signature": execution.signature.clone(),
+        "error": execution.error.clone(),
+        "response": execution.response.clone(),
+    })
+}
+
+fn proof_event_from_payload(
+    intent: &PrivateIntentView,
+    stage: &str,
+    status: &str,
+    executor: &str,
+    payload: &Value,
+    occurred_at: i64,
+) -> ProofEventView {
+    let proof_hash = sha256_value(payload);
+    ProofEventView {
+        event_id: format!(
+            "{}:{}:{}:{}",
+            intent.intent_id,
+            stage,
+            occurred_at,
+            &proof_hash[..12]
+        ),
+        intent_id: intent.intent_id.clone(),
+        vault_config_pubkey: intent.vault_config_pubkey.clone(),
+        stage: stage.to_string(),
+        status: status.to_string(),
+        executor: executor.to_string(),
+        proof_hash,
+        redacted_payload: redact_value(payload),
+        occurred_at,
+    }
+}
+
+fn normalize_private_intent_status(status: &str) -> Result<&'static str, AppError> {
+    match status.trim().to_ascii_lowercase().as_str() {
+        "received" | "queued" => Ok("received"),
+        "accepted" | "submitted" => Ok("accepted"),
+        "executing" | "guarded" | "proving" => Ok("executing"),
+        "settled" | "confirmed" | "executed" => Ok("settled"),
+        "failed" | "rejected" => Ok("failed"),
+        "cancelled" | "canceled" => Ok("cancelled"),
+        _ => Err(AppError::BadRequest(
+            "status must be received, accepted, executing, settled, failed, or cancelled"
+                .to_string(),
+        )),
+    }
+}
+
+fn can_transition_private_intent(current: &str, next: &str) -> bool {
+    if current == next {
+        return true;
+    }
+    match current {
+        "received" => matches!(
+            next,
+            "accepted" | "executing" | "settled" | "failed" | "cancelled"
+        ),
+        "accepted" => matches!(next, "executing" | "settled" | "failed" | "cancelled"),
+        "executing" => matches!(next, "settled" | "failed" | "cancelled"),
+        "settled" | "failed" | "cancelled" => false,
+        _ => false,
+    }
+}
+
+fn json_size(value: &Value) -> usize {
+    serde_json::to_vec(value)
+        .map(|bytes| bytes.len())
+        .unwrap_or(0)
+}
+
+fn sha256_value(value: &Value) -> String {
+    let bytes = serde_json::to_vec(value).unwrap_or_default();
+    let digest = Sha256::digest(bytes);
+    hex::encode(digest)
+}
+
+fn redact_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut redacted = serde_json::Map::with_capacity(map.len());
+            for (key, child) in map {
+                if is_sensitive_proof_key(key) {
+                    redacted.insert(key.clone(), redacted_leaf(child));
+                } else {
+                    redacted.insert(key.clone(), redact_value(child));
+                }
+            }
+            Value::Object(redacted)
+        }
+        Value::Array(items) => Value::Array(items.iter().map(redact_value).collect()),
+        _ => value.clone(),
+    }
+}
+
+fn redacted_leaf(value: &Value) -> Value {
+    json!({
+        "redacted": true,
+        "sha256": sha256_value(value),
+        "valueType": match value {
+            Value::Null => "null",
+            Value::Bool(_) => "bool",
+            Value::Number(_) => "number",
+            Value::String(_) => "string",
+            Value::Array(_) => "array",
+            Value::Object(_) => "object",
+        }
+    })
+}
+
+fn is_sensitive_proof_key(key: &str) -> bool {
+    let normalized = key.to_ascii_lowercase();
+    if matches!(
+        normalized.as_str(),
+        "intentid"
+            | "vaultconfigpubkey"
+            | "managerpubkey"
+            | "clientrequestid"
+            | "intenttype"
+            | "requesthash"
+            | "proofhash"
+            | "status"
+            | "stage"
+            | "executor"
+            | "executorrequestid"
+            | "fallbackreason"
+            | "message"
+            | "mode"
+    ) {
+        return false;
+    }
+    [
+        "amount",
+        "balance",
+        "instruction",
+        "account",
+        "mint",
+        "owner",
+        "payload",
+        "price",
+        "proof",
+        "quote",
+        "raw",
+        "route",
+        "secret",
+        "signature",
+        "size",
+        "slippage",
+        "token",
+        "transaction",
+        "wallet",
+        "witness",
+    ]
+    .iter()
+    .any(|needle| normalized.contains(needle))
+}
+
+fn magicblock_intents_url(endpoint: &str) -> String {
+    let trimmed = endpoint.trim_end_matches('/');
+    if trimmed.ends_with("/intents") || trimmed.ends_with("/private-intents") {
+        trimmed.to_string()
+    } else {
+        format!("{trimmed}/intents")
+    }
+}
+
+fn redact_endpoint(endpoint: &str) -> String {
+    endpoint
+        .split_once('?')
+        .map(|(base, _)| format!("{base}?redacted=true"))
+        .unwrap_or_else(|| endpoint.to_string())
+}
+
 fn parse_topics(topics: Option<&str>) -> HashSet<String> {
     topics
         .unwrap_or_default()
@@ -4064,12 +5284,22 @@ fn topic_matches(event: &RealtimeEvent, topics: &HashSet<String>) -> bool {
             vault_config_pubkey,
             ..
         }
+        | RealtimeEvent::PrivateIntentEvent {
+            vault_config_pubkey,
+            ..
+        }
+        | RealtimeEvent::ProofEvent {
+            vault_config_pubkey,
+            ..
+        }
         | RealtimeEvent::StatusEvent {
             vault_config_pubkey,
             ..
         } => {
             topics.contains(&format!("vault:{vault_config_pubkey}"))
                 || topics.contains(&format!("trades:{vault_config_pubkey}"))
+                || topics.contains(&format!("private-intents:{vault_config_pubkey}"))
+                || topics.contains("proofs")
                 || topics.contains("vaults")
         }
         RealtimeEvent::DepositEvent { item, .. } | RealtimeEvent::WithdrawalEvent { item, .. } => {
@@ -4156,6 +5386,16 @@ mod tests {
             webhook_secret: secret.map(ToString::to_string),
             jupiter_api_key: jupiter_api_key.map(ToString::to_string),
             jupiter_swap_base_url: "https://api.jup.ag/swap/v1".to_string(),
+            magicblock: MagicBlockConfig {
+                private_er_endpoint: None,
+                auth_token: None,
+                app_id: "arcadia-test".to_string(),
+                er_rpc_url: None,
+                er_validator: None,
+                fallback_enabled: true,
+                timeout_ms: 1_500,
+                skip_preflight: true,
+            },
             demo_mode: true,
             surfpool_mode,
             devnet_faucet: DevnetFaucetConfig {
@@ -4210,6 +5450,160 @@ mod tests {
         ] {
             assert!(sql.contains(table), "missing table {table}");
         }
+        let private_sql = include_str!("../migrations/0005_private_intents.sql");
+        assert!(private_sql.contains("private_intent_events"));
+        assert!(private_sql.contains("private_intents"));
+        assert!(private_sql.contains("proof_events"));
+        assert!(private_sql.contains("risk_limits JSONB"));
+        assert!(private_sql.contains("redacted_payload JSONB"));
+    }
+
+    #[tokio::test]
+    async fn private_intent_lifecycle_redacts_strategy_fields() {
+        let app = test_app(None);
+        let vault_config_pubkey = "vault-config-private-1111111111111111";
+        let submit = json!({
+            "managerPubkey": "11111111111111111111111111111111",
+            "vaultConfigPubkey": vault_config_pubkey,
+            "intentType": "trade.private_intent",
+            "payload": {
+                "direction": "USDC_TO_WSOL",
+                "sizeUsdc": 2500.0,
+                "routePreference": "secret route",
+                "strategyNote": "buy before catalyst"
+            },
+            "proof": {
+                "maxLossBps": 350,
+                "privateMetadata": { "alpha": "never return this" }
+            }
+        });
+
+        let (status, body) =
+            json_request(app.clone(), Method::POST, "/private-intents/submit", submit).await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        assert_eq!(body["status"], "accepted");
+        assert_eq!(body["executor"], "local_fallback");
+        assert!(body["requestHash"].as_str().unwrap().len() >= 32);
+        let returned = body.to_string();
+        assert!(!returned.contains("buy before catalyst"));
+        assert!(!returned.contains("secret route"));
+        assert!(!returned.contains("never return this"));
+
+        let intent_id = body["intentId"].as_str().unwrap();
+        let (status, approved) = json_request(
+            app.clone(),
+            Method::POST,
+            &format!("/private-intents/{intent_id}/guard"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(approved["status"], "executing");
+
+        let (status, settled) = json_request(
+            app.clone(),
+            Method::POST,
+            &format!("/private-intents/{intent_id}/settle"),
+            json!({
+                "settlementSignature": "5SPrivateProof111111111111111111111111111111111",
+                "juniorDelta": -2500.0,
+                "seniorDelta": 0.0
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(settled["status"], "settled");
+        assert_eq!(
+            settled["signature"],
+            "5SPrivateProof111111111111111111111111111111111"
+        );
+
+        let (status, listed) = json_request(
+            app.clone(),
+            Method::GET,
+            &format!("/vaults/{vault_config_pubkey}/private-intents"),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(listed["items"].as_array().unwrap().len(), 1);
+        assert!(!listed.to_string().contains("buy before catalyst"));
+
+        let (status, proofs) = json_request(
+            app,
+            Method::GET,
+            &format!("/private/intents/{intent_id}/proof-events"),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(proofs["items"].as_array().unwrap().len() >= 4);
+        assert!(!proofs.to_string().contains("secret route"));
+        assert!(!proofs.to_string().contains("never return this"));
+    }
+
+    #[tokio::test]
+    async fn private_intent_api_stores_only_redacted_proof_events() {
+        let app = test_app(None);
+        let payload = json!({
+            "managerPubkey": "11111111111111111111111111111111",
+            "vaultConfigPubkey": "So11111111111111111111111111111111111111112",
+            "intentType": "swap.private",
+            "clientRequestId": "client-proof-1",
+            "payload": {
+                "route": "USDC -> WSOL via hidden venue",
+                "amount": "2500000000",
+                "publicLabel": "rebalance"
+            },
+            "proof": {
+                "witness": "super-secret-witness",
+                "rawTransaction": "raw-private-transaction"
+            }
+        });
+
+        let (status, intent) =
+            json_request(app.clone(), Method::POST, "/private/intents", payload).await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        assert_eq!(intent["status"], "accepted");
+        assert_eq!(intent["executor"], "local_fallback");
+        let serialized = intent.to_string();
+        assert!(!serialized.contains("super-secret-witness"));
+        assert!(!serialized.contains("raw-private-transaction"));
+        assert!(!serialized.contains("USDC -> WSOL via hidden venue"));
+        assert_eq!(intent["redactedRequest"]["payload"]["redacted"], true);
+        assert_eq!(intent["redactedRequest"]["proof"]["redacted"], true);
+
+        let intent_id = intent["intentId"].as_str().unwrap();
+        let (status, events) = json_request(
+            app.clone(),
+            Method::GET,
+            &format!("/private/intents/{intent_id}/proof-events"),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(events["items"].as_array().unwrap().len() >= 2);
+        let events_string = events.to_string();
+        assert!(!events_string.contains("super-secret-witness"));
+        assert!(!events_string.contains("raw-private-transaction"));
+
+        let (status, settled) = json_request(
+            app,
+            Method::POST,
+            &format!("/private/intents/{intent_id}/proof-events"),
+            json!({
+                "status": "settled",
+                "stage": "settlement",
+                "signature": "5SPrivateProof111111111111111111111111111111111",
+                "proof": {
+                    "privateFillAmount": "2499000000",
+                    "rawTransaction": "another-secret"
+                }
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(settled["status"], "settled");
     }
 
     #[tokio::test]

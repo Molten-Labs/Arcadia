@@ -7,6 +7,12 @@ import { normalizeApiPosition } from "@/hooks/usePositions";
 import { normalizeVaultView, type ManagerView, type VaultView } from "@/hooks/useVaults";
 import { eventToActivity, type DemoStorySnapshot, type NavPoint, type RealtimeEvent, type TradeEvent, type VaultActivityEvent } from "@/lib/realtime";
 import type { MarketQuote } from "@/lib/surfpoolDemo";
+import {
+  isPrivateIntentRealtimeEvent,
+  mergePrivateIntentSnapshot,
+  privateIntentRealtimeToSnapshot,
+  type PrivateIntentVaultSnapshot,
+} from "@/lib/privateIntents";
 import { RealtimeContext, type RealtimeContextValue, type RealtimeStatus } from "@/hooks/realtimeContext";
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
@@ -97,6 +103,18 @@ function applyRealtimeEvent(
   const managersKey = ["managers", mode, apiUrl || "rpc"];
 
   if (event.type === "heartbeat") return;
+
+  if (isPrivateIntentRealtimeEvent(event)) {
+    const snapshot = privateIntentRealtimeToSnapshot(event);
+    if (snapshot) {
+      queryClient.setQueryData<PrivateIntentVaultSnapshot>(
+        ["private-intent-vault", snapshot.vaultConfigPubkey],
+        (old) => mergePrivateIntentSnapshot(old, snapshot),
+      );
+    }
+    appendActivity(queryClient, event);
+    return;
+  }
 
   if (event.type === "resync_required") {
     queryClient.invalidateQueries({ queryKey: ["vaults"] });
@@ -197,9 +215,10 @@ function appendActivity(queryClient: ReturnType<typeof useQueryClient>, event: R
 }
 
 function activityIdVault(event: RealtimeEvent): string {
-  if ("vaultConfigPubkey" in event) return event.vaultConfigPubkey;
-  if ("item" in event && event.item && "vaultConfigPubkey" in event.item) {
-    return event.item.vaultConfigPubkey;
+  if ("vaultConfigPubkey" in event && typeof event.vaultConfigPubkey === "string") return event.vaultConfigPubkey;
+  if ("item" in event && event.item && typeof event.item === "object" && "vaultConfigPubkey" in event.item) {
+    const vaultConfigPubkey = event.item.vaultConfigPubkey;
+    if (typeof vaultConfigPubkey === "string") return vaultConfigPubkey;
   }
   return "global";
 }

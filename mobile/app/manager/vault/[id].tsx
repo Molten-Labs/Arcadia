@@ -11,6 +11,8 @@ import { parseUsdcToUnits } from '../../../src/lib/amounts';
 import { TxModal, TxState } from '../../../src/components/TxModal';
 import { StatusBadge } from '../../../src/components/StatusBadge';
 import { HealthMeter } from '../../../src/components/HealthMeter';
+import { PrivateIntentPanel } from '../../../src/components/PrivateIntentPanel';
+import { useSubmitPrivateIntent } from '../../../src/hooks/usePrivateIntents';
 import { formatBps, formatUSD } from '../../../src/lib/format';
 
 export default function ManagerVaultScreen() {
@@ -18,6 +20,7 @@ export default function ManagerVaultScreen() {
   const { data: vault } = useVault(id);
   const { connected, connect, role, setRole, isDemoWallet } = useWallet();
   const { depositJunior, withdrawJunior, updateNav, graduateVault, claimFees, executeGuardedSwap } = useArcadiaTransactions();
+  const privateIntent = useSubmitPrivateIntent();
   const [amount, setAmount] = useState('');
   const [txState, setTxState] = useState<TxState>({ type: 'idle' });
 
@@ -60,6 +63,36 @@ export default function ManagerVaultScreen() {
     }
   }
 
+  async function sealPrivateIntent() {
+    const currentVault = vault;
+    if (!currentVault) { Alert.alert('Vault unavailable'); return; }
+    if (!amountUnits || amountUnits <= 0n) { Alert.alert('Invalid amount'); return; }
+    if (!connected) {
+      try {
+        await connect();
+      } catch (err: any) {
+        Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
+      }
+      return;
+    }
+    if (role !== 'trader') { setRole('trader'); Alert.alert('Trader mode enabled', 'Submit again to continue.'); return; }
+    try {
+      await privateIntent.mutateAsync({
+        vaultConfigPubkey: currentVault.configPubkey,
+        managerPubkey: currentVault.managerPubkey,
+        amountUsdc: Number(amountUnits) / 1_000_000,
+        side: 'USDC_TO_WSOL',
+        maxSlippageBps: currentVault.maxSlippageBps,
+        clientRequestId: `mobile-${Date.now()}`,
+        demoFallback: isDemoWallet,
+      });
+      setAmount('');
+      Alert.alert('Private intent sealed', 'Route, exact size, and timing are redacted while the guard proof updates.');
+    } catch (err: any) {
+      Alert.alert('Private intent unavailable', err?.message ?? 'Unable to seal private intent');
+    }
+  }
+
   return (
     <>
       <TxModal state={txState} onClose={() => setTxState({ type: 'idle' })} label="Manager Vault" />
@@ -80,6 +113,15 @@ export default function ManagerVaultScreen() {
           <Text style={styles.section}>Junior buffer</Text>
           <HealthMeter health={vault.juniorHealth} />
         </View>
+
+        <PrivateIntentPanel
+          vaultConfigPubkey={vault.configPubkey}
+          mode="manager"
+          onSubmit={sealPrivateIntent}
+          submitLabel="Seal Private Intent"
+          submitDisabled={!canUseAmount}
+          submitting={privateIntent.isPending}
+        />
 
         <View style={styles.card}>
           <Text style={styles.section}>USDC amount</Text>

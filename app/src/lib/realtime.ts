@@ -1,6 +1,12 @@
 import type { PositionView } from "@/hooks/usePositions";
 import type { ManagerView, VaultView } from "@/hooks/useVaults";
 import type { MarketQuote } from "@/lib/surfpoolDemo";
+import {
+  isPrivateIntentRealtimeEvent,
+  privateIntentRealtimeToActivity,
+  type PrivateIntentRealtimeEvent,
+  type RedactedPrivateIntentActivity,
+} from "@/lib/privateIntents";
 
 export interface NavPoint {
   vaultConfigPubkey: string;
@@ -85,6 +91,7 @@ export type VaultActivityEvent =
   | { id: string; kind: "fee"; label: string; amount?: number; tone: "success" | "warning" | "neutral"; occurredAt: number; detail: string }
   | { id: string; kind: "risk"; label: string; amount?: number; tone: "success" | "warning" | "danger" | "neutral"; occurredAt: number; detail: string }
   | { id: string; kind: "trade"; label: string; amount?: number; tone: "success" | "warning" | "danger" | "neutral"; occurredAt: number; detail: string }
+  | { id: string; kind: "private-intent"; label: string; amount?: number; tone: "success" | "warning" | "danger" | "neutral"; occurredAt: number; detail: string; redacted?: RedactedPrivateIntentActivity }
   | { id: string; kind: "status"; label: string; tone: "success" | "warning" | "danger" | "neutral"; occurredAt: number; detail: string };
 
 export type RealtimeEvent =
@@ -101,9 +108,29 @@ export type RealtimeEvent =
   | { type: "market.quote"; item: MarketQuote; receivedAt: number }
   | { type: "demo.step"; item: DemoStepEvent; receivedAt: number }
   | { type: "heartbeat"; receivedAt: number }
-  | { type: "resync_required"; topics: string[]; receivedAt: number };
+  | { type: "resync_required"; topics: string[]; receivedAt: number }
+  | PrivateIntentRealtimeEvent;
 
 export function eventToActivity(event: RealtimeEvent): VaultActivityEvent | null {
+  if (isPrivateIntentRealtimeEvent(event)) {
+    const redacted = privateIntentRealtimeToActivity(event);
+    if (!redacted) return null;
+    const tone = redacted.status === "rejected" || redacted.status === "failed"
+      ? "danger"
+      : redacted.status === "pending"
+        ? "warning"
+        : "success";
+    return {
+      id: `private-intent-${redacted.id}`,
+      kind: "private-intent",
+      label: redacted.status === "pending" ? "Private intent sealed" : `Private intent ${redacted.status}`,
+      tone,
+      occurredAt: redacted.occurredAt,
+      detail: redacted.detail,
+      redacted,
+    };
+  }
+
   if (event.type === "deposit.event" || event.type === "withdrawal.event") {
     const blocked = event.item.status === "blocked";
     return {

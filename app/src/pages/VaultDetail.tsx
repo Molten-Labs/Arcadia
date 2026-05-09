@@ -23,6 +23,7 @@ import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
+import { PrivateIntentVaultGuard } from "@/components/PrivateIntentVaultGuard";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockStore } from "@/lib/mockStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -212,6 +213,10 @@ const VaultDetail = () => {
         <div className="mb-6 grid gap-5 xl:grid-cols-[1.35fr_0.9fr]">
           <LiveVaultKpis vault={vault} />
           <VaultActivityFeed vaultConfigPubkey={vault.configPubkey} />
+        </div>
+
+        <div className="mb-6">
+          <PrivateIntentVaultGuard vaultConfigPubkey={vault.configPubkey} mode="investor" />
         </div>
 
         {/* ── Main grid ─────────────────────────────── */}

@@ -21,8 +21,11 @@ import { isArcadiaSurfpoolMode } from "@/lib/api";
 import { DataModeToggle } from "@/components/DataModeToggle";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
 import { LiveJupiterQuotePanel } from "@/components/LiveJupiterQuotePanel";
+import { PrivateIntentVaultGuard } from "@/components/PrivateIntentVaultGuard";
 import { useDataMode } from "@/hooks/useDataMode";
+import { useSubmitPrivateIntent } from "@/hooks/usePrivateIntents";
 import { mockStore } from "@/lib/mockStore";
+import { mergePrivateIntentSnapshot, normalizePrivateIntentSnapshot, type PrivateIntentVaultSnapshot } from "@/lib/privateIntents";
 import { useQueryClient } from "@tanstack/react-query";
 
 const QUICK_USDC_AMOUNTS = [1_000, 5_000, 10_000, 25_000] as const;
@@ -32,6 +35,7 @@ const ManagerVault = () => {
   const { data: v, isLoading } = useVault(id);
   const { depositJunior, withdrawJunior, updateNav, graduateVault, executeSwap, claimFees } = useKilnTransactions();
   const { isMock } = useDataMode();
+  const submitPrivateIntent = useSubmitPrivateIntent();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
@@ -192,6 +196,60 @@ const ManagerVault = () => {
     }
   };
 
+  const handlePrivateIntent = async () => {
+    if (!hasValidAmount) { toast.error("Enter a valid amount"); return; }
+    setSending(true);
+    try {
+      const amountUsdc = Number(usdcUnits) / 1e6;
+      if (isMock) {
+        await new Promise(r => setTimeout(r, 900));
+        const intentId = `mock-intent-${Date.now()}`;
+        const snapshot = normalizePrivateIntentSnapshot({
+          vaultConfigPubkey: v.configPubkey,
+          guard: {
+            status: "online",
+            label: "MagicBlock ER guard online",
+            reserveFloorBps: 2_000,
+            pendingCount: 1,
+            approvedCount: 4,
+            rejectedCount: 0,
+            latencyMs: 96,
+            lastProofAt: Math.floor(Date.now() / 1000),
+          },
+          activity: [{
+            intentId,
+            status: "pending",
+            side: "USDC_TO_WSOL",
+            amountBucket: amountUsdc >= 10_000 ? "10k+ USDC" : `${Math.max(1, Math.round(amountUsdc / 1_000))}k bucket`,
+            routeCommitment: `route-${intentId}`,
+            guardResult: "pending",
+            detail: "Private intent sealed locally; route, size, and slot are redacted until proof release.",
+            occurredAt: Math.floor(Date.now() / 1000),
+          }],
+        }, v.configPubkey);
+        queryClient.setQueryData<PrivateIntentVaultSnapshot>(
+          ["private-intent-vault", v.configPubkey],
+          (old) => mergePrivateIntentSnapshot(old, snapshot),
+        );
+      } else {
+        await submitPrivateIntent.mutateAsync({
+          vaultConfigPubkey: v.configPubkey,
+          trader: v.managerPubkey,
+          amountUsdc,
+          side: "USDC_TO_WSOL",
+          maxSlippageBps: v.maxSlippageBps,
+          clientRequestId: `web-${Date.now()}`,
+        });
+      }
+      setAmount("");
+      toast.success("Private intent sealed", { description: "Vault guard proof will update without exposing route or exact size." });
+    } catch (e) {
+      toast.error("Private intent failed", { description: e instanceof Error ? e.message : "Unknown error" });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleClaimFees = async () => {
     setSending(true);
     try {
@@ -268,6 +326,20 @@ const ManagerVault = () => {
         <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr] mb-6">
           <LiveVaultKpis vault={v} />
           <VaultActivityFeed vaultConfigPubkey={v.configPubkey} />
+        </div>
+
+        <div className="mb-6">
+          <PrivateIntentVaultGuard
+            vaultConfigPubkey={v.configPubkey}
+            mode="manager"
+            action={{
+              label: "Seal private intent",
+              helper: "Uses backend private-intent rails when available; mock mode keeps the same redacted UX locally.",
+              onClick: handlePrivateIntent,
+              disabled: sending || !hasValidAmount || submitPrivateIntent.isPending,
+              loading: sending || submitPrivateIntent.isPending,
+            }}
+          />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
