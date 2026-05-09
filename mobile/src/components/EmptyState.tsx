@@ -1,9 +1,32 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../lib/theme';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const EMOJI_FALLBACK: Partial<Record<string, string>> = {
+  'layers-outline': '📦',
+  'briefcase-outline': '💼',
+  'people-outline': '👥',
+  'stats-chart-outline': '📊',
+  'wallet-outline': '👛',
+  'flask-outline': '🧪',
+  'swap-horizontal-outline': '🔁',
+  'trending-up': '📈',
+  'trending-down': '📉',
+  'shield-checkmark-outline': '🛡️',
+  'alert-circle-outline': '⚠️',
+  'checkmark-circle-outline': '✅',
+  'close-circle-outline': '❌',
+  'information-circle-outline': 'ℹ️',
+  'search-outline': '🔍',
+  'lock-closed-outline': '🔒',
+  'time-outline': '⏱️',
+  'star-outline': '⭐',
+  'trophy-outline': '🏆',
+  'diamond-outline': '💎',
+};
 
 interface Props {
   icon?: string;
@@ -13,13 +36,17 @@ interface Props {
 }
 
 export function EmptyState({ icon, iconName, title, subtitle }: Props) {
+  const emojiIcon = iconName ? EMOJI_FALLBACK[iconName] : null;
+
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        {iconName ? (
+        {iconName && !emojiIcon ? (
           <Ionicons name={iconName} size={28} color={colors.textQuiet} />
         ) : (
-          <Text style={styles.iconText}>{icon ?? '○'}</Text>
+          <Text style={styles.iconText}>
+            {emojiIcon ?? icon ?? '○'}
+          </Text>
         )}
       </View>
       <Text style={styles.title}>{title}</Text>
@@ -38,9 +65,9 @@ const styles = StyleSheet.create({
     minHeight: 220,
   },
   iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
@@ -49,8 +76,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   iconText: {
-    fontSize: 26,
-    color: colors.textQuiet,
+    fontSize: 30,
   },
   title: {
     fontSize: 16,

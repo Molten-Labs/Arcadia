@@ -5,11 +5,13 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "arcadia",
-    "userInterfaceStyle": "light",
-    "backgroundColor": "#F8FBFA",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#030A10",
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#F8FBFA",
-      "resizeMode": "contain"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#030A10"
     },
     "ios": {
       "supportsTablet": false,
@@ -17,15 +19,47 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F8FBFA"
+        "foregroundImage": "./assets/adaptive-icon-fg.png",
+        "backgroundColor": "#030A10"
       },
-      "package": "com.arcadia.mobile"
+      "package": "com.arcadia.mobile",
+      "intentFilters": [
+        {
+          "action": "android.intent.action.VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "arcadia"
+            }
+          ],
+          "category": ["android.intent.category.DEFAULT", "android.intent.category.BROWSABLE"]
+        }
+      ],
+      "queries": [
+        { "package": "app.phantom" },
+        { "package": "com.solflare.mobile" },
+        { "package": "io.magiceden.wallet" },
+        { "package": "com.backpack.app" }
+      ]
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./assets/icon.png"
     },
-    "plugins": ["expo-router", "expo-font"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#030A10",
+          "image": "./assets/splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }

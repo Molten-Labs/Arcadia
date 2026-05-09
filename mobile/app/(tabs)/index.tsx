@@ -191,7 +191,7 @@ export default function VaultsScreen() {
     return (
       <View style={[styles.screen, styles.center, { paddingTop: insets.top }]}>
         <View style={styles.loadingIcon}>
-          <Ionicons name="layers-outline" size={32} color={colors.signal} />
+          <Text style={styles.loadingEmoji}>📦</Text>
         </View>
         <Text style={styles.loadingText}>Loading vaults...</Text>
       </View>
@@ -240,14 +240,17 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: spacing.md, paddingBottom: 48 },
 
   loadingIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingEmoji: {
+    fontSize: 32,
   },
   loadingText: {
     fontSize: 14,

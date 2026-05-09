@@ -323,7 +323,7 @@ export default function TradersScreen() {
       {sorted.length === 0 && (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="people-outline" size={32} color={colors.textMuted} />
+            <Text style={{ fontSize: 32 }}>👥</Text>
           </View>
           <Text style={styles.emptyTitle}>No traders yet</Text>
           <Text style={styles.emptySub}>Rankings will appear once traders register</Text>
@@ -499,9 +499,9 @@ const styles = StyleSheet.create({
 
   emptyWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
     borderColor: colors.border,

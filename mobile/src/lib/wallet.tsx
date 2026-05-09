@@ -100,41 +100,43 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const connection = useMemo(() => new Connection(RPC_URL, 'confirmed'), []);
 
-  // MWA is only available on Android, not on iOS or web.
   const isMwaAvailable = Platform.OS === 'android';
 
-  // Restore persisted session on mount
   useEffect(() => {
     (async () => {
-      const [storedKey, storedRole, storedToken, storedDemo, storedLabel] = await AsyncStorage.multiGet([
-        'wallet_pubkey',
-        'wallet_role',
-        'wallet_auth_token',
-        'wallet_is_demo',
-        'wallet_label',
-      ]);
-      const key = storedKey[1];
-      const roleVal = storedRole[1] as Role | null;
-      const token = storedToken[1];
-      const demo = storedDemo[1];
-      const label = storedLabel[1];
-      if (key) { setPublicKey(key); setConnected(true); }
-      if (roleVal) setRoleState(roleVal);
-      if (token) setAuthToken(token);
-      if (demo === '1') setIsDemoWallet(true);
-      if (label) setWalletLabel(label);
+      try {
+        const [storedKey, storedRole, storedToken, storedDemo, storedLabel] = await AsyncStorage.multiGet([
+          'wallet_pubkey',
+          'wallet_role',
+          'wallet_auth_token',
+          'wallet_is_demo',
+          'wallet_label',
+        ]);
+        const key = storedKey[1];
+        const roleVal = storedRole[1] as Role | null;
+        const token = storedToken[1];
+        const demo = storedDemo[1];
+        const label = storedLabel[1];
+        if (key) { setPublicKey(key); setConnected(true); }
+        if (roleVal) setRoleState(roleVal);
+        if (token) setAuthToken(token);
+        if (demo === '1') setIsDemoWallet(true);
+        if (label) setWalletLabel(label);
+      } catch {
+        // Ignore storage errors on cold start
+      }
     })();
   }, []);
 
   const setRole = useCallback((r: Role) => {
     setRoleState(r);
-    AsyncStorage.setItem('wallet_role', r);
+    AsyncStorage.setItem('wallet_role', r).catch(() => {});
   }, []);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active' && pendingRequest?.includes('wallet')) {
-        setPendingRequest('Back from wallet - checking status...');
+        setPendingRequest('Back from wallet — checking status...');
       }
     });
     return () => sub.remove();
@@ -146,12 +148,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setConnected(true);
     setAuthToken(null);
     setIsDemoWallet(true);
-    setWalletLabel('Guided demo wallet');
+    setWalletLabel('Demo wallet');
     await AsyncStorage.multiSet([
       ['wallet_pubkey', demo],
       ['wallet_is_demo', '1'],
-      ['wallet_label', 'Guided demo wallet'],
-    ]);
+      ['wallet_label', 'Demo wallet'],
+    ]).catch(() => {});
     notify(Haptics.NotificationFeedbackType.Success);
   }, []);
 
@@ -161,36 +163,38 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setPendingRequest('Opening wallet...');
     try {
       if (!isMwaAvailable) {
-        // Non-Android: demo/read-only preview mode
         await connectDemoWallet();
         setWalletLabel('Read-only preview');
-        await AsyncStorage.setItem('wallet_label', 'Read-only preview');
+        await AsyncStorage.setItem('wallet_label', 'Read-only preview').catch(() => {});
         return;
       }
 
-      // Android: use Mobile Wallet Adapter v2
       const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js');
-      await withTimeout(transact(async (wallet: any) => {
-        const { accounts, auth_token } = await wallet.authorize({
-          cluster: CLUSTER,
-          identity: APP_IDENTITY,
-        });
-        if (accounts && accounts.length > 0) {
-          const pubkey = normalizeWalletAddress(accounts[0].address);
-          const label = accounts[0].label ?? 'MWA Wallet';
-          setPublicKey(pubkey);
-          setConnected(true);
-          setAuthToken(auth_token);
-          setIsDemoWallet(false);
-          setWalletLabel(label);
-          await AsyncStorage.multiSet([
-            ['wallet_pubkey', pubkey],
-            ['wallet_auth_token', auth_token ?? ''],
-            ['wallet_is_demo', '0'],
-            ['wallet_label', label],
-          ]);
-        }
-      }), 'Wallet connection');
+      await withTimeout(
+        transact(async (wallet: any) => {
+          const { accounts, auth_token } = await wallet.authorize({
+            cluster: CLUSTER,
+            identity: APP_IDENTITY,
+          });
+          if (accounts && accounts.length > 0) {
+            const pubkey = normalizeWalletAddress(accounts[0].address);
+            const label = accounts[0].label ?? 'MWA Wallet';
+            setPublicKey(pubkey);
+            setConnected(true);
+            setAuthToken(auth_token);
+            setIsDemoWallet(false);
+            setWalletLabel(label);
+            await AsyncStorage.multiSet([
+              ['wallet_pubkey', pubkey],
+              ['wallet_auth_token', auth_token ?? ''],
+              ['wallet_is_demo', '0'],
+              ['wallet_label', label],
+            ]).catch(() => {});
+          }
+        }),
+        'Wallet connection',
+        90_000,
+      );
       notify(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       notify(Haptics.NotificationFeedbackType.Error);
@@ -199,10 +203,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setConnecting(false);
       setPendingRequest(null);
     }
-  }, [isMwaAvailable, connecting]);
+  }, [isMwaAvailable, connecting, connectDemoWallet]);
 
   const disconnect = useCallback(() => {
-    // Fire-and-forget deauthorize so the wallet app knows to clean up the session
     if (isMwaAvailable && authToken && !isDemoWallet) {
       import('@solana-mobile/mobile-wallet-adapter-protocol-web3js')
         .then(({ transact }) =>
@@ -217,71 +220,68 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(null);
     setIsDemoWallet(false);
     setWalletLabel(null);
-    AsyncStorage.multiRemove(['wallet_pubkey', 'wallet_auth_token', 'wallet_is_demo', 'wallet_label']);
+    AsyncStorage.multiRemove(['wallet_pubkey', 'wallet_auth_token', 'wallet_is_demo', 'wallet_label']).catch(() => {});
     if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
   }, [isMwaAvailable, authToken, isDemoWallet]);
 
   const signAndSendTransaction = useCallback(async (tx: Transaction): Promise<string> => {
     if (!connected || !publicKey) throw new Error('Wallet not connected');
-    if (isDemoWallet || !isMwaAvailable) throw new Error('Android Mobile Wallet Adapter required for signing');
+    if (isDemoWallet || !isMwaAvailable) throw new Error('Android with Phantom or Solflare required for signing');
 
     const { transact } = await import('@solana-mobile/mobile-wallet-adapter-protocol-web3js');
     setPendingRequest('Awaiting wallet approval...');
 
-    return withTimeout(transact(async (wallet: any) => {
-      // 1. Rotate auth token (reauthorize). If token expired, fall back to full authorize.
-      let currentToken = authToken;
-      try {
-        const r = await wallet.reauthorize({ auth_token: authToken, identity: APP_IDENTITY });
-        currentToken = r.auth_token;
-      } catch {
-        // Token invalid or expired - request fresh authorization.
-        const { accounts, auth_token } = await wallet.authorize({
-          cluster: CLUSTER,
-          identity: APP_IDENTITY,
-        });
-        currentToken = auth_token;
-        if (accounts?.length > 0) {
-          const newPubkey = normalizeWalletAddress(accounts[0].address);
-          const label = accounts[0].label ?? 'MWA Wallet';
-          setPublicKey(newPubkey);
-          setWalletLabel(label);
-          await AsyncStorage.multiSet([
-            ['wallet_pubkey', newPubkey],
-            ['wallet_label', label],
-          ]);
+    return withTimeout(
+      transact(async (wallet: any) => {
+        let currentToken = authToken;
+        try {
+          const r = await wallet.reauthorize({ auth_token: authToken, identity: APP_IDENTITY });
+          currentToken = r.auth_token;
+        } catch {
+          const { accounts, auth_token } = await wallet.authorize({
+            cluster: CLUSTER,
+            identity: APP_IDENTITY,
+          });
+          currentToken = auth_token;
+          if (accounts?.length > 0) {
+            const newPubkey = normalizeWalletAddress(accounts[0].address);
+            const label = accounts[0].label ?? 'MWA Wallet';
+            setPublicKey(newPubkey);
+            setWalletLabel(label);
+            await AsyncStorage.multiSet([
+              ['wallet_pubkey', newPubkey],
+              ['wallet_label', label],
+            ]).catch(() => {});
+          }
         }
-      }
 
-      // Persist the rotated token
-      setAuthToken(currentToken);
-      if (currentToken) await AsyncStorage.setItem('wallet_auth_token', currentToken);
+        setAuthToken(currentToken);
+        if (currentToken) await AsyncStorage.setItem('wallet_auth_token', currentToken).catch(() => {});
 
-      // 2. Fetch a fresh blockhash inside the transact session for minimum latency
-      setPendingRequest('Preparing devnet transaction...');
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = new PublicKey(publicKey!);
+        setPendingRequest('Preparing transaction...');
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+        tx.recentBlockhash = blockhash;
+        tx.feePayer = new PublicKey(publicKey!);
 
-      // 3. Pass the Transaction object directly; the MWA augmented API handles base64 encoding internally.
-      //    Do NOT pre-serialize; that would double-encode the transaction.
-      setPendingRequest('Approve in wallet...');
-      const signatures: string[] = await wallet.signAndSendTransactions({
-        transactions: [tx],
-      });
+        setPendingRequest('Approve in wallet...');
+        const signatures: string[] = await wallet.signAndSendTransactions({
+          transactions: [tx],
+        });
 
-      const sig = normalizeSignature(signatures[0]);
+        const sig = normalizeSignature(signatures[0]);
 
-      // 4. Confirm on-chain
-      setPendingRequest('Confirming on devnet...');
-      await connection.confirmTransaction(
-        { signature: sig, blockhash, lastValidBlockHeight },
-        'confirmed',
-      );
+        setPendingRequest('Confirming on-chain...');
+        await connection.confirmTransaction(
+          { signature: sig, blockhash, lastValidBlockHeight },
+          'confirmed',
+        );
 
-      notify(Haptics.NotificationFeedbackType.Success);
-      return sig;
-    }), 'Wallet approval').catch((err) => {
+        notify(Haptics.NotificationFeedbackType.Success);
+        return sig;
+      }),
+      'Wallet approval',
+      120_000,
+    ).catch((err) => {
       notify(Haptics.NotificationFeedbackType.Error);
       throw err;
     }).finally(() => setPendingRequest(null));
@@ -321,11 +321,12 @@ function friendlyWalletError(error: any): string {
   if (
     message.includes('No wallet') ||
     message.includes('Activity not found') ||
-    message.includes('No activity found')
+    message.includes('No activity found') ||
+    message.includes('RESOLVE_ACTIVITY')
   ) {
-    return 'No MWA wallet found. Install Phantom or Solflare for Android.';
+    return 'No MWA wallet found. Install Phantom or Solflare on your Android device.';
   }
-  if (message.includes('JsonRpc') || message.includes('RPC')) {
+  if (message.includes('JsonRpc') || message.includes('RPC') || message.includes('network')) {
     return 'Network error. Check your connection and try again.';
   }
   return message || 'Wallet connection failed';
