@@ -213,7 +213,14 @@ export default function VaultDetailScreen() {
               { backgroundColor: navPositive ? colors.signalDim : colors.dangerDim,
                 borderColor: navPositive ? colors.signal + '40' : colors.danger + '40' }
             ]}>
-              <Text style={{ fontSize: 12 }}>{navPositive ? '📈' : '📉'}</Text>
+              <View style={{
+                width: 0, height: 0,
+                borderLeftWidth: 5, borderRightWidth: 5,
+                borderLeftColor: 'transparent', borderRightColor: 'transparent',
+                ...(navPositive
+                  ? { borderBottomWidth: 8, borderBottomColor: colors.signal }
+                  : { borderTopWidth: 8, borderTopColor: colors.danger }),
+              }} />
               <Text style={[styles.navDeltaText, { color: navPositive ? colors.signal : colors.danger }]}>
                 {Math.abs(navChange * 100).toFixed(2)}%
               </Text>

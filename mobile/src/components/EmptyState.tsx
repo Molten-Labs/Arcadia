@@ -1,29 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../lib/theme';
-
-const EMOJI_MAP: Record<string, string> = {
-  'layers-outline': '📦',
-  'briefcase-outline': '💼',
-  'people-outline': '👥',
-  'stats-chart-outline': '📊',
-  'wallet-outline': '👛',
-  'flask-outline': '🧪',
-  'swap-horizontal-outline': '🔁',
-  'trending-up': '📈',
-  'trending-down': '📉',
-  'shield-checkmark-outline': '🛡️',
-  'alert-circle-outline': '⚠️',
-  'checkmark-circle-outline': '✅',
-  'close-circle-outline': '❌',
-  'information-circle-outline': 'ℹ️',
-  'search-outline': '🔍',
-  'lock-closed-outline': '🔒',
-  'time-outline': '⏱️',
-  'star-outline': '⭐',
-  'trophy-outline': '🏆',
-  'diamond-outline': '💎',
-};
 
 interface Props {
   icon?: string;
@@ -32,13 +9,32 @@ interface Props {
   subtitle?: string;
 }
 
-export function EmptyState({ icon, iconName, title, subtitle }: Props) {
-  const resolvedEmoji = iconName ? (EMOJI_MAP[iconName] ?? '○') : (icon ?? '○');
+const ACCENT_MAP: Record<string, string> = {
+  'briefcase-outline': colors.signal,
+  'layers-outline': colors.signal,
+  'people-outline': colors.textQuiet,
+  'stats-chart-outline': colors.signal,
+  'wallet-outline': colors.textMuted,
+  'flask-outline': colors.warning,
+  'swap-horizontal-outline': colors.textMuted,
+  'trending-up': colors.signal,
+  'trending-down': colors.danger,
+  'shield-checkmark-outline': colors.signal,
+  'alert-circle-outline': colors.warning,
+  'trophy-outline': colors.warning,
+  'search-outline': colors.textMuted,
+  'lock-closed-outline': colors.textQuiet,
+};
+
+export function EmptyState({ iconName, title, subtitle }: Props) {
+  const accent = ACCENT_MAP[iconName ?? ''] ?? colors.textQuiet;
 
   return (
     <View style={styles.container}>
       <View style={styles.iconWrap}>
-        <Text style={styles.iconText}>{resolvedEmoji}</Text>
+        <View style={[styles.iconDot, { backgroundColor: accent + '40' }]}>
+          <View style={[styles.innerDot, { backgroundColor: accent }]} />
+        </View>
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -66,8 +62,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
-  iconText: {
-    fontSize: 30,
+  iconDot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  innerDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
   },
   title: {
     fontSize: 16,

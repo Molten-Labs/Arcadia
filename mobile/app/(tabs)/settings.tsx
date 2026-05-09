@@ -123,7 +123,7 @@ export default function SettingsScreen() {
                   {publicKey?.slice(0, 2).toUpperCase() ?? '—'}
                 </Text>
               ) : (
-                <Text style={{ fontSize: 22 }}>👛</Text>
+                <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: colors.border }} />
               )}
             </View>
 
@@ -216,7 +216,6 @@ export default function SettingsScreen() {
                       style={StyleSheet.absoluteFillObject}
                     />
                   )}
-                  <Text style={{ fontSize: 20 }}>{r === 'investor' ? '💼' : '📊'}</Text>
                   <Text style={[styles.roleLabel, active && { color: colors.signal }]}>
                     {r === 'investor' ? 'Investor' : 'Trader'}
                   </Text>
@@ -236,7 +235,6 @@ export default function SettingsScreen() {
             <View style={styles.card}>
               <SettingRow
                 label="Initialize Manager Profile"
-                icon="👤"
                 right={<Text style={{ fontSize: 14, color: colors.textQuiet }}>›</Text>}
                 onPress={handleInitManager}
               />
@@ -250,19 +248,16 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <SettingRow
               label="MWA"
-              icon="📱"
               right={<Text style={styles.monoText}>{isMwaAvailable ? 'Available' : 'Web only'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="RPC"
-              icon="🖥"
               right={<Text style={styles.monoText}>{shortUrl(RPC_URL)}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Cluster"
-              icon="🌐"
               right={
                 <View style={[styles.clusterChip, {
                   borderColor: cluster === 'devnet' ? colors.warningBorder : colors.signalBorder,
@@ -279,13 +274,11 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <SettingRow
               label="API"
-              icon="☁️"
               right={<Text style={styles.monoText}>{API_BASE ? shortUrl(API_BASE) : 'Mock mode'}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Jupiter"
-              icon="⇄"
               right={<Text style={styles.monoText}>{shortUrl(JUPITER_API_URL)}</Text>}
             />
           </View>
@@ -297,19 +290,16 @@ export default function SettingsScreen() {
           <View style={styles.card}>
             <SettingRow
               label="Version"
-              icon="ℹ️"
               right={<Text style={styles.monoText}>1.0.0</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Program"
-              icon="＜/＞"
               right={<Text style={styles.monoText}>{truncateAddress(PROGRAM_ID.toBase58(), 5)}</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
               label="Protocol"
-              icon="🛡️"
               right={<Text style={styles.monoText}>Arcadia</Text>}
             />
           </View>

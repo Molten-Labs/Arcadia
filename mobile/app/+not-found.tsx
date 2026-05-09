@@ -13,7 +13,8 @@ export default function NotFoundScreen() {
       }} />
       <View style={styles.container}>
         <View style={styles.iconWrap}>
-          <Text style={{ fontSize: 36 }}>🧭</Text>
+          <View style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 3, borderColor: colors.textMuted }} />
+          <View style={{ position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textMuted }} />
         </View>
         <Text style={styles.title}>Screen not found</Text>
         <Text style={styles.sub}>This page doesn't exist or was moved.</Text>

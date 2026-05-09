@@ -102,7 +102,13 @@ export default function ManagerScreen() {
           />
           <View style={styles.heroTop}>
             <View style={styles.heroIconWrap}>
-              <Text style={{ fontSize: 22 }}>📊</Text>
+              <View style={{ width: 16, height: 16, gap: 3 }}>
+                <View style={{ flexDirection: 'row', gap: 3, alignItems: 'flex-end', height: 16 }}>
+                  <View style={{ width: 4, height: 7, borderRadius: 1, backgroundColor: colors.signal }} />
+                  <View style={{ width: 4, height: 14, borderRadius: 1, backgroundColor: colors.signal }} />
+                  <View style={{ width: 4, height: 10, borderRadius: 1, backgroundColor: colors.signal }} />
+                </View>
+              </View>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.eyebrow}>Trader Cockpit</Text>
@@ -127,7 +133,7 @@ export default function ManagerScreen() {
 
           {pendingRequest && (
             <View style={styles.pendingBanner}>
-              <Text style={{ fontSize: 13 }}>⏱</Text>
+              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.signal }} />
               <Text style={styles.pendingText}>{pendingRequest}</Text>
             </View>
           )}
@@ -136,7 +142,6 @@ export default function ManagerScreen() {
             {!connected ? (
               <MotionPressable style={styles.primaryBtn} onPress={handleConnect}>
                 <LinearGradient colors={[colors.signal, colors.signalDeep]} style={styles.primaryGrad}>
-                  <Text style={{ fontSize: 16 }}>👛</Text>
                   <Text style={styles.primaryText}>Connect Wallet</Text>
                 </LinearGradient>
               </MotionPressable>
@@ -167,24 +172,20 @@ export default function ManagerScreen() {
           <KpiCard
             label="Junior at risk"
             value={formatUSD(totalJunior, true)}
-            icon="🛡️"
             accent
           />
           <KpiCard
             label="Senior protected"
             value={formatUSD(seniorTvl, true)}
-            icon="🔒"
           />
           <KpiCard
             label="Live vaults"
             value={`${activeVaults.length}/${managerVaults.length}`}
-            icon="📦"
             accent={activeVaults.length > 0}
           />
           <KpiCard
             label="Paper progress"
             value={`${Math.round(paperProgress * 100)}%`}
-            icon="📄"
           />
         </View>
 
@@ -223,7 +224,9 @@ export default function ManagerScreen() {
         {/* Vault Guard */}
         <View style={styles.guardCard}>
           <View style={styles.guardHeader}>
-            <Text style={{ fontSize: 18 }}>🛡️</Text>
+            <View style={{ width: 18, height: 20, borderRadius: 4, borderWidth: 2, borderColor: colors.signal, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 6, height: 6, borderRadius: 1, backgroundColor: colors.signal }} />
+            </View>
             <Text style={styles.guardTitle}>Vault Guard</Text>
           </View>
           <Text style={styles.guardSub}>
@@ -245,19 +248,16 @@ export default function ManagerScreen() {
           <QuickAction
             title="Initialize"
             copy="Create manager account"
-            icon="👤"
             onPress={runInitManager}
           />
           <QuickAction
             title="Trade"
             copy="Open terminal"
-            icon="⇄"
             onPress={() => router.push('/trade')}
           />
           <QuickAction
             title="New Vault"
             copy="Paper mode first"
-            icon="＋"
             onPress={() => router.push('/manager/create')}
           />
         </View>
@@ -273,7 +273,7 @@ export default function ManagerScreen() {
         ) : managerVaults.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIcon}>
-              <Text style={{ fontSize: 24 }}>📦</Text>
+              <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.border }} />
             </View>
             <Text style={styles.emptyTitle}>No managed vaults</Text>
             <Text style={styles.emptySub}>
@@ -333,16 +333,15 @@ function MotionPressable({
   );
 }
 
-function KpiCard({ label, value, icon, accent }: {
+function KpiCard({ label, value, accent }: {
   label: string;
   value: string;
-  icon: string;
   accent?: boolean;
 }) {
   return (
     <View style={[styles.kpiCard, accent && styles.kpiCardAccent]}>
       <View style={[styles.kpiIconWrap, accent && styles.kpiIconWrapAccent]}>
-        <Text style={{ fontSize: 14 }}>{icon}</Text>
+        <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: accent ? colors.signal : colors.textQuiet }} />
       </View>
       <Text style={[styles.kpiValue, accent && { color: colors.signal }]}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
@@ -377,16 +376,15 @@ function PipelineStep({ index, title, copy, done, last }: {
   );
 }
 
-function QuickAction({ title, copy, icon, onPress }: {
+function QuickAction({ title, copy, onPress }: {
   title: string;
   copy: string;
-  icon: string;
   onPress: () => void;
 }) {
   return (
     <MotionPressable style={styles.quickCard} onPress={onPress}>
       <View style={styles.quickIcon}>
-        <Text style={{ fontSize: 18 }}>{icon}</Text>
+        <View style={{ width: 14, height: 14, borderRadius: 3, borderWidth: 2, borderColor: colors.signal }} />
       </View>
       <Text style={styles.quickTitle}>{title}</Text>
       <Text style={styles.quickCopy}>{copy}</Text>

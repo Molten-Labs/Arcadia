@@ -58,9 +58,16 @@ function PositionRow({
       >
         <View style={[
           styles.posIcon,
-          { backgroundColor: positive ? colors.signalDim : colors.dangerDim },
+          { backgroundColor: positive ? colors.signalDim : colors.dangerDim,
+            alignItems: 'center', justifyContent: 'center' },
         ]}>
-          <Text style={{ fontSize: 20 }}>{positive ? '📈' : '📉'}</Text>
+          <View style={{
+            width: 0, height: 0,
+            borderLeftWidth: 7, borderRightWidth: 7, borderLeftColor: 'transparent', borderRightColor: 'transparent',
+            ...(positive
+              ? { borderBottomWidth: 10, borderBottomColor: colors.signal }
+              : { borderTopWidth: 10, borderTopColor: colors.danger }),
+          }} />
         </View>
         <View style={styles.posInfo}>
           <Text style={styles.posLabel}>{label}</Text>
@@ -119,7 +126,6 @@ export default function PortfolioScreen() {
               style={styles.connectBtnGrad}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             >
-              <Text style={{ fontSize: 18 }}>👛</Text>
               <Text style={styles.connectBtnText}>Connect Wallet</Text>
             </LinearGradient>
           </Pressable>
@@ -147,8 +153,7 @@ export default function PortfolioScreen() {
         {isDemoWallet && (
           <FadeSlideIn delay={60} style={{ marginHorizontal: spacing.md }}>
             <View style={styles.demoBanner}>
-              <Text style={{ fontSize: 12 }}>🧪</Text>
-              <Text style={styles.demoBannerText}>Demo wallet · simulated data</Text>
+              <Text style={styles.demoBannerText}>DEMO · simulated data</Text>
             </View>
           </FadeSlideIn>
         )}

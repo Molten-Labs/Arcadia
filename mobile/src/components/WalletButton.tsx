@@ -73,7 +73,6 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <View style={styles.connectInner}>
-              <Text style={{ fontSize: 14 }}>👛</Text>
               <Text style={styles.connectText}>Connect</Text>
             </View>
           )}
@@ -114,7 +113,7 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 />
                 <View style={styles.optionIcon}>
-                  <Text style={{ fontSize: 22 }}>📱</Text>
+                  <View style={{ width: 18, height: 22, borderRadius: 4, borderWidth: 2.5, borderColor: colors.signal }} />
                 </View>
                 <View style={styles.optionText}>
                   <Text style={styles.optionTitle}>Mobile Wallet Adapter</Text>
@@ -132,7 +131,8 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
               }}
             >
               <View style={[styles.optionIcon, { backgroundColor: colors.warningDim }]}>
-                <Text style={{ fontSize: 22 }}>🧪</Text>
+                <View style={{ width: 6, height: 14, borderRadius: 3, backgroundColor: colors.warning, marginTop: 4 }} />
+                <View style={{ width: 10, height: 8, borderRadius: 3, backgroundColor: colors.warning, marginTop: -2 }} />
               </View>
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>Demo Mode</Text>
@@ -143,7 +143,9 @@ export function WalletButton({ onPress }: { onPress?: () => void }) {
 
             {!isMwaAvailable && (
               <View style={styles.mwaHint}>
-                <Text style={{ fontSize: 14 }}>ℹ️</Text>
+                <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: 1.5, borderColor: colors.textMuted, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 9, color: colors.textMuted, fontWeight: '700' }}>i</Text>
+                </View>
                 <Text style={styles.mwaHintText}>
                   To use MWA: open this app on an Android device with Phantom or Solflare installed
                 </Text>

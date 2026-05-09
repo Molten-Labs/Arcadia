@@ -148,7 +148,14 @@ export function VaultCard({ vault, onPress, sparkData, entryDelay = 0 }: Props) 
             <Text style={styles.navLabel}>NAV</Text>
             <Text style={styles.navValue}>{formatNav(vault.currentNav)}</Text>
             <View style={styles.navDeltaRow}>
-              <Text style={{ fontSize: 12 }}>{navPositive ? '📈' : '📉'}</Text>
+              <View style={{
+                width: 0, height: 0,
+                borderLeftWidth: 4, borderRightWidth: 4,
+                borderLeftColor: 'transparent', borderRightColor: 'transparent',
+                ...(navPositive
+                  ? { borderBottomWidth: 7, borderBottomColor: colors.signal }
+                  : { borderTopWidth: 7, borderTopColor: colors.danger }),
+              }} />
               <Text style={[styles.navDelta, { color: navPositive ? colors.signal : colors.danger }]}>
                 {navPct}%
               </Text>

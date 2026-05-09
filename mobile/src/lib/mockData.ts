@@ -233,6 +233,38 @@ export const MOCK_MANAGERS: ManagerView[] = [
     totalJuniorDeposited: 46000,
     createdAt: now - 90 * day,
   },
+  {
+    pubkey: 'MGR4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    owner: 'OWN4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    totalVaults: 1,
+    activeVaults: 1,
+    totalJuniorDeposited: 12000,
+    createdAt: now - 35 * day,
+  },
+  {
+    pubkey: 'MGR5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    owner: 'OWN5xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    totalVaults: 1,
+    activeVaults: 0,
+    totalJuniorDeposited: 15000,
+    createdAt: now - 18 * day,
+  },
+  {
+    pubkey: 'MGR6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    owner: 'OWN6xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    totalVaults: 0,
+    activeVaults: 0,
+    totalJuniorDeposited: 0,
+    createdAt: now - 10 * day,
+  },
+  {
+    pubkey: 'MGR7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    owner: 'OWN7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    totalVaults: 0,
+    activeVaults: 0,
+    totalJuniorDeposited: 0,
+    createdAt: now - 5 * day,
+  },
 ];
 
 export function mockPositions(walletPubkey: string): PositionView[] {

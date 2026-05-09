@@ -22,9 +22,9 @@ import { formatUSD, truncateAddress, formatAge } from '../../src/lib/format';
 const ND = Platform.OS !== 'web';
 
 const PODIUM_COLORS = [
-  { ring: '#FFD700', dim: 'rgba(255,215,0,0.10)', icon: '🏆', label: 'GOLD' },
-  { ring: '#C0C8D4', dim: 'rgba(192,200,212,0.10)', icon: '🥈', label: 'SILVER' },
-  { ring: '#CD7F32', dim: 'rgba(205,127,50,0.10)', icon: '🥉', label: 'BRONZE' },
+  { ring: '#FFD700', dim: 'rgba(255,215,0,0.10)', label: 'GOLD' },
+  { ring: '#C0C8D4', dim: 'rgba(192,200,212,0.10)', label: 'SILVER' },
+  { ring: '#CD7F32', dim: 'rgba(205,127,50,0.10)', label: 'BRONZE' },
 ];
 
 function getAvgHealth(m: ManagerWithVaults) {
@@ -84,8 +84,8 @@ function PodiumCard({
           />
 
           <View style={styles.podiumRankBadge}>
-            <Text style={{ fontSize: large ? 14 : 11 }}>{p.icon}</Text>
             <Text style={[styles.podiumRankText, { color: p.ring }]}>#{rank}</Text>
+            <Text style={[{ fontSize: 8, fontWeight: '700', color: p.ring, letterSpacing: 0.5 }]}>{p.label}</Text>
           </View>
 
           <View style={[
@@ -232,7 +232,6 @@ export default function TradersScreen() {
             <Text style={styles.pageSub}>{sorted.length} verified traders</Text>
           </View>
           <View style={styles.seasonBadge}>
-            <Text style={{ fontSize: 12 }}>🔥</Text>
             <Text style={styles.seasonText}>S1</Text>
           </View>
         </View>
@@ -322,7 +321,7 @@ export default function TradersScreen() {
       {sorted.length === 0 && (
         <View style={styles.emptyWrap}>
           <View style={styles.emptyIcon}>
-            <Text style={{ fontSize: 32 }}>👥</Text>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.border }} />
           </View>
           <Text style={styles.emptyTitle}>No traders yet</Text>
           <Text style={styles.emptySub}>Rankings will appear once traders register</Text>
