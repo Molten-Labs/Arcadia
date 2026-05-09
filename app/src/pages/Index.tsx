@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { toast } from "sonner";
@@ -183,17 +183,17 @@ const PROBLEM_COLUMNS = [
   {
     title: "For Traders",
     items: [
-      "Hard to prove skill on-chain",
-      "No scalable way to access capital",
-      "Reliance on audience or connections",
+      "Strategy exposed to front-runners on-chain",
+      "Hard to prove skill without burning edge",
+      "No scalable path to investor capital",
     ],
   },
   {
     title: "For Investors",
     items: [
-      "Hard to verify traders",
-      "Trust-based systems",
-      "Capital gets locked or delayed",
+      "No way to verify risk rules are followed",
+      "Trust-based systems with no enforcement",
+      "Capital gets locked or exits delayed",
     ],
   },
 ];
@@ -282,15 +282,137 @@ const ProblemCard = ({
       </div>
     </div>
     <ul className="space-y-3">
-      {column.items.map((item) => (
-        <li key={item} className="flex items-start gap-3 rounded-lg border border-border/35 bg-background/45 px-3 py-2.5 text-sm text-foreground/78">
+      {column.items.map((item, itemIndex) => (
+        <motion.li
+          key={item}
+          initial={{ opacity: 0, x: index === 0 ? -10 : 10 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.38, delay: index * 0.08 + 0.18 + itemIndex * 0.1 }}
+          className="flex items-start gap-3 rounded-lg border border-border/35 bg-background/45 px-3 py-2.5 text-sm text-foreground/78"
+        >
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_18px_hsl(var(--primary)/0.45)]" />
           <span>{item}</span>
-        </li>
+        </motion.li>
       ))}
     </ul>
   </motion.div>
 );
+
+/* ── Animated guard evaluation widget (center connector) ─────────────────── */
+const GUARD_SEQ = [
+  { id: "intent",   dur: 1800 },
+  { id: "check",    dur: 1600 },
+  { id: "approved", dur: 2300 },
+  { id: "intent2",  dur: 1800 },
+  { id: "check2",   dur: 1600 },
+  { id: "rejected", dur: 2300 },
+] as const;
+
+function GuardConnector() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setStep((s) => (s + 1) % GUARD_SEQ.length), GUARD_SEQ[step].dur);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  const id = GUARD_SEQ[step].id;
+  const isIntent   = id === "intent" || id === "intent2";
+  const isChecking = id === "check"  || id === "check2";
+  const isApproved = id === "approved";
+  const isRejected = id === "rejected";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.45, delay: 0.1 }}
+      className="order-first flex items-center justify-center lg:order-none"
+    >
+      <div className="relative flex w-full flex-col items-center gap-4 rounded-xl border border-border/55 bg-card/60 px-4 py-7 shadow-card backdrop-blur-xl lg:h-full lg:w-44">
+        <div className="pointer-events-none absolute left-0 right-0 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/25 to-transparent lg:block" />
+
+        {/* Icon */}
+        <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-signal">
+          <Lock className="h-5 w-5" />
+        </div>
+
+        {/* Label */}
+        <div className="relative z-10 text-center">
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Arcadia layer</p>
+          <p className="mt-0.5 font-display text-[13px] font-semibold text-foreground">Private Guard</p>
+        </div>
+
+        {/* Cycling guard state */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 6, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -5, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="relative z-10 flex flex-col items-center gap-1.5"
+          >
+            {isIntent && (
+              <>
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className="h-1 w-1 rounded-full bg-muted-foreground/25" />
+                  ))}
+                </div>
+                <span className="font-mono text-[9px] text-muted-foreground/55">intent in</span>
+              </>
+            )}
+            {isChecking && (
+              <>
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="h-1.5 w-1.5 rounded-full bg-warning"
+                      animate={{ opacity: [0.25, 1, 0.25], scale: [0.7, 1, 0.7] }}
+                      transition={{ duration: 0.65, delay: i * 0.2, repeat: Infinity }}
+                    />
+                  ))}
+                </div>
+                <span className="font-mono text-[9px] text-warning/80">checking rules…</span>
+              </>
+            )}
+            {isApproved && (
+              <motion.div
+                initial={{ scale: 0.7 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 420, damping: 18 }}
+                className="rounded-md border border-success/35 bg-success/10 px-2.5 py-1.5 font-mono text-[10px] font-bold text-success"
+              >
+                ✓ Approved
+              </motion.div>
+            )}
+            {isRejected && (
+              <motion.div
+                initial={{ scale: 0.7 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 420, damping: 18 }}
+                className="rounded-md border border-destructive/35 bg-destructive/10 px-2.5 py-1.5 font-mono text-[10px] font-bold text-destructive"
+              >
+                ✗ Rejected
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* New feature badge */}
+        <div className="relative z-10 mt-auto">
+          <div className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5">
+            <EyeOff className="h-2.5 w-2.5 text-primary/75" />
+            <span className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-primary/75">New</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 const Landing = () => {
   const { data: vaults } = useVaults();
@@ -431,33 +553,44 @@ const Landing = () => {
 
           <div className="mx-auto grid max-w-6xl items-stretch gap-4 lg:grid-cols-[1fr_auto_1fr]">
             <ProblemCard column={PROBLEM_COLUMNS[0]} index={0} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: 0.1 }}
-              className="order-first flex items-center justify-center lg:order-none"
-            >
-              <div className="relative flex w-full items-center justify-center rounded-xl border border-border/55 bg-card/60 p-5 shadow-card backdrop-blur-xl lg:h-full lg:w-44">
-                <div className="pointer-events-none absolute left-0 right-0 top-1/2 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/25 to-transparent lg:block" />
-                <div className="relative z-10 max-w-[12rem] rounded-xl bg-background/85 px-4 py-5 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-signal">
-                    <Activity className="h-6 w-6" aria-hidden="true" />
-                  </div>
-                  <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Arcadia layer</p>
-                  <p className="mt-2 font-display text-sm font-semibold leading-5 text-foreground">Proof routes capital</p>
-                </div>
-              </div>
-            </motion.div>
+            <GuardConnector />
             <ProblemCard column={PROBLEM_COLUMNS[1]} index={1} />
           </div>
+
+          {/* Private Guard compact strip */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.45, delay: 0.2 }}
+            className="mx-auto mt-5 max-w-6xl overflow-hidden rounded-xl border border-border/40 bg-card/50 backdrop-blur-sm"
+          >
+            <div className="grid divide-y divide-border/40 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+              <div className="px-6 py-5">
+                <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-destructive/80">
+                  <XCircle className="h-3 w-3" /> The hidden problem
+                </p>
+                <p className="text-[13px] leading-relaxed text-foreground/65">
+                  Publishing strategy on-chain means front-runners copy every move. Keeping it private means investors can't verify risk rules are followed. Either way, serious traders stay off-chain.
+                </p>
+              </div>
+              <div className="px-6 py-5">
+                <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
+                  <EyeOff className="h-3 w-3" /> Private Intent Vault Guard
+                </p>
+                <p className="text-[13px] leading-relaxed text-foreground/65">
+                  Trade intents are checked by a private evaluator against Arcadia's risk rules. Only the result — approved or rejected — lands on-chain. Strategy, size, and route stay hidden forever.
+                </p>
+              </div>
+            </div>
+          </motion.div>
 
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.45, delay: 0.16 }}
-            className="mx-auto mt-10 max-w-3xl rounded-xl border border-primary/25 bg-primary/10 px-5 py-4 text-center font-display type-h3 font-semibold text-primary shadow-[0_20px_70px_hsl(var(--primary)/0.10)]"
+            transition={{ duration: 0.45, delay: 0.22 }}
+            className="mx-auto mt-8 max-w-3xl rounded-xl border border-primary/25 bg-primary/10 px-5 py-4 text-center font-display type-h3 font-semibold text-primary shadow-[0_20px_70px_hsl(var(--primary)/0.10)]"
           >
             Arcadia replaces trust with performance.
           </motion.p>
@@ -505,8 +638,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* 3b. Private Intent Vault Guard */}
-      <section id="private-guard" className="relative overflow-hidden border-b border-border/35 py-24 scroll-mt-16">
+      {/* [removed — private guard folded into section 2] */}
+      <section id="private-guard-removed" className="hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,hsl(var(--primary)/0.10),transparent_60%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
         <div className="container relative">
