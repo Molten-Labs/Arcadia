@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { Platform, useEffect } from 'react';
 import { WalletProvider } from '../src/lib/wallet';
 import { colors } from '../src/lib/theme';
@@ -35,6 +37,7 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   useEffect(() => {
+    Font.loadAsync(Ionicons.font).catch(() => {});
     SplashScreen.hideAsync().catch(() => {});
   }, []);
 

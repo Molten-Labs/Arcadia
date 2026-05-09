@@ -1,42 +1,50 @@
-import React from 'react';
-import { Alert, Pressable, Text, StyleSheet, View, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  Text,
+  StyleSheet,
+  View,
+  ActivityIndicator,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, spacing } from '../lib/theme';
 import { useWallet } from '../lib/wallet';
 import { truncateAddress } from '../lib/format';
 
-interface Props {
-  onPress?: () => void;
-}
+export function WalletButton({ onPress }: { onPress?: () => void }) {
+  const {
+    connected, connecting, publicKey, connect, connectDemoWallet,
+    disconnect, isDemoWallet, isMwaAvailable, walletLabel,
+  } = useWallet();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-export function WalletButton({ onPress }: Props) {
-  const { connected, connecting, publicKey, connect, isDemoWallet } = useWallet();
-
-  const handlePress = async () => {
+  const handleConnectedPress = () => {
     if (onPress) { onPress(); return; }
-    if (!connected && !connecting) {
-      try {
-        await connect();
-      } catch (err: any) {
-        Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
-      }
-    }
+    Alert.alert(
+      walletLabel ?? (isDemoWallet ? 'Demo Wallet' : 'Connected'),
+      truncateAddress(publicKey ?? '', 8),
+      [
+        { text: 'Disconnect', style: 'destructive', onPress: disconnect },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   if (connected && publicKey) {
     return (
       <Pressable
-        style={({ pressed }) => [styles.connectedBtn, pressed && styles.pressed]}
-        onPress={handlePress}
+        style={({ pressed }) => [styles.connectedBtn, pressed && { opacity: 0.75 }]}
+        onPress={handleConnectedPress}
       >
         <View style={[
-          styles.statusDot,
+          styles.dot,
           { backgroundColor: isDemoWallet ? colors.warning : colors.signal },
         ]} />
-        <Text style={styles.connectedAddr}>
-          {truncateAddress(publicKey, 4)}
-        </Text>
+        <Text style={styles.connectedAddr}>{truncateAddress(publicKey, 4)}</Text>
         {isDemoWallet && (
           <View style={styles.demoPill}>
             <Text style={styles.demoLabel}>DEMO</Text>
@@ -47,27 +55,109 @@ export function WalletButton({ onPress }: Props) {
   }
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.connectBtn, pressed && styles.pressed]}
-      onPress={handlePress}
-      disabled={connecting}
-    >
-      <LinearGradient
-        colors={[colors.signal, colors.signalDeep]}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+    <>
+      <Pressable
+        style={({ pressed }) => [styles.connectBtn, pressed && { opacity: 0.8 }]}
+        onPress={() => {
+          if (onPress) { onPress(); return; }
+          setSheetOpen(true);
+        }}
+        disabled={connecting}
       >
-        {connecting ? (
-          <ActivityIndicator size="small" color={colors.white} />
-        ) : (
-          <View style={styles.connectInner}>
-            <Ionicons name="wallet-outline" size={14} color={colors.white} />
-            <Text style={styles.connectText}>Connect</Text>
+        <LinearGradient
+          colors={[colors.signal, colors.signalDeep]}
+          style={styles.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          {connecting ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <View style={styles.connectInner}>
+              <Ionicons name="wallet-outline" size={14} color={colors.white} />
+              <Text style={styles.connectText}>Connect</Text>
+            </View>
+          )}
+        </LinearGradient>
+      </Pressable>
+
+      <Modal
+        visible={sheetOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSheetOpen(false)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setSheetOpen(false)}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+
+            <Text style={styles.sheetTitle}>Connect Wallet</Text>
+            <Text style={styles.sheetSub}>
+              {isMwaAvailable
+                ? 'Open your Solana wallet app to authorize this connection'
+                : 'MWA requires an Android device with Phantom or Solflare installed'}
+            </Text>
+
+            {isMwaAvailable && (
+              <Pressable
+                style={({ pressed }) => [styles.optionBtn, pressed && { opacity: 0.8 }]}
+                onPress={async () => {
+                  setSheetOpen(false);
+                  try { await connect(); }
+                  catch (err: any) {
+                    Alert.alert('Connection failed', err?.message ?? 'Could not connect wallet');
+                  }
+                }}
+              >
+                <LinearGradient
+                  colors={[colors.signal + '22', colors.signal + '08']}
+                  style={StyleSheet.absoluteFillObject}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                />
+                <View style={styles.optionIcon}>
+                  <Ionicons name="phone-portrait-outline" size={22} color={colors.signal} />
+                </View>
+                <View style={styles.optionText}>
+                  <Text style={styles.optionTitle}>Mobile Wallet Adapter</Text>
+                  <Text style={styles.optionDesc}>Phantom · Solflare · Any MWA wallet</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </Pressable>
+            )}
+
+            <Pressable
+              style={({ pressed }) => [styles.optionBtn, styles.optionBtnDemo, pressed && { opacity: 0.8 }]}
+              onPress={async () => {
+                setSheetOpen(false);
+                await connectDemoWallet();
+              }}
+            >
+              <View style={[styles.optionIcon, { backgroundColor: colors.warningDim }]}>
+                <Ionicons name="flask-outline" size={22} color={colors.warning} />
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>Demo Mode</Text>
+                <Text style={styles.optionDesc}>Explore with simulated data — no wallet needed</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
+
+            {!isMwaAvailable && (
+              <View style={styles.mwaHint}>
+                <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.mwaHintText}>
+                  To use MWA: open this app on an Android device with Phantom or Solflare installed
+                </Text>
+              </View>
+            )}
+
+            <Pressable style={styles.cancelBtn} onPress={() => setSheetOpen(false)}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
           </View>
-        )}
-      </LinearGradient>
-    </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -83,11 +173,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surfaceElevated,
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
+  dot: { width: 6, height: 6, borderRadius: 3 },
   connectedAddr: {
     fontSize: 12,
     fontWeight: '600',
@@ -106,10 +192,8 @@ const styles = StyleSheet.create({
     color: colors.warning,
     letterSpacing: 0.5,
   },
-  connectBtn: {
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-  },
+
+  connectBtn: { borderRadius: radius.pill, overflow: 'hidden' },
   gradient: {
     paddingHorizontal: 16,
     paddingVertical: 9,
@@ -117,17 +201,94 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 90,
   },
-  connectInner: {
+  connectInner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  connectText: { fontSize: 13, fontWeight: '700', color: colors.white },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(2,8,16,0.85)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 40,
+    paddingTop: 14,
+    gap: 12,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.4,
+    textAlign: 'center',
+  },
+  sheetSub: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: 8,
+    marginBottom: 4,
+  },
+
+  optionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 14,
+    padding: 16,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.signalBorder,
+    backgroundColor: colors.surfaceElevated,
+    overflow: 'hidden',
   },
-  connectText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.white,
+  optionBtnDemo: {
+    borderColor: colors.border,
   },
-  pressed: {
-    opacity: 0.75,
+  optionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.signalDim,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  optionText: { flex: 1, gap: 3 },
+  optionTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  optionDesc: { fontSize: 12, color: colors.textMuted },
+
+  mwaHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+  },
+  mwaHintText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textMuted,
+    lineHeight: 17,
+  },
+
+  cancelBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  cancelText: { fontSize: 15, color: colors.textMuted, fontWeight: '500' },
 });
