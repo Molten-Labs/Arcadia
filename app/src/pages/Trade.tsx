@@ -3,7 +3,10 @@ import { Layout } from "@/components/Layout";
 import { cn } from "@/lib/utils";
 import { useWallet } from "@/lib/wallet";
 import { toast } from "sonner";
-import { ArrowDownUp, AlertTriangle, Star } from "lucide-react";
+import { ArrowDownUp, AlertTriangle, ExternalLink, ShieldCheck, Star } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ARCADIA_EXECUTION_ENV, SOLANA_CLUSTER } from "@/lib/solana/constants";
+import { useNavigate } from "react-router-dom";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -202,18 +205,20 @@ function NavLineChart({ history }: { history: number[] }) {
 // ─── Swap Panel ───────────────────────────────────────────────────────────────
 
 function SwapPanel({
-    markets, nav, health, cooldown, onExecute,
+    markets, nav, health, cooldown, onExecute, onOpenSurfpoolPreview,
 }: {
     markets: Market[];
     nav: number;
     health: number;
     cooldown: number;
     onExecute: (pair: string, amtIn: number, pnl: number) => void;
+    onOpenSurfpoolPreview: () => void;
 }) {
     const { connected, role } = useWallet();
     const [amtIn, setAmtIn]     = useState("800");
     const [tokenOut, setTokenOut] = useState("SOL");
     const [pending, setPending]   = useState(false);
+    const [devnetNoticeOpen, setDevnetNoticeOpen] = useState(false);
 
     const outMarket = markets.find(m => m.base === tokenOut) ?? markets[0];
     const amtInNum  = parseFloat(amtIn) || 0;
@@ -222,6 +227,7 @@ function SwapPanel({
     const impact    = amtInNum > 500 ? "0.08%" : "0.04%";
     const bps       = health > 80 ? 10 : health > 50 ? 6 : health > 30 ? 3 : health > 10 ? 1 : 0;
     const maxTrade  = Math.floor((nav * bps) / 100);
+    const isDevnetExecution = SOLANA_CLUSTER === "devnet" || ARCADIA_EXECUTION_ENV === "devnet";
 
     const canExec = connected && role === "trader" && cooldown === 0 && bps > 0 && amtInNum > 0 && amtInNum <= maxTrade;
 
@@ -232,6 +238,10 @@ function SwapPanel({
         if (bps === 0)         { toast.error("Trading disabled — health critical"); return; }
         if (amtInNum > maxTrade) { toast.error(`Max trade: ${maxTrade.toLocaleString()} USDC`); return; }
         if (amtInNum <= 0)     { toast.error("Enter an amount"); return; }
+        if (isDevnetExecution) {
+            setDevnetNoticeOpen(true);
+            return;
+        }
         setPending(true);
         toast.loading("Simulating guarded quote…", { id: "swap" });
         setTimeout(() => {
@@ -337,11 +347,49 @@ function SwapPanel({
                     "border border-primary/30 bg-primary/5 text-primary",
                     "hover:bg-primary hover:text-primary-foreground hover:border-primary",
                     "disabled:opacity-30 disabled:cursor-not-allowed",
-                    "transition-all duration-150"
+                    "transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 )}
             >
-                {pending ? "Simulating guarded quote…" : "Simulate guarded quote"}
+                {pending
+                    ? "Simulating guarded quote…"
+                    : isDevnetExecution
+                      ? "Preview devnet limitation"
+                      : "Simulate guarded quote"}
             </button>
+            <Dialog open={devnetNoticeOpen} onOpenChange={setDevnetNoticeOpen}>
+                <DialogContent className="surface-elevated border-border-strong sm:max-w-md">
+                    <DialogHeader>
+                        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <ShieldCheck className="h-5 w-5" />
+                        </div>
+                        <DialogTitle>Jupiter execution is mainnet-only</DialogTitle>
+                        <DialogDescription>
+                            Arcadia devnet can verify vault limits, NAV, liquidity, deposits, and withdrawals with real wallet
+                            transactions. Jupiter swap execution is shown through Surfpool, using live quotes with local simulation.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-1 rounded-lg border border-border/50 bg-card/40 p-3 font-mono text-[10px] text-muted-foreground">
+                        <div className="flex justify-between gap-4">
+                            <span>Devnet action</span>
+                            <span className="text-foreground">Guard + accounting</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                            <span>Jupiter route</span>
+                            <span className="text-foreground">Surfpool preview</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                            <span>Mainnet funds</span>
+                            <span className="text-primary">Not touched</span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onOpenSurfpoolPreview}
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                        Open Surfpool preview <ExternalLink className="h-4 w-4" />
+                    </button>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -392,6 +440,7 @@ function TradeFeed({ trades }: { trades: TradeEntry[] }) {
 
 const Trade = () => {
     const { connected, role } = useWallet();
+    const navigate = useNavigate();
 
     // Market state (live ticking)
     const [markets, setMarkets]         = useState<Market[]>(SEED_MARKETS);
@@ -779,6 +828,7 @@ const Trade = () => {
                         health={health}
                         cooldown={cooldown}
                         onExecute={addTrade}
+                        onOpenSurfpoolPreview={() => navigate("/demo-control")}
                     />
 
                     {/* Alert */}

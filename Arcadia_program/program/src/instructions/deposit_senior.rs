@@ -194,6 +194,14 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .current_nav
         .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
+    if state.high_water_mark == 0 {
+        state.high_water_mark = state.current_nav;
+    } else {
+        state.high_water_mark = state
+            .high_water_mark
+            .checked_add(args.amount_lamports)
+            .ok_or(KilnError::MathOverflow)?;
+    }
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
 
@@ -213,20 +221,8 @@ pub fn deposit_senior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 }
 
 fn deposit_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [
-        investor,
-        vault_config,
-        vault_state,
-        treasury,
-        investor_position,
-        investor_usdc,
-        vault_usdc,
-        token_program,
-        rent_sysvar,
-        clock_sysvar,
-        system_program,
-        ..,
-    ] = accounts
+    let [investor, vault_config, vault_state, treasury, investor_position, investor_usdc, vault_usdc, token_program, rent_sysvar, clock_sysvar, system_program, ..] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -361,6 +357,14 @@ fn deposit_senior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         .current_nav
         .checked_add(args.amount_lamports)
         .ok_or(KilnError::MathOverflow)?;
+    if state.high_water_mark == 0 {
+        state.high_water_mark = state.current_nav;
+    } else {
+        state.high_water_mark = state
+            .high_water_mark
+            .checked_add(args.amount_lamports)
+            .ok_or(KilnError::MathOverflow)?;
+    }
     state.last_nav = state.current_nav;
     state.last_nav_update_at = clock.unix_timestamp;
 

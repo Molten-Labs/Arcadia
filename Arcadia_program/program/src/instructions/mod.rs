@@ -10,6 +10,7 @@ pub mod deposit_senior;
 pub mod execute_swap;
 pub mod init_manager;
 pub mod update_nav;
+pub mod update_oracle_price;
 pub mod vault_guard;
 pub mod withdraw_junior;
 pub mod withdraw_senior;
@@ -21,6 +22,7 @@ pub use deposit_senior::*;
 pub use execute_swap::*;
 pub use init_manager::*;
 pub use update_nav::*;
+pub use update_oracle_price::*;
 pub use withdraw_junior::*;
 pub use withdraw_senior::*;
 
@@ -37,6 +39,7 @@ pub enum ProgramInstruction {
     WithdrawJunior = 7,
     ClaimFees = 8,
     ExecuteSwap = 9,
+    UpdateOraclePrice = 10,
 }
 
 impl TryFrom<&u8> for ProgramInstruction {
@@ -54,6 +57,7 @@ impl TryFrom<&u8> for ProgramInstruction {
             7 => Ok(ProgramInstruction::WithdrawJunior),
             8 => Ok(ProgramInstruction::ClaimFees),
             9 => Ok(ProgramInstruction::ExecuteSwap),
+            10 => Ok(ProgramInstruction::UpdateOraclePrice),
             _ => Err(ProgramError::InvalidInstructionData),
         }
     }
@@ -161,6 +165,14 @@ pub enum KilnInstructionIdl {
     #[account(4, writable, name = "treasury")]
     #[account(5, name = "clock")]
     ExecuteSwap(ExecuteSwapArgsIdl),
+
+    /// Upsert a devnet/demo oracle adapter price account.
+    #[account(0, writable, signer, name = "payer")]
+    #[account(1, writable, name = "price_account")]
+    #[account(2, name = "rent")]
+    #[account(3, name = "clock")]
+    #[account(4, name = "system_program")]
+    UpdateOraclePrice(UpdateOraclePriceArgsIdl),
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
@@ -197,4 +209,11 @@ pub struct WithdrawJuniorArgsIdl {
 pub struct ExecuteSwapArgsIdl {
     pub in_amount: u64,
     pub minimum_amount_out: u64,
+}
+
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
+pub struct UpdateOraclePriceArgsIdl {
+    pub feed: u8,
+    pub price: u64,
+    pub confidence: u64,
 }

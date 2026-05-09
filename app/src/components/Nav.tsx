@@ -39,7 +39,7 @@ import {
 import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
-import { DemoTriggerButton } from "@/components/DemoRunner";
+import { DevnetUsdcFaucet } from "@/components/DevnetUsdcFaucet";
 import { useRealtimeStatus } from "@/hooks/realtimeContext";
 import type { Alert } from "@/lib/mockData";
 import { mockStore } from "@/lib/mockStore";
@@ -56,7 +56,7 @@ const KIND_META: Record<Alert["kind"], { icon: React.ElementType; color: string 
 };
 
 export const Nav = () => {
-    const { connected, address, role, network, walletName, setRole, disconnect } = useWallet();
+    const { connected, address, publicKey, role, network, walletName, setRole, disconnect } = useWallet();
     const { status, lastEventAt } = useRealtimeStatus();
     const [open, setOpen] = useState(false);
     const [connectOpen, setConnectOpen] = useState(false);
@@ -209,7 +209,6 @@ export const Nav = () => {
                     </nav>
 
                     <div className="flex min-w-0 items-center justify-end gap-2 lg:col-start-3">
-                        <DemoTriggerButton />
                         <ThemeToggle className="hidden sm:inline-flex" />
 
                         {/* Bell notification popover — only shown when connected */}
@@ -394,6 +393,11 @@ export const Nav = () => {
                                             </p>
                                         )}
                                     </div>
+                                    {publicKey && (
+                                        <div className="border-b border-border/40 px-4 py-3">
+                                            <DevnetUsdcFaucet compact />
+                                        </div>
+                                    )}
                                     <div className="p-1.5">
                                         <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
                                             Account

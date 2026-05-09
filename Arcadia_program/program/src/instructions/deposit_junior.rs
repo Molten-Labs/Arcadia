@@ -105,6 +105,11 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     state.last_nav = state.current_nav;
     if state.high_water_mark == 0 {
         state.high_water_mark = state.current_nav;
+    } else {
+        state.high_water_mark = state
+            .high_water_mark
+            .checked_add(args.amount_lamports)
+            .ok_or(KilnError::MathOverflow)?;
     }
     state.last_nav_update_at = clock.unix_timestamp;
 
@@ -125,19 +130,8 @@ pub fn deposit_junior(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
 }
 
 fn deposit_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-    let [
-        manager,
-        manager_profile,
-        vault_config,
-        vault_state,
-        treasury,
-        manager_usdc,
-        vault_usdc,
-        token_program,
-        clock_sysvar,
-        _system_program,
-        ..,
-    ] = accounts
+    let [manager, manager_profile, vault_config, vault_state, treasury, manager_usdc, vault_usdc, token_program, clock_sysvar, _system_program, ..] =
+        accounts
     else {
         return Err(ProgramError::NotEnoughAccountKeys);
     };
@@ -224,6 +218,11 @@ fn deposit_junior_usdc(accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
     state.last_nav = state.current_nav;
     if state.high_water_mark == 0 {
         state.high_water_mark = state.current_nav;
+    } else {
+        state.high_water_mark = state
+            .high_water_mark
+            .checked_add(args.amount_lamports)
+            .ok_or(KilnError::MathOverflow)?;
     }
     state.last_nav_update_at = clock.unix_timestamp;
 

@@ -44,5 +44,8 @@ fn process_instruction(
         }
         ProgramInstruction::ClaimFees => instructions::claim_fees(accounts, instruction_data),
         ProgramInstruction::ExecuteSwap => instructions::execute_swap(accounts, instruction_data),
+        ProgramInstruction::UpdateOraclePrice => {
+            instructions::update_oracle_price(accounts, instruction_data)
+        }
     }
 }

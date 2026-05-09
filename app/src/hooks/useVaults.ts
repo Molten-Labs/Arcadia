@@ -54,6 +54,11 @@ export interface VaultView {
   return7d?: number;
   returnAll?: number;
   strategyTags?: string[];
+  liquidUsdc?: number;
+  wsolExposureValue?: number;
+  reserveStatus?: "ok" | "watch" | "violation" | string;
+  executionEnv?: string | null;
+  lastMarketUpdate?: number;
 }
 
 type ApiVaultView = Partial<VaultView> & {
@@ -281,5 +286,10 @@ export function normalizeVaultView(v: ApiVaultView): VaultView {
     tradingEnabled: v.tradingEnabled ?? true,
     instantExit: v.instantExit ?? Number(v.juniorHealth ?? 0) < 20,
     vaultIndex: Number(v.vaultIndex ?? 0),
+    liquidUsdc: Number(v.liquidUsdc ?? currentNav),
+    wsolExposureValue: Number(v.wsolExposureValue ?? 0),
+    reserveStatus: v.reserveStatus ?? "ok",
+    executionEnv: v.executionEnv ?? null,
+    lastMarketUpdate: Number(v.lastMarketUpdate ?? 0),
   };
 }

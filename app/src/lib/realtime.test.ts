@@ -78,4 +78,54 @@ describe("Arcadia realtime events", () => {
       tone: "danger",
     });
   });
+
+  it("turns live Jupiter quotes into visible market activity", () => {
+    const event: RealtimeEvent = {
+      type: "market.quote",
+      receivedAt: 1_778_000_003,
+      item: {
+        vaultConfigPubkey: "vault-demo",
+        route: "USDC -> SOL",
+        inputAmount: 30_000,
+        inputSymbol: "USDC",
+        expectedOutput: 210.4,
+        outputSymbol: "SOL",
+        priceImpactPct: 0.03,
+        routeLabels: ["Meteora", "Orca"],
+        quoteSource: "Jupiter mainnet",
+        executionEnv: "Surfpool local simulation",
+        fetchedAt: 1_778_000_003,
+      },
+    };
+
+    expect(eventToActivity(event)).toMatchObject({
+      kind: "trade",
+      label: "Live Jupiter quote",
+      amount: 30_000,
+      tone: "success",
+    });
+  });
+
+  it("turns completed demo story steps into visible activity", () => {
+    const event: RealtimeEvent = {
+      type: "demo.step",
+      receivedAt: 1_778_000_004,
+      item: {
+        id: "loss-buffer",
+        label: "Loss absorbed",
+        stage: "completed",
+        summary: "Trader buffer absorbs the drawdown first.",
+        actor: "protocol",
+        metric: "Investor impact 0",
+        occurredAt: 1_778_000_004,
+      },
+    };
+
+    expect(eventToActivity(event)).toMatchObject({
+      kind: "status",
+      label: "Loss absorbed",
+      tone: "success",
+      detail: "Trader buffer absorbs the drawdown first.",
+    });
+  });
 });

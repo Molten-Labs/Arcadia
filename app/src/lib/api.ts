@@ -20,6 +20,10 @@ export function isArcadiaDemoMode(): boolean {
   return value === "1" || String(value).toLowerCase() === "true";
 }
 
+export function isArcadiaSurfpoolMode(): boolean {
+  return String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || "").toLowerCase() === "surfpool";
+}
+
 export function isArcadiaDevnetProductMode(): boolean {
   const executionEnv = String(import.meta.env.VITE_ARCADIA_EXECUTION_ENV || "").toLowerCase();
   const cluster = String(import.meta.env.VITE_SOLANA_CLUSTER || "").toLowerCase();
@@ -49,7 +53,7 @@ export async function postKilnApi<T>(path: string, body?: unknown): Promise<T | 
 
   const response = await fetch(`${baseUrl}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: body === undefined ? undefined : { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {

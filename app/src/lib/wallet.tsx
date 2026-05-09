@@ -1,9 +1,11 @@
 import {
   createContext,
   useContext,
+  useCallback,
   useMemo,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from "react";
 import {
@@ -16,11 +18,11 @@ import {
   WalletModalProvider,
   WalletMultiButton,
 } from "@solana/wallet-adapter-react-ui";
+import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
-import type { WalletName } from "@solana/wallet-adapter-base";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { RPC_URL } from "./solana/constants";
 
@@ -37,7 +39,8 @@ interface KilnWalletState {
   network: Network;
   walletName: string | null;
   connection: Connection | null;
-  connect: (walletName?: string) => void;
+  connect: (walletName?: string) => Promise<void>;
+  connectDemoWallet: () => void;
   disconnect: () => void;
   setRole: (r: Role) => void;
   setNetwork: (n: Network) => void;
@@ -51,7 +54,8 @@ const defaultState: KilnWalletState = {
   network: "devnet",
   walletName: null,
   connection: null,
-  connect: () => {},
+  connect: async () => {},
+  connectDemoWallet: () => {},
   disconnect: () => {},
   setRole: () => {},
   setNetwork: () => {},
@@ -63,6 +67,7 @@ const PREFS_KEY = "kiln.wallet.prefs";
 
 interface StoredWalletPrefs {
   role?: Role;
+  network?: Network;
   walletName?: string | null;
 }
 
@@ -71,13 +76,13 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
     connected,
     publicKey,
     wallet,
-    disconnect: solDisconnect,
+    wallets,
     select,
-    connect: solConnect,
+    disconnect: solDisconnect,
   } = useSolanaWallet();
   const { connection } = useConnection();
   const [demoWalletName, setDemoWalletName] = useState<string | null>(null);
-  const [pendingConnect, setPendingConnect] = useState(false);
+  const autoConnectAttemptRef = useRef<string | null>(null);
 
   const stored = useMemo(() => {
     try {
@@ -89,27 +94,35 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   }, []);
 
   const [role, setRole] = useState<Role>(stored?.role ?? "investor");
+  const [network, setNetworkState] = useState<Network>("devnet");
   const [rememberedWalletName, setRememberedWalletName] = useState<string | null>(stored?.walletName ?? null);
 
   useEffect(() => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ role, walletName: rememberedWalletName }));
-  }, [rememberedWalletName, role]);
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ role, network, walletName: rememberedWalletName }));
+  }, [rememberedWalletName, role, network]);
 
-  // After select() updates the wallet state, trigger the real connect()
-  useEffect(() => {
-    if (pendingConnect && wallet && !connected) {
-      setPendingConnect(false);
-      solConnect().catch(() => {
-        // User cancelled or wallet not available — silent, ConnectModal handles UI
-      });
-    }
-  }, [pendingConnect, wallet, connected, solConnect]);
+  const setNetwork = useCallback((next: Network) => {
+    setNetworkState(next === "devnet" ? "devnet" : "devnet");
+  }, []);
 
   useEffect(() => {
     if (connected || wallet || demoWalletName || !rememberedWalletName) return;
-    select(rememberedWalletName as WalletName);
-    setPendingConnect(true);
-  }, [connected, demoWalletName, rememberedWalletName, select, wallet]);
+    const remembered = wallets.find((entry) => entry.adapter.name === rememberedWalletName);
+    if (remembered) {
+      select(remembered.adapter.name as WalletName);
+    }
+  }, [connected, demoWalletName, rememberedWalletName, select, wallet, wallets]);
+
+  useEffect(() => {
+    if (connected || demoWalletName || !wallet || !rememberedWalletName) return;
+    if (wallet.adapter.name !== rememberedWalletName) return;
+    if (autoConnectAttemptRef.current === rememberedWalletName) return;
+
+    autoConnectAttemptRef.current = rememberedWalletName;
+    wallet.adapter.connect().catch(() => {
+      // Wallet may require a manual approval after refresh. The connect modal remains the fallback.
+    });
+  }, [connected, demoWalletName, rememberedWalletName, wallet]);
 
   useEffect(() => {
     if (wallet?.adapter.name) {
@@ -121,35 +134,76 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
   const isConnected = connected || Boolean(demoWalletName);
   const address = publicKey?.toBase58() ?? (demoWalletName ? demoAddress : null);
 
+  const connect = useCallback(
+    async (name?: string) => {
+      if (!name) {
+        throw new Error("Choose Phantom or Solflare to connect on devnet.");
+      }
+
+      const target = wallets.find((entry) => entry.adapter.name === name);
+      if (!target) {
+        throw new Error(`${name} is not available in this browser.`);
+      }
+
+      const isReady =
+        target.readyState === WalletReadyState.Installed ||
+        target.readyState === WalletReadyState.Loadable;
+      if (!isReady) {
+        throw new Error(`${name} is not installed or not ready. Install it, refresh Arcadia, then try again.`);
+      }
+
+      setDemoWalletName(null);
+      setNetwork("devnet");
+      setRememberedWalletName(target.adapter.name);
+      autoConnectAttemptRef.current = null;
+      select(target.adapter.name as WalletName);
+
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+      await target.adapter.connect();
+    },
+    [select, setNetwork, wallets]
+  );
+
+  const connectDemoWallet = useCallback(() => {
+    setDemoWalletName("Recording Wallet");
+    setRememberedWalletName(null);
+    setNetwork("devnet");
+  }, [setNetwork]);
+
   const value: KilnWalletState = useMemo(
     () => ({
       connected: isConnected,
       address,
       publicKey: publicKey ?? null,
       role,
-      network: "devnet",
+      network,
       walletName: wallet?.adapter.name ?? demoWalletName,
       connection,
-      connect: (name?: string) => {
-        if (!name || name === "Demo Wallet") {
-          setDemoWalletName(name ?? "Demo Wallet");
-          setRememberedWalletName(null);
-          return;
-        }
-        setDemoWalletName(null);
-        setRememberedWalletName(name);
-        select(name as WalletName);
-        setPendingConnect(true);
-      },
+      connect,
+      connectDemoWallet,
       disconnect: () => {
         setDemoWalletName(null);
         setRememberedWalletName(null);
+        autoConnectAttemptRef.current = null;
         solDisconnect();
       },
       setRole,
-      setNetwork: () => {},
+      setNetwork,
     }),
-    [isConnected, address, publicKey, role, wallet, demoWalletName, connection, solDisconnect, select]
+    [
+      isConnected,
+      address,
+      publicKey,
+      role,
+      network,
+      wallet,
+      demoWalletName,
+      connection,
+      connect,
+      connectDemoWallet,
+      solDisconnect,
+      setNetwork,
+    ]
   );
 
   return (

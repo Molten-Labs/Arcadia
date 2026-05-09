@@ -5,7 +5,8 @@ import { useDataMode } from "@/hooks/useDataMode";
 import { useWallet } from "@/lib/wallet";
 import { normalizeApiPosition } from "@/hooks/usePositions";
 import { normalizeVaultView, type ManagerView, type VaultView } from "@/hooks/useVaults";
-import { eventToActivity, type NavPoint, type RealtimeEvent, type TradeEvent, type VaultActivityEvent } from "@/lib/realtime";
+import { eventToActivity, type DemoStorySnapshot, type NavPoint, type RealtimeEvent, type TradeEvent, type VaultActivityEvent } from "@/lib/realtime";
+import type { MarketQuote } from "@/lib/surfpoolDemo";
 import { RealtimeContext, type RealtimeContextValue, type RealtimeStatus } from "@/hooks/realtimeContext";
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
@@ -101,6 +102,7 @@ function applyRealtimeEvent(
     queryClient.invalidateQueries({ queryKey: ["vaults"] });
     queryClient.invalidateQueries({ queryKey: ["managers"] });
     queryClient.invalidateQueries({ queryKey: ["positions"] });
+    queryClient.invalidateQueries({ queryKey: ["demo-story"] });
     return;
   }
 
@@ -131,6 +133,28 @@ function applyRealtimeEvent(
 
   if (event.type === "trade.public") {
     appendList<TradeEvent>(queryClient, ["vault-trades", event.vaultConfigPubkey], event.item, 40);
+    appendActivity(queryClient, event);
+    return;
+  }
+
+  if (event.type === "market.quote") {
+    queryClient.setQueryData<MarketQuote>(["market-quote", event.item.vaultConfigPubkey], event.item);
+    appendActivity(queryClient, event);
+    return;
+  }
+
+  if (event.type === "demo.step") {
+    queryClient.setQueryData<DemoStorySnapshot>(["demo-story"], (old) => {
+      const completed = new Set(old?.completedSteps ?? []);
+      if (event.item.stage === "completed") completed.add(event.item.id);
+      const terminal = ["story-complete", "stopped", "reset", "story-error"].includes(event.item.id) || event.item.stage === "failed";
+      return {
+        running: event.item.stage === "active" ? true : terminal ? false : old?.running ?? false,
+        activeStep: event.item.stage === "active" ? event.item.id : old?.activeStep === event.item.id ? null : old?.activeStep ?? null,
+        completedSteps: Array.from(completed),
+        lastStep: event.item,
+      };
+    });
     appendActivity(queryClient, event);
     return;
   }

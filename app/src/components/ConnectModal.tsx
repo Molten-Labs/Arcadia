@@ -47,12 +47,6 @@ const WALLETS = [
         recommended: false,
         demo: false,
     },
-    {
-        name: "Demo Wallet",
-        tone: "bg-secondary text-muted-foreground ring-1 ring-border",
-        recommended: false,
-        demo: true,
-    },
 ];
 
 function detectWallet(name: string): boolean {
@@ -81,6 +75,7 @@ export const ConnectModal = ({
         connected,
         disconnect,
         walletName,
+        setNetwork,
     } = useWallet();
     const navigate = useNavigate();
 
@@ -137,20 +132,18 @@ export const ConnectModal = ({
         }
     }, [connected, step, chosenWallet]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleConnect = (name: string) => {
+    const handleConnect = async (name: string) => {
         setChosenWallet(name);
         setStep("connecting");
         setError(null);
         try {
-            connect(name); // sync for Demo Wallet; triggers select+pendingConnect for real wallets
-            if (name === "Demo Wallet") {
-                if (chosenRole) setRole(chosenRole);
-                setStep("success");
-                toast.success("Connected with Demo Wallet", {
-                    description: "Deterministic demo session · Devnet",
-                });
-            }
-            // Real wallets: the useEffect above transitions to "success" once connected === true
+            setNetwork("devnet");
+            await connect(name);
+            if (chosenRole) setRole(chosenRole);
+            setStep("success");
+            toast.success(`Connected with ${name}`, {
+                description: `${chosenRole === "trader" ? "Trader" : "Investor"} mode · Devnet`,
+            });
         } catch (e) {
             setError(e instanceof Error ? e.message : "Connection failed");
             setStep("error");
@@ -239,13 +232,13 @@ export const ConnectModal = ({
                             <motion.div key="wallet" {...fade}>
                                 <DialogHeader>
                                     <DialogTitle className="font-display text-2xl">
-                                        Start a wallet session
+                                        Connect on devnet
                                     </DialogTitle>
                                     <DialogDescription className="flex items-center gap-2 flex-wrap">
                                         Continuing as <Pill>{chosenRole}</Pill>{" "}
                                         on <Pill icon={Globe}>devnet</Pill>.
-                                        Use your real Phantom or Solflare wallet,
-                                        or try the demo session.
+                                        Your wallet signs real Arcadia devnet
+                                        transactions.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-2 mt-4">
@@ -272,21 +265,14 @@ export const ConnectModal = ({
                                                                 Recommended
                                                             </span>
                                                         )}
-                                                        {w.demo && (
-                                                            <span className="text-xs uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                                                                Demo
-                                                            </span>
-                                                        )}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                                                         <span
                                                             className={`w-1.5 h-1.5 rounded-full ${detected ? "bg-success" : "bg-muted-foreground/40"}`}
                                                         />
-                                                        {w.demo
-                                                            ? "Always available · no extension needed"
-                                                            : detected
-                                                              ? "Extension detected"
-                                                              : "Not installed — get it at " + (w.name === "Phantom" ? "phantom.app" : "solflare.com")}
+                                                        {detected
+                                                            ? "Extension detected"
+                                                            : "Not installed — get it at " + (w.name === "Phantom" ? "phantom.app" : "solflare.com")}
                                                     </div>
                                                 </div>
                                                 <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-[color,transform]" />
@@ -302,9 +288,10 @@ export const ConnectModal = ({
                                     </SecondaryButton>
                                 </div>
                                 <InfoNote>
-                                    Arcadia never custodies funds. Phantom and
-                                    Solflare connect directly to your browser
-                                    extension — no keys are shared with this app.
+                                    Arcadia never custodies funds. Devnet vault
+                                    actions are signed by your wallet; Jupiter
+                                    exposure previews are simulated with
+                                    Surfpool where shown.
                                 </InfoNote>
                             </motion.div>
                         )}
@@ -325,9 +312,8 @@ export const ConnectModal = ({
                                     Connecting to {chosenWallet}
                                 </DialogTitle>
                                 <DialogDescription className="mt-2">
-                                    {chosenWallet === "Demo Wallet"
-                                        ? "Creating a deterministic demo session…"
-                                        : `Approve the connection request in your ${chosenWallet} extension.`}
+                                    Approve the request in {chosenWallet} to
+                                    continue on Arcadia devnet.
                                 </DialogDescription>
                                 <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                                     <Globe className="w-3 h-3" /> devnet ·{" "}
@@ -396,10 +382,8 @@ export const ConnectModal = ({
                                         You're signed in
                                         {walletName
                                             ? ` with ${walletName}`
-                                            : ""}
-                                        {walletName === "Demo Wallet"
-                                            ? " using a deterministic demo session."
-                                            : " · live wallet on devnet."}
+                                            : ""}{" "}
+                                        on Arcadia devnet.
                                     </DialogDescription>
                                 </div>
 
@@ -414,7 +398,7 @@ export const ConnectModal = ({
                                                 <Copy className="w-3.5 h-3.5" />
                                             </button>
                                             <a
-                                                href={`https://solscan.io/account/${address}`}
+                                                href={`https://solscan.io/account/${address}?cluster=devnet`}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="text-muted-foreground hover:text-foreground p-1 -m-1"

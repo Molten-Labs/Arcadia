@@ -18,6 +18,8 @@ describe("data mode", () => {
   it("defaults to mock mode when no API URL is configured", () => {
     vi.stubEnv("VITE_KILN_API_URL", "");
     vi.stubEnv("VITE_KILN_API_BASE_URL", "");
+    vi.stubEnv("VITE_ARCADIA_EXECUTION_ENV", "");
+    vi.stubEnv("VITE_SOLANA_CLUSTER", "");
 
     expect(getDefaultDataMode()).toBe("mock");
   });
