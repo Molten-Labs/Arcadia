@@ -6,7 +6,7 @@ import { colors, radius, spacing } from '../../src/lib/theme';
 import { useWallet } from '../../src/lib/wallet';
 import { useVaults } from '../../src/hooks/useVaults';
 import { useArcadiaTransactions } from '../../src/hooks/useTransactions';
-import { TxModal, TxState } from '../../src/components/TxModal';
+import { TxModal, TxState, txFailureState } from '../../src/components/TxModal';
 
 export default function CreateVaultScreen() {
   const router = useRouter();
@@ -58,7 +58,7 @@ export default function CreateVaultScreen() {
         router.replace('/(tabs)/manager');
       }, 450);
     } catch (err: any) {
-      setTxState({ type: 'error', message: err?.message ?? 'Create vault failed' });
+      setTxState(txFailureState(err, 'Create vault failed'));
     }
   }
 
@@ -143,5 +143,5 @@ const styles = StyleSheet.create({
   checkLine: { color: colors.textMuted, fontSize: 12, lineHeight: 18 },
   submit: { borderRadius: radius.full, overflow: 'hidden', marginTop: 4 },
   submitGrad: { paddingVertical: 16, alignItems: 'center' },
-  submitText: { color: colors.bg, fontWeight: '800', fontSize: 16 },
+  submitText: { color: colors.white, fontWeight: '800', fontSize: 16 },
 });

@@ -6,6 +6,12 @@
       "sourceType": "github",
       "computedHash": "7859139478a5276c63a6114f0c3f9899ca4a30b5e4239825d16b92e8744e9e07"
     },
+    "mobile-app-ui-design": {
+      "source": "ceorkm/mobile-app-ui-design",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "fbeba4ea8cc5063c9280a0f29af46f05ff66326d49ff7e59b61ee021b4d424c8"
+    },
     "solana-dev": {
       "source": "solana-foundation/solana-dev-skill",
       "sourceType": "github",

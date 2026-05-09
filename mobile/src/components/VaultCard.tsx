@@ -26,7 +26,7 @@ export function VaultCard({ vault, onPress, sparkData }: Props) {
     >
       {vault.status === 'active' && (
         <LinearGradient
-          colors={['rgba(163,230,53,0.06)', 'transparent']}
+          colors={['rgba(0,181,164,0.08)', 'transparent']}
           style={StyleSheet.absoluteFillObject}
         />
       )}

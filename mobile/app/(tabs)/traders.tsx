@@ -35,7 +35,7 @@ function TraderCard({ manager, rank, onPress }: {
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]} onPress={onPress}>
       {isTop && (
         <LinearGradient
-          colors={['rgba(163,230,53,0.07)', 'transparent']}
+          colors={['rgba(0,181,164,0.10)', 'transparent']}
           style={StyleSheet.absoluteFillObject}
         />
       )}
@@ -46,7 +46,7 @@ function TraderCard({ manager, rank, onPress }: {
           colors={isTop ? [colors.signal + 'CC', colors.signalDeep] : [colors.surfaceHigh, colors.surfaceElevated]}
           style={styles.avatar}
         >
-          <Text style={[styles.avatarText, { color: isTop ? colors.bg : colors.textMuted }]}>
+          <Text style={[styles.avatarText, { color: isTop ? colors.white : colors.textMuted }]}>
             {initial}
           </Text>
         </LinearGradient>

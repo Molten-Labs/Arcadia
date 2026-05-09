@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { WalletProvider } from '../src/lib/wallet';
 import { colors } from '../src/lib/theme';
+import { GuidedDemoOverlay } from '../src/components/GuidedDemoOverlay';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -26,7 +27,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <WalletProvider>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -91,6 +92,7 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
+            <GuidedDemoOverlay />
           </WalletProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

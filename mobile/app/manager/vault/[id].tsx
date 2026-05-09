@@ -8,7 +8,7 @@ import { useVault } from '../../../src/hooks/useVaults';
 import { useWallet } from '../../../src/lib/wallet';
 import { useArcadiaTransactions } from '../../../src/hooks/useTransactions';
 import { parseUsdcToUnits } from '../../../src/lib/amounts';
-import { TxModal, TxState } from '../../../src/components/TxModal';
+import { TxModal, TxState, txFailureState } from '../../../src/components/TxModal';
 import { StatusBadge } from '../../../src/components/StatusBadge';
 import { HealthMeter } from '../../../src/components/HealthMeter';
 import { formatBps, formatUSD } from '../../../src/lib/format';
@@ -30,6 +30,10 @@ export default function ManagerVaultScreen() {
   const canGraduate = vault.status === 'paper' &&
     vault.paperTradeCount >= vault.minQualifyingTrades &&
     vault.currentNav >= vault.highWaterMark;
+  const paperProgress = Math.min(1, vault.paperTradeCount / Math.max(1, vault.minQualifyingTrades));
+  const maxTradeLabel = vault.juniorHealth < 0.45 ? 'Locked'
+    : vault.juniorHealth < 0.7 ? '5% TVL'
+    : '15% TVL';
 
   const getConfigKey = () => {
     try { return new PublicKey(vault.configPubkey); }
@@ -56,7 +60,7 @@ export default function ManagerVaultScreen() {
       setTxState({ type: 'confirming' });
       setTimeout(() => setTxState({ type: 'success', sig: result.sig, demo: result.demo }), 350);
     } catch (err: any) {
-      setTxState({ type: 'error', message: err?.message ?? `${label} failed` });
+      setTxState(txFailureState(err, `${label} failed`));
     }
   }
 
@@ -68,6 +72,10 @@ export default function ManagerVaultScreen() {
           <StatusBadge status={vault.status} />
           <Text style={styles.title}>{vault.name}</Text>
           <Text style={styles.copy}>Trader-only operations. Investors cannot access these controls.</Text>
+          <View style={styles.heroStrip}>
+            <Text style={styles.heroStripLabel}>MWA flow</Text>
+            <Text style={styles.heroStripValue}>Build to wallet approval to devnet confirm</Text>
+          </View>
         </View>
 
         <View style={styles.grid}>
@@ -79,6 +87,18 @@ export default function ManagerVaultScreen() {
         <View style={styles.card}>
           <Text style={styles.section}>Junior buffer</Text>
           <HealthMeter health={vault.juniorHealth} />
+          <View style={styles.limitRow}>
+            <Text style={styles.hint}>Guard limit tightens as junior health drops.</Text>
+            <Text style={styles.limitValue}>{maxTradeLabel}</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.section}>Proof checklist</Text>
+          <CheckRow label="Junior capital posted" done={vault.juniorCapital > 0} />
+          <CheckRow label={`Paper trades ${vault.paperTradeCount}/${vault.minQualifyingTrades}`} done={paperProgress >= 1} />
+          <CheckRow label="Graduation unlocked" done={canGraduate || vault.status !== 'paper'} />
+          <CheckRow label="Guarded trading enabled" done={vault.tradingEnabled} />
         </View>
 
         <View style={styles.card}>
@@ -124,6 +144,17 @@ function Metric({ label, value }: { label: string; value: string }) {
   return <View style={styles.metric}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text></View>;
 }
 
+function CheckRow({ label, done }: { label: string; done: boolean }) {
+  return (
+    <View style={styles.checkRow}>
+      <View style={[styles.checkDot, done && styles.checkDotDone]}>
+        <Text style={[styles.checkDotText, done && styles.checkDotTextDone]}>{done ? 'OK' : '--'}</Text>
+      </View>
+      <Text style={styles.checkLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function Action({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
   return (
     <Pressable style={[styles.actionBtn, disabled && { opacity: 0.4 }]} onPress={onPress} disabled={disabled}>
@@ -141,6 +172,9 @@ const styles = StyleSheet.create({
   hero: { backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: 8 },
   title: { color: colors.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.4 },
   copy: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+  heroStrip: { backgroundColor: colors.signalDim, borderRadius: radius.lg, padding: 12, gap: 4, marginTop: 2 },
+  heroStripLabel: { color: colors.signalDeep, fontSize: 9, fontWeight: '800', fontFamily: 'Courier', letterSpacing: 0.8, textTransform: 'uppercase' },
+  heroStripValue: { color: colors.text, fontSize: 12, fontFamily: 'Courier', fontWeight: '700' },
   grid: { flexDirection: 'row', gap: 10 },
   metric: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 12 },
   metricLabel: { color: colors.textQuiet, fontSize: 9, fontWeight: '700', fontFamily: 'Courier', letterSpacing: 0.7 },
@@ -148,6 +182,14 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: 12 },
   section: { color: colors.textMuted, fontSize: 10, fontFamily: 'Courier', fontWeight: '700', letterSpacing: 1 },
   input: { height: 54, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.md, color: colors.text, fontSize: 20, fontFamily: 'Courier', fontWeight: '700' },
+  limitRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  limitValue: { color: colors.signalDeep, fontSize: 14, fontFamily: 'Courier', fontWeight: '800' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkDot: { width: 30, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border },
+  checkDotDone: { backgroundColor: colors.signal, borderColor: colors.signal },
+  checkDotText: { color: colors.textQuiet, fontSize: 8, fontWeight: '800', fontFamily: 'Courier' },
+  checkDotTextDone: { color: colors.white },
+  checkLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
   actionGrid: { gap: 8 },
   actionBtn: { borderRadius: radius.full, overflow: 'hidden' },
   actionGrad: { paddingVertical: 13, alignItems: 'center' },

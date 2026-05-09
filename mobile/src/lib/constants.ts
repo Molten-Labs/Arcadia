@@ -42,10 +42,10 @@ export const PYTH_USDC_USD_ACCOUNT = env.EXPO_PUBLIC_PYTH_USDC_USD_ACCOUNT
 export const JUPITER_API_URL = env.EXPO_PUBLIC_JUPITER_API_URL ?? 'https://quote-api.jup.ag/v6';
 
 export const APP_IDENTITY = {
-  name: 'Arcadia Protocol',
-  uri: 'https://arcadia.protocol',
-  // Must be an absolute URL — MWA wallets fetch this to show the app icon in their approval UI
-  icon: 'https://arcadia.protocol/icon.png',
+  name: 'Arcadia',
+  uri: 'https://kiln-capital-forge.lovable.app',
+  // Must be an absolute URL; MWA wallets fetch this to show the app icon in their approval UI.
+  icon: 'https://kiln-capital-forge.lovable.app/favicon.ico',
 } as const;
 
 export const EXPLORER_BASE = 'https://explorer.solana.com';

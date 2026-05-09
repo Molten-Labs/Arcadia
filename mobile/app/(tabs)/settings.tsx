@@ -9,7 +9,8 @@ import { useWallet, Role } from '../../src/lib/wallet';
 import { useBalance } from '../../src/hooks/useBalance';
 import { useArcadiaTransactions } from '../../src/hooks/useTransactions';
 import { truncateAddress, formatUSD } from '../../src/lib/format';
-import { TxModal, TxState } from '../../src/components/TxModal';
+import { TxModal, TxState, txFailureState } from '../../src/components/TxModal';
+import { startGuidedMobileDemo } from '../../src/components/GuidedDemoOverlay';
 import {
   JUPITER_API_URL,
   PROGRAM_ID,
@@ -76,8 +77,14 @@ export default function SettingsScreen() {
       const result = await initManager();
       setTxState({ type: 'success', sig: result.sig, demo: result.demo });
     } catch (err: any) {
-      setTxState({ type: 'error', message: err?.message ?? 'Failed' });
+      setTxState(txFailureState(err, 'Failed'));
     }
+  }
+
+  function handleDemo() {
+    setRole('trader');
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    startGuidedMobileDemo();
   }
 
   return (
@@ -95,8 +102,8 @@ export default function SettingsScreen() {
         <View style={styles.walletCard}>
           <LinearGradient
             colors={connected
-              ? ['rgba(163,230,53,0.08)', 'transparent']
-              : ['rgba(39,39,42,0.4)', 'transparent']}
+              ? ['rgba(0,181,164,0.12)', 'transparent']
+              : ['rgba(0,43,61,0.05)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
           />
 
@@ -108,7 +115,7 @@ export default function SettingsScreen() {
                 : [colors.surfaceHigh, colors.surfaceElevated]}
               style={styles.walletAvatar}
             >
-              <Text style={[styles.walletAvatarText, { color: connected ? colors.bg : colors.textQuiet }]}>
+              <Text style={[styles.walletAvatarText, { color: connected ? colors.white : colors.textQuiet }]}>
                 {connected && publicKey ? publicKey.slice(0, 2).toUpperCase() : '—'}
               </Text>
             </LinearGradient>
@@ -157,6 +164,22 @@ export default function SettingsScreen() {
               </View>
             </View>
           )}
+        </View>
+
+        {/* Guided demo */}
+        <View style={styles.demoCard}>
+          <LinearGradient
+            colors={['rgba(0,181,164,0.14)', 'rgba(255,255,255,0)']}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <Text style={styles.sectionLabel}>MOBILE DEMO</Text>
+          <Text style={styles.demoTitle}>Run the Frontier proof flow</Text>
+          <Text style={styles.demoSub}>
+            Trader funding, paper mode, graduation, investor deposit, guard approval, and junior-first loss in one guided loop.
+          </Text>
+          <Pressable style={styles.demoButton} onPress={handleDemo}>
+            <Text style={styles.demoButtonText}>Start guided lifecycle</Text>
+          </Pressable>
         </View>
 
         {/* Role selector */}
@@ -218,6 +241,11 @@ export default function SettingsScreen() {
             <SettingRow
               label="MWA available"
               right={<Text style={styles.monoText}>{isMwaAvailable ? 'Android yes' : 'Read-only platform'}</Text>}
+            />
+            <View style={styles.divider} />
+            <SettingRow
+              label="Wallet target"
+              right={<Text style={styles.monoText}>Solflare / Phantom via MWA</Text>}
             />
             <View style={styles.divider} />
             <SettingRow
@@ -364,6 +392,27 @@ const styles = StyleSheet.create({
   tokenCellDivider: { width: 1, backgroundColor: colors.border },
   tokenAmt: { fontSize: 18, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
   tokenTicker: { fontSize: 9, color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Courier' },
+
+  demoCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: 10,
+    overflow: 'hidden',
+  },
+  demoTitle: { color: colors.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  demoSub: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  demoButton: {
+    marginTop: 4,
+    minHeight: 48,
+    borderRadius: radius.full,
+    backgroundColor: colors.signal,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoButtonText: { color: colors.white, fontSize: 14, fontWeight: '800' },
 
   roleCard: {
     flexDirection: 'row',

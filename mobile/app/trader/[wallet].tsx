@@ -46,7 +46,7 @@ export default function TraderProfileScreen() {
       {/* Profile hero */}
       <View style={styles.profileCard}>
         <LinearGradient
-          colors={['rgba(163,230,53,0.08)', 'transparent']}
+          colors={['rgba(0,181,164,0.10)', 'transparent']}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.profileRow}>
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '700', color: colors.bg, fontFamily: 'Courier' },
+  avatarText: { fontSize: 18, fontWeight: '700', color: colors.white, fontFamily: 'Courier' },
   profileInfo: { flex: 1, gap: 3 },
   profileAddr: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: 'Courier' },
   profileSince: { fontSize: 11, color: colors.textQuiet, fontFamily: 'Courier' },

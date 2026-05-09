@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   connectWrap: { paddingHorizontal: spacing.md },
   connectBtn: { borderRadius: radius.full, overflow: 'hidden' },
   connectBtnGrad: { paddingVertical: 16, alignItems: 'center' },
-  connectBtnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
+  connectBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
 
   balanceHero: {
     marginHorizontal: spacing.md,

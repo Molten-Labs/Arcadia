@@ -7,7 +7,7 @@ import { useWallet } from '../src/lib/wallet';
 import { useVaults } from '../src/hooks/useVaults';
 import { useArcadiaTransactions } from '../src/hooks/useTransactions';
 import { parseUsdcToUnits } from '../src/lib/amounts';
-import { TxModal, TxState } from '../src/components/TxModal';
+import { TxModal, TxState, txFailureState } from '../src/components/TxModal';
 import { formatUSD } from '../src/lib/format';
 
 export default function TradeScreen() {
@@ -54,7 +54,7 @@ export default function TradeScreen() {
       setTxState({ type: 'confirming' });
       setTimeout(() => setTxState({ type: 'success', sig: result.sig, demo: result.demo }), 350);
     } catch (err: any) {
-      setTxState({ type: 'error', message: err?.message ?? 'Swap failed' });
+      setTxState(txFailureState(err, 'Swap failed'));
     }
   }
 
@@ -125,5 +125,5 @@ const styles = StyleSheet.create({
   input: { height: 54, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.md, color: colors.text, fontSize: 20, fontFamily: 'Courier', fontWeight: '700' },
   submit: { borderRadius: radius.full, overflow: 'hidden' },
   submitGrad: { paddingVertical: 16, alignItems: 'center' },
-  submitText: { color: colors.bg, fontWeight: '800', fontSize: 15 },
+  submitText: { color: colors.white, fontWeight: '800', fontSize: 15 },
 });

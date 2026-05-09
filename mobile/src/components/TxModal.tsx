@@ -9,6 +9,7 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing } from '../lib/theme';
 import { CLUSTER, EXPLORER_BASE } from '../lib/constants';
 
@@ -18,6 +19,8 @@ export type TxState =
   | { type: 'signing' }
   | { type: 'confirming' }
   | { type: 'success'; sig: string; demo: boolean }
+  | { type: 'timeout'; message?: string }
+  | { type: 'offline'; message?: string }
   | { type: 'error'; message: string };
 
 interface Props {
@@ -33,14 +36,21 @@ function stepIndex(state: TxState): number {
   return -1;
 }
 
-const STEPS = ['Build TX', 'Sign', 'Confirm'];
+const STEPS = ['Build TX', 'Wallet', 'Confirm'];
+
+export function txFailureState(err: unknown, fallback = 'Transaction failed'): TxState {
+  const message = err instanceof Error ? err.message : typeof err === 'string' ? err : fallback;
+  if (/timed?\s*out|timeout/i.test(message)) return { type: 'timeout', message };
+  if (/offline|network|internet|fetch|connection/i.test(message)) return { type: 'offline', message };
+  return { type: 'error', message };
+}
 
 function StepDot({ active, done, label }: { active: boolean; done: boolean; label: string }) {
   return (
     <View style={styles.stepCol}>
       <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>
         {done && <Text style={styles.dotCheck}>✓</Text>}
-        {active && <ActivityIndicator size="small" color={colors.bg} />}
+        {active && <ActivityIndicator size="small" color={colors.white} />}
       </View>
       <Text style={[styles.stepLabel, (done || active) && { color: colors.text }]}>{label}</Text>
     </View>
@@ -55,7 +65,16 @@ export function TxModal({ state, onClose, label }: Props) {
   const visible = state.type !== 'idle';
   const idx = stepIndex(state);
   const isSuccess = state.type === 'success';
-  const isError = state.type === 'error';
+  const isError = state.type === 'error' || state.type === 'timeout' || state.type === 'offline';
+  const failureMessage = isError ? state.message ?? 'Transaction failed' : '';
+  const failureTitle = state.type === 'timeout' ? 'Wallet Timeout'
+    : state.type === 'offline' ? 'Network Offline'
+    : 'Transaction Failed';
+
+  React.useEffect(() => {
+    if (isSuccess) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (isError) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+  }, [isError, isSuccess]);
 
   return (
     <Modal
@@ -71,10 +90,12 @@ export function TxModal({ state, onClose, label }: Props) {
           {isError ? (
             <View style={styles.body}>
               <View style={[styles.bigIcon, { borderColor: colors.danger + '50', backgroundColor: colors.dangerDim }]}>
-                <Text style={[styles.bigIconText, { color: colors.danger }]}>✕</Text>
+                <Text style={[styles.bigIconText, { color: colors.danger }]}>
+                  {state.type === 'offline' ? '!' : 'x'}
+                </Text>
               </View>
-              <Text style={styles.title}>Transaction Failed</Text>
-              <Text style={styles.hint}>{(state as any).message}</Text>
+              <Text style={styles.title}>{failureTitle}</Text>
+              <Text style={styles.hint}>{failureMessage}</Text>
               <Pressable style={[styles.btn, styles.btnSecondary]} onPress={onClose}>
                 <Text style={styles.btnSecondaryText}>Dismiss</Text>
               </Pressable>
@@ -90,12 +111,12 @@ export function TxModal({ state, onClose, label }: Props) {
 
               {(state as any).demo ? (
                 <View style={styles.demoBadge}>
-                  <Text style={styles.demoBadgeText}>DEMO MODE — simulated only</Text>
+                  <Text style={styles.demoBadgeText}>DEMO MODE - simulated only</Text>
                 </View>
               ) : (
                 <Pressable style={styles.explorerRow} onPress={() => openExplorer((state as any).sig)}>
                   <Text style={styles.sigText} numberOfLines={1}>
-                    {(state as any).sig.slice(0, 28)}…
+                    {(state as any).sig.slice(0, 28)}...
                   </Text>
                   <Text style={styles.explorerLink}>View on Explorer ↗</Text>
                 </Pressable>
@@ -107,7 +128,7 @@ export function TxModal({ state, onClose, label }: Props) {
                   style={styles.btnGrad}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 >
-                  <Text style={styles.btnText}>Done</Text>
+                <Text style={styles.btnText}>Done</Text>
                 </LinearGradient>
               </Pressable>
             </View>
@@ -126,9 +147,9 @@ export function TxModal({ state, onClose, label }: Props) {
                 ))}
               </View>
               <Text style={styles.hint}>
-                {idx === 1 ? 'Approve in your wallet…'
-                  : idx === 2 ? 'Waiting for confirmation…'
-                  : 'Preparing transaction…'}
+                {idx === 1 ? 'Approve in your wallet...'
+                  : idx === 2 ? 'Waiting for devnet confirmation...'
+                  : 'Preparing transaction...'}
               </Text>
             </View>
           )}
@@ -141,13 +162,13 @@ export function TxModal({ state, onClose, label }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(0,43,61,0.28)',
     justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderRightWidth: 1,
@@ -172,7 +193,7 @@ const styles = StyleSheet.create({
   bigIcon: {
     width: 80,
     height: 80,
-    borderRadius: 28,
+    borderRadius: 18,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -212,7 +233,7 @@ const styles = StyleSheet.create({
   },
   dotActive: { borderColor: colors.signal, backgroundColor: colors.signal },
   dotDone: { borderColor: colors.signal, backgroundColor: colors.signal },
-  dotCheck: { fontSize: 18, fontWeight: '700', color: colors.bg },
+  dotCheck: { fontSize: 18, fontWeight: '700', color: colors.white },
   stepLabel: {
     fontSize: 9,
     fontWeight: '600',
@@ -253,7 +274,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   btnGrad: { paddingVertical: 16, alignItems: 'center' },
-  btnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
+  btnText: { fontSize: 16, fontWeight: '700', color: colors.white },
   btnSecondary: {
     backgroundColor: colors.surfaceElevated,
     borderWidth: 1,

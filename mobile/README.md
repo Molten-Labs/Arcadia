@@ -26,6 +26,20 @@ React Native / Expo mobile app for the Arcadia Protocol vault platform.
 | Trade Terminal | `/trade` | Guarded USDC ↔ WSOL operation flow |
 | Trader Profile | `/trader/[wallet]` | Manager stats and their vaults |
 
+## Guided Demo Flow
+
+The app now includes a guided mobile lifecycle demo from Settings and the Manager tab. It walks through:
+
+- Trader demo wallet connection
+- Junior first-loss deposit
+- Paper-mode proof completion
+- Vault graduation
+- Investor senior deposit
+- Guarded trade proof
+- Junior-first loss while senior capital stays protected
+
+This is intended for hackathon recording and product review. For real signing, use an Android custom dev build with Solflare, Phantom, or Mock MWA Wallet installed.
+
 ## Quick Start
 
 ```bash
@@ -55,7 +69,7 @@ Use your machine's local IP (not `localhost`) so the device can reach it.
 
 ## Production Wallet (Mobile Wallet Adapter)
 
-Android uses Mobile Wallet Adapter authorize/reauthorize/deauthorize state and submits transactions with `signAndSendTransactions`. iOS and Expo Go stay read-only/mock-compatible for v1 and show an Android signing requirement before real transaction submission.
+Android uses Mobile Wallet Adapter authorize/reauthorize/deauthorize state and submits transactions with `signAndSendTransactions`. Transaction UI covers build, wallet approval, confirmation, success, failure, timeout, and offline-style network failures. iOS and Expo Go stay read-only/mock-compatible for v1 and show an Android signing requirement before real transaction submission.
 
 ## Environment Variables
 

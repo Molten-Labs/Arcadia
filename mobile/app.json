@@ -5,10 +5,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "arcadia",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#050C0F",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F8FBFA",
     "splash": {
-      "backgroundColor": "#050C0F",
+      "backgroundColor": "#F8FBFA",
       "resizeMode": "contain"
     },
     "ios": {
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#050C0F"
+        "backgroundColor": "#F8FBFA"
       },
       "package": "com.arcadia.mobile"
     },

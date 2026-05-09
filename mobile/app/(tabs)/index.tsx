@@ -61,7 +61,7 @@ export default function VaultsScreen() {
       {/* Balance hero card */}
       <View style={styles.heroCard}>
         <LinearGradient
-          colors={['rgba(163,230,53,0.10)', 'rgba(163,230,53,0.02)', 'transparent']}
+          colors={['rgba(0,181,164,0.14)', 'rgba(0,181,164,0.04)', 'transparent']}
           style={StyleSheet.absoluteFillObject}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         />

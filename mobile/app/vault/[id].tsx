@@ -26,7 +26,7 @@ import { HealthMeter } from '../../src/components/HealthMeter';
 import { CapitalStack } from '../../src/components/CapitalStack';
 import { StatCard } from '../../src/components/StatCard';
 import { EmptyState } from '../../src/components/EmptyState';
-import { TxModal, TxState } from '../../src/components/TxModal';
+import { TxModal, TxState, txFailureState } from '../../src/components/TxModal';
 import { formatUSD, formatBps, formatNav, formatAge, truncateAddress } from '../../src/lib/format';
 import { parseUsdcToUnits } from '../../src/lib/amounts';
 
@@ -113,7 +113,7 @@ export default function VaultDetailScreen() {
       setAmount('');
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      setTxState({ type: 'error', message: err?.message ?? 'Unknown error' });
+      setTxState(txFailureState(err, 'Unknown error'));
     }
   }
 
@@ -148,7 +148,7 @@ export default function VaultDetailScreen() {
               setAmount('');
               if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (err: any) {
-              setTxState({ type: 'error', message: err?.message ?? 'Unknown error' });
+              setTxState(txFailureState(err, 'Unknown error'));
             }
           }
         }
@@ -177,7 +177,7 @@ export default function VaultDetailScreen() {
         {/* Hero card */}
         <View style={styles.heroCard}>
           <LinearGradient
-            colors={['rgba(163,230,53,0.08)', 'transparent']}
+            colors={['rgba(0,181,164,0.10)', 'transparent']}
             style={StyleSheet.absoluteFillObject}
           />
           <View style={styles.heroTop}>
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   gateText: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
   gateBtn: { borderRadius: radius.full, overflow: 'hidden', width: '100%' },
   gateBtnGrad: { paddingVertical: 14, alignItems: 'center' },
-  gateBtnText: { fontSize: 15, fontWeight: '700', color: colors.bg },
+  gateBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
 
   balanceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   balanceLabelSm: { fontSize: 10, fontWeight: '600', color: colors.textQuiet, textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Courier' },
@@ -534,5 +534,5 @@ const styles = StyleSheet.create({
   exitNoteText: { fontSize: 12, color: colors.textMuted, fontFamily: 'Courier' },
   submitBtn: { borderRadius: radius.full, overflow: 'hidden' },
   submitBtnGrad: { paddingVertical: 16, alignItems: 'center', borderRadius: radius.full },
-  submitBtnText: { fontSize: 16, fontWeight: '700', color: colors.bg },
+  submitBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
 });

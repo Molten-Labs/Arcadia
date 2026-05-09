@@ -51,7 +51,7 @@ export function WalletButton({ onPress }: Props) {
         end={{ x: 1, y: 0 }}
       >
         {connecting
-          ? <ActivityIndicator size="small" color={colors.bg} />
+          ? <ActivityIndicator size="small" color={colors.white} />
           : <Text style={styles.connectText}>Connect</Text>
         }
       </LinearGradient>
@@ -96,6 +96,6 @@ const styles = StyleSheet.create({
   connectText: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.bg,
+    color: colors.white,
   },
 });

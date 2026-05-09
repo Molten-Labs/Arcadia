@@ -1,19 +1,19 @@
 export const colors = {
-  bg: '#0C0C0E',
-  surface: '#18181B',
-  surfaceElevated: '#1C1C1F',
-  surfaceHigh: '#27272A',
-  border: '#27272A',
-  borderStrong: '#3F3F46',
+  bg: '#F8FBFA',
+  surface: '#FFFFFF',
+  surfaceElevated: '#EEF6F5',
+  surfaceHigh: '#DCEBE9',
+  border: '#D7E7E5',
+  borderStrong: '#A8C7C2',
 
-  text: '#FFFFFF',
-  textMuted: '#A1A1AA',
-  textQuiet: '#52525B',
+  text: '#002B3D',
+  textMuted: '#4A7080',
+  textQuiet: '#7FA0A8',
 
-  signal: '#A3E635',
-  signalDeep: '#84CC16',
-  signalDim: 'rgba(163,230,53,0.10)',
-  signalGlow: 'rgba(163,230,53,0.22)',
+  signal: '#007A6E',
+  signalDeep: '#005A52',
+  signalDim: 'rgba(0,122,110,0.10)',
+  signalGlow: 'rgba(0,181,164,0.22)',
 
   danger: '#EF4444',
   dangerDim: 'rgba(239,68,68,0.12)',
@@ -21,13 +21,19 @@ export const colors = {
   warning: '#F59E0B',
   warningDim: 'rgba(245,158,11,0.12)',
 
-  success: '#A3E635',
+  success: '#007A6E',
 
-  statusPaper: '#71717A',
-  statusActive: '#A3E635',
+  statusPaper: '#6B8790',
+  statusActive: '#007A6E',
   statusCooldown: '#F59E0B',
   statusFrozen: '#EF4444',
-  statusClosed: '#3F3F46',
+  statusClosed: '#8AABB5',
+
+  ink: '#07191C',
+  inkSurface: '#0E2328',
+  inkSurfaceElevated: '#143137',
+  inkBorder: '#244A51',
+  white: '#FFFFFF',
 };
 
 export const spacing = {
@@ -41,10 +47,10 @@ export const spacing = {
 
 export const radius = {
   sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  card: 24,
+  md: 10,
+  lg: 12,
+  xl: 16,
+  card: 14,
   pill: 9999,
   full: 9999,
 };
