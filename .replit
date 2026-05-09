@@ -18,6 +18,10 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Mobile Web"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -30,6 +34,18 @@ task = "shell.exec"
 args = "bash dev.sh"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Mobile Web"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash mobile-web.sh"
+waitForPort = 8000
+
 [[ports]]
 localPort = 5000
 externalPort = 80
@@ -37,6 +53,10 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3000
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 8081
