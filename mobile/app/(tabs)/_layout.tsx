@@ -12,7 +12,7 @@ function TabIcon({ glyph, focused }: { glyph: string; focused: boolean }) {
 
 const styles = StyleSheet.create({
   iconWrap: {
-    width: 36,
+    width: 38,
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
@@ -21,10 +21,10 @@ const styles = StyleSheet.create({
   iconWrapActive: {
     backgroundColor: colors.signalDim,
     borderWidth: 1,
-    borderColor: colors.signal + '22',
+    borderColor: colors.signal + '30',
   },
   icon: {
-    fontSize: 18,
+    fontSize: 17,
     color: colors.textQuiet,
   },
   iconActive: {
@@ -44,9 +44,9 @@ export default function TabLayout() {
           height: 78,
           paddingBottom: 16,
           paddingTop: 8,
-          shadowColor: colors.ink,
-          shadowOpacity: 0.08,
-          shadowRadius: 18,
+          shadowColor: '#000',
+          shadowOpacity: 0.4,
+          shadowRadius: 24,
           shadowOffset: { width: 0, height: -8 },
         },
         tabBarActiveTintColor: colors.signal,

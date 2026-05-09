@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
@@ -20,26 +21,49 @@ import { StatusBadge } from '../../src/components/StatusBadge';
 import { HealthMeter } from '../../src/components/HealthMeter';
 import { EmptyState } from '../../src/components/EmptyState';
 import { WalletButton } from '../../src/components/WalletButton';
+import { FadeSlideIn } from '../../src/components/AnimatedEntry';
 import { formatUSD, formatPnL, pnlColor, formatAge } from '../../src/lib/format';
+
+function AnimatedBalance({ value }: { value: number }) {
+  const animVal = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = React.useState('$0.00');
+
+  useEffect(() => {
+    animVal.addListener(({ value: v }) => setDisplay(formatUSD(v)));
+    Animated.timing(animVal, { toValue: value, duration: 1100, delay: 300, useNativeDriver: false }).start();
+    return () => animVal.removeAllListeners();
+  }, [value]);
+
+  return <Text style={styles.balanceBig}>{display}</Text>;
+}
 
 function ActivityRow({
   label, sub, value, positive, onPress,
 }: { label: string; sub: string; value: string; positive: boolean; onPress: () => void }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
   return (
-    <Pressable style={({ pressed }) => [styles.actRow, pressed && { opacity: 0.7 }]} onPress={onPress}>
-      <View style={[styles.actDot, { backgroundColor: positive ? colors.signalDim : colors.dangerDim }]}>
-        <Text style={{ fontSize: 14, color: positive ? colors.signal : colors.danger }}>
-          {positive ? '↑' : '↓'}
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        style={styles.actRow}
+        onPress={onPress}
+        onPressIn={() => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true, speed: 50 }).start()}
+        onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()}
+      >
+        <View style={[styles.actDot, { backgroundColor: positive ? colors.signalDim : colors.dangerDim }]}>
+          <Text style={{ fontSize: 14, color: positive ? colors.signal : colors.danger }}>
+            {positive ? '↑' : '↓'}
+          </Text>
+        </View>
+        <View style={styles.actInfo}>
+          <Text style={styles.actLabel}>{label}</Text>
+          <Text style={styles.actSub}>{sub}</Text>
+        </View>
+        <Text style={[styles.actValue, { color: positive ? colors.signal : colors.danger }]}>
+          {value}
         </Text>
-      </View>
-      <View style={styles.actInfo}>
-        <Text style={styles.actLabel}>{label}</Text>
-        <Text style={styles.actSub}>{sub}</Text>
-      </View>
-      <Text style={[styles.actValue, { color: positive ? colors.signal : colors.danger }]}>
-        {value}
-      </Text>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -58,36 +82,38 @@ export default function PortfolioScreen() {
     ? ((totalPnL / totalDeposited) * 100).toFixed(2) : '0.00';
 
   async function handleConnect() {
-    try {
-      await connect();
-    } catch (err: any) {
+    try { await connect(); } catch (err: any) {
       Alert.alert('Wallet unavailable', err?.message ?? 'Unable to connect wallet');
     }
   }
 
   if (!connected) {
     return (
-      <View style={[styles.screen]}>
-        <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
-          <Text style={styles.pageTitle}>Portfolio</Text>
-          <WalletButton />
-        </View>
+      <View style={styles.screen}>
+        <FadeSlideIn delay={0}>
+          <View style={[styles.navbar, { paddingTop: insets.top + 8 }]}>
+            <Text style={styles.pageTitle}>Portfolio</Text>
+            <WalletButton />
+          </View>
+        </FadeSlideIn>
         <EmptyState
           icon="◈"
           title="Connect your wallet"
           subtitle="View positions, P&L, and manage your capital"
         />
-        <View style={[styles.connectWrap, { paddingBottom: insets.bottom + 20 }]}>
-          <Pressable style={styles.connectBtn} onPress={handleConnect}>
-            <LinearGradient
-              colors={[colors.signal, colors.signalDeep]}
-              style={styles.connectBtnGrad}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            >
-              <Text style={styles.connectBtnText}>Connect Wallet</Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
+        <FadeSlideIn delay={200} style={{ paddingHorizontal: spacing.md }}>
+          <View style={[styles.connectWrap, { paddingBottom: insets.bottom + 20 }]}>
+            <Pressable style={styles.connectBtn} onPress={handleConnect}>
+              <LinearGradient
+                colors={[colors.signal, colors.signalDeep]}
+                style={styles.connectBtnGrad}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              >
+                <Text style={styles.connectBtnText}>Connect Wallet</Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
+        </FadeSlideIn>
       </View>
     );
   }
@@ -101,89 +127,96 @@ export default function PortfolioScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.signal} />
         }
       >
-        {/* Nav */}
-        <View style={styles.navbar}>
-          <Text style={styles.pageTitle}>Portfolio</Text>
-          <WalletButton />
-        </View>
+        <FadeSlideIn delay={0}>
+          <View style={styles.navbar}>
+            <Text style={styles.pageTitle}>Portfolio</Text>
+            <WalletButton />
+          </View>
+        </FadeSlideIn>
 
         {isDemoWallet && (
-          <View style={[styles.demoBanner, { marginHorizontal: spacing.md }]}>
-            <Text style={styles.demoBannerText}>◐ Demo wallet — simulated data</Text>
-          </View>
+          <FadeSlideIn delay={60} style={{ marginHorizontal: spacing.md }}>
+            <View style={styles.demoBanner}>
+              <Text style={styles.demoBannerText}>◐ Demo wallet — simulated data</Text>
+            </View>
+          </FadeSlideIn>
         )}
 
-        {/* Total balance hero */}
-        <View style={styles.balanceHero}>
-          <LinearGradient
-            colors={[colors.signalDim, 'transparent']}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.balanceTop}>
-            <View>
-              <Text style={styles.balanceLabel}>Total Balance</Text>
-              <Text style={styles.balanceBig}>{formatUSD(totalCurrent)}</Text>
+        <FadeSlideIn delay={120}>
+          <View style={styles.balanceHero}>
+            <LinearGradient
+              colors={['rgba(0,200,150,0.10)', 'transparent']}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.balanceTop}>
+              <View>
+                <Text style={styles.balanceLabel}>Total Balance</Text>
+                <AnimatedBalance value={totalCurrent} />
+              </View>
+              <View style={[
+                styles.pnlPill,
+                { backgroundColor: totalPnL >= 0 ? colors.signalDim : colors.dangerDim }
+              ]}>
+                <Text style={[styles.pnlPillText, { color: totalPnL >= 0 ? colors.signal : colors.danger }]}>
+                  {totalPnL >= 0 ? '+' : ''}{pnlPct}%
+                </Text>
+              </View>
             </View>
-            <View style={[
-              styles.pnlPill,
-              { backgroundColor: totalPnL >= 0 ? colors.signalDim : colors.dangerDim }
-            ]}>
-              <Text style={[styles.pnlPillText, { color: totalPnL >= 0 ? colors.signal : colors.danger }]}>
-                {totalPnL >= 0 ? '+' : ''}{pnlPct}%
-              </Text>
-            </View>
+
+            {balance && (
+              <View style={styles.walletTokens}>
+                <View style={styles.tokenRow}>
+                  <View style={styles.tokenIcon}>
+                    <Text style={styles.tokenIconText}>◎</Text>
+                  </View>
+                  <View style={styles.tokenInfo}>
+                    <Text style={styles.tokenName}>SOL</Text>
+                    <Text style={styles.tokenSub}>Solana</Text>
+                  </View>
+                  <Text style={styles.tokenAmount}>{balance.sol.toFixed(4)}</Text>
+                </View>
+                <View style={styles.tokenDivider} />
+                <View style={styles.tokenRow}>
+                  <View style={[styles.tokenIcon, { backgroundColor: colors.surfaceHigh }]}>
+                    <Text style={styles.tokenIconText}>$</Text>
+                  </View>
+                  <View style={styles.tokenInfo}>
+                    <Text style={styles.tokenName}>USDC</Text>
+                    <Text style={styles.tokenSub}>USD Coin</Text>
+                  </View>
+                  <Text style={styles.tokenAmount}>{formatUSD(balance.usdc)}</Text>
+                </View>
+              </View>
+            )}
           </View>
+        </FadeSlideIn>
 
-          {/* Wallet balances */}
-          {balance && (
-            <View style={styles.walletTokens}>
-              <View style={styles.tokenRow}>
-                <View style={styles.tokenIcon}><Text style={styles.tokenIconText}>◎</Text></View>
-                <View style={styles.tokenInfo}>
-                  <Text style={styles.tokenName}>SOL</Text>
-                  <Text style={styles.tokenSub}>Solana</Text>
-                </View>
-                <Text style={styles.tokenAmount}>{balance.sol.toFixed(4)}</Text>
-              </View>
-              <View style={styles.tokenDivider} />
-              <View style={styles.tokenRow}>
-                <View style={[styles.tokenIcon, { backgroundColor: colors.surfaceHigh }]}>
-                  <Text style={styles.tokenIconText}>$</Text>
-                </View>
-                <View style={styles.tokenInfo}>
-                  <Text style={styles.tokenName}>USDC</Text>
-                  <Text style={styles.tokenSub}>USD Coin</Text>
-                </View>
-                <Text style={styles.tokenAmount}>{formatUSD(balance.usdc)}</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* P&L strip */}
         {(positions ?? []).length > 0 && (
-          <View style={styles.pnlStrip}>
-            <View style={styles.pnlCell}>
-              <Text style={styles.pnlLabel}>DEPOSITED</Text>
-              <Text style={styles.pnlValue}>{formatUSD(totalDeposited, true)}</Text>
+          <FadeSlideIn delay={200}>
+            <View style={styles.pnlStrip}>
+              <View style={styles.pnlCell}>
+                <Text style={styles.pnlLabel}>DEPOSITED</Text>
+                <Text style={styles.pnlValue}>{formatUSD(totalDeposited, true)}</Text>
+              </View>
+              <View style={styles.pnlDivider} />
+              <View style={styles.pnlCell}>
+                <Text style={styles.pnlLabel}>TOTAL P&L</Text>
+                <Text style={[styles.pnlValue, { color: pnlC }]}>
+                  {formatPnL(totalDeposited, totalCurrent)}
+                </Text>
+              </View>
+              <View style={styles.pnlDivider} />
+              <View style={styles.pnlCell}>
+                <Text style={styles.pnlLabel}>POSITIONS</Text>
+                <Text style={styles.pnlValue}>{(positions ?? []).length}</Text>
+              </View>
             </View>
-            <View style={styles.pnlDivider} />
-            <View style={styles.pnlCell}>
-              <Text style={styles.pnlLabel}>TOTAL P&L</Text>
-              <Text style={[styles.pnlValue, { color: pnlC }]}>
-                {formatPnL(totalDeposited, totalCurrent)}
-              </Text>
-            </View>
-            <View style={styles.pnlDivider} />
-            <View style={styles.pnlCell}>
-              <Text style={styles.pnlLabel}>POSITIONS</Text>
-              <Text style={styles.pnlValue}>{(positions ?? []).length}</Text>
-            </View>
-          </View>
+          </FadeSlideIn>
         )}
 
-        {/* Activity log header */}
-        <Text style={styles.sectionTitle}>Active Positions</Text>
+        <FadeSlideIn delay={260}>
+          <Text style={styles.sectionTitle}>Active Positions</Text>
+        </FadeSlideIn>
 
         {isLoading ? (
           <ActivityIndicator color={colors.signal} style={{ marginTop: 24 }} />
@@ -194,36 +227,38 @@ export default function PortfolioScreen() {
             subtitle="Deposit into a graduated vault to start earning"
           />
         ) : (
-          <View style={styles.activityCard}>
-            {(positions ?? []).map((pos, i) => {
-              const positive = pos.currentValue >= pos.totalDeposited;
-              const pnlStr = formatPnL(pos.totalDeposited, pos.currentValue);
-              const ret = pos.totalDeposited > 0
-                ? ((pos.currentValue - pos.totalDeposited) / pos.totalDeposited * 100).toFixed(2)
-                : '0.00';
-              return (
-                <React.Fragment key={pos.pubkey}>
-                  {i > 0 && <View style={styles.actDivider} />}
-                  <ActivityRow
-                    label={pos.vault?.name ?? 'Unknown Vault'}
-                    sub={`${formatAge(pos.depositedAt)} ago · ${formatUSD(pos.currentValue, true)} current claim`}
-                    value={`${pnlStr} (${ret}%)`}
-                    positive={positive}
-                    onPress={() => router.push(`/vault/${pos.vaultConfigPubkey}`)}
-                  />
-                  {pos.vault && (
-                    <View style={styles.actHealth}>
-                      <StatusBadge status={pos.vault.status} size="sm" />
-                      <View style={{ flex: 1 }}>
-                        <HealthMeter health={pos.vault.juniorHealth} showLabel={false} height={3} />
+          <FadeSlideIn delay={320}>
+            <View style={styles.activityCard}>
+              {(positions ?? []).map((pos, i) => {
+                const positive = pos.currentValue >= pos.totalDeposited;
+                const pnlStr = formatPnL(pos.totalDeposited, pos.currentValue);
+                const ret = pos.totalDeposited > 0
+                  ? ((pos.currentValue - pos.totalDeposited) / pos.totalDeposited * 100).toFixed(2)
+                  : '0.00';
+                return (
+                  <React.Fragment key={pos.pubkey}>
+                    {i > 0 && <View style={styles.actDivider} />}
+                    <ActivityRow
+                      label={pos.vault?.name ?? 'Unknown Vault'}
+                      sub={`${formatAge(pos.depositedAt)} ago · ${formatUSD(pos.currentValue, true)} current`}
+                      value={`${pnlStr} (${ret}%)`}
+                      positive={positive}
+                      onPress={() => router.push(`/vault/${pos.vaultConfigPubkey}`)}
+                    />
+                    {pos.vault && (
+                      <View style={styles.actHealth}>
+                        <StatusBadge status={pos.vault.status} size="sm" />
+                        <View style={{ flex: 1 }}>
+                          <HealthMeter health={pos.vault.juniorHealth} showLabel={false} height={3} />
+                        </View>
+                        <Text style={styles.actPositionVal}>{formatUSD(pos.currentValue, true)}</Text>
                       </View>
-                      <Text style={styles.actPositionVal}>{formatUSD(pos.currentValue, true)}</Text>
-                    </View>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </View>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          </FadeSlideIn>
         )}
       </ScrollView>
     </View>
@@ -240,12 +275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: 14,
   },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: colors.text,
-    letterSpacing: -0.6,
-  },
+  pageTitle: { fontSize: 28, fontWeight: '600', color: colors.text, letterSpacing: -0.6 },
   demoBanner: {
     backgroundColor: colors.warningDim,
     borderRadius: radius.full,
@@ -254,9 +284,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.warning + '40',
     alignSelf: 'flex-start',
+    marginBottom: 4,
   },
   demoBannerText: { fontSize: 11, color: colors.warning, fontWeight: '600', fontFamily: 'Courier' },
-  connectWrap: { paddingHorizontal: spacing.md },
+  connectWrap: {},
   connectBtn: { borderRadius: radius.full, overflow: 'hidden' },
   connectBtnGrad: { paddingVertical: 16, alignItems: 'center' },
   connectBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
@@ -287,28 +318,15 @@ const styles = StyleSheet.create({
     letterSpacing: -1.5,
     fontFamily: 'Courier',
   },
-  pnlPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    marginTop: 6,
-  },
+  pnlPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.full, marginTop: 6 },
   pnlPillText: { fontSize: 13, fontWeight: '700', fontFamily: 'Courier' },
 
-  walletTokens: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
+  walletTokens: { backgroundColor: colors.surfaceElevated, borderRadius: radius.lg, overflow: 'hidden' },
   tokenRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   tokenDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: 14 },
   tokenIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.signalDim,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 12,
+    backgroundColor: colors.signalDim, alignItems: 'center', justifyContent: 'center',
   },
   tokenIconText: { fontSize: 15, color: colors.signal, fontWeight: '700' },
   tokenInfo: { flex: 1 },
@@ -328,22 +346,14 @@ const styles = StyleSheet.create({
   pnlCell: { flex: 1, alignItems: 'center', paddingVertical: 12, gap: 2 },
   pnlDivider: { width: 1, backgroundColor: colors.border },
   pnlLabel: {
-    fontSize: 8,
-    fontWeight: '600',
-    color: colors.textQuiet,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontFamily: 'Courier',
+    fontSize: 8, fontWeight: '600', color: colors.textQuiet,
+    textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Courier',
   },
   pnlValue: { fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: 'Courier' },
 
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontFamily: 'Courier',
+    fontSize: 11, fontWeight: '600', color: colors.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8, fontFamily: 'Courier',
     paddingHorizontal: spacing.md,
   },
   activityCard: {
@@ -355,34 +365,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   actDivider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
-  actRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: spacing.md,
-  },
-  actDot: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: spacing.md },
+  actDot: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   actInfo: { flex: 1 },
   actLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
   actSub: { fontSize: 11, color: colors.textQuiet, marginTop: 1, fontFamily: 'Courier' },
   actValue: { fontSize: 14, fontWeight: '700', fontFamily: 'Courier' },
   actHealth: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: spacing.md,
-    paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: spacing.md, paddingBottom: 12,
   },
-  actPositionVal: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-    fontFamily: 'Courier',
-  },
+  actPositionVal: { fontSize: 12, fontWeight: '600', color: colors.textMuted, fontFamily: 'Courier' },
 });
