@@ -71,6 +71,9 @@ vi.mock("@/components/Banner", () => ({
     </div>
   ),
 }));
+vi.mock("@/components/MagicBlockRealProofPanel", () => ({
+  MagicBlockRealProofPanel: () => <div>MagicBlock real proof panel</div>,
+}));
 
 import ManagerVault from "./ManagerVault";
 

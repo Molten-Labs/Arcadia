@@ -198,6 +198,13 @@ function ActivityRow({ item }: { item: RedactedPrivateIntentActivity }) {
         <RedactedPill label="Route" value={item.routeCommitment ? shortHash(item.routeCommitment) : "redacted"} />
         <RedactedPill label="Size" value={item.amountBucket ?? "redacted"} />
         <RedactedPill label="Guard" value={item.guardResult ?? "pending"} />
+        {item.juniorDelta !== null && item.juniorDelta !== undefined ? (
+          <RedactedPill label="Junior" value={`${item.juniorDelta} USDC`} />
+        ) : null}
+        {item.seniorDelta !== null && item.seniorDelta !== undefined ? (
+          <RedactedPill label="Senior" value={`${item.seniorDelta} USDC`} />
+        ) : null}
+        {item.healthBand ? <RedactedPill label="Health" value={item.healthBand} /> : null}
       </div>
     </div>
   );

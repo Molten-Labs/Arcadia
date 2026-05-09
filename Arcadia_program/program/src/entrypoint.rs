@@ -19,6 +19,15 @@ fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
+    if instruction_data.len() >= 8
+        && instruction_data[..8] == instructions::MAGICBLOCK_EXTERNAL_UNDELEGATE_DISCRIMINATOR
+    {
+        return instructions::external_undelegate_private_intent_session(
+            accounts,
+            &instruction_data[8..],
+        );
+    }
+
     let (ix_disc, instruction_data) = instruction_data
         .split_first()
         .ok_or(ProgramError::InvalidInstructionData)?;
@@ -46,6 +55,21 @@ fn process_instruction(
         ProgramInstruction::ExecuteSwap => instructions::execute_swap(accounts, instruction_data),
         ProgramInstruction::UpdateOraclePrice => {
             instructions::update_oracle_price(accounts, instruction_data)
+        }
+        ProgramInstruction::InitPrivateIntentSession => {
+            instructions::init_private_intent_session(accounts, instruction_data)
+        }
+        ProgramInstruction::DelegatePrivateIntentSession => {
+            instructions::delegate_private_intent_session(accounts, instruction_data)
+        }
+        ProgramInstruction::RecordPrivateIntentOnEr => {
+            instructions::record_private_intent_on_er(accounts, instruction_data)
+        }
+        ProgramInstruction::CommitPrivateIntentSession => {
+            instructions::commit_private_intent_session(accounts, instruction_data)
+        }
+        ProgramInstruction::CommitAndUndelegatePrivateIntentSession => {
+            instructions::commit_and_undelegate_private_intent_session(accounts, instruction_data)
         }
     }
 }

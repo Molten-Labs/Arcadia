@@ -53,8 +53,14 @@ struct MagicBlockConfig {
     private_er_endpoint: Option<String>,
     auth_token: Option<String>,
     app_id: String,
+    base_rpc_url: String,
     er_rpc_url: Option<String>,
+    tee_rpc_url: Option<String>,
     er_validator: Option<String>,
+    arcadia_program_id: String,
+    magic_program_id: String,
+    permission_program_id: String,
+    delegation_program_id: String,
     fallback_enabled: bool,
     timeout_ms: u64,
     skip_preflight: bool,
@@ -402,13 +408,61 @@ struct PrivateIntentLifecycleRequest {
     proof: Value,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PrivateIntentOnchainProofRequest {
+    vault_config_pubkey: String,
+    wallet_pubkey: String,
+    session_pda: String,
+    permission_pda: Option<String>,
+    intent_commitment: String,
+    proof_hash: String,
+    er_state_root: String,
+    guard_decision: String,
+    settlement_result: String,
+    health_band: String,
+    position_limit_bps: i32,
+    junior_delta: f64,
+    senior_delta: f64,
+    signatures: OnchainProofSignatures,
+    #[serde(default)]
+    account_owners: OnchainProofOwners,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OnchainProofSignatures {
+    init: String,
+    delegate: String,
+    er_execution: String,
+    commit: String,
+    undelegate: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OnchainProofOwners {
+    session_before: Option<String>,
+    session_delegated: Option<String>,
+    session_after: Option<String>,
+    permission_delegated: Option<String>,
+    vault_state: Option<String>,
+    treasury: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct MagicBlockExecutorStatus {
     primary_configured: bool,
     primary_endpoint: Option<String>,
+    base_rpc_url: String,
     er_rpc_url: Option<String>,
+    tee_rpc_url: Option<String>,
     er_validator: Option<String>,
+    arcadia_program_id: String,
+    magic_program_id: String,
+    permission_program_id: String,
+    delegation_program_id: String,
     local_fallback_enabled: bool,
     timeout_ms: u64,
     skip_preflight: bool,
@@ -853,6 +907,10 @@ fn build_app(state: AppState) -> Router {
             get(private_intent_proof_events_handler).post(private_intent_lifecycle_handler),
         )
         .route(
+            "/private/intents/:intent_id/onchain-proof",
+            post(private_intent_onchain_proof_handler),
+        )
+        .route(
             "/private-intents/submit",
             post(private_intent_submit_handler),
         )
@@ -957,12 +1015,27 @@ fn magicblock_config_from_env() -> MagicBlockConfig {
             .ok()
             .filter(|value| !value.trim().is_empty()),
         app_id: env::var("MAGICBLOCK_APP_ID").unwrap_or_else(|_| "arcadia-kiln".to_string()),
+        base_rpc_url: env::var("SOLANA_RPC_URL")
+            .or_else(|_| env::var("VITE_RPC_URL"))
+            .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string()),
         er_rpc_url: env::var("MAGICBLOCK_ER_RPC_URL")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        tee_rpc_url: env::var("MAGICBLOCK_TEE_RPC_URL")
             .ok()
             .filter(|value| !value.trim().is_empty()),
         er_validator: env::var("MAGICBLOCK_ER_VALIDATOR")
             .ok()
             .filter(|value| !value.trim().is_empty()),
+        arcadia_program_id: env::var("ARCADIA_PROGRAM_ID")
+            .or_else(|_| env::var("PROGRAM_ID"))
+            .unwrap_or_else(|_| "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN".to_string()),
+        magic_program_id: env::var("MAGICBLOCK_MAGIC_PROGRAM_ID")
+            .unwrap_or_else(|_| "Magic11111111111111111111111111111111111111".to_string()),
+        permission_program_id: env::var("MAGICBLOCK_PERMISSION_PROGRAM_ID")
+            .unwrap_or_else(|_| "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1".to_string()),
+        delegation_program_id: env::var("MAGICBLOCK_DELEGATION_PROGRAM_ID")
+            .unwrap_or_else(|_| "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh".to_string()),
         fallback_enabled: env::var("MAGICBLOCK_ALLOW_LOCAL_FALLBACK")
             .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
             .unwrap_or(false),
@@ -1317,8 +1390,14 @@ async fn magicblock_executor_config_handler(
             .private_er_endpoint
             .as_deref()
             .map(redact_endpoint),
+        base_rpc_url: redact_endpoint(&state.magicblock.base_rpc_url),
         er_rpc_url: state.magicblock.er_rpc_url.clone(),
+        tee_rpc_url: state.magicblock.tee_rpc_url.as_deref().map(redact_endpoint),
         er_validator: state.magicblock.er_validator.clone(),
+        arcadia_program_id: state.magicblock.arcadia_program_id.clone(),
+        magic_program_id: state.magicblock.magic_program_id.clone(),
+        permission_program_id: state.magicblock.permission_program_id.clone(),
+        delegation_program_id: state.magicblock.delegation_program_id.clone(),
         local_fallback_enabled: state.magicblock.fallback_enabled,
         timeout_ms: state.magicblock.timeout_ms,
         skip_preflight: state.magicblock.skip_preflight,
@@ -1372,6 +1451,17 @@ async fn private_intent_lifecycle_handler(
     state.verify_magicblock_lifecycle(&headers)?;
     let intent = state
         .record_private_intent_lifecycle(&intent_id, request)
+        .await?;
+    Ok((StatusCode::OK, Json(intent)))
+}
+
+async fn private_intent_onchain_proof_handler(
+    State(state): State<Arc<AppState>>,
+    Path(intent_id): Path<String>,
+    Json(request): Json<PrivateIntentOnchainProofRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let intent = state
+        .record_private_intent_onchain_proof(&intent_id, request)
         .await?;
     Ok((StatusCode::OK, Json(intent)))
 }
@@ -2748,6 +2838,190 @@ impl AppState {
         self.update_private_intent(intent.clone()).await?;
         self.insert_proof_event(event).await?;
         Ok(intent)
+    }
+
+    async fn record_private_intent_onchain_proof(
+        &self,
+        intent_id: &str,
+        request: PrivateIntentOnchainProofRequest,
+    ) -> Result<PrivateIntentView, AppError> {
+        validate_onchain_proof_request(&request)?;
+        self.validate_onchain_proof_signatures(&request).await?;
+
+        let Some(mut intent) = self.get_private_intent(intent_id).await? else {
+            return Err(AppError::NotFound);
+        };
+        if intent.vault_config_pubkey != request.vault_config_pubkey {
+            return Err(AppError::BadRequest(
+                "on-chain proof vault does not match intent".to_string(),
+            ));
+        }
+
+        let now = now_ts();
+        let status = if request.guard_decision.eq_ignore_ascii_case("rejected")
+            || request.settlement_result.eq_ignore_ascii_case("failed")
+        {
+            "failed"
+        } else {
+            "settled"
+        };
+        let redacted_payload = json!({
+            "stage": "magicblock_onchain_proof",
+            "status": status,
+            "executor": "magicblock_per_onchain",
+            "sessionPda": request.session_pda,
+            "permissionPda": request.permission_pda,
+            "commitmentHash": request.intent_commitment,
+            "proofHash": request.proof_hash,
+            "erStateRoot": request.er_state_root,
+            "guardDecision": request.guard_decision,
+            "settlementResult": request.settlement_result,
+            "riskLimits": {
+                "healthBand": request.health_band,
+                "maxPositionBps": request.position_limit_bps,
+                "seniorProtected": request.senior_delta == 0.0
+            },
+            "balanceImpact": {
+                "juniorDelta": request.junior_delta,
+                "seniorDelta": request.senior_delta
+            },
+            "signatures": {
+                "init": request.signatures.init,
+                "delegate": request.signatures.delegate,
+                "erExecution": request.signatures.er_execution,
+                "commit": request.signatures.commit,
+                "undelegate": request.signatures.undelegate,
+            },
+            "accountOwners": request.account_owners,
+            "redactedFields": ["route logic", "timing logic", "hidden size logic", "private notes"],
+            "publicSummary": "Private trader alpha stayed hidden; session and permission PDAs were delegated while vault custody remained public."
+        });
+        let event = proof_event_from_payload(
+            &intent,
+            "magicblock_onchain_proof",
+            status,
+            "magicblock_per_onchain",
+            &redacted_payload,
+            now,
+        );
+
+        intent.status = status.to_string();
+        intent.executor = "magicblock_per_onchain".to_string();
+        intent.executor_request_id = Some(request.session_pda);
+        intent.signature = Some(request.signatures.commit);
+        intent.error = None;
+        intent.response_hash = Some(sha256_value(&redacted_payload));
+        intent.redacted_response = Some(redact_value(&redacted_payload));
+        intent.updated_at = now;
+
+        self.update_private_intent(intent.clone()).await?;
+        self.insert_proof_event(event).await?;
+        Ok(intent)
+    }
+
+    async fn validate_onchain_proof_signatures(
+        &self,
+        request: &PrivateIntentOnchainProofRequest,
+    ) -> Result<(), AppError> {
+        self.validate_onchain_proof_owner_claims(request)?;
+        if self.demo_mode {
+            return Ok(());
+        }
+
+        let er_rpc_url = self
+            .magicblock
+            .tee_rpc_url
+            .as_deref()
+            .or(self.magicblock.er_rpc_url.as_deref())
+            .ok_or_else(|| {
+                AppError::ServiceUnavailable(
+                    "MAGICBLOCK_TEE_RPC_URL or MAGICBLOCK_ER_RPC_URL is required to validate MagicBlock proof signatures".to_string(),
+                )
+            })?;
+
+        verify_signature_on_rpc(&self.magicblock.base_rpc_url, &request.signatures.init).await?;
+        verify_signature_on_rpc(&self.magicblock.base_rpc_url, &request.signatures.delegate)
+            .await?;
+        verify_signature_on_rpc(er_rpc_url, &request.signatures.er_execution).await?;
+        verify_signature_on_rpc(er_rpc_url, &request.signatures.commit).await?;
+        if let Some(signature) = &request.signatures.undelegate {
+            verify_signature_on_rpc(er_rpc_url, signature).await?;
+        }
+        verify_transaction_mentions_on_rpc(
+            &self.magicblock.base_rpc_url,
+            &request.signatures.init,
+            &[
+                self.magicblock.arcadia_program_id.as_str(),
+                request.vault_config_pubkey.as_str(),
+                request.session_pda.as_str(),
+            ],
+            "private intent init",
+        )
+        .await?;
+        verify_transaction_mentions_on_rpc(
+            &self.magicblock.base_rpc_url,
+            &request.signatures.delegate,
+            &[
+                self.magicblock.arcadia_program_id.as_str(),
+                self.magicblock.delegation_program_id.as_str(),
+                self.magicblock.permission_program_id.as_str(),
+                request.session_pda.as_str(),
+                request.permission_pda.as_deref().unwrap_or_default(),
+            ],
+            "private intent delegation",
+        )
+        .await?;
+        verify_transaction_mentions_on_rpc(
+            er_rpc_url,
+            &request.signatures.er_execution,
+            &[self.magicblock.arcadia_program_id.as_str(), request.session_pda.as_str()],
+            "private intent ER execution",
+        )
+        .await?;
+        verify_transaction_mentions_on_rpc(
+            er_rpc_url,
+            &request.signatures.commit,
+            &[
+                self.magicblock.arcadia_program_id.as_str(),
+                self.magicblock.magic_program_id.as_str(),
+                request.session_pda.as_str(),
+            ],
+            "private intent commit",
+        )
+        .await?;
+        Ok(())
+    }
+
+    fn validate_onchain_proof_owner_claims(
+        &self,
+        request: &PrivateIntentOnchainProofRequest,
+    ) -> Result<(), AppError> {
+        let owners = &request.account_owners;
+        require_owner_claim(
+            owners.session_delegated.as_deref(),
+            &self.magicblock.delegation_program_id,
+            "sessionDelegated",
+        )?;
+        require_owner_claim(
+            owners.permission_delegated.as_deref(),
+            &self.magicblock.delegation_program_id,
+            "permissionDelegated",
+        )?;
+        require_owner_claim(
+            owners.session_after.as_deref(),
+            &self.magicblock.arcadia_program_id,
+            "sessionAfter",
+        )?;
+        require_owner_claim(
+            owners.vault_state.as_deref(),
+            &self.magicblock.arcadia_program_id,
+            "vaultState",
+        )?;
+        require_owner_claim(
+            owners.treasury.as_deref(),
+            &self.magicblock.arcadia_program_id,
+            "treasury",
+        )
     }
 
     async fn insert_private_intent(&self, intent: PrivateIntentView) -> Result<(), AppError> {
@@ -5109,6 +5383,182 @@ fn validate_private_intent_request(request: &PrivateIntentRequest) -> Result<(),
     Ok(())
 }
 
+fn validate_onchain_proof_request(
+    request: &PrivateIntentOnchainProofRequest,
+) -> Result<(), AppError> {
+    validate_pubkey_like(&request.vault_config_pubkey, "vaultConfigPubkey")?;
+    validate_pubkey_like(&request.wallet_pubkey, "walletPubkey")?;
+    validate_pubkey_like(&request.session_pda, "sessionPda")?;
+    let Some(permission_pda) = &request.permission_pda else {
+        return Err(AppError::BadRequest(
+            "permissionPda is required for MagicBlock PER proof ingestion".to_string(),
+        ));
+    };
+    validate_pubkey_like(permission_pda, "permissionPda")?;
+    validate_hex_32(&request.intent_commitment, "intentCommitment")?;
+    validate_hex_32(&request.proof_hash, "proofHash")?;
+    validate_hex_32(&request.er_state_root, "erStateRoot")?;
+    validate_signature_like(&request.signatures.init, "signatures.init")?;
+    validate_signature_like(&request.signatures.delegate, "signatures.delegate")?;
+    validate_signature_like(&request.signatures.er_execution, "signatures.erExecution")?;
+    validate_signature_like(&request.signatures.commit, "signatures.commit")?;
+    if let Some(signature) = &request.signatures.undelegate {
+        validate_signature_like(signature, "signatures.undelegate")?;
+    }
+    if !["approved", "rejected", "pending"]
+        .contains(&request.guard_decision.trim().to_ascii_lowercase().as_str())
+    {
+        return Err(AppError::BadRequest(
+            "guardDecision must be approved, rejected, or pending".to_string(),
+        ));
+    }
+    if !["success", "loss", "failed", "pending"]
+        .contains(&request.settlement_result.trim().to_ascii_lowercase().as_str())
+    {
+        return Err(AppError::BadRequest(
+            "settlementResult must be success, loss, failed, or pending".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_hex_32(value: &str, field: &str) -> Result<(), AppError> {
+    if value.len() == 64 && value.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "{field} must be a 32-byte hex string"
+        )))
+    }
+}
+
+fn validate_signature_like(value: &str, field: &str) -> Result<(), AppError> {
+    if is_signature_like(value) {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "{field} must be a base58 transaction signature"
+        )))
+    }
+}
+
+async fn verify_signature_on_rpc(rpc_url: &str, signature: &str) -> Result<(), AppError> {
+    let response = reqwest::Client::new()
+        .post(rpc_url)
+        .json(&json!({
+            "jsonrpc": "2.0",
+            "id": "arcadia-private-intent-proof",
+            "method": "getSignatureStatuses",
+            "params": [[signature], { "searchTransactionHistory": true }]
+        }))
+        .send()
+        .await
+        .map_err(|error| AppError::Upstream(format!("RPC signature validation failed: {error}")))?;
+    let status = response.status();
+    let body = response
+        .json::<Value>()
+        .await
+        .unwrap_or_else(|_| json!({}));
+    if !status.is_success() {
+        return Err(AppError::Upstream(format!(
+            "RPC signature validation returned {status}: {body}"
+        )));
+    }
+    let Some(signature_status) = body
+        .get("result")
+        .and_then(|result| result.get("value"))
+        .and_then(Value::as_array)
+        .and_then(|values| values.first())
+    else {
+        return Err(AppError::BadRequest(
+            "transaction signature was not found on configured RPC".to_string(),
+        ));
+    };
+    if signature_status.is_null() {
+        return Err(AppError::BadRequest(
+            "transaction signature was not found on configured RPC".to_string(),
+        ));
+    }
+    if !signature_status.get("err").unwrap_or(&Value::Null).is_null() {
+        return Err(AppError::BadRequest(
+            "transaction signature exists but failed on-chain".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+async fn verify_transaction_mentions_on_rpc(
+    rpc_url: &str,
+    signature: &str,
+    required_accounts: &[&str],
+    label: &str,
+) -> Result<(), AppError> {
+    let response = reqwest::Client::new()
+        .post(rpc_url)
+        .json(&json!({
+            "jsonrpc": "2.0",
+            "id": "arcadia-private-intent-transaction-proof",
+            "method": "getTransaction",
+            "params": [
+                signature,
+                {
+                    "encoding": "json",
+                    "commitment": "confirmed",
+                    "maxSupportedTransactionVersion": 0
+                }
+            ]
+        }))
+        .send()
+        .await
+        .map_err(|error| AppError::Upstream(format!("RPC transaction validation failed: {error}")))?;
+    let status = response.status();
+    let body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
+    if !status.is_success() {
+        return Err(AppError::Upstream(format!(
+            "RPC transaction validation returned {status}: {body}"
+        )));
+    }
+    let Some(account_keys) = body
+        .get("result")
+        .and_then(|result| result.get("transaction"))
+        .and_then(|transaction| transaction.get("message"))
+        .and_then(|message| message.get("accountKeys"))
+        .and_then(Value::as_array)
+    else {
+        return Err(AppError::BadRequest(format!(
+            "{label} transaction was not found on configured RPC"
+        )));
+    };
+    let accounts: HashSet<String> = account_keys
+        .iter()
+        .filter_map(|key| {
+            key.as_str()
+                .map(ToString::to_string)
+                .or_else(|| key.get("pubkey").and_then(Value::as_str).map(ToString::to_string))
+        })
+        .collect();
+    for required in required_accounts.iter().filter(|value| !value.is_empty()) {
+        if !accounts.contains(*required) {
+            return Err(AppError::BadRequest(format!(
+                "{label} transaction does not mention required account {required}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn require_owner_claim(actual: Option<&str>, expected: &str, field: &str) -> Result<(), AppError> {
+    match actual {
+        Some(value) if value == expected => Ok(()),
+        Some(value) => Err(AppError::BadRequest(format!(
+            "{field} owner proof mismatch: expected {expected}, got {value}"
+        ))),
+        None => Err(AppError::BadRequest(format!(
+            "{field} owner proof is required"
+        ))),
+    }
+}
+
 fn private_intent_request_payload(request: &PrivateIntentRequest) -> Value {
     json!({
         "managerPubkey": request.manager_pubkey.as_str(),
@@ -5447,8 +5897,16 @@ mod tests {
                 private_er_endpoint: None,
                 auth_token: None,
                 app_id: "arcadia-test".to_string(),
+                base_rpc_url: "https://api.devnet.solana.com".to_string(),
                 er_rpc_url: None,
+                tee_rpc_url: None,
                 er_validator: None,
+                arcadia_program_id: "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN".to_string(),
+                magic_program_id: "Magic11111111111111111111111111111111111111".to_string(),
+                permission_program_id: "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1"
+                    .to_string(),
+                delegation_program_id: "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+                    .to_string(),
                 fallback_enabled: true,
                 timeout_ms: 1_500,
                 skip_preflight: true,
@@ -5757,6 +6215,79 @@ mod tests {
         .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(settled["status"], "settled");
+    }
+
+    #[tokio::test]
+    async fn private_intent_onchain_proof_records_redacted_magicblock_evidence() {
+        let app = test_app(None);
+        let payload = json!({
+            "managerPubkey": "11111111111111111111111111111111",
+            "vaultConfigPubkey": "So11111111111111111111111111111111111111112",
+            "intentType": "trade.private_intent",
+            "payload": {
+                "direction": "USDC_TO_WSOL",
+                "routeLogic": "secret strategy must stay hidden"
+            },
+            "proof": {
+                "privacyMode": "magicblock-per"
+            }
+        });
+
+        let (status, intent) =
+            json_request(app.clone(), Method::POST, "/private/intents", payload).await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let intent_id = intent["intentId"].as_str().unwrap();
+
+        let proof = json!({
+            "vaultConfigPubkey": "So11111111111111111111111111111111111111112",
+            "walletPubkey": "11111111111111111111111111111111",
+            "sessionPda": "Session1111111111111111111111111111111111",
+            "permissionPda": "Permission1111111111111111111111111111111",
+            "intentCommitment": "1111111111111111111111111111111111111111111111111111111111111111",
+            "proofHash": "2222222222222222222222222222222222222222222222222222222222222222",
+            "erStateRoot": "3333333333333333333333333333333333333333333333333333333333333333",
+            "guardDecision": "approved",
+            "settlementResult": "loss",
+            "healthBand": "critical",
+            "positionLimitBps": 100,
+            "juniorDelta": -1000.0,
+            "seniorDelta": 0.0,
+            "signatures": {
+                "init": "1111111111111111111111111111111111111111111111111111111111111111",
+                "delegate": "2222222222222222222222222222222222222222222222222222222222222222",
+                "erExecution": "3333333333333333333333333333333333333333333333333333333333333333",
+                "commit": "4444444444444444444444444444444444444444444444444444444444444444",
+                "undelegate": "5555555555555555555555555555555555555555555555555555555555555555"
+            },
+            "accountOwners": {
+                "sessionDelegated": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+                "permissionDelegated": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+                "sessionAfter": "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN",
+                "vaultState": "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN",
+                "treasury": "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN"
+            }
+        });
+        let (status, onchain) = json_request(
+            app.clone(),
+            Method::POST,
+            &format!("/private/intents/{intent_id}/onchain-proof"),
+            proof,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(onchain["status"], "settled");
+        assert_eq!(onchain["executor"], "magicblock_per_onchain");
+
+        let (status, proofs) = json_request(
+            app,
+            Method::GET,
+            &format!("/private/intents/{intent_id}/proof-events"),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(proofs.to_string().contains("magicblock_onchain_proof"));
+        assert!(!proofs.to_string().contains("secret strategy must stay hidden"));
     }
 
     #[tokio::test]

@@ -77,7 +77,7 @@ solana program deploy target/deploy/Kiln_program.so
 
 ### 4. Run the backend
 
-Private intent and MagicBlock ER submission are server-mediated. For a hosted/devnet ER demo, deploy or run `server-rs` first, then point the frontend at it with `VITE_KILN_API_BASE_URL`.
+Private intent proof ingestion is server-mediated. For the real MagicBlock PER demo, deploy or run `server-rs` first, then point the frontend at it with `VITE_KILN_API_BASE_URL`.
 
 ```bash
 cd server-rs
@@ -89,7 +89,7 @@ ARCADIA_STORE=memory ARCADIA_DEMO_MODE=true cargo run --release
 ```bash
 # From repo root
 cp .env.example .env
-# Set VITE_RPC_URL and VITE_KILN_API_BASE_URL to your devnet RPC/backend
+# Set VITE_RPC_URL, VITE_KILN_API_BASE_URL, and MagicBlock PER vars for the real proof button
 
 pnpm install
 pnpm --dir app dev
@@ -200,6 +200,10 @@ investor_pct = investor.senior_shares / vault.senior_shares_outstanding
 # Frontend
 VITE_RPC_URL=https://api.devnet.solana.com
 VITE_KILN_API_BASE_URL=http://localhost:8080
+VITE_MAGICBLOCK_ER_RPC_URL=https://devnet-router.magicblock.app
+VITE_MAGICBLOCK_TEE_RPC_URL=https://devnet-tee.magicblock.app
+VITE_MAGICBLOCK_TEE_AUTH_TOKEN=your_short_lived_tee_token
+VITE_MAGICBLOCK_ER_VALIDATOR=MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo
 
 # Indexer (server-rs)
 DATABASE_URL=postgres://user:pass@localhost:5432/arcadia
@@ -214,8 +218,14 @@ JUPITER_API_KEY=your_jupiter_key
 MAGICBLOCK_PRIVATE_ER_ENDPOINT=https://your-magicblock-executor.example
 MAGICBLOCK_AUTH_TOKEN=your_magicblock_token
 MAGICBLOCK_APP_ID=arcadia-kiln
+SOLANA_RPC_URL=https://api.devnet.solana.com
 MAGICBLOCK_ER_RPC_URL=https://devnet-router.magicblock.app
-MAGICBLOCK_ER_VALIDATOR=
+MAGICBLOCK_TEE_RPC_URL=https://devnet-tee.magicblock.app
+MAGICBLOCK_PERMISSION_PROGRAM_ID=ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1
+MAGICBLOCK_DELEGATION_PROGRAM_ID=DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh
+MAGICBLOCK_ER_VALIDATOR=MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo
+ARCADIA_PROGRAM_ID=49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN
+MAGICBLOCK_MAGIC_PROGRAM_ID=Magic11111111111111111111111111111111111111
 MAGICBLOCK_ER_SKIP_PREFLIGHT=true
 MAGICBLOCK_ALLOW_LOCAL_FALLBACK=false
 MAGICBLOCK_EXECUTOR_TIMEOUT_MS=1500
@@ -253,9 +263,10 @@ Endpoints:
 | `GET /private/intents/{intentId}` | Redacted private intent lifecycle record |
 | `GET /private/intents/{intentId}/proof-events` | Redacted proof event history |
 | `POST /private/intents/{intentId}/proof-events` | Append lifecycle/proof transition |
+| `POST /private/intents/{intentId}/onchain-proof` | Ingest real MagicBlock PER transaction signatures and redacted proof fields |
 | `POST /private-intents/submit` | Legacy redacted private intent lifecycle demo route |
 
-MagicBlock boundary: Arcadia only delegates the private intent/session proof path to ER. Vault creation, custody, deposits, withdrawals, graduation, investor share accounting, and first-loss state remain on public Solana so investors can audit safety. The on-chain proof envelope is bound to the manager and vault config, but cryptographic ER attestation depends on a real MagicBlock executor endpoint; `local_fallback` is demo evidence only.
+MagicBlock boundary: Arcadia only delegates the private intent session PDA and its MagicBlock PER permission PDA. Vault creation, custody, deposits, withdrawals, graduation, investor share accounting, and first-loss state remain on public Solana so investors can audit safety. The real proof button fails visibly when TEE/auth/RPC config is missing; `local_fallback` is demo evidence only and must not be presented as MagicBlock execution.
 
 ---
 

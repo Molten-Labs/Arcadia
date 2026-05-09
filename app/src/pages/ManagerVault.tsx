@@ -22,6 +22,7 @@ import { DataModeToggle } from "@/components/DataModeToggle";
 import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
 import { LiveJupiterQuotePanel } from "@/components/LiveJupiterQuotePanel";
 import { PrivateIntentVaultGuard } from "@/components/PrivateIntentVaultGuard";
+import { MagicBlockRealProofPanel } from "@/components/MagicBlockRealProofPanel";
 import { useDataMode } from "@/hooks/useDataMode";
 import { useSubmitPrivateIntent } from "@/hooks/usePrivateIntents";
 import { mockStore } from "@/lib/mockStore";
@@ -340,6 +341,14 @@ const ManagerVault = () => {
               loading: sending || submitPrivateIntent.isPending,
             }}
           />
+          <div className="mt-4">
+            <MagicBlockRealProofPanel
+              vaultConfigPubkey={v.configPubkey}
+              amountUsdcUnits={usdcUnits}
+              maxSlippageBps={v.maxSlippageBps}
+              disabled={sending || !hasValidAmount}
+            />
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

@@ -9,6 +9,7 @@ pub mod deposit_junior;
 pub mod deposit_senior;
 pub mod execute_swap;
 pub mod init_manager;
+pub mod magicblock_er;
 pub mod update_nav;
 pub mod update_oracle_price;
 pub mod vault_guard;
@@ -21,6 +22,7 @@ pub use deposit_junior::*;
 pub use deposit_senior::*;
 pub use execute_swap::*;
 pub use init_manager::*;
+pub use magicblock_er::*;
 pub use update_nav::*;
 pub use update_oracle_price::*;
 pub use withdraw_junior::*;
@@ -40,6 +42,11 @@ pub enum ProgramInstruction {
     ClaimFees = 8,
     ExecuteSwap = 9,
     UpdateOraclePrice = 10,
+    InitPrivateIntentSession = 11,
+    DelegatePrivateIntentSession = 12,
+    RecordPrivateIntentOnEr = 13,
+    CommitPrivateIntentSession = 14,
+    CommitAndUndelegatePrivateIntentSession = 15,
 }
 
 impl TryFrom<&u8> for ProgramInstruction {
@@ -58,6 +65,11 @@ impl TryFrom<&u8> for ProgramInstruction {
             8 => Ok(ProgramInstruction::ClaimFees),
             9 => Ok(ProgramInstruction::ExecuteSwap),
             10 => Ok(ProgramInstruction::UpdateOraclePrice),
+            11 => Ok(ProgramInstruction::InitPrivateIntentSession),
+            12 => Ok(ProgramInstruction::DelegatePrivateIntentSession),
+            13 => Ok(ProgramInstruction::RecordPrivateIntentOnEr),
+            14 => Ok(ProgramInstruction::CommitPrivateIntentSession),
+            15 => Ok(ProgramInstruction::CommitAndUndelegatePrivateIntentSession),
             _ => Err(ProgramError::InvalidInstructionData),
         }
     }
@@ -173,6 +185,52 @@ pub enum KilnInstructionIdl {
     #[account(3, name = "clock")]
     #[account(4, name = "system_program")]
     UpdateOraclePrice(UpdateOraclePriceArgsIdl),
+
+    /// Create a MagicBlock ER private intent session PDA. This account stores only public proof commitments.
+    #[account(0, writable, signer, name = "manager")]
+    #[account(1, name = "manager_profile")]
+    #[account(2, name = "vault_config")]
+    #[account(3, writable, name = "private_intent_session")]
+    #[account(4, name = "rent")]
+    #[account(5, name = "clock")]
+    #[account(6, name = "system_program")]
+    InitPrivateIntentSession(InitPrivateIntentSessionArgsIdl),
+
+    /// Delegate only the private intent session PDA to MagicBlock ER.
+    #[account(0, writable, signer, name = "manager")]
+    #[account(1, name = "vault_config")]
+    #[account(2, writable, name = "private_intent_session")]
+    #[account(3, name = "owner_program")]
+    #[account(4, writable, name = "delegation_buffer")]
+    #[account(5, writable, name = "delegation_record")]
+    #[account(6, writable, name = "delegation_metadata")]
+    #[account(7, name = "system_program")]
+    #[account(8, name = "clock")]
+    #[account(9, name = "delegation_program")]
+    DelegatePrivateIntentSession(DelegatePrivateIntentSessionArgsIdl),
+
+    /// Record a redacted ER guard/settlement proof on the delegated session account.
+    #[account(0, signer, name = "manager")]
+    #[account(1, name = "vault_config")]
+    #[account(2, writable, name = "private_intent_session")]
+    #[account(3, name = "clock")]
+    RecordPrivateIntentOnEr(RecordPrivateIntentOnErArgsIdl),
+
+    /// Commit the delegated session state from MagicBlock ER back to base Solana.
+    #[account(0, signer, name = "manager")]
+    #[account(1, writable, name = "private_intent_session")]
+    #[account(2, name = "magic_program")]
+    #[account(3, writable, name = "magic_context")]
+    #[account(4, name = "clock")]
+    CommitPrivateIntentSession,
+
+    /// Commit and undelegate the session PDA after the ER demo proof is complete.
+    #[account(0, signer, name = "manager")]
+    #[account(1, writable, name = "private_intent_session")]
+    #[account(2, name = "magic_program")]
+    #[account(3, writable, name = "magic_context")]
+    #[account(4, name = "clock")]
+    CommitAndUndelegatePrivateIntentSession,
 }
 
 #[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
@@ -216,4 +274,30 @@ pub struct UpdateOraclePriceArgsIdl {
     pub feed: u8,
     pub price: u64,
     pub confidence: u64,
+}
+
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
+pub struct InitPrivateIntentSessionArgsIdl {
+    pub session_id: [u8; 32],
+    pub intent_commitment: [u8; 32],
+    pub max_in_amount: u64,
+    pub expires_at: i64,
+}
+
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
+pub struct DelegatePrivateIntentSessionArgsIdl {
+    pub commit_frequency_ms: u32,
+    pub _reserved: [u8; 4],
+    pub validator: [u8; 32],
+}
+
+#[derive(Clone, Debug, BorshSerialize, BorshDeserialize)]
+pub struct RecordPrivateIntentOnErArgsIdl {
+    pub proof_hash: [u8; 32],
+    pub er_state_root: [u8; 32],
+    pub observed_in_amount: u64,
+    pub guard_decision: u8,
+    pub settlement_result: u8,
+    pub status: u8,
+    pub _reserved: [u8; 5],
 }

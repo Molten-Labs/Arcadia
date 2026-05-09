@@ -46,6 +46,9 @@ pub enum KilnError {
     InvalidPrivateIntentSession,
     PrivateIntentExpired,
     PrivateIntentAmountExceeded,
+    InvalidMagicBlockAccount,
+    InvalidPrivateIntentTransition,
+    InvalidPrivateIntentProof,
 }
 
 impl From<KilnError> for ProgramError {

@@ -10,9 +10,43 @@ export const VAULT_CONFIG_SEED = Buffer.from("vault-config");
 export const VAULT_STATE_SEED = Buffer.from("vault-state");
 export const TREASURY_SEED = Buffer.from("vault-treasury");
 export const INVESTOR_POSITION_SEED = Buffer.from("investor-position");
+export const PRIVATE_INTENT_SESSION_SEED = Buffer.from("private-intent-session");
+export const MAGICBLOCK_PERMISSION_SEED = Buffer.from("permission:");
+export const MAGICBLOCK_DELEGATION_BUFFER_SEED = Buffer.from("buffer");
+export const MAGICBLOCK_DELEGATION_RECORD_SEED = Buffer.from("delegation");
+export const MAGICBLOCK_DELEGATION_METADATA_SEED = Buffer.from("delegation-metadata");
+
+export const MAGICBLOCK_DELEGATION_PROGRAM_ID = new PublicKey(
+  import.meta.env.VITE_MAGICBLOCK_DELEGATION_PROGRAM_ID ||
+    "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+);
+export const MAGICBLOCK_PERMISSION_PROGRAM_ID = new PublicKey(
+  import.meta.env.VITE_MAGICBLOCK_PERMISSION_PROGRAM_ID ||
+    "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1",
+);
+export const MAGICBLOCK_MAGIC_PROGRAM_ID = new PublicKey(
+  import.meta.env.VITE_MAGICBLOCK_MAGIC_PROGRAM_ID ||
+    "Magic11111111111111111111111111111111111111",
+);
+export const MAGICBLOCK_MAGIC_CONTEXT_ID = new PublicKey(
+  import.meta.env.VITE_MAGICBLOCK_MAGIC_CONTEXT_ID ||
+    "MagicContext1111111111111111111111111111111",
+);
+export const MAGICBLOCK_DEVNET_TEE_VALIDATOR = new PublicKey(
+  import.meta.env.VITE_MAGICBLOCK_ER_VALIDATOR ||
+    "MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo",
+);
+export const MAGICBLOCK_DEVNET_US_VALIDATOR = MAGICBLOCK_DEVNET_TEE_VALIDATOR;
 
 export const RPC_URL =
   import.meta.env.VITE_RPC_URL || "https://api.devnet.solana.com";
+
+export const MAGICBLOCK_ER_RPC_URL =
+  import.meta.env.VITE_MAGICBLOCK_ER_RPC_URL || "https://devnet-router.magicblock.app";
+export const MAGICBLOCK_TEE_RPC_URL =
+  import.meta.env.VITE_MAGICBLOCK_TEE_RPC_URL || "https://devnet-tee.magicblock.app";
+export const MAGICBLOCK_TEE_AUTH_TOKEN =
+  import.meta.env.VITE_MAGICBLOCK_TEE_AUTH_TOKEN || "";
 
 export const SOLANA_CLUSTER =
   import.meta.env.VITE_SOLANA_CLUSTER || (RPC_URL.includes("mainnet") ? "mainnet-beta" : "devnet");

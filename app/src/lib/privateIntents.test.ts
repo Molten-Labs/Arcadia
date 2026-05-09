@@ -79,4 +79,40 @@ describe("private intent normalization", () => {
     expect(snapshot.timeline[0]).toMatchObject({ id: "sealed", status: "complete" });
     expect(snapshot.timeline[1]).toMatchObject({ id: "er-guard", status: "active" });
   });
+
+  it("surfaces nested MagicBlock on-chain proof fields without raw strategy data", () => {
+    const snapshot = normalizePrivateIntentSnapshot({
+      eventId: "proof-1",
+      intentId: "intent-proof",
+      vaultConfigPubkey: "vault-1",
+      status: "settled",
+      proofHash: "event-proof",
+      redactedPayload: {
+        commitmentHash: "commitment-hash",
+        proofHash: "proof-hash",
+        guardDecision: "approved",
+        settlementResult: "loss",
+        riskLimits: {
+          healthBand: "critical",
+          maxPositionBps: 100,
+        },
+        balanceImpact: {
+          juniorDelta: -1000,
+          seniorDelta: 0,
+        },
+        redactedFields: ["route logic", "timing logic"],
+      },
+    }, "vault-1");
+
+    expect(snapshot.guard.approvedCount).toBe(1);
+    expect(snapshot.activity[0]).toMatchObject({
+      guardResult: "approved",
+      routeCommitment: "commitment-hash",
+      proofHash: "event-proof",
+      healthBand: "critical",
+      juniorDelta: -1000,
+      seniorDelta: 0,
+      redactedFields: ["route logic", "timing logic"],
+    });
+  });
 });

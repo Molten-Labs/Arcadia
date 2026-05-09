@@ -39,6 +39,10 @@ export interface RedactedPrivateIntentActivity {
   routeCommitment?: string | null;
   guardResult?: "approved" | "rejected" | "pending" | string | null;
   proofHash?: string | null;
+  settlementResult?: string | null;
+  healthBand?: string | null;
+  juniorDelta?: number | null;
+  seniorDelta?: number | null;
   revealAt?: number | null;
   detail: string;
   redactedFields: string[];
@@ -67,6 +71,37 @@ export interface PrivateIntentRealtimeEvent {
   intentId?: string;
   item?: unknown;
   receivedAt?: number;
+}
+
+export interface PrivateIntentOnchainProofRequest {
+  vaultConfigPubkey: string;
+  walletPubkey: string;
+  sessionPda: string;
+  permissionPda?: string;
+  intentCommitment: string;
+  proofHash: string;
+  erStateRoot: string;
+  guardDecision: "approved" | "rejected" | "pending" | string;
+  settlementResult: "success" | "loss" | "failed" | "pending" | string;
+  healthBand: string;
+  positionLimitBps: number;
+  juniorDelta: number;
+  seniorDelta: number;
+  signatures: {
+    init: string;
+    delegate: string;
+    erExecution: string;
+    commit: string;
+    undelegate?: string;
+  };
+  accountOwners?: {
+    sessionBefore?: string | null;
+    sessionDelegated?: string | null;
+    sessionAfter?: string | null;
+    permissionDelegated?: string | null;
+    vaultState?: string | null;
+    treasury?: string | null;
+  };
 }
 
 const PRIVATE_INTENT_ENDPOINTS = (vaultConfigPubkey: string) => [
@@ -196,6 +231,17 @@ export async function submitPrivateIntent(
   throw new Error("Private intent backend is not available for this vault yet.");
 }
 
+export async function recordPrivateIntentOnchainProof(
+  intentId: string,
+  request: PrivateIntentOnchainProofRequest,
+): Promise<PrivateIntentVaultSnapshot | null> {
+  const data = await postKilnApiOptional<unknown>(
+    `/private/intents/${encodeURIComponent(intentId)}/onchain-proof`,
+    request,
+  );
+  return data ? normalizePrivateIntentSnapshot(data, request.vaultConfigPubkey) : null;
+}
+
 export function isPrivateIntentRealtimeEvent(event: { type?: string }): event is PrivateIntentRealtimeEvent {
   const type = event.type ?? "";
   return type === "proof.event" || type.startsWith("private_intent.") || type.startsWith("privateIntent.") || type.startsWith("private-intent.");
@@ -275,6 +321,8 @@ export function normalizePrivateIntentSnapshot(
   const activity = activitySource.map((item, index) =>
     normalizeRedactedActivity(item, vaultConfigPubkey, guard.lastProofAt ?? undefined, index),
   );
+  const approvedFromActivity = activity.filter((item) => item.guardResult === "approved").length;
+  const rejectedFromActivity = activity.filter((item) => item.guardResult === "rejected").length;
 
   const timeline = normalizeTimeline(
     arrayValue(data.timeline) ?? arrayValue(data.proofTimeline) ?? arrayValue(data.proofs),
@@ -284,7 +332,11 @@ export function normalizePrivateIntentSnapshot(
 
   return {
     vaultConfigPubkey,
-    guard,
+    guard: {
+      ...guard,
+      approvedCount: Math.max(guard.approvedCount, approvedFromActivity),
+      rejectedCount: Math.max(guard.rejectedCount, rejectedFromActivity),
+    },
     timeline,
     activity,
     updatedAt: numberValue(data.updatedAt) ?? numberValue(data.receivedAt) ?? guard.lastProofAt ?? null,
@@ -353,12 +405,33 @@ function normalizeRedactedActivity(
   index = 0,
 ): RedactedPrivateIntentActivity {
   const data = valueRecord(raw) ?? {};
-  const riskLimits = valueRecord(data.riskLimits) ?? {};
+  const redactedPayload = valueRecord(data.redactedPayload)
+    ?? valueRecord(data.redacted_payload)
+    ?? valueRecord(data.redactedResponse)
+    ?? valueRecord(data.redacted_response)
+    ?? {};
+  const riskLimits = valueRecord(data.riskLimits) ?? valueRecord(redactedPayload.riskLimits) ?? {};
+  const balanceImpact = valueRecord(data.balanceImpact) ?? valueRecord(redactedPayload.balanceImpact) ?? {};
+  const guardDecision =
+    stringValue(data.guardDecision)
+    ?? stringValue(redactedPayload.guardDecision)
+    ?? stringValue(data.guardResult);
+  const settlementResult =
+    stringValue(data.settlementResult)
+    ?? stringValue(redactedPayload.settlementResult)
+    ?? stringValue(data.result);
   const intentId = stringValue(data.intentId) ?? stringValue(data.id) ?? `intent-${fallbackTime ?? Date.now()}-${index}`;
   const occurredAt = numberValue(data.occurredAt) ?? numberValue(data.receivedAt) ?? fallbackTime ?? Math.floor(Date.now() / 1000);
-  const result = intentResult(stringValue(data.status) ?? stringValue(data.result) ?? stringValue(data.guardResult));
-  const guardResult = stringValue(data.guardResult) ?? (result === "approved" || result === "rejected" ? result : "pending");
-  const redactedFields = stringArray(data.redactedFields);
+  const result = intentResult(
+    stringValue(data.status)
+      ?? settlementResult
+      ?? guardDecision
+      ?? stringValue(redactedPayload.status),
+  );
+  const guardResult = guardDecision ?? (result === "approved" || result === "rejected" ? result : "pending");
+  const redactedFields = stringArray(data.redactedFields).length
+    ? stringArray(data.redactedFields)
+    : stringArray(redactedPayload.redactedFields);
 
   return {
     id: `${intentId}-${occurredAt}`,
@@ -368,11 +441,15 @@ function normalizeRedactedActivity(
     status: result,
     side: stringValue(data.side) ?? stringValue(data.direction) ?? null,
     amountBucket: stringValue(data.amountBucket) ?? stringValue(data.sizeBucket) ?? stringValue(riskLimits.requestedNotionalBand) ?? "redacted",
-    routeCommitment: stringValue(data.routeCommitment) ?? stringValue(data.routeHash) ?? stringValue(data.commitment) ?? stringValue(data.commitmentHash) ?? null,
+    routeCommitment: stringValue(data.routeCommitment) ?? stringValue(data.routeHash) ?? stringValue(data.commitment) ?? stringValue(data.commitmentHash) ?? stringValue(redactedPayload.commitmentHash) ?? null,
     guardResult,
-    proofHash: stringValue(data.proofHash) ?? stringValue(data.guardProofHash) ?? stringValue(data.erCommitment) ?? stringValue(data.commitmentHash) ?? null,
+    proofHash: stringValue(data.proofHash) ?? stringValue(data.guardProofHash) ?? stringValue(data.erCommitment) ?? stringValue(data.commitmentHash) ?? stringValue(redactedPayload.proofHash) ?? null,
+    settlementResult,
+    healthBand: stringValue(data.healthBand) ?? stringValue(riskLimits.healthBand) ?? null,
+    juniorDelta: numberValue(data.juniorDelta) ?? numberValue(balanceImpact.juniorDelta) ?? null,
+    seniorDelta: numberValue(data.seniorDelta) ?? numberValue(balanceImpact.seniorDelta) ?? null,
     revealAt: numberValue(data.revealAt) ?? numberValue(data.visibilityAfter) ?? null,
-    detail: stringValue(data.detail) ?? stringValue(data.summary) ?? detailForResult(result),
+    detail: stringValue(data.detail) ?? stringValue(data.summary) ?? stringValue(redactedPayload.publicSummary) ?? detailForResult(result),
     redactedFields: redactedFields.length ? redactedFields : ["route", "exact size", "execution slot"],
   };
 }
