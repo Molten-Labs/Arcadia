@@ -31,7 +31,7 @@ export function MagicBlockRealProofPanel({
           <h4 className="mt-2 font-display text-[15px] font-semibold">Private trader alpha, public investor safety</h4>
           <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
             {proof.envStatus.localEr
-              ? "Local ER mode: initialize a session, delegate only session state to localhost MagicBlock ER, execute redacted guard logic, commit proof, then reclaim. This validates ER mechanics, not TEE privacy."
+              ? "Local ER mode: initialize a session, delegate only session state to localhost MagicBlock ER, execute redacted guard logic, commit proof, then request reclaim. This validates ER mechanics, not TEE privacy."
               : "This verifies the TEE endpoint, gets a short-lived wallet-signed auth token, initializes a session, delegates only session state, executes redacted guard logic on MagicBlock, commits proof, then reclaims."}
           </p>
         </div>
@@ -124,15 +124,16 @@ export function MagicBlockRealProofPanel({
       {proof.lastResult ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <ProofBox
-            title="Delegated and reclaimed"
+            title="Delegation and reclaim proof"
             rows={[
               ["Session PDA", proof.lastResult.plan.sessionPda.toBase58()],
               ["Permission PDA", proof.lastResult.plan.permissionPda.toBase58()],
+              ["Reclaim status", proof.lastResult.reclaimStatus],
               ["ER auth", proof.lastResult.teeAuth.source],
               ["TEE integrity", proof.lastResult.teeAuth.integrityVerified ? "verified" : proof.lastResult.teeAuth.source],
               ["Delegated owner", proof.lastResult.accountOwners.sessionDelegated ?? "pending"],
               ["Permission owner", proof.lastResult.accountOwners.permissionDelegated ?? "pending"],
-              ["Reclaimed owner", proof.lastResult.accountOwners.sessionAfter ?? "pending"],
+              ["Current owner", proof.lastResult.accountOwners.sessionAfter ?? "pending"],
               ["Delegation owner", MAGICBLOCK_DELEGATION_PROGRAM_ID.toBase58()],
               ["Arcadia owner", PROGRAM_ID.toBase58()],
             ]}

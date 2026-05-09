@@ -424,6 +424,7 @@ struct PrivateIntentOnchainProofRequest {
     position_limit_bps: i32,
     junior_delta: f64,
     senior_delta: f64,
+    reclaim_status: Option<String>,
     signatures: OnchainProofSignatures,
     #[serde(default)]
     account_owners: OnchainProofOwners,
@@ -2892,9 +2893,14 @@ impl AppState {
                 "commit": request.signatures.commit,
                 "undelegate": request.signatures.undelegate,
             },
+            "reclaimStatus": request.reclaim_status.as_deref().unwrap_or("reclaimed"),
             "accountOwners": request.account_owners,
             "redactedFields": ["route logic", "timing logic", "hidden size logic", "private notes"],
-            "publicSummary": "Private trader alpha stayed hidden; session and permission PDAs were delegated while vault custody remained public."
+            "publicSummary": if request.reclaim_status.as_deref() == Some("pending-local-callback") {
+                "Private trader alpha stayed hidden; ER commit and undelegate signatures landed, and local base-layer reclaim is pending without delegating vault custody."
+            } else {
+                "Private trader alpha stayed hidden; session and permission PDAs were delegated while vault custody remained public."
+            }
         });
         let event = proof_event_from_payload(
             &intent,
@@ -2974,7 +2980,10 @@ impl AppState {
         verify_transaction_mentions_on_rpc(
             er_rpc_url,
             &request.signatures.er_execution,
-            &[self.magicblock.arcadia_program_id.as_str(), request.session_pda.as_str()],
+            &[
+                self.magicblock.arcadia_program_id.as_str(),
+                request.session_pda.as_str(),
+            ],
             "private intent ER execution",
         )
         .await?;
@@ -3007,11 +3016,19 @@ impl AppState {
             &self.magicblock.delegation_program_id,
             "permissionDelegated",
         )?;
-        require_owner_claim(
-            owners.session_after.as_deref(),
-            &self.magicblock.arcadia_program_id,
-            "sessionAfter",
-        )?;
+        if self.is_pending_local_reclaim(request) {
+            require_owner_claim(
+                owners.session_after.as_deref(),
+                &self.magicblock.delegation_program_id,
+                "sessionAfter",
+            )?;
+        } else {
+            require_owner_claim(
+                owners.session_after.as_deref(),
+                &self.magicblock.arcadia_program_id,
+                "sessionAfter",
+            )?;
+        }
         require_owner_claim(
             owners.vault_state.as_deref(),
             &self.magicblock.arcadia_program_id,
@@ -3022,6 +3039,13 @@ impl AppState {
             &self.magicblock.arcadia_program_id,
             "treasury",
         )
+    }
+
+    fn is_pending_local_reclaim(&self, request: &PrivateIntentOnchainProofRequest) -> bool {
+        self.surfpool_mode
+            && request.signatures.undelegate.is_some()
+            && request.reclaim_status.as_deref() == Some("pending-local-callback")
+            && is_local_rpc(self.magicblock.er_rpc_url.as_deref())
     }
 
     async fn insert_private_intent(&self, intent: PrivateIntentView) -> Result<(), AppError> {
@@ -5412,14 +5436,36 @@ fn validate_onchain_proof_request(
             "guardDecision must be approved, rejected, or pending".to_string(),
         ));
     }
-    if !["success", "loss", "failed", "pending"]
-        .contains(&request.settlement_result.trim().to_ascii_lowercase().as_str())
-    {
+    if !["success", "loss", "failed", "pending"].contains(
+        &request
+            .settlement_result
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+    ) {
         return Err(AppError::BadRequest(
             "settlementResult must be success, loss, failed, or pending".to_string(),
         ));
     }
+    if let Some(reclaim_status) = &request.reclaim_status {
+        if !["reclaimed", "pending-local-callback"]
+            .contains(&reclaim_status.trim().to_ascii_lowercase().as_str())
+        {
+            return Err(AppError::BadRequest(
+                "reclaimStatus must be reclaimed or pending-local-callback".to_string(),
+            ));
+        }
+    }
     Ok(())
+}
+
+fn is_local_rpc(value: Option<&str>) -> bool {
+    value
+        .map(|url| {
+            let lower = url.to_ascii_lowercase();
+            lower.contains("127.0.0.1") || lower.contains("localhost")
+        })
+        .unwrap_or(false)
 }
 
 fn validate_hex_32(value: &str, field: &str) -> Result<(), AppError> {
@@ -5455,10 +5501,7 @@ async fn verify_signature_on_rpc(rpc_url: &str, signature: &str) -> Result<(), A
         .await
         .map_err(|error| AppError::Upstream(format!("RPC signature validation failed: {error}")))?;
     let status = response.status();
-    let body = response
-        .json::<Value>()
-        .await
-        .unwrap_or_else(|_| json!({}));
+    let body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
     if !status.is_success() {
         return Err(AppError::Upstream(format!(
             "RPC signature validation returned {status}: {body}"
@@ -5479,7 +5522,11 @@ async fn verify_signature_on_rpc(rpc_url: &str, signature: &str) -> Result<(), A
             "transaction signature was not found on configured RPC".to_string(),
         ));
     }
-    if !signature_status.get("err").unwrap_or(&Value::Null).is_null() {
+    if !signature_status
+        .get("err")
+        .unwrap_or(&Value::Null)
+        .is_null()
+    {
         return Err(AppError::BadRequest(
             "transaction signature exists but failed on-chain".to_string(),
         ));
@@ -5510,7 +5557,9 @@ async fn verify_transaction_mentions_on_rpc(
         }))
         .send()
         .await
-        .map_err(|error| AppError::Upstream(format!("RPC transaction validation failed: {error}")))?;
+        .map_err(|error| {
+            AppError::Upstream(format!("RPC transaction validation failed: {error}"))
+        })?;
     let status = response.status();
     let body = response.json::<Value>().await.unwrap_or_else(|_| json!({}));
     if !status.is_success() {
@@ -5532,9 +5581,11 @@ async fn verify_transaction_mentions_on_rpc(
     let accounts: HashSet<String> = account_keys
         .iter()
         .filter_map(|key| {
-            key.as_str()
-                .map(ToString::to_string)
-                .or_else(|| key.get("pubkey").and_then(Value::as_str).map(ToString::to_string))
+            key.as_str().map(ToString::to_string).or_else(|| {
+                key.get("pubkey")
+                    .and_then(Value::as_str)
+                    .map(ToString::to_string)
+            })
         })
         .collect();
     for required in required_accounts.iter().filter(|value| !value.is_empty()) {
@@ -5903,10 +5954,8 @@ mod tests {
                 er_validator: None,
                 arcadia_program_id: "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN".to_string(),
                 magic_program_id: "Magic11111111111111111111111111111111111111".to_string(),
-                permission_program_id: "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1"
-                    .to_string(),
-                delegation_program_id: "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
-                    .to_string(),
+                permission_program_id: "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1".to_string(),
+                delegation_program_id: "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh".to_string(),
                 fallback_enabled: true,
                 timeout_ms: 1_500,
                 skip_preflight: true,
@@ -6287,7 +6336,77 @@ mod tests {
         .await;
         assert_eq!(status, StatusCode::OK);
         assert!(proofs.to_string().contains("magicblock_onchain_proof"));
-        assert!(!proofs.to_string().contains("secret strategy must stay hidden"));
+        assert!(!proofs
+            .to_string()
+            .contains("secret strategy must stay hidden"));
+    }
+
+    #[tokio::test]
+    async fn private_intent_onchain_proof_allows_local_reclaim_callback_pending() {
+        let mut state = test_state(None, true, None);
+        state.magicblock.er_rpc_url = Some("http://127.0.0.1:7799".to_string());
+        let app = build_app(state);
+        let payload = json!({
+            "managerPubkey": "11111111111111111111111111111111",
+            "vaultConfigPubkey": "So11111111111111111111111111111111111111112",
+            "intentType": "trade.private_intent",
+            "payload": {
+                "direction": "USDC_TO_WSOL",
+                "routeLogic": "secret strategy must stay hidden"
+            },
+            "proof": {
+                "privacyMode": "magicblock-local-er"
+            }
+        });
+
+        let (status, intent) =
+            json_request(app.clone(), Method::POST, "/private/intents", payload).await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let intent_id = intent["intentId"].as_str().unwrap();
+
+        let proof = json!({
+            "vaultConfigPubkey": "So11111111111111111111111111111111111111112",
+            "walletPubkey": "11111111111111111111111111111111",
+            "sessionPda": "Session1111111111111111111111111111111111",
+            "permissionPda": "Permission1111111111111111111111111111111",
+            "intentCommitment": "1111111111111111111111111111111111111111111111111111111111111111",
+            "proofHash": "2222222222222222222222222222222222222222222222222222222222222222",
+            "erStateRoot": "3333333333333333333333333333333333333333333333333333333333333333",
+            "guardDecision": "approved",
+            "settlementResult": "loss",
+            "healthBand": "critical",
+            "positionLimitBps": 100,
+            "juniorDelta": -1000.0,
+            "seniorDelta": 0.0,
+            "reclaimStatus": "pending-local-callback",
+            "signatures": {
+                "init": "1111111111111111111111111111111111111111111111111111111111111111",
+                "delegate": "2222222222222222222222222222222222222222222222222222222222222222",
+                "erExecution": "3333333333333333333333333333333333333333333333333333333333333333",
+                "commit": "4444444444444444444444444444444444444444444444444444444444444444",
+                "undelegate": "5555555555555555555555555555555555555555555555555555555555555555"
+            },
+            "accountOwners": {
+                "sessionDelegated": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+                "permissionDelegated": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+                "sessionAfter": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+                "vaultState": "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN",
+                "treasury": "49StrXrpxCyC5VkmhossJLWx5nTCvyeoVMbPNMv9WcdN"
+            }
+        });
+        let (status, onchain) = json_request(
+            app.clone(),
+            Method::POST,
+            &format!("/private/intents/{intent_id}/onchain-proof"),
+            proof,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(onchain["status"], "settled");
+        assert!(onchain.to_string().contains("pending-local-callback"));
+        assert!(!onchain
+            .to_string()
+            .contains("secret strategy must stay hidden"));
     }
 
     #[tokio::test]

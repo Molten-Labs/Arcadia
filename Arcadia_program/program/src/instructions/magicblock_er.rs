@@ -16,12 +16,12 @@ use crate::{
     errors::KilnError,
     states::{
         ManagerProfile, PrivateIntentSessionAccount, VaultConfig, PRIVATE_INTENT_GUARD_APPROVED,
-        PRIVATE_INTENT_GUARD_PENDING, PRIVATE_INTENT_GUARD_REJECTED,
-        PRIVATE_INTENT_SESSION_SEED, PRIVATE_INTENT_SETTLEMENT_FAILED,
-        PRIVATE_INTENT_SETTLEMENT_LOSS, PRIVATE_INTENT_SETTLEMENT_PENDING,
-        PRIVATE_INTENT_SETTLEMENT_SUCCESS, PRIVATE_INTENT_STATUS_COMMITTED,
-        PRIVATE_INTENT_STATUS_DELEGATED, PRIVATE_INTENT_STATUS_EXECUTING,
-        PRIVATE_INTENT_STATUS_FAILED, PRIVATE_INTENT_STATUS_INITIALIZED, PRIVATE_INTENT_STATUS_RECLAIMED,
+        PRIVATE_INTENT_GUARD_PENDING, PRIVATE_INTENT_GUARD_REJECTED, PRIVATE_INTENT_SESSION_SEED,
+        PRIVATE_INTENT_SETTLEMENT_FAILED, PRIVATE_INTENT_SETTLEMENT_LOSS,
+        PRIVATE_INTENT_SETTLEMENT_PENDING, PRIVATE_INTENT_SETTLEMENT_SUCCESS,
+        PRIVATE_INTENT_STATUS_COMMITTED, PRIVATE_INTENT_STATUS_DELEGATED,
+        PRIVATE_INTENT_STATUS_EXECUTING, PRIVATE_INTENT_STATUS_FAILED,
+        PRIVATE_INTENT_STATUS_INITIALIZED, PRIVATE_INTENT_STATUS_RECLAIMED,
         PRIVATE_INTENT_STATUS_UNDELEGATING,
     },
 };
@@ -493,7 +493,11 @@ fn commit_or_undelegate_private_intent_session(
     drop(session);
 
     if let Some((permission, permission_program)) = permission_accounts {
-        validate_private_intent_permission_account(private_session, permission, permission_program)?;
+        validate_private_intent_permission_account(
+            private_session,
+            permission,
+            permission_program,
+        )?;
         invoke_commit_private_intent_permission(
             manager,
             private_session,
@@ -715,7 +719,10 @@ fn create_and_delegate_private_intent_permission(
         )?;
     }
 
-    if !permission_accounts.permission.is_owned_by(&DELEGATION_PROGRAM_ID) {
+    if !permission_accounts
+        .permission
+        .is_owned_by(&DELEGATION_PROGRAM_ID)
+    {
         invoke_delegate_private_intent_permission(
             payer,
             private_session,
@@ -901,7 +908,13 @@ fn invoke_commit_private_intent_permission(
     };
     slice_invoke_signed(
         &ix,
-        &[payer, private_session, permission, magic_program, magic_context],
+        &[
+            payer,
+            private_session,
+            permission,
+            magic_program,
+            magic_context,
+        ],
         &[],
     )
 }
@@ -1050,7 +1063,9 @@ fn read_seed<'a>(data: &mut &'a [u8]) -> Result<&'a [u8], ProgramError> {
 fn is_valid_guard_decision(value: u8) -> bool {
     matches!(
         value,
-        PRIVATE_INTENT_GUARD_PENDING | PRIVATE_INTENT_GUARD_APPROVED | PRIVATE_INTENT_GUARD_REJECTED
+        PRIVATE_INTENT_GUARD_PENDING
+            | PRIVATE_INTENT_GUARD_APPROVED
+            | PRIVATE_INTENT_GUARD_REJECTED
     )
 }
 

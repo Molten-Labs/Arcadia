@@ -43,6 +43,7 @@ interface RunRealMagicBlockIntentParams {
 interface RealMagicBlockProofResult {
   plan: MagicBlockPrivateIntentPlan;
   teeAuth: MagicBlockTeeAuthSession;
+  reclaimStatus: "reclaimed" | "pending-local-callback";
   intentId?: string;
   signatures: {
     init: string;
@@ -167,18 +168,18 @@ export function useMagicBlockPrivateIntentProof() {
       });
 
       const expectedDelegationOwner = MAGICBLOCK_DELEGATION_PROGRAM_ID.toBase58();
-      const sessionDelegated = await waitForOwnerProof(
+      const sessionDelegated = (await waitForOwnerProof(
         connection,
         plan.sessionPda,
         expectedDelegationOwner,
         "Session PDA delegation",
-      );
-      const permissionDelegated = await waitForOwnerProof(
+      )).owner;
+      const permissionDelegated = (await waitForOwnerProof(
         connection,
         plan.permissionPda,
         expectedDelegationOwner,
         "PER permission delegation",
-      );
+      )).owner;
       await waitForAccountAvailable(erConnection, plan.sessionPda, "Session PDA on MagicBlock PER");
       await waitForAccountAvailable(erConnection, plan.permissionPda, "PER permission account on MagicBlock PER");
 
@@ -219,12 +220,25 @@ export function useMagicBlockPrivateIntentProof() {
         markPhase,
         skipPreflight: true,
       });
-      const sessionAfter = await waitForOwnerProof(
+      const reclaimProof = await waitForOwnerProof(
         connection,
         plan.sessionPda,
         PROGRAM_ID.toBase58(),
         "Session PDA reclaim",
+        {
+          allowPendingOwner: envStatus.localEr ? expectedDelegationOwner : undefined,
+          maxAttempts: envStatus.localEr ? 36 : 24,
+        },
       );
+      if (!reclaimProof.reached && envStatus.localEr) {
+        markPhase("undelegate", {
+          status: "complete",
+          signature: undelegateSig,
+          explorerUrl: explorerTxUrl(undelegateSig),
+          detail:
+            "MagicBlock ER accepted the undelegate intent; local validator callback is still pending, so proof is recorded honestly as pending-local-callback.",
+        });
+      }
 
       const signatures = {
         init: initSig,
@@ -233,10 +247,11 @@ export function useMagicBlockPrivateIntentProof() {
         commit: commitSig,
         undelegate: undelegateSig,
       };
+      const reclaimStatus = reclaimProof.reached ? "reclaimed" : "pending-local-callback";
       const accountOwners = {
         sessionBefore,
         sessionDelegated,
-        sessionAfter,
+        sessionAfter: reclaimProof.owner,
         permissionDelegated,
         vaultState: vaultStateOwner,
         treasury: treasuryOwner,
@@ -258,6 +273,7 @@ export function useMagicBlockPrivateIntentProof() {
             seniorDelta: plan.seniorDeltaUsdc,
             signatures,
             accountOwners,
+            reclaimStatus,
           })
         : null;
 
@@ -269,11 +285,13 @@ export function useMagicBlockPrivateIntentProof() {
       }
       queryClient.invalidateQueries({ queryKey: ["private-intent-vault", params.vaultConfigPubkey] });
 
-      const result = { plan, teeAuth, intentId, signatures, accountOwners, snapshot };
+      const result = { plan, teeAuth, reclaimStatus, intentId, signatures, accountOwners, snapshot };
       setLastResult(result);
       toast.success("Real MagicBlock proof flow completed", {
         description:
-          plan.guardDecision === "rejected"
+          reclaimStatus === "pending-local-callback"
+            ? "ER execution, commit, and undelegate signatures landed; local base callback is pending."
+            : plan.guardDecision === "rejected"
             ? "Guard rejection was recorded on MagicBlock PER and committed."
             : "Session was delegated, executed on ER, committed, and reclaimed.",
       });
@@ -379,13 +397,21 @@ async function waitForOwnerProof(
   pubkey: PublicKey,
   expectedOwner: string,
   label: string,
-): Promise<string> {
-  for (let attempt = 0; attempt < 18; attempt += 1) {
+  options: {
+    allowPendingOwner?: string;
+    maxAttempts?: number;
+  } = {},
+): Promise<{ owner: string; reached: boolean }> {
+  const maxAttempts = options.maxAttempts ?? 18;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const owner = await readOwnerProof(connection, pubkey);
-    if (owner === expectedOwner) return owner;
+    if (owner === expectedOwner) return { owner, reached: true };
     await sleep(700);
   }
   const owner = await readOwnerProof(connection, pubkey);
+  if (owner && options.allowPendingOwner && owner === options.allowPendingOwner) {
+    return { owner, reached: false };
+  }
   throw new Error(`${label} did not reach expected owner ${expectedOwner}. Current owner: ${owner ?? "not found"}.`);
 }
 

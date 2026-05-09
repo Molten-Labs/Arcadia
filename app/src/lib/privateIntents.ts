@@ -87,6 +87,7 @@ export interface PrivateIntentOnchainProofRequest {
   positionLimitBps: number;
   juniorDelta: number;
   seniorDelta: number;
+  reclaimStatus?: "reclaimed" | "pending-local-callback" | string;
   signatures: {
     init: string;
     delegate: string;

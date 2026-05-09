@@ -297,7 +297,7 @@ VITE_MAGICBLOCK_ER_VALIDATOR=mAGicPQYBMvcYveUZA5F5UNNwyHvfYh5xkLS2Fr1mev
 
 For screen recordings, `VITE_ARCADIA_LOCAL_CHAIN_MODE=true` makes the app read vaults and positions directly from the local Surfpool RPC instead of the backend demo store. Create vault, junior deposit, senior deposit, withdrawal, NAV update, guard-only trade checks, and MagicBlock session instructions are wallet-signed local transactions. Local capital uses the program's lamport-backed path, so the UI displays USDC-equivalent accounting while the wallet is funded by local SOL airdrops.
 
-For this local path, the app intentionally skips `getAuthToken` / TEE integrity verification because `127.0.0.1:7799` is a local ER validator, not MagicBlock's TEE endpoint.
+For this local path, the app intentionally skips `getAuthToken` / TEE integrity verification because `127.0.0.1:7799` is a local ER validator, not MagicBlock's TEE endpoint. If the ER undelegate transaction lands but the local validator has not fired the base-layer callback yet, the UI and proof API record `reclaimStatus=pending-local-callback` instead of failing or pretending the PDA has returned to Arcadia ownership. Devnet / TEE mode still requires the final owner to be the Arcadia program.
 
 ---
 
