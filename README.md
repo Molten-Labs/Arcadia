@@ -200,6 +200,7 @@ investor_pct = investor.senior_shares / vault.senior_shares_outstanding
 # Frontend
 VITE_RPC_URL=https://api.devnet.solana.com
 VITE_KILN_API_BASE_URL=http://localhost:8080
+VITE_MAGICBLOCK_LOCAL_ER=false
 VITE_MAGICBLOCK_ER_RPC_URL=https://devnet-router.magicblock.app
 VITE_MAGICBLOCK_TEE_RPC_URL=https://devnet-tee.magicblock.app
 # Optional fallback only. The app normally gets this at runtime via wallet signMessage.
@@ -268,6 +269,31 @@ Endpoints:
 | `POST /private-intents/submit` | Legacy redacted private intent lifecycle demo route |
 
 MagicBlock boundary: Arcadia only delegates the private intent session PDA and its MagicBlock PER permission PDA. Vault creation, custody, deposits, withdrawals, graduation, investor share accounting, and first-loss state remain on public Solana so investors can audit safety. The real proof button fails visibly when TEE/auth/RPC config is missing; `local_fallback` is demo evidence only and must not be presented as MagicBlock execution.
+
+### Local MagicBlock ER + Surfpool
+
+Use this when you want to prove the delegation / ER execution / commit / reclaim mechanics locally before the TEE-backed devnet demo. This validates real local ER behavior, but it is not a TEE privacy attestation.
+
+```bash
+npm install -g @magicblock-labs/ephemeral-validator@latest
+surfpool start --rpc-url https://api.devnet.solana.com
+ephemeral-validator --remotes "http://localhost:8899" --remotes "ws://localhost:8900" -l "7799" --lifecycle ephemeral
+pnpm dev:server:magicblock-local
+pnpm dev:app:magicblock-local
+```
+
+Local browser env:
+
+```bash
+VITE_ARCADIA_EXECUTION_ENV=surfpool
+VITE_RPC_URL=http://localhost:8899
+VITE_MAGICBLOCK_LOCAL_ER=true
+VITE_MAGICBLOCK_ER_RPC_URL=http://localhost:7799
+VITE_MAGICBLOCK_TEE_RPC_URL=http://localhost:7799
+VITE_MAGICBLOCK_ER_VALIDATOR=mAGicPQYBMvcYveUZA5F5UNNwyHvfYh5xkLS2Fr1mev
+```
+
+For this local path, the app intentionally skips `getAuthToken` / TEE integrity verification because `localhost:7799` is a local ER validator, not MagicBlock's TEE endpoint.
 
 ---
 

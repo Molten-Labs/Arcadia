@@ -47,6 +47,10 @@ export const MAGICBLOCK_TEE_RPC_URL =
   import.meta.env.VITE_MAGICBLOCK_TEE_RPC_URL || "https://devnet-tee.magicblock.app";
 export const MAGICBLOCK_TEE_AUTH_TOKEN =
   import.meta.env.VITE_MAGICBLOCK_TEE_AUTH_TOKEN || "";
+export const MAGICBLOCK_LOCAL_ER =
+  String(import.meta.env.VITE_MAGICBLOCK_LOCAL_ER || "").toLowerCase() === "true" ||
+  isLocalRpcUrl(MAGICBLOCK_ER_RPC_URL) ||
+  isLocalRpcUrl(MAGICBLOCK_TEE_RPC_URL);
 
 export const SOLANA_CLUSTER =
   import.meta.env.VITE_SOLANA_CLUSTER || (RPC_URL.includes("mainnet") ? "mainnet-beta" : "devnet");
@@ -88,3 +92,12 @@ export const PYTH_USDC_USD_ACCOUNT = (env.VITE_PYTH_USDC_USD_ACCOUNT || processE
 
 export const EXPLORER_BASE =
   import.meta.env.VITE_EXPLORER_BASE_URL || "https://explorer.solana.com";
+
+function isLocalRpcUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ["localhost", "127.0.0.1", "0.0.0.0"].includes(parsed.hostname);
+  } catch {
+    return false;
+  }
+}

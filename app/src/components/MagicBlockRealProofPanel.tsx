@@ -30,7 +30,9 @@ export function MagicBlockRealProofPanel({
           </div>
           <h4 className="mt-2 font-display text-[15px] font-semibold">Private trader alpha, public investor safety</h4>
           <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
-            This verifies the TEE endpoint, gets a short-lived wallet-signed auth token, initializes a session, delegates only session state, executes redacted guard logic on MagicBlock, commits proof, then reclaims.
+            {proof.envStatus.localEr
+              ? "Local ER mode: initialize a session, delegate only session state to localhost MagicBlock ER, execute redacted guard logic, commit proof, then reclaim. This validates ER mechanics, not TEE privacy."
+              : "This verifies the TEE endpoint, gets a short-lived wallet-signed auth token, initializes a session, delegates only session state, executes redacted guard logic on MagicBlock, commits proof, then reclaims."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -126,8 +128,8 @@ export function MagicBlockRealProofPanel({
             rows={[
               ["Session PDA", proof.lastResult.plan.sessionPda.toBase58()],
               ["Permission PDA", proof.lastResult.plan.permissionPda.toBase58()],
-              ["TEE auth", proof.lastResult.teeAuth.source],
-              ["TEE integrity", proof.lastResult.teeAuth.integrityVerified ? "verified" : "env-token"],
+              ["ER auth", proof.lastResult.teeAuth.source],
+              ["TEE integrity", proof.lastResult.teeAuth.integrityVerified ? "verified" : proof.lastResult.teeAuth.source],
               ["Delegated owner", proof.lastResult.accountOwners.sessionDelegated ?? "pending"],
               ["Permission owner", proof.lastResult.accountOwners.permissionDelegated ?? "pending"],
               ["Reclaimed owner", proof.lastResult.accountOwners.sessionAfter ?? "pending"],

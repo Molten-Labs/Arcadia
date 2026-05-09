@@ -102,7 +102,9 @@ export function useMagicBlockPrivateIntentProof() {
       const vaultConfig = new PublicKey(params.vaultConfigPubkey);
       markPhase("init-session", {
         status: "active",
-        detail: "Verifying MagicBlock TEE integrity and requesting a wallet-signed auth token.",
+        detail: envStatus.localEr
+          ? "Using local MagicBlock ER on localhost; TEE auth is skipped for local validation."
+          : "Verifying MagicBlock TEE integrity and requesting a wallet-signed auth token.",
       });
       const teeAuth = await requestMagicBlockTeeAuth({
         publicKey,

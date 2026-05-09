@@ -19,6 +19,8 @@ app/dist/
 mobile/dist/
 target/
 Arcadia_program/target
+magicblock-test-storage/
+.surfpool/
 
 # ─── Expo / React Native ──────────────────────────────────────────────────────
 mobile/.expo/

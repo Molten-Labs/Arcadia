@@ -15,6 +15,7 @@ import {
   MAGICBLOCK_DELEGATION_PROGRAM_ID,
   MAGICBLOCK_DEVNET_TEE_VALIDATOR,
   MAGICBLOCK_ER_RPC_URL,
+  MAGICBLOCK_LOCAL_ER,
   MAGICBLOCK_MAGIC_CONTEXT_ID,
   MAGICBLOCK_MAGIC_PROGRAM_ID,
   MAGICBLOCK_PERMISSION_PROGRAM_ID,
@@ -74,6 +75,7 @@ export interface MagicBlockPrivateIntentPlan {
 export interface MagicBlockEnvStatus {
   ready: boolean;
   missing: string[];
+  localEr: boolean;
   teeRpcUrl: string;
   erRpcUrl: string;
   validator: string;
@@ -85,7 +87,7 @@ export interface MagicBlockTeeAuthSession {
   token: string;
   connectionUrl: string;
   integrityVerified: boolean;
-  source: "wallet-challenge" | "env-token";
+  source: "wallet-challenge" | "env-token" | "local-er";
   issuedAt: number;
 }
 
@@ -152,12 +154,13 @@ const PRIVATE_INTENT_SETTLEMENT_FAILED = 3;
 
 export function getMagicBlockEnvStatus(): MagicBlockEnvStatus {
   const missing: string[] = [];
-  if (!MAGICBLOCK_TEE_RPC_URL) missing.push("VITE_MAGICBLOCK_TEE_RPC_URL");
+  if (!MAGICBLOCK_LOCAL_ER && !MAGICBLOCK_TEE_RPC_URL) missing.push("VITE_MAGICBLOCK_TEE_RPC_URL");
   if (!MAGICBLOCK_ER_RPC_URL) missing.push("VITE_MAGICBLOCK_ER_RPC_URL");
 
   return {
     ready: missing.length === 0,
     missing,
+    localEr: MAGICBLOCK_LOCAL_ER,
     teeRpcUrl: MAGICBLOCK_TEE_RPC_URL,
     erRpcUrl: MAGICBLOCK_ER_RPC_URL,
     validator: MAGICBLOCK_DEVNET_TEE_VALIDATOR.toBase58(),
@@ -176,6 +179,16 @@ export async function requestMagicBlockTeeAuth(input: {
 }): Promise<MagicBlockTeeAuthSession> {
   if (!MAGICBLOCK_TEE_RPC_URL) {
     throw new Error("VITE_MAGICBLOCK_TEE_RPC_URL is required for MagicBlock PER.");
+  }
+
+  if (MAGICBLOCK_LOCAL_ER) {
+    return {
+      token: "",
+      connectionUrl: MAGICBLOCK_ER_RPC_URL || MAGICBLOCK_TEE_RPC_URL,
+      integrityVerified: false,
+      source: "local-er",
+      issuedAt: Date.now(),
+    };
   }
 
   if (MAGICBLOCK_TEE_AUTH_TOKEN) {
