@@ -444,7 +444,7 @@ const Landing = () => {
               custom={2}
               className="mt-7 max-w-2xl text-[1.1rem] leading-[1.65] text-foreground/78 md:text-[1.25rem]"
             >
-              Arcadia lets traders raise capital through verified on-chain performance and execute privately, while investors get automatic protection and clean exits — all enforced by code, no trust required.
+              Arcadia lets traders raise capital through verified on-chain performance and execute privately, while investors get automatic protection and clean exits, all enforced by code, no trust required.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
