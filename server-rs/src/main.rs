@@ -29,8 +29,6 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 
-static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
-
 #[derive(Clone)]
 struct AppState {
     store: Store,
@@ -626,7 +624,9 @@ async fn main() -> anyhow::Result<()> {
             .max_connections(5)
             .connect(&database_url)
             .await?;
-        MIGRATOR.run(&db).await?;
+        let mut migrator = sqlx::migrate!("./migrations");
+        migrator.set_ignore_missing(true);
+        migrator.run(&db).await?;
         Store::Postgres(db)
     };
 
