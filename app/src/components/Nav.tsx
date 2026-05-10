@@ -144,7 +144,7 @@ export const Nav = () => {
                 <div className="container grid h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:grid-cols-[minmax(17rem,1fr)_auto_minmax(17rem,1fr)]">
                     <div className="flex min-w-0 items-center">
                         <Link to="/" className="group flex min-w-0 shrink-0 items-center gap-2.5">
-                            <ArcadiaLogo className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 md:h-5 md:w-5" />
+                            <ArcadiaLogo className="transition-transform duration-200 group-hover:translate-x-0.5" />
                             <ArcadiaWordmark className="max-w-[14.5rem] truncate" />
                         </Link>
                     </div>
