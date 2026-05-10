@@ -74,4 +74,78 @@ export default defineConfig(({ mode }) => ({
       target: "esnext",
     },
   },
+
+  build: {
+    target: "esnext",
+    minify: "esbuild",
+    sourcemap: false,
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/scheduler/")
+          ) return "vendor-react";
+
+          if (
+            id.includes("node_modules/react-router") ||
+            id.includes("node_modules/@remix-run/")
+          ) return "vendor-router";
+
+          if (
+            id.includes("node_modules/@solana/web3.js") ||
+            id.includes("node_modules/@solana/wallet-adapter-base") ||
+            id.includes("node_modules/@solana/wallet-adapter-react/") ||
+            id.includes("node_modules/bs58") ||
+            id.includes("node_modules/buffer") ||
+            id.includes("node_modules/safe-buffer") ||
+            id.includes("node_modules/base-x") ||
+            id.includes("node_modules/bn.js") ||
+            id.includes("node_modules/borsh") ||
+            id.includes("node_modules/@solana/buffer-layout") ||
+            id.includes("node_modules/rpc-websockets") ||
+            id.includes("node_modules/@noble/") ||
+            id.includes("node_modules/superstruct")
+          ) return "vendor-misc";
+
+          if (
+            id.includes("node_modules/@solana/wallet-adapter-react-ui") ||
+            id.includes("node_modules/@solana/wallet-adapter-wallets") ||
+            id.includes("node_modules/@phantom/") ||
+            id.includes("node_modules/@solflare-wallet/")
+          ) return "vendor-wallet-ui";
+
+          if (
+            id.includes("node_modules/@walletconnect/") ||
+            id.includes("node_modules/@reown/") ||
+            id.includes("node_modules/@web3modal/") ||
+            id.includes("node_modules/@toruslabs/")
+          ) return "vendor-walletconnect";
+
+          if (id.includes("node_modules/@radix-ui/")) return "vendor-radix";
+          if (id.includes("node_modules/framer-motion")) return "vendor-motion";
+          if (id.includes("node_modules/lucide-react")) return "vendor-icons";
+          if (id.includes("node_modules/@tanstack/")) return "vendor-query";
+
+          if (
+            id.includes("node_modules/recharts") ||
+            id.includes("node_modules/recharts-scale") ||
+            id.includes("node_modules/d3-") ||
+            id.includes("node_modules/victory-vendor")
+          ) return "vendor-charts";
+
+          if (
+            id.includes("node_modules/sonner") ||
+            id.includes("node_modules/vaul") ||
+            id.includes("node_modules/cmdk") ||
+            id.includes("node_modules/embla-carousel")
+          ) return "vendor-ui-utils";
+
+          if (id.includes("node_modules/")) return "vendor-misc";
+        },
+      },
+    },
+  },
 }));

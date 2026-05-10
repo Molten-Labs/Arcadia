@@ -1,23 +1,4 @@
-// ── Polyfills — must be first, before any Solana import ────────────────────
-import { Buffer } from "buffer";
-
-const globalScope = globalThis as typeof globalThis & {
-  Buffer?: typeof Buffer;
-  global?: typeof globalThis;
-};
-const windowScope = window as Window & { Buffer?: typeof Buffer };
-
-if (typeof globalScope.Buffer === "undefined" || typeof globalScope.Buffer.alloc !== "function") {
-  globalScope.Buffer = Buffer;
-}
-if (typeof windowScope.Buffer === "undefined" || typeof windowScope.Buffer.alloc !== "function") {
-  windowScope.Buffer = Buffer;
-}
-if (typeof globalScope.global === "undefined") {
-  globalScope.global = globalThis;
-}
-
-// ── App ─────────────────────────────────────────────────────────────────────
+import "./polyfills";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";

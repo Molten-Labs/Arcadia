@@ -136,17 +136,25 @@ export default defineConfig(({ mode }) => ({
           ) return "vendor-router";
 
           // ── Tier 2: Solana core ──────────────────────────────────────────
+          // Keep Solana and the Node-style remainder in the same chunk. Several
+          // transitive packages share the browser Buffer export at module
+          // initialization time; splitting them creates a circular chunk that can
+          // leave `Buffer` undefined in Safari/production builds.
           if (
             id.includes("node_modules/@solana/web3.js") ||
             id.includes("node_modules/@solana/wallet-adapter-base") ||
             id.includes("node_modules/@solana/wallet-adapter-react/") ||
             id.includes("node_modules/bs58") ||
             id.includes("node_modules/buffer") ||
+            id.includes("node_modules/safe-buffer") ||
+            id.includes("node_modules/base-x") ||
             id.includes("node_modules/bn.js") ||
             id.includes("node_modules/borsh") ||
+            id.includes("node_modules/@solana/buffer-layout") ||
+            id.includes("node_modules/rpc-websockets") ||
             id.includes("node_modules/@noble/") ||
             id.includes("node_modules/superstruct")
-          ) return "vendor-solana";
+          ) return "vendor-misc";
 
           // ── Tier 3: Wallet UI ────────────────────────────────────────────
           if (
