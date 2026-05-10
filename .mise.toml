@@ -1,4 +1,4 @@
-# Mise configuration for SynQ
-# Disable automatic tool installation
+[tools]
+rust = "1.89.0"
+
 [env]
-# Skip mise tool management - use system binaries

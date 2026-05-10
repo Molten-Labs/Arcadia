@@ -1,0 +1,11 @@
+[variables]
+NIXPACKS_RUST_VERSION = "1.89.0"
+
+[phases.setup]
+nixPkgs = ["rustc", "cargo", "pkg-config", "openssl"]
+
+[phases.build]
+cmds = ["cargo build --release --manifest-path server-rs/Cargo.toml"]
+
+[start]
+cmd = "./server-rs/target/release/server-rs"

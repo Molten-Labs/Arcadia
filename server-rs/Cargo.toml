@@ -2,6 +2,7 @@
 name = "server-rs"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.89.0"
 authors = ["Kiln Team <dev@kiln.example>"]
 license = "MIT"
 description = "Axum-based indexer & API server for Kiln — receives Helius webhooks, indexes events to Postgres and exposes read APIs for the frontend."
