@@ -1,5 +1,5 @@
-# Arcadia
-<img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/a9b2b319-3f83-4198-9181-05cd2529f284" />
+# Arcadia Protocol 
+<img width="1983" height="793" alt="banner" src="https://github.com/user-attachments/assets/03bb0814-4144-431b-a2bf-64e0a6349e1e" />
 
 **Proof-of-Performance Capital Protocol on Solana.**
 
