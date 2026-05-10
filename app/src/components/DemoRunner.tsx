@@ -13,6 +13,10 @@ import { DEMO_STEPS, PHASE_META } from "@/lib/demoScript";
 import { cn } from "@/lib/utils";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+const DEMO_SPEED_MULTIPLIER = 4 / 3;
+
+const getStepDuration = (idx: number) =>
+  (DEMO_STEPS[idx]?.duration ?? 0) * DEMO_SPEED_MULTIPLIER;
 
 export function DemoRunner() {
   const navigate = useNavigate();
@@ -55,7 +59,7 @@ export function DemoRunner() {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (rafRef.current)   cancelAnimationFrame(rafRef.current);
     const elapsed = Date.now() - stepStartRef.current;
-    remainingRef.current = Math.max(0, DEMO_STEPS[stepIdxRef.current].duration - elapsed);
+    remainingRef.current = Math.max(0, getStepDuration(stepIdxRef.current) - elapsed);
     setIsPaused(true);
     isPausedRef.current = true;
   }, []);
@@ -69,12 +73,12 @@ export function DemoRunner() {
     const remaining = remainingRef.current;
     setIsPaused(false);
     isPausedRef.current = false;
-    const newStart = Date.now() - (DEMO_STEPS[stepIdxRef.current].duration - remaining);
+    const newStart = Date.now() - (getStepDuration(stepIdxRef.current) - remaining);
     stepStartRef.current = newStart;
 
     // rAF progress
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    const duration = DEMO_STEPS[stepIdxRef.current].duration;
+    const duration = getStepDuration(stepIdxRef.current);
     const tick = () => {
       if (isPausedRef.current) return;
       const pct = Math.min(100, ((Date.now() - newStart) / duration) * 100);
@@ -207,7 +211,7 @@ export function DemoRunner() {
     await sleep(300);
     await runAction(step.id);
 
-    const duration = step.duration;
+    const duration = getStepDuration(idx);
     stepStartRef.current = Date.now();
     remainingRef.current = duration;
     startProgressRaf(duration, stepStartRef.current);
@@ -527,7 +531,7 @@ export function DemoTriggerButton({ className }: { className?: string }) {
       onClick={fire}
       title="Start hands-free demo"
       className={cn(
-        "hidden sm:inline-flex items-center gap-1.5 h-9 rounded-lg border border-border/60 px-3",
+        "inline-flex items-center gap-1.5 h-9 rounded-lg border border-border/60 px-3",
         "font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
         "hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-colors",
         className

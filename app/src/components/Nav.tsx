@@ -40,6 +40,7 @@ import { ArcadiaLogo, ArcadiaWordmark } from "@/components/ArcadiaLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ConnectModal } from "@/components/ConnectModal";
 import { DevnetUsdcFaucet } from "@/components/DevnetUsdcFaucet";
+import { DemoTriggerButton } from "@/components/DemoRunner";
 import { useRealtimeStatus } from "@/hooks/realtimeContext";
 import type { Alert } from "@/lib/mockData";
 import { mockStore } from "@/lib/mockStore";
@@ -104,6 +105,7 @@ export const Nav = () => {
     ];
 
     const links = !connected ? publicLinks : role === "trader" ? traderLinks : investorLinks;
+    const showDemoTrigger = true;
     const secondaryLinks = connected
         ? role === "trader"
             ? [
@@ -209,6 +211,7 @@ export const Nav = () => {
                     </nav>
 
                     <div className="flex min-w-0 items-center justify-end gap-2 lg:col-start-3">
+                        {showDemoTrigger && <DemoTriggerButton />}
                         <ThemeToggle className="hidden sm:inline-flex" />
 
                         {/* Bell notification popover — only shown when connected */}
@@ -441,6 +444,17 @@ export const Nav = () => {
             {open && (
                 <div className="border-b border-border/40 bg-background/95 backdrop-blur-xl lg:hidden">
                     <div className="container py-3 flex flex-col gap-1">
+                        {showDemoTrigger && (
+                            <button
+                                onClick={() => {
+                                    setOpen(false);
+                                    window.dispatchEvent(new CustomEvent("kiln:demo-start"));
+                                }}
+                                className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-left font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-primary hover:bg-primary/10"
+                            >
+                                Start auto demo
+                            </button>
+                        )}
                         {[...links, ...secondaryLinks].map((l) =>
                             "to" in l ? (
                                 <Link
