@@ -178,7 +178,7 @@ class MockStore {
       instantExit: false,
       strategyTags: ["Discretionary"],
       description: params.name,
-      allowedAssets: ["USDC", "SOL", "ETH"],
+      allowedAssets: ["USDC", "SOL"],
       feeModel: `${params.feeBps / 100}% performance above HWM`,
       hwm: params.juniorAmount,
       unclaimedFees: 0,

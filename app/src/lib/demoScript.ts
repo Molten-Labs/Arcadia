@@ -14,162 +14,126 @@ export const PHASE_META: Record<DemoStep["phase"], { label: string; color: strin
 };
 
 export const DEMO_STEPS: DemoStep[] = [
-  // ── Phase 1: Overview ──────────────────────────────────────────────────────
+  // ── Phase 1: Set the promise ───────────────────────────────────────────────
   {
     id: "welcome",
     phase: "overview",
-    caption: "Welcome to Arcadia Protocol",
+    caption: "Arcadia starts with proof, not promises",
     subcaption:
-      "A first-loss vault DeFi platform on Solana — where traders put their own capital at risk before touching a single investor dollar.",
-    route: "/vaults",
-    duration: 5500,
-  },
-  {
-    id: "traders-leaderboard",
-    phase: "overview",
-    caption: "Traders build trust on-chain",
-    subcaption:
-      "Every manager posts junior capital as a first-loss buffer, creating a verifiable track record that investors can audit directly on-chain.",
-    route: "/traders",
-    duration: 5500,
-  },
-  {
-    id: "how-it-works",
-    phase: "overview",
-    caption: "The first-loss mechanism",
-    subcaption:
-      "Each vault holds two layers. Junior capital comes from the trader. Senior capital comes from investors. Losses always hit junior first — investors are protected as long as the junior buffer holds.",
-    route: "/how-it-works",
-    duration: 5500,
-  },
-  {
-    id: "private-guard",
-    phase: "overview",
-    caption: "Private Intent Vault Guard",
-    subcaption:
-      "Traders submit trade intents privately — strategy, size, and route never touch the blockchain. The guard approves or rejects on-chain. Investors see proof of rule enforcement without seeing the trade.",
-    route: "/#private-guard",
+      "A trader can only access investor capital after risking their own junior capital first and proving the vault can survive paper mode.",
+    route: "/",
     duration: 6500,
   },
 
-  // ── Phase 2: Trader Flow ───────────────────────────────────────────────────
+  // ── Phase 2: Trader creates and proves a vault ─────────────────────────────
   {
     id: "connect-trader",
     phase: "trader",
-    caption: "Connecting as Aria Volkov",
+    caption: "Step 1: trader dashboard",
     subcaption:
-      "Elite-tier manager · 920 reputation score · $4.3M AUM across 2 active graduated vaults.",
-    duration: 3000,
-  },
-  {
-    id: "manager-dashboard",
-    phase: "trader",
-    caption: "Manager dashboard",
-    subcaption:
-      "Signal Macro I (+11.4% in 30d) and Signal Momentum II (+7.4% in 30d). Unclaimed performance fees accumulating above the high-water mark.",
+      "The trader enters operator mode. For the MVP, there is no reputation shortcut: access is earned by posting junior capital and passing vault rules.",
     route: "/manager",
-    duration: 5000,
+    duration: 5500,
   },
   {
     id: "create-vault-page",
     phase: "trader",
-    caption: "Creating a new vault",
+    caption: "Step 2: create a vault with first-loss capital",
     subcaption:
-      "The wizard walks through: strategy name, risk profile (fee + max slippage), and junior capital deposit — all submitted in one transaction bundle.",
+      "The vault starts with strategy name, fee, max slippage, and the trader's junior deposit. Investor capital is still blocked.",
     route: "/manager/create",
     duration: 4000,
   },
   {
     id: "create-vault-submit",
     phase: "trader",
-    caption: "Posting 10,000 USDC as first-loss buffer",
+    caption: "Step 3: junior capital is posted",
     subcaption:
-      "Junior capital is locked on-chain. Paper mode begins — 30 days of live trade history required before investor deposits open.",
-    duration: 5500,
+      "Arcadia creates the vault and locks 10,000 USDC of trader capital as the first-loss buffer. This is what protects future investors.",
+    duration: 5000,
   },
   {
     id: "paper-mode",
     phase: "trader",
-    caption: "Vault live in paper mode",
+    caption: "Step 4: paper mode begins",
     subcaption:
-      "No investor capital at risk yet. The protocol records every trade on-chain to build a tamper-proof, auditable track record.",
+      "No investor funds are at risk yet. The trader must build a live track record while keeping the junior buffer above the graduation threshold.",
     duration: 4000,
   },
   {
     id: "trade-terminal",
     phase: "trader",
-    caption: "Pro trading terminal",
+    caption: "Step 5: approved spot trading",
     subcaption:
-      "Full-featured terminal with live market data, multi-asset order routing via Jupiter, real-time positions panel, and NAV impact preview before each trade.",
+      "The MVP keeps the scope tight: spot flow only, approved assets only, and every action updates NAV and vault health.",
     route: "/trade",
     duration: 5500,
   },
   {
     id: "execute-trades",
     phase: "trader",
-    caption: "Executing paper trades",
+    caption: "Step 6: paper trades build the proof trail",
     subcaption:
-      "Each trade is recorded on-chain: pair, size, price, and NAV impact. The vault's track record updates live — prospective investors can audit every entry.",
+      "The demo runs a few SOL/USDC paper trades. The important part is not the trade idea, it is the visible effect on NAV and junior buffer health.",
     duration: 7000,
   },
   {
     id: "vault-post-trades",
     phase: "trader",
-    caption: "Vault NAV updated after trading",
+    caption: "Step 7: vault record is visible",
     subcaption:
-      "The manager vault view reflects every trade: updated NAV chart, junior buffer health, activity log, and paper trade count toward graduation threshold.",
+      "Now the manager view shows the paper trades, NAV movement, junior health, and activity log in one place.",
     duration: 4500,
   },
   {
     id: "graduate",
     phase: "trader",
-    caption: "Vault graduates from paper mode!",
+    caption: "Step 8: the vault graduates",
     subcaption:
-      "30-day track record verified on-chain. Investor deposits are now open. Aria's reputation score increases and the vault appears in the marketplace.",
+      "After the paper requirements are satisfied and junior capital remains healthy, Arcadia opens the vault to protected investor deposits.",
     duration: 4500,
   },
 
-  // ── Phase 3: Investor Flow ─────────────────────────────────────────────────
+  // ── Phase 3: Investor enters protected capital ─────────────────────────────
   {
     id: "switch-investor",
     phase: "investor",
-    caption: "Switching to investor view",
+    caption: "Step 9: switch to investor view",
     subcaption:
-      "Same wallet, different role. Investors browse the marketplace and monitor their positions from a unified portfolio dashboard.",
+      "The same app now shows what an investor cares about: graduated vaults, junior protection, NAV history, and exit conditions.",
     duration: 2500,
   },
   {
     id: "investor-marketplace",
     phase: "investor",
-    caption: "Graduated vaults marketplace",
+    caption: "Step 10: browse graduated vaults",
     subcaption:
-      "Only vaults with verified paper-mode track records appear. Junior buffer health, live NAV, and risk metrics shown for every vault.",
+      "The marketplace is where investor discovery happens. Vaults should be judged by health, capital stack, and proof trail, not hype.",
     route: "/vaults",
     duration: 5000,
   },
   {
     id: "vault-detail",
     phase: "investor",
-    caption: "Signal Macro I — 84% junior buffer, +11.4% return",
+    caption: "Step 11: inspect the graduated vault",
     subcaption:
-      "Full NAV history, capital stack breakdown, trade log, and risk metrics — all sourced on-chain and updated in real time.",
-    route: "/vault/vlt-001",
+      "Before depositing, the investor sees NAV history, senior and junior capital, trade activity, and the first-loss buffer protecting them.",
     duration: 5000,
   },
   {
     id: "deposit",
     phase: "investor",
-    caption: "Depositing 50,000 USDC",
+    caption: "Step 12: deposit senior capital",
     subcaption:
-      "Protected by trader's first-loss buffer. Instant exit is available any time junior health drops below 20%.",
+      "The investor deposits as senior capital. If the vault loses money, the trader's junior capital absorbs losses first.",
     duration: 5000,
   },
   {
     id: "portfolio",
     phase: "investor",
-    caption: "Portfolio dashboard",
+    caption: "Step 13: monitor the protected position",
     subcaption:
-      "Live position tracking, unrealized P&L, health meter, and per-vault alert thresholds — everything in one view.",
+      "The portfolio closes the loop: live position value, P&L, junior health, alerts, and exit readiness in one dashboard.",
     route: "/portfolio",
     duration: 6000,
   },

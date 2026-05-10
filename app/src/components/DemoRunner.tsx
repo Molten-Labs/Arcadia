@@ -144,9 +144,9 @@ export function DemoRunner() {
         const vid = newVaultIdRef.current;
         if (!vid) break;
         const trades = [
-          { pair: "SOL → USDC", amount: 2500 },
-          { pair: "ETH → USDC", amount: 1800 },
-          { pair: "JUP → USDC", amount: 1200 },
+          { pair: "USDC → SOL", amount: 2500 },
+          { pair: "SOL → USDC", amount: 1800 },
+          { pair: "USDC → SOL", amount: 1200 },
           { pair: "SOL → USDC", amount: 3000 },
         ];
         for (const t of trades) {
@@ -177,11 +177,16 @@ export function DemoRunner() {
         setRole("investor");
         break;
 
+      case "vault-detail":
+        navigate(`/vault/${newVaultIdRef.current ?? "vlt-001"}`);
+        break;
+
       case "deposit":
         await sleep(1500);
-        mockStore.depositSenior("vlt-001", 50_000);
+        mockStore.depositSenior(newVaultIdRef.current ?? "vlt-001", 50_000);
         queryClient.invalidateQueries({ queryKey: ["vaults"] });
-        toast.success("Deposited 50,000 USDC into Signal Macro I");
+        queryClient.invalidateQueries({ queryKey: ["positions"] });
+        toast.success("Deposited 50,000 USDC into the graduated vault");
         break;
     }
   }, [connectDemoWallet, setRole, navigate, queryClient]);
