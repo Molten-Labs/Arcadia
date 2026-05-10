@@ -6,7 +6,7 @@ CARGO_TARGET_DIR = "target"
 nixPkgs = ["rustc", "cargo", "pkg-config", "openssl"]
 
 [phases.build]
-cmds = ["cargo build --release --manifest-path server-rs/Cargo.toml"]
+cmds = ["cargo build --release"]
 
 [start]
 cmd = "./target/release/server-rs"
