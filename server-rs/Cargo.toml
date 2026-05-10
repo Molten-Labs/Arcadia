@@ -49,13 +49,7 @@ tower = "0.5"
 # the `DATABASE_URL` env and running `cargo sqlx prepare` if desired.
 default = []
 
-[profile.release]
-opt-level = 3
-debug = false
-lto = true
-codegen-units = 1
-
-[workspace.metadata]
+[package.metadata]
 # Helpful notes for maintainers
 notes = """
 This crate is an Axum server scaffold that connects to a Postgres database using SQLx.
