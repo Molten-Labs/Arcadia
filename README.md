@@ -1,134 +1,40 @@
-# Arcadia protocol
-
+# Arcadia
 <img width="1024" height="572" alt="image" src="https://github.com/user-attachments/assets/a9b2b319-3f83-4198-9181-05cd2529f284" />
 
-Traders prove themselves with their own money before touching investor capital — and lose first when trades go wrong. No trust required. Code enforces it.
+**Proof-of-Performance Capital Protocol on Solana.**
+
+Arcadia lets traders raise capital through verified on-chain performance and execute strategies privately, while investors get automatic protection and clean exits — all enforced by code, no trust required.
 
 ---
 
-## How it works
+## What it does
 
-Every vault starts in **paper mode**: the trader deposits their own capital (junior) and trades publicly on-chain for 30 days. Only after demonstrating positive performance does the vault open to investor deposits (senior). When trades lose money, the junior buffer absorbs losses first. Investor capital is protected until the junior is fully wiped.
+Traders deposit their own capital first. They trade publicly on-chain for 30 days in paper mode, building a verifiable track record before any investor can deposit. When the vault graduates, investors join the senior tranche. When trades lose money, the trader's junior capital absorbs losses first. Investor capital is protected until the junior buffer is fully wiped.
 
-Key protocol properties enforced at the program level:
+The protocol enforces five guarantees at the program level — no operator override:
 
-- **First-loss waterfall** — trader junior capital absorbs all losses before investors feel anything
-- **20% liquid reserve floor** — vault guard rejects any swap that would leave less than 20% of NAV in liquid stablecoin, ensuring investors can always withdraw
-- **Dynamic position limits** — max trade size shrinks as junior health falls (10% → 6% → 3% → 1% → disabled)
-- **Pro-rata withdrawal** — investors receive their proportional share of every token in the vault instantly, without waiting for the trader to unwind positions
-- **High-water mark fees** — manager performance fees (up to 20%) only accrue on gains above the previous HWM
+- **First-loss waterfall** — junior capital absorbs all losses before investors feel anything
+- **20% liquid reserve floor** — the vault guard rejects any swap that would leave less than 20% of NAV in liquid stablecoin, so investors can always exit
+- **Dynamic position limits** — max trade size shrinks automatically as junior health falls (10% → 6% → 3% → 1% → disabled)
+- **Pro-rata withdrawal** — investors receive their proportional share of every token in the vault instantly, with no trader involvement
+- **High-water mark fees** — performance fees (up to 20%) only accrue on gains above the previous HWM, never during drawdowns
 
 ---
 
 ## Repository structure
 
 ```
-Arcadia_program/       # On-chain program (Pinocchio, Shank, bytemuck)
-  program/src/         # Program source
-    instructions/      # All 10 instructions
-    states/            # Account structs (zero-copy, Pod)
-  kiln-tests/          # LiteSVM integration tests
-app/                   # Frontend (Vite + React + TypeScript + Tailwind)
-  src/pages/           # Route pages
-  src/hooks/           # Data fetching hooks
-  src/lib/             # Wallet, formatting, Solana helpers
-server-rs/             # Axum indexer + Helius webhook handler
-clients/               # Generated TypeScript client SDK (Codama/Shank)
-```
-
----
-
-## Quickstart
-
-### Prerequisites
-
-- [Rust](https://rustup.rs/) stable + the Solana SBF toolchain
-- [Node.js](https://nodejs.org/) 18+ and [pnpm](https://pnpm.io/)
-- [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools) configured for devnet
-
-### 1. Clone
-
-```bash
-git clone https://github.com/your-org/arcadia.git
-cd arcadia
-```
-
-### 2. Build and test the on-chain program
-
-```bash
-cd Arcadia_program
-
-# Unit tests (no SBF toolchain required)
-cargo test --features test-default -p Arcadia_program
-
-# Integration tests (requires a built .so)
-cargo build-sbf
-cargo test -p kiln-tests
-```
-
-### 3. Deploy to devnet
-
-```bash
-cd Arcadia_program
-solana config set --url devnet
-cargo build-sbf
-solana program deploy target/deploy/Kiln_program.so
-```
-
-### 4. Run the frontend
-
-```bash
-# From repo root
-cp .env.example .env
-# Set VITE_RPC_URL to your devnet RPC endpoint
-
-pnpm install
-pnpm --dir app dev
-```
-
-Open [http://localhost:5173](http://localhost:5173).
-
----
-
-## Usage
-
-### Create a vault (trader)
-
-```typescript
-import { useKilnTransactions } from "@/hooks/useTransactions";
-
-const { initManager, createVault, depositJunior } = useKilnTransactions();
-
-// 1. Initialize your manager profile (once per wallet)
-await initManager();
-
-// 2. Create a vault in paper mode
-await createVault({
-  name: "Alpha Vault I",
-  feeBps: 2000,           // 20% performance fee
-  maxSlippageBps: 200,    // 2% max slippage per swap
-  paperWindowSecs: 2592000, // 30 days
-});
-
-// 3. Deposit your first-loss junior capital
-await depositJunior(vaultConfigPda, 5_000_000n); // 5 USDC (6 decimals)
-```
-
-### Deposit as an investor (after vault graduation)
-
-```typescript
-const { depositSenior } = useKilnTransactions();
-
-await depositSenior(vaultConfigPda, 10_000_000n); // 10 USDC
-```
-
-### Withdraw at any time
-
-```typescript
-const { withdrawSenior } = useKilnTransactions();
-
-// Withdraws your pro-rata share of every token in the vault
-await withdrawSenior(vaultConfigPda, amountUsdcUnits);
+Arcadia_program/          # On-chain program
+  program/src/
+    instructions/         # 10 program instructions
+    states/               # Zero-copy account structs (bytemuck, Pod)
+  kiln-tests/             # LiteSVM integration tests
+app/                      # Frontend (Vite + React + TypeScript + Tailwind)
+  src/pages/              # Route pages
+  src/hooks/              # Data fetching
+  src/lib/                # Wallet, Solana helpers, formatting
+server-rs/                # Axum indexer + Helius webhook handler
+clients/                  # Generated TypeScript SDK (Shank + Codama)
 ```
 
 ---
@@ -138,10 +44,10 @@ await withdrawSenior(vaultConfigPda, amountUsdcUnits);
 | # | Instruction | Who calls it |
 |---|---|---|
 | 0 | `init_manager` | Trader — one-time profile creation |
-| 1 | `create_vault` | Trader — creates a vault in paper mode |
+| 1 | `create_vault` | Trader — opens a vault in paper mode |
 | 2 | `deposit_junior` | Trader — posts first-loss capital |
 | 3 | `update_nav` | Anyone — recomputes NAV from oracle prices |
-| 4 | `graduate_vault` | Anyone — promotes a paper vault if requirements met |
+| 4 | `graduate_vault` | Anyone — promotes a vault that meets all requirements |
 | 5 | `deposit_senior` | Investor — deposits into a graduated vault |
 | 6 | `withdraw_senior` | Investor — pro-rata withdrawal of vault assets |
 | 7 | `withdraw_junior` | Trader — reclaims junior capital (respects ratio floor) |
@@ -150,20 +56,20 @@ await withdrawSenior(vaultConfigPda, amountUsdcUnits);
 
 ---
 
-## Vault guard checks
+## Vault guard
 
-Every `execute_swap` runs 10 checks before execution:
+Every `execute_swap` runs ten checks before the swap executes. Any failure rejects the transaction:
 
-1. Vault not frozen
-2. Vault graduated (paper mode complete)
-3. Trading enabled (junior health > threshold)
-4. Position size within dynamic limit
-5. Input ≠ output mint
-6. Output token on whitelist
-7. Trade cooldown not active
-8. Slippage: actual out ≥ minimum out
-9. Oracle price fresh and confidence within bounds (Pyth, max 30s staleness)
-10. Post-swap AUDD balance ≥ 20% of total NAV
+1. Vault is not frozen
+2. Vault has graduated from paper mode
+3. Trading is enabled (junior health above threshold)
+4. Position size is within the dynamic limit
+5. Input and output mints are different
+6. Output token is on the vault whitelist
+7. Trade cooldown has expired
+8. Slippage: actual output ≥ minimum out
+9. Oracle price is fresh and within confidence bounds (Pyth, max 30s staleness, max 1.5% confidence)
+10. Post-swap stablecoin balance ≥ 20% of total NAV
 
 ---
 
@@ -177,11 +83,22 @@ InvestorPosition  PDA: ["investor-position", investor_pubkey, vault_config_pubke
 Treasury          PDA: ["vault-treasury", vault_config_pubkey]
 ```
 
-Investor positions are tracked in `InvestorPosition` only — no share token mints. Ownership percentage is derived at withdrawal time:
+No share token mints. Investor ownership is tracked in `InvestorPosition` and derived at withdrawal time:
 
 ```
 investor_pct = investor.senior_shares / vault.senior_shares_outstanding
 ```
+
+---
+
+## Graduation requirements
+
+A vault graduates automatically when all three conditions are met:
+
+- Junior capital is still positive
+- Current NAV exceeds the original junior deposit (positive paper PnL)
+- Minimum qualifying trades have been completed
+- The 30-day paper window has elapsed
 
 ---
 
@@ -192,90 +109,12 @@ investor_pct = investor.senior_shares / vault.senior_shares_outstanding
 VITE_RPC_URL=https://api.devnet.solana.com
 VITE_KILN_API_BASE_URL=http://localhost:8080
 
-# Indexer (server-rs)
+# Indexer
 DATABASE_URL=postgres://user:pass@localhost:5432/arcadia
 HELIUS_API_KEY=your_helius_key
 HELIUS_WEBHOOK_SECRET=your_webhook_secret
 PORT=8080
 
-# Optional (mainnet only)
+# Mainnet only
 JUPITER_API_KEY=your_jupiter_key
 ```
-
-> **Never commit secrets.** Use environment variables or a secrets manager.
-
----
-
-## Running the indexer
-
-The Axum-based indexer handles Helius webhooks, materializes vault state into Postgres, and proxies Jupiter routes.
-
-```bash
-cd server-rs
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/arcadia cargo run --release
-```
-
-Endpoints:
-
-| Route | Description |
-|---|---|
-| `GET /health` | API and database status |
-| `POST /webhook` | Helius webhook ingestion |
-| `GET /vaults` | All materialized vaults |
-| `GET /vaults/{address}` | Single vault detail |
-| `GET /vaults/address/nav-history` | NAV chart data |
-| `GET /managers/address` | Manager profile |
-| `GET /positions/wallet` | Investor positions |
-| `GET /jupiter/quote` | Guarded Jupiter quote proxy |
-| `POST /jupiter/swap-instructions` | Swap instruction builder |
-
----
-
-## Tech stack
-
-| Layer | Technology |
-|---|---|
-| On-chain program | Rust, [Pinocchio](https://github.com/febo/pinocchio), Shank IDL, bytemuck zero-copy |
-| Oracle | Pyth (max 30s staleness, 1.5% confidence bound) |
-| Swap routing | Jupiter CPI (spot, devnet guard-only MVP) |
-| Testing | LiteSVM, Rust unit tests |
-| Frontend | Vite, React, TypeScript, Tailwind CSS |
-| Indexer | Rust, Axum, SQLx, Postgres |
-| Webhooks | Helius |
-
----
-
-## Development workflow
-
-```bash
-# Regenerate IDL and TypeScript client
-pnpm -w codegen:shank
-pnpm --dir clients run generate
-
-# Run frontend dev server
-pnpm --dir app dev
-
-# Run indexer
-cd server-rs && cargo run
-
-# Run all program tests
-cd Arcadia_program && cargo test --features test-default -p Kiln_program
-
-# Build SBF program
-cd Arcadia_program && cargo build-sbf
-```
-
----
-
-## Contributing
-
-1. Fork the repository and create a feature branch.
-2. Run tests before opening a pull request: `cargo test --features test-default -p Kiln_program`
-3. Keep program changes covered by LiteSVM integration tests in `kiln-tests/`.
-4. For frontend changes, run `pnpm --dir app build` to verify no type errors.
-
----
-
-## License
-
-MIT
