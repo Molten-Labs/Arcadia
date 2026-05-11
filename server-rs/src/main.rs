@@ -1,4 +1,5 @@
 use axum::{
+    body::Bytes,
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         Path, Query, State,
@@ -8,6 +9,8 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use base64::{engine::general_purpose, Engine as _};
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
@@ -30,6 +33,8 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 
+type HmacSha256 = Hmac<Sha256>;
+
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
 #[derive(Clone)]
@@ -38,6 +43,7 @@ struct AppState {
     webhook_secret: Option<String>,
     jupiter_api_key: Option<String>,
     jupiter_swap_base_url: String,
+    dodo: DodoConfig,
     magicblock: MagicBlockConfig,
     demo_mode: bool,
     surfpool_mode: bool,
@@ -64,6 +70,17 @@ struct MagicBlockConfig {
     fallback_enabled: bool,
     timeout_ms: u64,
     skip_preflight: bool,
+}
+
+#[derive(Clone, Debug)]
+struct DodoConfig {
+    api_key: Option<String>,
+    webhook_key: Option<String>,
+    api_base_url: String,
+    environment: String,
+    bot_access_monthly_product_id: Option<String>,
+    creator_pro_monthly_product_id: Option<String>,
+    bot_credits_product_id: Option<String>,
 }
 
 #[derive(Clone)]
@@ -190,6 +207,11 @@ struct MaterializedState {
     private_intent_records: HashMap<String, PrivateIntentView>,
     proof_events: Vec<ProofEventView>,
     status_events: Vec<StatusEvent>,
+    dodo_checkout_sessions: Vec<DodoCheckoutSessionRecord>,
+    dodo_webhook_ids: HashSet<String>,
+    dodo_webhook_events: Vec<DodoWebhookEventRecord>,
+    bot_subscriptions: HashMap<String, BotSubscriptionRecord>,
+    bot_entitlements: HashMap<String, BotEntitlementRecord>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -218,6 +240,123 @@ struct HealthStats {
     nav_points: i64,
     trades: i64,
     status_events: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DodoCheckoutSessionRecord {
+    session_id: String,
+    checkout_url: Option<String>,
+    wallet: String,
+    bot_id: String,
+    plan_kind: DodoPlanKind,
+    product_id: String,
+    status: String,
+    created_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DodoWebhookEventRecord {
+    webhook_id: String,
+    event_type: String,
+    payload: Value,
+    received_at: i64,
+    processed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BotSubscriptionRecord {
+    subscription_id: String,
+    wallet: String,
+    bot_id: String,
+    product_id: String,
+    status: String,
+    current_period_end: Option<i64>,
+    updated_at: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BotEntitlementRecord {
+    wallet: String,
+    bot_id: String,
+    subscription_id: String,
+    product_id: String,
+    active: bool,
+    reason: String,
+    updated_at: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum DodoPlanKind {
+    BotAccessMonthly,
+    CreatorProMonthly,
+    BotCredits,
+}
+
+impl DodoPlanKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            DodoPlanKind::BotAccessMonthly => "bot_access_monthly",
+            DodoPlanKind::CreatorProMonthly => "creator_pro_monthly",
+            DodoPlanKind::BotCredits => "bot_credits",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DodoCheckoutRequest {
+    wallet: String,
+    bot_id: String,
+    plan_kind: DodoPlanKind,
+    success_url: String,
+    cancel_url: Option<String>,
+    customer_email: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DodoCheckoutResponse {
+    session_id: String,
+    checkout_url: Option<String>,
+    mode: String,
+    product_id: String,
+    plan_kind: DodoPlanKind,
+}
+
+#[derive(Debug, Serialize)]
+struct DodoProductCartItem<'a> {
+    product_id: &'a str,
+    quantity: u32,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DodoCustomer<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    email: Option<&'a str>,
+}
+
+#[derive(Debug, Serialize)]
+struct DodoCheckoutCreateRequest<'a> {
+    product_cart: Vec<DodoProductCartItem<'a>>,
+    return_url: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cancel_url: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    customer: Option<DodoCustomer<'a>>,
+    metadata: HashMap<&'a str, String>,
+    allowed_payment_method_types: Vec<&'static str>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DodoCheckoutCreateResponse {
+    session_id: String,
+    checkout_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -815,6 +954,7 @@ async fn main() -> anyhow::Result<()> {
         .filter(|value| !value.is_empty());
     let jupiter_swap_base_url = env::var("JUPITER_SWAP_BASE_URL")
         .unwrap_or_else(|_| "https://api.jup.ag/swap/v1".to_string());
+    let dodo = dodo_config_from_env();
     let magicblock = magicblock_config_from_env();
     let demo_mode = env::var("ARCADIA_DEMO_MODE")
         .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
@@ -849,6 +989,7 @@ async fn main() -> anyhow::Result<()> {
         webhook_secret,
         jupiter_api_key,
         jupiter_swap_base_url,
+        dodo,
         magicblock,
         demo_mode,
         surfpool_mode,
@@ -931,6 +1072,8 @@ fn build_app(state: AppState) -> Router {
         .route("/managers/:address", get(get_manager_handler))
         .route("/positions/:wallet", get(positions_handler))
         .route("/devnet/faucet/usdc", post(devnet_usdc_faucet_handler))
+        .route("/billing/dodo/checkout", post(dodo_checkout_handler))
+        .route("/webhooks/dodo", post(dodo_webhook_handler))
         .route("/jupiter/quote", get(jupiter_quote_handler))
         .route(
             "/jupiter/swap-instructions",
@@ -1004,6 +1147,38 @@ fn devnet_faucet_config_from_env() -> DevnetFaucetConfig {
             .ok()
             .and_then(|value| value.parse().ok())
             .unwrap_or(60),
+    }
+}
+
+fn dodo_config_from_env() -> DodoConfig {
+    let environment =
+        env::var("DODO_PAYMENTS_ENVIRONMENT").unwrap_or_else(|_| "test_mode".to_string());
+    let api_base_url = env::var("DODO_PAYMENTS_API_BASE_URL").unwrap_or_else(|_| {
+        if environment == "live_mode" {
+            "https://live.dodopayments.com".to_string()
+        } else {
+            "https://test.dodopayments.com".to_string()
+        }
+    });
+    DodoConfig {
+        api_key: env::var("DODO_PAYMENTS_API_KEY")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        webhook_key: env::var("DODO_PAYMENTS_WEBHOOK_KEY")
+            .or_else(|_| env::var("DODO_WEBHOOK_SECRET"))
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        api_base_url,
+        environment,
+        bot_access_monthly_product_id: env::var("DODO_PRODUCT_BOT_ACCESS_MONTHLY")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        creator_pro_monthly_product_id: env::var("DODO_PRODUCT_CREATOR_PRO_MONTHLY")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
+        bot_credits_product_id: env::var("DODO_PRODUCT_BOT_CREDITS")
+            .ok()
+            .filter(|value| !value.trim().is_empty()),
     }
 }
 
@@ -2158,6 +2333,128 @@ async fn jupiter_quote_handler(
     proxy_json_response(response).await
 }
 
+async fn dodo_checkout_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<DodoCheckoutRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    validate_pubkey_like(&payload.wallet, "wallet")?;
+    validate_nonempty_ascii_slug(&payload.bot_id, "botId")?;
+    validate_http_url(&payload.success_url, "successUrl")?;
+    if let Some(cancel_url) = &payload.cancel_url {
+        validate_http_url(cancel_url, "cancelUrl")?;
+    }
+    if let Some(email) = &payload.customer_email {
+        if email.len() > 254 || !email.contains('@') {
+            return Err(AppError::BadRequest(
+                "customerEmail must be a valid email address".to_string(),
+            ));
+        }
+    }
+
+    let api_key = state.dodo.api_key.as_deref().ok_or_else(|| {
+        AppError::ServiceUnavailable(
+            "DODO_PAYMENTS_API_KEY is not configured on the server.".to_string(),
+        )
+    })?;
+    let product_id = state.dodo.product_id_for(payload.plan_kind)?;
+    let request_body = dodo_checkout_create_body(&payload, product_id);
+    let response = reqwest::Client::new()
+        .post(format!(
+            "{}/checkouts",
+            state.dodo.api_base_url.trim_end_matches('/')
+        ))
+        .bearer_auth(api_key)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| AppError::Upstream(format!("Dodo checkout request failed: {e}")))?;
+
+    let status =
+        StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    if !status.is_success() {
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "upstream error".to_string());
+        return Err(AppError::Upstream(format!(
+            "Dodo checkout failed with {status}: {}",
+            truncate_for_error(&body, 240)
+        )));
+    }
+
+    let checkout = response
+        .json::<DodoCheckoutCreateResponse>()
+        .await
+        .map_err(|e| AppError::Upstream(format!("Dodo checkout response was invalid: {e}")))?;
+    if checkout.session_id.trim().is_empty() {
+        return Err(AppError::Upstream(
+            "Dodo checkout response did not include session_id".to_string(),
+        ));
+    }
+
+    let record = DodoCheckoutSessionRecord {
+        session_id: checkout.session_id.clone(),
+        checkout_url: checkout.checkout_url.clone(),
+        wallet: payload.wallet.clone(),
+        bot_id: payload.bot_id.clone(),
+        plan_kind: payload.plan_kind,
+        product_id: product_id.to_string(),
+        status: "created".to_string(),
+        created_at: now_ts(),
+    };
+    state.store.record_dodo_checkout_session(&record).await?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(DodoCheckoutResponse {
+            session_id: checkout.session_id,
+            checkout_url: checkout.checkout_url,
+            mode: state.dodo.environment.clone(),
+            product_id: product_id.to_string(),
+            plan_kind: payload.plan_kind,
+        }),
+    ))
+}
+
+async fn dodo_webhook_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<impl IntoResponse, AppError> {
+    let webhook_key = state.dodo.webhook_key.as_deref().ok_or_else(|| {
+        AppError::ServiceUnavailable(
+            "DODO_PAYMENTS_WEBHOOK_KEY is not configured on the server.".to_string(),
+        )
+    })?;
+    let webhook_id = required_header(&headers, "webhook-id")?;
+    let webhook_timestamp = required_header(&headers, "webhook-timestamp")?;
+    let webhook_signature = required_header(&headers, "webhook-signature")?;
+    verify_dodo_webhook_signature(
+        webhook_key,
+        webhook_id,
+        webhook_timestamp,
+        webhook_signature,
+        &body,
+    )?;
+
+    let payload: Value = serde_json::from_slice(&body)
+        .map_err(|_| AppError::BadRequest("webhook payload must be valid JSON".to_string()))?;
+    let materialization = materialize_dodo_webhook(&state, webhook_id, payload)?;
+    let duplicate = state
+        .store
+        .record_dodo_webhook_event(&materialization)
+        .await?;
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "received": true,
+            "duplicate": duplicate,
+            "eventType": materialization.event_type,
+        })),
+    ))
+}
+
 async fn jupiter_swap_instructions_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<JupiterSwapInstructionsRequest>,
@@ -2302,6 +2599,438 @@ fn validate_pubkey_like(value: &str, field: &str) -> Result<(), AppError> {
         Err(AppError::BadRequest(format!(
             "{field} must be a base58 public key"
         )))
+    }
+}
+
+fn validate_nonempty_ascii_slug(value: &str, field: &str) -> Result<(), AppError> {
+    let valid = !value.trim().is_empty()
+        && value.len() <= 96
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'));
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "{field} must be a non-empty slug using letters, numbers, dash, or underscore"
+        )))
+    }
+}
+
+fn validate_http_url(value: &str, field: &str) -> Result<(), AppError> {
+    let valid = value.len() <= 512
+        && (value.starts_with("https://")
+            || value.starts_with("http://localhost")
+            || value.starts_with("http://127.0.0.1"));
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest(format!(
+            "{field} must be https, localhost, or 127.0.0.1"
+        )))
+    }
+}
+
+fn required_header<'a>(headers: &'a HeaderMap, name: &str) -> Result<&'a str, AppError> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| AppError::Unauthorized)
+}
+
+fn verify_dodo_webhook_signature(
+    webhook_key: &str,
+    webhook_id: &str,
+    webhook_timestamp: &str,
+    webhook_signature: &str,
+    body: &[u8],
+) -> Result<(), AppError> {
+    let timestamp = webhook_timestamp
+        .parse::<i64>()
+        .map_err(|_| AppError::Unauthorized)?;
+    let now = now_ts();
+    if (now - timestamp).abs() > 5 * 60 {
+        return Err(AppError::Unauthorized);
+    }
+
+    let mut signed = Vec::new();
+    signed.extend_from_slice(webhook_id.as_bytes());
+    signed.push(b'.');
+    signed.extend_from_slice(webhook_timestamp.as_bytes());
+    signed.push(b'.');
+    signed.extend_from_slice(body);
+
+    let signatures = dodo_signature_candidates(webhook_key, &signed)?;
+    let header_signatures = parse_webhook_signature_header(webhook_signature);
+    if header_signatures.iter().any(|header| {
+        signatures
+            .iter()
+            .any(|candidate| constant_time_eq(header.as_bytes(), candidate.as_bytes()))
+    }) {
+        Ok(())
+    } else {
+        Err(AppError::Unauthorized)
+    }
+}
+
+fn dodo_signature_candidates(webhook_key: &str, signed: &[u8]) -> Result<Vec<String>, AppError> {
+    let mut keys = vec![webhook_key.as_bytes().to_vec()];
+    if let Some(encoded) = webhook_key.strip_prefix("whsec_") {
+        if let Ok(decoded) = general_purpose::STANDARD.decode(encoded) {
+            keys.push(decoded);
+        }
+    }
+
+    let mut out = Vec::new();
+    for key in keys {
+        let mut mac = HmacSha256::new_from_slice(&key).map_err(|_| AppError::Unauthorized)?;
+        mac.update(signed);
+        let digest = mac.finalize().into_bytes();
+        out.push(hex::encode(digest));
+        out.push(general_purpose::STANDARD.encode(digest));
+    }
+    Ok(out)
+}
+
+fn parse_webhook_signature_header(value: &str) -> Vec<String> {
+    value
+        .split_whitespace()
+        .flat_map(|part| part.split(','))
+        .filter_map(|part| {
+            let trimmed = part.trim();
+            if trimmed.is_empty() || trimmed == "v1" {
+                None
+            } else if let Some(signature) = trimmed.strip_prefix("v1=") {
+                Some(signature.to_string())
+            } else {
+                Some(trimmed.to_string())
+            }
+        })
+        .collect()
+}
+
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (left, right) in a.iter().zip(b.iter()) {
+        diff |= left ^ right;
+    }
+    diff == 0
+}
+
+fn truncate_for_error(value: &str, max_len: usize) -> String {
+    if value.len() <= max_len {
+        value.to_string()
+    } else {
+        format!("{}...", &value[..max_len])
+    }
+}
+
+fn materialize_dodo_webhook(
+    state: &AppState,
+    webhook_id: &str,
+    payload: Value,
+) -> Result<DodoWebhookMaterialization, AppError> {
+    let event_type = payload
+        .get("type")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::BadRequest("webhook payload missing type".to_string()))?
+        .to_string();
+
+    let data = payload
+        .get("data")
+        .ok_or_else(|| AppError::BadRequest("webhook payload missing data".to_string()))?;
+    let product_id = string(data, &["product_id", "productId"]).ok_or_else(|| {
+        AppError::BadRequest("webhook subscription missing product_id".to_string())
+    })?;
+    let subscription_id = string(data, &["subscription_id", "subscriptionId"])
+        .or_else(|| string(data, &["id"]))
+        .ok_or_else(|| {
+            AppError::BadRequest("webhook subscription missing subscription_id".to_string())
+        })?;
+    let status = string(data, &["status"]).unwrap_or_else(|| {
+        if event_type == "subscription.active" || event_type == "subscription.renewed" {
+            "active".to_string()
+        } else {
+            "unknown".to_string()
+        }
+    });
+
+    if Some(product_id.as_str()) != state.dodo.bot_access_monthly_product_id.as_deref() {
+        return Ok(DodoWebhookMaterialization {
+            webhook_id: webhook_id.to_string(),
+            event_type,
+            subscription: None,
+            entitlement: None,
+        });
+    }
+
+    let metadata = data.get("metadata").and_then(Value::as_object);
+    let wallet = metadata
+        .and_then(|meta| meta.get("arcadia_wallet"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::BadRequest("webhook metadata missing arcadia_wallet".to_string()))?
+        .to_string();
+    let bot_id = metadata
+        .and_then(|meta| meta.get("arcadia_bot_id"))
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::BadRequest("webhook metadata missing arcadia_bot_id".to_string()))?
+        .to_string();
+    validate_pubkey_like(&wallet, "arcadia_wallet")?;
+    validate_nonempty_ascii_slug(&bot_id, "arcadia_bot_id")?;
+
+    let active = matches!(
+        event_type.as_str(),
+        "subscription.active" | "subscription.renewed"
+    ) || status == "active";
+    let current_period_end = timestamp_value(
+        data,
+        &["next_billing_date", "nextBillingDate", "current_period_end"],
+    );
+    let updated_at = now_ts();
+    let subscription = BotSubscriptionRecord {
+        subscription_id: subscription_id.clone(),
+        wallet: wallet.clone(),
+        bot_id: bot_id.clone(),
+        product_id: product_id.clone(),
+        status: status.clone(),
+        current_period_end,
+        updated_at,
+    };
+    let entitlement = BotEntitlementRecord {
+        wallet,
+        bot_id,
+        subscription_id,
+        product_id,
+        active,
+        reason: event_type.clone(),
+        updated_at,
+    };
+
+    Ok(DodoWebhookMaterialization {
+        webhook_id: webhook_id.to_string(),
+        event_type,
+        subscription: Some(subscription),
+        entitlement: Some(entitlement),
+    })
+}
+
+fn timestamp_value(value: &Value, keys: &[&str]) -> Option<i64> {
+    for key in keys {
+        let item = value.get(*key)?;
+        if let Some(n) = item.as_i64() {
+            return Some(n);
+        }
+        if let Some(s) = item.as_str() {
+            if let Ok(n) = s.parse::<i64>() {
+                return Some(n);
+            }
+        }
+    }
+    None
+}
+
+fn dodo_checkout_create_body<'a>(
+    payload: &'a DodoCheckoutRequest,
+    product_id: &'a str,
+) -> DodoCheckoutCreateRequest<'a> {
+    let mut metadata = HashMap::new();
+    metadata.insert("arcadia_wallet", payload.wallet.clone());
+    metadata.insert("arcadia_bot_id", payload.bot_id.clone());
+    metadata.insert("arcadia_plan", payload.plan_kind.as_str().to_string());
+    metadata.insert("arcadia_network", "devnet".to_string());
+    metadata.insert("arcadia_mode", "test".to_string());
+
+    DodoCheckoutCreateRequest {
+        product_cart: vec![DodoProductCartItem {
+            product_id,
+            quantity: 1,
+        }],
+        return_url: &payload.success_url,
+        cancel_url: payload.cancel_url.as_deref(),
+        customer: payload
+            .customer_email
+            .as_deref()
+            .map(|email| DodoCustomer { email: Some(email) }),
+        metadata,
+        allowed_payment_method_types: vec!["credit", "debit", "crypto_currency"],
+    }
+}
+
+#[derive(Debug)]
+struct DodoWebhookMaterialization {
+    webhook_id: String,
+    event_type: String,
+    subscription: Option<BotSubscriptionRecord>,
+    entitlement: Option<BotEntitlementRecord>,
+}
+
+impl DodoConfig {
+    fn product_id_for(&self, plan_kind: DodoPlanKind) -> Result<&str, AppError> {
+        let value = match plan_kind {
+            DodoPlanKind::BotAccessMonthly => self.bot_access_monthly_product_id.as_deref(),
+            DodoPlanKind::CreatorProMonthly => self.creator_pro_monthly_product_id.as_deref(),
+            DodoPlanKind::BotCredits => self.bot_credits_product_id.as_deref(),
+        };
+        value.ok_or_else(|| {
+            AppError::ServiceUnavailable(format!(
+                "Dodo product id is not configured for {}",
+                plan_kind.as_str()
+            ))
+        })
+    }
+}
+
+impl Store {
+    async fn record_dodo_checkout_session(
+        &self,
+        record: &DodoCheckoutSessionRecord,
+    ) -> Result<(), AppError> {
+        match self {
+            Store::Postgres(pool) => {
+                sqlx::query(
+                    "INSERT INTO dodo_checkout_sessions
+                       (session_id, checkout_url, wallet, bot_id, plan_kind, product_id, status, created_at)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8))
+                     ON CONFLICT (session_id) DO UPDATE SET
+                       checkout_url = EXCLUDED.checkout_url,
+                       wallet = EXCLUDED.wallet,
+                       bot_id = EXCLUDED.bot_id,
+                       plan_kind = EXCLUDED.plan_kind,
+                       product_id = EXCLUDED.product_id,
+                       status = EXCLUDED.status",
+                )
+                .bind(&record.session_id)
+                .bind(&record.checkout_url)
+                .bind(&record.wallet)
+                .bind(&record.bot_id)
+                .bind(record.plan_kind.as_str())
+                .bind(&record.product_id)
+                .bind(&record.status)
+                .bind(record.created_at as f64)
+                .execute(pool)
+                .await?;
+            }
+            Store::Memory(state) => {
+                let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                if let Some(existing) = state
+                    .dodo_checkout_sessions
+                    .iter_mut()
+                    .find(|session| session.session_id == record.session_id)
+                {
+                    *existing = record.clone();
+                } else {
+                    state.dodo_checkout_sessions.push(record.clone());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn record_dodo_webhook_event(
+        &self,
+        materialization: &DodoWebhookMaterialization,
+    ) -> Result<bool, AppError> {
+        let record = DodoWebhookEventRecord {
+            webhook_id: materialization.webhook_id.clone(),
+            event_type: materialization.event_type.clone(),
+            payload: json!({
+                "type": materialization.event_type,
+                "subscription": materialization.subscription,
+                "entitlement": materialization.entitlement,
+            }),
+            received_at: now_ts(),
+            processed: true,
+        };
+
+        match self {
+            Store::Postgres(pool) => {
+                let mut tx = pool.begin().await?;
+                let result = sqlx::query(
+                    "INSERT INTO dodo_webhook_events (webhook_id, event_type, payload, processed)
+                     VALUES ($1, $2, $3, TRUE)
+                     ON CONFLICT (webhook_id) DO NOTHING",
+                )
+                .bind(&record.webhook_id)
+                .bind(&record.event_type)
+                .bind(&record.payload)
+                .execute(&mut *tx)
+                .await?;
+                if result.rows_affected() == 0 {
+                    tx.commit().await?;
+                    return Ok(true);
+                }
+                if let Some(subscription) = &materialization.subscription {
+                    sqlx::query(
+                        "INSERT INTO bot_subscriptions
+                           (subscription_id, wallet, bot_id, product_id, status, current_period_end, updated_at)
+                         VALUES ($1, $2, $3, $4, $5, to_timestamp($6), to_timestamp($7))
+                         ON CONFLICT (subscription_id) DO UPDATE SET
+                           wallet = EXCLUDED.wallet,
+                           bot_id = EXCLUDED.bot_id,
+                           product_id = EXCLUDED.product_id,
+                           status = EXCLUDED.status,
+                           current_period_end = EXCLUDED.current_period_end,
+                           updated_at = EXCLUDED.updated_at",
+                    )
+                    .bind(&subscription.subscription_id)
+                    .bind(&subscription.wallet)
+                    .bind(&subscription.bot_id)
+                    .bind(&subscription.product_id)
+                    .bind(&subscription.status)
+                    .bind(subscription.current_period_end.map(|ts| ts as f64))
+                    .bind(subscription.updated_at as f64)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+                if let Some(entitlement) = &materialization.entitlement {
+                    sqlx::query(
+                        "INSERT INTO bot_entitlements
+                           (wallet, bot_id, subscription_id, product_id, active, reason, updated_at)
+                         VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7))
+                         ON CONFLICT (wallet, bot_id) DO UPDATE SET
+                           subscription_id = EXCLUDED.subscription_id,
+                           product_id = EXCLUDED.product_id,
+                           active = EXCLUDED.active,
+                           reason = EXCLUDED.reason,
+                           updated_at = EXCLUDED.updated_at",
+                    )
+                    .bind(&entitlement.wallet)
+                    .bind(&entitlement.bot_id)
+                    .bind(&entitlement.subscription_id)
+                    .bind(&entitlement.product_id)
+                    .bind(entitlement.active)
+                    .bind(&entitlement.reason)
+                    .bind(entitlement.updated_at as f64)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+                tx.commit().await?;
+                Ok(false)
+            }
+            Store::Memory(state) => {
+                let mut state = state.lock().map_err(|_| AppError::StatePoisoned)?;
+                if !state.dodo_webhook_ids.insert(record.webhook_id.clone()) {
+                    return Ok(true);
+                }
+                state.dodo_webhook_events.push(record);
+                if let Some(subscription) = &materialization.subscription {
+                    state
+                        .bot_subscriptions
+                        .insert(subscription.subscription_id.clone(), subscription.clone());
+                }
+                if let Some(entitlement) = &materialization.entitlement {
+                    state.bot_entitlements.insert(
+                        format!("{}:{}", entitlement.wallet, entitlement.bot_id),
+                        entitlement.clone(),
+                    );
+                }
+                Ok(false)
+            }
+        }
     }
 }
 
@@ -5944,6 +6673,15 @@ mod tests {
             webhook_secret: secret.map(ToString::to_string),
             jupiter_api_key: jupiter_api_key.map(ToString::to_string),
             jupiter_swap_base_url: "https://api.jup.ag/swap/v1".to_string(),
+            dodo: DodoConfig {
+                api_key: None,
+                webhook_key: None,
+                api_base_url: "https://test.dodopayments.com".to_string(),
+                environment: "test_mode".to_string(),
+                bot_access_monthly_product_id: None,
+                creator_pro_monthly_product_id: None,
+                bot_credits_product_id: None,
+            },
             magicblock: MagicBlockConfig {
                 private_er_endpoint: None,
                 auth_token: None,
@@ -6025,6 +6763,112 @@ mod tests {
         (status, json)
     }
 
+    async fn spawn_dodo_checkout_mock() -> (String, Arc<Mutex<Option<Value>>>) {
+        let captured = Arc::new(Mutex::new(None));
+        let captured_for_route = captured.clone();
+        let app = Router::new().route(
+            "/checkouts",
+            post(move |headers: HeaderMap, Json(body): Json<Value>| {
+                let captured = captured_for_route.clone();
+                async move {
+                    assert_eq!(
+                        headers
+                            .get("authorization")
+                            .and_then(|value| value.to_str().ok()),
+                        Some("Bearer test-dodo-key")
+                    );
+                    *captured.lock().unwrap() = Some(body);
+                    Json(json!({
+                        "session_id": "chk_arcadia_test_123",
+                        "checkout_url": "https://test.dodopayments.com/checkout/chk_arcadia_test_123"
+                    }))
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        (format!("http://{addr}"), captured)
+    }
+
+    fn dodo_test_app(api_base_url: String, with_product: bool) -> Router {
+        let mut state = test_state(None, false, None);
+        state.dodo = DodoConfig {
+            api_key: Some("test-dodo-key".to_string()),
+            webhook_key: None,
+            api_base_url,
+            environment: "test_mode".to_string(),
+            bot_access_monthly_product_id: with_product.then(|| "prod_bot_monthly".to_string()),
+            creator_pro_monthly_product_id: Some("prod_creator_pro".to_string()),
+            bot_credits_product_id: Some("prod_bot_credits".to_string()),
+        };
+        build_app(state)
+    }
+
+    fn dodo_webhook_test_state() -> AppState {
+        let mut state = test_state(None, false, None);
+        state.dodo = DodoConfig {
+            api_key: Some("test-dodo-key".to_string()),
+            webhook_key: Some("test-webhook-secret".to_string()),
+            api_base_url: "https://test.dodopayments.com".to_string(),
+            environment: "test_mode".to_string(),
+            bot_access_monthly_product_id: Some("pdt_bot_access_monthly".to_string()),
+            creator_pro_monthly_product_id: Some("pdt_creator_pro".to_string()),
+            bot_credits_product_id: Some("pdt_bot_credits".to_string()),
+        };
+        state
+    }
+
+    fn signed_dodo_webhook_request(body: &Value, webhook_id: &str, secret: &str) -> Request<Body> {
+        let raw = body.to_string();
+        let timestamp = now_ts().to_string();
+        let signed = format!("{webhook_id}.{timestamp}.{raw}");
+        let signature = dodo_signature_candidates(secret, signed.as_bytes())
+            .unwrap()
+            .into_iter()
+            .find(|candidate| !candidate.chars().all(|c| c.is_ascii_hexdigit()))
+            .unwrap();
+        Request::builder()
+            .method(Method::POST)
+            .uri("/webhooks/dodo")
+            .header("content-type", "application/json")
+            .header("webhook-id", webhook_id)
+            .header("webhook-timestamp", timestamp)
+            .header("webhook-signature", format!("v1,{signature}"))
+            .body(Body::from(raw))
+            .unwrap()
+    }
+
+    async fn raw_request(app: Router, request: Request<Body>) -> (StatusCode, Value) {
+        let response = app.oneshot(request).await.unwrap();
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+        (status, json)
+    }
+
+    fn dodo_subscription_payload(event_type: &str, status: &str) -> Value {
+        json!({
+            "business_id": "bus_test",
+            "type": event_type,
+            "timestamp": "2026-05-11T00:00:00Z",
+            "data": {
+                "payload_type": "Subscription",
+                "subscription_id": "sub_arcadia_bot_001",
+                "product_id": "pdt_bot_access_monthly",
+                "status": status,
+                "next_billing_date": "1778457600",
+                "metadata": {
+                    "arcadia_wallet": "11111111111111111111111111111111",
+                    "arcadia_bot_id": "sol_momentum",
+                    "arcadia_plan": "bot_access_monthly"
+                }
+            }
+        })
+    }
+
     #[test]
     fn migration_defines_product_tables() {
         let sql = include_str!("../migrations/0001_init.sql");
@@ -6045,6 +6889,187 @@ mod tests {
         assert!(private_sql.contains("proof_events"));
         assert!(private_sql.contains("risk_limits JSONB"));
         assert!(private_sql.contains("redacted_payload JSONB"));
+        let dodo_sql = include_str!("../migrations/0006_dodo_checkout.sql");
+        assert!(dodo_sql.contains("dodo_products"));
+        assert!(dodo_sql.contains("dodo_checkout_sessions"));
+        assert!(dodo_sql.contains("idx_dodo_checkout_sessions_wallet"));
+        let dodo_webhook_sql = include_str!("../migrations/0007_dodo_webhooks_entitlements.sql");
+        assert!(dodo_webhook_sql.contains("dodo_webhook_events"));
+        assert!(dodo_webhook_sql.contains("bot_subscriptions"));
+        assert!(dodo_webhook_sql.contains("bot_entitlements"));
+        assert!(dodo_webhook_sql.contains("idx_bot_entitlements_wallet_active"));
+    }
+
+    #[tokio::test]
+    async fn dodo_checkout_requires_api_key() {
+        let app = test_app(None);
+        let payload = json!({
+            "wallet": "11111111111111111111111111111111",
+            "botId": "sol-momentum",
+            "planKind": "bot_access_monthly",
+            "successUrl": "http://localhost:5173/trading-bots/sol-momentum/subscribe/success"
+        });
+
+        let (status, body) =
+            json_request(app, Method::POST, "/billing/dodo/checkout", payload).await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(body.is_null());
+    }
+
+    #[tokio::test]
+    async fn dodo_checkout_requires_configured_product_id() {
+        let app = dodo_test_app("http://127.0.0.1:9".to_string(), false);
+        let payload = json!({
+            "wallet": "11111111111111111111111111111111",
+            "botId": "sol-momentum",
+            "planKind": "bot_access_monthly",
+            "successUrl": "http://localhost:5173/trading-bots/sol-momentum/subscribe/success"
+        });
+
+        let (status, body) =
+            json_request(app, Method::POST, "/billing/dodo/checkout", payload).await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(body.is_null());
+    }
+
+    #[tokio::test]
+    async fn dodo_checkout_creates_real_session_payload() {
+        let (base_url, captured) = spawn_dodo_checkout_mock().await;
+        let app = dodo_test_app(base_url, true);
+        let payload = json!({
+            "wallet": "11111111111111111111111111111111",
+            "botId": "sol-momentum",
+            "planKind": "bot_access_monthly",
+            "successUrl": "http://localhost:5173/trading-bots/sol-momentum/subscribe/success",
+            "cancelUrl": "http://localhost:5173/trading-bots/sol-momentum"
+        });
+
+        let (status, body) =
+            json_request(app, Method::POST, "/billing/dodo/checkout", payload).await;
+        assert_eq!(status, StatusCode::CREATED);
+        assert_eq!(body["sessionId"], "chk_arcadia_test_123");
+        assert_eq!(
+            body["checkoutUrl"],
+            "https://test.dodopayments.com/checkout/chk_arcadia_test_123"
+        );
+        assert_eq!(body["productId"], "prod_bot_monthly");
+        assert_eq!(body["planKind"], "bot_access_monthly");
+        assert_eq!(body["mode"], "test_mode");
+
+        let request = captured.lock().unwrap().clone().unwrap();
+        assert_eq!(request["product_cart"][0]["product_id"], "prod_bot_monthly");
+        assert_eq!(request["product_cart"][0]["quantity"], 1);
+        assert_eq!(
+            request["return_url"],
+            "http://localhost:5173/trading-bots/sol-momentum/subscribe/success"
+        );
+        assert_eq!(
+            request["metadata"]["arcadia_wallet"],
+            "11111111111111111111111111111111"
+        );
+        assert_eq!(request["metadata"]["arcadia_bot_id"], "sol-momentum");
+        assert_eq!(request["metadata"]["arcadia_plan"], "bot_access_monthly");
+        assert_eq!(request["metadata"]["arcadia_mode"], "test");
+    }
+
+    #[tokio::test]
+    async fn dodo_webhook_rejects_invalid_signature() {
+        let state = dodo_webhook_test_state();
+        let app = build_app(state);
+        let body = dodo_subscription_payload("subscription.active", "active");
+        let request = Request::builder()
+            .method(Method::POST)
+            .uri("/webhooks/dodo")
+            .header("content-type", "application/json")
+            .header("webhook-id", "wh_bad_sig")
+            .header("webhook-timestamp", now_ts().to_string())
+            .header("webhook-signature", "v1,not-valid")
+            .body(Body::from(body.to_string()))
+            .unwrap();
+
+        let (status, _) = raw_request(app, request).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn dodo_webhook_active_subscription_grants_bot_access() {
+        let state = dodo_webhook_test_state();
+        let app = build_app(state.clone());
+        let body = dodo_subscription_payload("subscription.active", "active");
+        let request = signed_dodo_webhook_request(&body, "wh_active_001", "test-webhook-secret");
+
+        let (status, response) = raw_request(app, request).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(response["received"], true);
+        assert_eq!(response["duplicate"], false);
+
+        let Store::Memory(memory) = &state.store else {
+            panic!("expected memory store");
+        };
+        let memory = memory.lock().unwrap();
+        assert_eq!(memory.dodo_webhook_events.len(), 1);
+        assert_eq!(memory.bot_subscriptions.len(), 1);
+        let entitlement = memory
+            .bot_entitlements
+            .get("11111111111111111111111111111111:sol_momentum")
+            .unwrap();
+        assert!(entitlement.active);
+        assert_eq!(entitlement.reason, "subscription.active");
+    }
+
+    #[tokio::test]
+    async fn dodo_webhook_duplicate_is_idempotent() {
+        let state = dodo_webhook_test_state();
+        let app = build_app(state.clone());
+        let body = dodo_subscription_payload("subscription.active", "active");
+        let first = signed_dodo_webhook_request(&body, "wh_dupe_001", "test-webhook-secret");
+        let second = signed_dodo_webhook_request(&body, "wh_dupe_001", "test-webhook-secret");
+
+        let (status, first_response) = raw_request(app.clone(), first).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(first_response["duplicate"], false);
+        let (status, second_response) = raw_request(app, second).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(second_response["duplicate"], true);
+
+        let Store::Memory(memory) = &state.store else {
+            panic!("expected memory store");
+        };
+        let memory = memory.lock().unwrap();
+        assert_eq!(memory.dodo_webhook_events.len(), 1);
+        assert_eq!(memory.bot_entitlements.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn dodo_webhook_cancelled_subscription_revokes_bot_access() {
+        let state = dodo_webhook_test_state();
+        let app = build_app(state.clone());
+        let active = dodo_subscription_payload("subscription.active", "active");
+        let cancelled = dodo_subscription_payload("subscription.cancelled", "cancelled");
+
+        let (status, _) = raw_request(
+            app.clone(),
+            signed_dodo_webhook_request(&active, "wh_active_before_cancel", "test-webhook-secret"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, _) = raw_request(
+            app,
+            signed_dodo_webhook_request(&cancelled, "wh_cancel_001", "test-webhook-secret"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+
+        let Store::Memory(memory) = &state.store else {
+            panic!("expected memory store");
+        };
+        let memory = memory.lock().unwrap();
+        let entitlement = memory
+            .bot_entitlements
+            .get("11111111111111111111111111111111:sol_momentum")
+            .unwrap();
+        assert!(!entitlement.active);
+        assert_eq!(entitlement.reason, "subscription.cancelled");
     }
 
     #[tokio::test]
