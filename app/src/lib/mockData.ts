@@ -35,6 +35,8 @@ export interface Vault {
   tvl: number;
   juniorCapital: number;
   seniorCapital: number;
+  reserveCapital: number;       // self-funded reserve pool (grows from fee allocation)
+  reserveAllocationBps: number; // % of trader performance fees routed to reserve (e.g. 1500 = 15%)
   juniorHealth: number; // 0-100
   return30d: number;
   return7d: number;
@@ -245,6 +247,8 @@ export const vaults: Vault[] = [
     tvl: 1_240_000,
     juniorCapital: 280_000,
     seniorCapital: 960_000,
+    reserveCapital: 18_400,
+    reserveAllocationBps: 1500,
     juniorHealth: 78,
     return30d: 6.2,
     return7d: 1.8,
@@ -280,6 +284,8 @@ export const vaults: Vault[] = [
     tvl: 2_100_000,
     juniorCapital: 540_000,
     seniorCapital: 1_560_000,
+    reserveCapital: 24_800,
+    reserveAllocationBps: 1000,
     juniorHealth: 86,
     return30d: 7.4,
     return7d: 2.1,
@@ -309,6 +315,8 @@ export const vaults: Vault[] = [
     tvl: 940_000,
     juniorCapital: 220_000,
     seniorCapital: 720_000,
+    reserveCapital: 6_200,
+    reserveAllocationBps: 1000,
     juniorHealth: 42,
     return30d: -2.1,
     return7d: -1.4,
@@ -340,6 +348,8 @@ export const vaults: Vault[] = [
     tvl: 720_000,
     juniorCapital: 180_000,
     seniorCapital: 540_000,
+    reserveCapital: 9_100,
+    reserveAllocationBps: 1500,
     juniorHealth: 71,
     return30d: 4.8,
     return7d: 1.1,
@@ -367,6 +377,8 @@ export const vaults: Vault[] = [
     tvl: 420_000,
     juniorCapital: 105_000,
     seniorCapital: 315_000,
+    reserveCapital: 3_800,
+    reserveAllocationBps: 2000,
     juniorHealth: 18,
     return30d: 8.4,
     return7d: -0.8,
@@ -396,6 +408,8 @@ export const vaults: Vault[] = [
     tvl: 240_000,
     juniorCapital: 72_000,
     seniorCapital: 168_000,
+    reserveCapital: 2_800,
+    reserveAllocationBps: 1000,
     juniorHealth: 88,
     return30d: 2.4,
     return7d: 0.6,
@@ -423,6 +437,8 @@ export const vaults: Vault[] = [
     tvl: 45_000,
     juniorCapital: 45_000,
     seniorCapital: 0,
+    reserveCapital: 0,
+    reserveAllocationBps: 1500,
     juniorHealth: 92,
     return30d: 4.2,
     return7d: 1.4,
@@ -453,6 +469,8 @@ export const vaults: Vault[] = [
     tvl: 180_000,
     juniorCapital: 12_000,
     seniorCapital: 168_000,
+    reserveCapital: 0,
+    reserveAllocationBps: 500,
     juniorHealth: 6,
     return30d: -14.2,
     return7d: -8.1,

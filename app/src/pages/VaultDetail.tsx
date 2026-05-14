@@ -221,7 +221,7 @@ const VaultDetail = () => {
 
             {/* Capital stack */}
             <div className="surface rounded-[11px] p-6">
-              <CapitalStack junior={vault.juniorCapital} senior={vault.seniorCapital} health={vault.juniorHealth} />
+              <CapitalStack junior={vault.juniorCapital} senior={vault.seniorCapital} health={vault.juniorHealth} reserve={vault.reserveCapital ?? 0} />
             </div>
 
             {/* Risk & rules */}
@@ -236,6 +236,8 @@ const VaultDetail = () => {
                   { l: "Trading", v: vault.tradingEnabled ? "Enabled" : "Disabled" },
                   { l: "Junior ratio", v: `${juniorPct}%` },
                   { l: "Manager fee", v: `${vault.feeBps / 100}% above HWM` },
+                  { l: "Reserve allocation", v: vault.reserveAllocationBps ? `${vault.reserveAllocationBps / 100}% of fees` : "—" },
+                  { l: "Reserve pool", v: vault.reserveCapital ? `$${(vault.reserveCapital / 1000).toFixed(1)}k` : "—" },
                   { l: "Max slippage", v: `${vault.maxSlippageBps / 100}%` },
                   { l: "24h loss limit", v: `${vault.rolling24hLossBps / 100}%` },
                   { l: "7d loss limit", v: `${vault.rolling7dLossBps / 100}%` },

@@ -59,6 +59,8 @@ export interface VaultView {
   reserveStatus?: "ok" | "watch" | "violation" | string;
   executionEnv?: string | null;
   lastMarketUpdate?: number;
+  reserveCapital?: number;       // accumulated self-funded reserve pool
+  reserveAllocationBps?: number; // % of trader fees routed to reserve
 }
 
 type ApiVaultView = Partial<VaultView> & {
@@ -291,5 +293,7 @@ export function normalizeVaultView(v: ApiVaultView): VaultView {
     reserveStatus: v.reserveStatus ?? "ok",
     executionEnv: v.executionEnv ?? null,
     lastMarketUpdate: Number(v.lastMarketUpdate ?? 0),
+    reserveCapital: Number(v.reserveCapital ?? 0),
+    reserveAllocationBps: Number(v.reserveAllocationBps ?? 0),
   };
 }

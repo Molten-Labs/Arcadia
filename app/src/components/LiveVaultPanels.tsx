@@ -70,9 +70,9 @@ export function LiveVaultKpis({ vault, compact = false }: LiveVaultPanelsProps) 
       tone: claimableFees > 0 ? "success" : "neutral",
     },
     {
-      label: "Reserve",
-      value: reserveOk ? "OK" : "Watch",
-      sub: "10% liquid rule",
+      label: "Reserve pool",
+      value: vault.reserveCapital ? `$${fmtUSD(vault.reserveCapital, { compact: true })}` : "—",
+      sub: vault.reserveAllocationBps ? `${vault.reserveAllocationBps / 100}% of fees · ${reserveOk ? "OK" : "Watch"}` : "10% liquid rule",
       tone: reserveOk ? "success" : "warning",
     },
     {

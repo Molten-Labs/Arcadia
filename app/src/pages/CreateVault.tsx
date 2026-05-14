@@ -28,6 +28,7 @@ const CreateVault = () => {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [risk, setRisk] = useState<"conservative" | "balanced" | "aggressive">("balanced");
+  const [reserveAllocBps, setReserveAllocBps] = useState(1000);
   const [junior, setJunior] = useState("1");
   const [accept, setAccept] = useState(false);
   const [sending, setSending] = useState(false);
@@ -131,9 +132,9 @@ const CreateVault = () => {
             </div>
           )}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h2 className="font-display type-h3 font-semibold">Risk setup</h2>
-              <p className="text-sm text-muted-foreground">Defines fee and slippage parameters.</p>
+              <p className="text-sm text-muted-foreground">Defines fee, slippage, and reserve parameters.</p>
               <div>
                 <label className="text-sm font-medium mb-2 block">Risk profile</label>
                 <div className="grid grid-cols-3 gap-2">
@@ -145,6 +146,17 @@ const CreateVault = () => {
                         {r === "balanced" && "20% fee, 2% slippage"}
                         {r === "aggressive" && "20% fee, 3% slippage"}
                       </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Reserve allocation</label>
+                <p className="text-xs text-muted-foreground mb-2">Percentage of your performance fees automatically routed into the reserve pool. Higher reserve means stronger investor protection.</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {[500, 1000, 1500, 2000].map(bps => (
+                    <button key={bps} onClick={() => setReserveAllocBps(bps)} className={cn("p-3 rounded-lg border text-center", reserveAllocBps === bps ? "border-primary bg-primary/5" : "border-border hover:bg-secondary")}>
+                      <div className="font-semibold text-sm">{bps / 100}%</div>
                     </button>
                   ))}
                 </div>
@@ -188,6 +200,7 @@ const CreateVault = () => {
                 <Row label="Name" value={name || "—"} />
                 <Row label="Risk profile" value={<span className="capitalize">{risk}</span>} />
                 <Row label="Fee" value={`${RISK_PROFILES[risk].feeBps / 100}% above HWM`} />
+                <Row label="Reserve allocation" value={`${reserveAllocBps / 100}% of fees → reserve`} />
                 <Row label="Max slippage" value={`${RISK_PROFILES[risk].maxSlippageBps / 100}%`} />
                 <Row label="Junior deposit" value={`${parseFloat(junior || "0").toFixed(4)} USDC`} />
                 <Row label="Paper window" value="30 days" />

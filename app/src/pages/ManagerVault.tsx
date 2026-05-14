@@ -351,7 +351,7 @@ const ManagerVault = () => {
             </div>
 
             <div className="surface rounded-lg p-6">
-              <CapitalStack junior={v.juniorCapital} senior={v.seniorCapital} health={v.juniorHealth} />
+              <CapitalStack junior={v.juniorCapital} senior={v.seniorCapital} health={v.juniorHealth} reserve={v.reserveCapital ?? 0} />
             </div>
           </div>
 

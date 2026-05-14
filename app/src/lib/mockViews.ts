@@ -62,6 +62,8 @@ export function mockVaultViews(): VaultView[] {
       return7d: vault.return7d + liveJitter(index + 12, 0.08),
       returnAll: vault.returnAll,
       strategyTags: vault.strategyTags,
+      reserveCapital: vault.reserveCapital,
+      reserveAllocationBps: vault.reserveAllocationBps,
     };
   });
 }
