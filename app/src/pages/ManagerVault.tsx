@@ -19,7 +19,7 @@ import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { isRealJupiterEnabled } from "@/lib/solana/jupiter";
 import { isArcadiaSurfpoolMode } from "@/lib/api";
 import { DataModeToggle } from "@/components/DataModeToggle";
-import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
+import { LiveVaultKpis } from "@/components/LiveVaultPanels";
 import { LiveJupiterQuotePanel } from "@/components/LiveJupiterQuotePanel";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockStore } from "@/lib/mockStore";
@@ -265,9 +265,8 @@ const ManagerVault = () => {
           <StatCard label="Senior" value={`${fmtUSD(v.seniorCapital, { decimals: 2 })} USDC`} />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr] mb-6">
+        <div className="mb-6">
           <LiveVaultKpis vault={v} />
-          <VaultActivityFeed vaultConfigPubkey={v.configPubkey} />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">

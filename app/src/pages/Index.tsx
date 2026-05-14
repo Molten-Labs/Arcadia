@@ -424,7 +424,7 @@ const Landing = () => {
             <motion.div variants={fadeUp} custom={0} className="mb-6 flex flex-wrap items-center gap-4">
               <span className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-status-active animate-pulse-glow" />
-                Devnet Live
+                Proof-of-Performance · Solana
               </span>
             </motion.div>
 
@@ -434,9 +434,9 @@ const Landing = () => {
               className="max-w-[960px] font-display font-bold leading-[0.92] tracking-[-0.055em] text-foreground/95"
               style={{ fontSize: "clamp(3.35rem, 8.2vw, 7rem)" }}
             >
-              Back traders by proof,
+              Proven traders.
               <br />
-              <span className="text-gradient-signal">not promises.</span>
+              <span className="text-gradient-signal">Protected capital.</span>
             </motion.h1>
 
             <motion.p
@@ -444,24 +444,23 @@ const Landing = () => {
               custom={2}
               className="mt-7 max-w-2xl text-[1.1rem] leading-[1.65] text-foreground/78 md:text-[1.25rem]"
             >
-              Arcadia lets traders raise capital through verified on-chain performance and execute privately, while investors get automatic protection and clean exits, all enforced by code, no trust required.
+              Arcadia is where traders prove themselves with their own money before touching investor capital. They lose first when trades go wrong. No trust required. Code enforces it.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-11 border-0 bg-primary font-display font-semibold text-primary-foreground shadow-signal hover:bg-primary-glow">
                 <Link to="/vaults">
-                  Explore Vaults
+                  Open marketplace
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="h-11 border-border/60 font-display font-semibold hover:bg-secondary/60">
-                <Link to="/manager/create">Launch Vault</Link>
+                <Link to="/manager">Trader console</Link>
               </Button>
               <Button asChild size="lg" variant="ghost" className="h-11 font-display font-semibold text-muted-foreground hover:bg-secondary/60 hover:text-foreground">
-                <Link to="/demo-control">
-                  <Zap className="mr-2 h-4 w-4" />
-                  Surfpool Demo
-                </Link>
+                <a href="#how-it-works">
+                  See how it works <ArrowRight className="ml-1 h-4 w-4" />
+                </a>
               </Button>
             </motion.div>
 

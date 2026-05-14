@@ -147,9 +147,10 @@ function KilnWalletInner({ children }: { children: ReactNode }) {
 
       const isReady =
         target.readyState === WalletReadyState.Installed ||
-        target.readyState === WalletReadyState.Loadable;
+        target.readyState === WalletReadyState.Loadable ||
+        target.readyState === WalletReadyState.NotDetected;
       if (!isReady) {
-        throw new Error(`${name} is not installed or not ready. Install it, refresh Arcadia, then try again.`);
+        throw new Error(`${name} is not available in this browser. Install it from ${name === "Solflare" ? "solflare.com" : "phantom.app"}, then refresh the page.`);
       }
 
       setDemoWalletName(null);

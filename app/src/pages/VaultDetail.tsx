@@ -22,7 +22,7 @@ import { PublicKey } from "@solana/web3.js";
 import { parseUsdcToUnits } from "@/lib/solana/amounts";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { LiveVaultKpis, VaultActivityFeed } from "@/components/LiveVaultPanels";
+import { LiveVaultKpis } from "@/components/LiveVaultPanels";
 import { useDataMode } from "@/hooks/useDataMode";
 import { mockStore } from "@/lib/mockStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -209,9 +209,8 @@ const VaultDetail = () => {
           <StatCard label="HWM" value={`${fmtUSD(vault.highWaterMark, { compact: true })} USDC`} />
         </div>
 
-        <div className="mb-6 grid gap-5 xl:grid-cols-[1.35fr_0.9fr]">
+        <div className="mb-6">
           <LiveVaultKpis vault={vault} />
-          <VaultActivityFeed vaultConfigPubkey={vault.configPubkey} />
         </div>
 
         {/* ── Main grid ─────────────────────────────── */}

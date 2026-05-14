@@ -16,8 +16,11 @@ interface FaucetResponse {
 
 async function requestDemoUsdc(wallet: string): Promise<FaucetResponse> {
   const baseUrl = getKilnApiUrl();
+
   if (!baseUrl) {
-    throw new Error("Start the Arcadia server to request demo USDC.");
+    // No backend configured — open the public Solana devnet faucet in a new tab
+    window.open(`https://faucet.circle.com/`, "_blank", "noopener,noreferrer");
+    throw new Error("No Arcadia server running. Opened the Circle devnet USDC faucet in a new tab — paste your wallet address there to receive test USDC.");
   }
 
   const response = await fetch(`${baseUrl}/devnet/faucet/usdc`, {
