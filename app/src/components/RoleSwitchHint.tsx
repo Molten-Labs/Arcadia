@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowRightLeft, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ const oppositeRole: Record<Role, Role> = {
 
 export const RoleSwitchHint = () => {
   const { connected, role, setRole } = useWallet();
+  const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(SESSION_KEY) === "true");
   const [visible, setVisible] = useState(false);
 
@@ -53,6 +55,7 @@ export const RoleSwitchHint = () => {
 
   const switchRole = () => {
     setRole(nextRole);
+    navigate("/");
     toast.success(`Switched to ${roleLabel[nextRole]} mode`);
     dismiss();
   };

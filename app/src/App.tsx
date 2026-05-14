@@ -60,7 +60,7 @@ const App = () => (
                                     <Route
                                         path="/portfolio"
                                         element={
-                                            <ProtectedRoute allowedRoles={["investor"]} requireConnection={false}>
+                                            <ProtectedRoute allowedRoles={["investor"]} requireConnection={false} mode="redirect">
                                                 <Portfolio />
                                             </ProtectedRoute>
                                         }
@@ -76,7 +76,7 @@ const App = () => (
                                     <Route
                                         path="/manager"
                                         element={
-                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false}>
+                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false} mode="redirect">
                                                 <ManagerDashboard />
                                             </ProtectedRoute>
                                         }
@@ -84,7 +84,7 @@ const App = () => (
                                     <Route
                                         path="/manager/create"
                                         element={
-                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false}>
+                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false} mode="redirect">
                                                 <CreateVault />
                                             </ProtectedRoute>
                                         }
@@ -92,7 +92,7 @@ const App = () => (
                                     <Route
                                         path="/manager/vault/:id"
                                         element={
-                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false}>
+                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false} mode="redirect">
                                                 <ManagerVault />
                                             </ProtectedRoute>
                                         }
@@ -100,7 +100,7 @@ const App = () => (
                                     <Route
                                         path="/trade"
                                         element={
-                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false}>
+                                            <ProtectedRoute allowedRoles={["trader"]} requireConnection={false} mode="redirect">
                                                 <Trade />
                                             </ProtectedRoute>
                                         }

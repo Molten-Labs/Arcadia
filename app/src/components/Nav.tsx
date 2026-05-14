@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWallet, shortAddr } from "@/lib/wallet";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,9 +134,12 @@ export const Nav = () => {
     const isActive = (to: string) =>
         location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
 
+    const navigate = useNavigate();
+
     const switchRole = (nextRole: typeof role) => {
         if (nextRole === role) return;
         setRole(nextRole);
+        navigate("/");
         toast.success(`Switched to ${nextRole === "trader" ? "Trader" : "Investor"} mode`);
     };
 

@@ -53,8 +53,7 @@ export const ProtectedRoute = ({
     const preferredRole = allowedRoles[0];
 
     if (mode === "redirect") {
-      const roleRedirect = preferredRole === "trader" ? "/manager" : "/portfolio";
-      return <Navigate to={roleRedirect} replace state={{ from: location.pathname, reason: "role_required" }} />;
+      return <Navigate to="/" replace state={{ from: location.pathname, reason: "role_required" }} />;
     }
 
     return (
