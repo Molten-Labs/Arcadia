@@ -6,6 +6,12 @@
       "sourceType": "github",
       "computedHash": "7859139478a5276c63a6114f0c3f9899ca4a30b5e4239825d16b92e8744e9e07"
     },
+    "hallmark": {
+      "source": "nutlope/hallmark",
+      "sourceType": "github",
+      "skillPath": "skills/hallmark/SKILL.md",
+      "computedHash": "099306f12b9980eb6196a441af8290412d2cb8884b09c675672e3ffbb268b3c7"
+    },
     "solana-dev": {
       "source": "solana-foundation/solana-dev-skill",
       "sourceType": "github",
