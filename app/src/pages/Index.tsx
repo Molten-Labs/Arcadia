@@ -30,7 +30,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { InfiniteSlider } from "@/components/InfiniteSlider";
 import { VaultCalculator } from "@/components/VaultCalculator";
 import { DevnetUsdcFaucet } from "@/components/DevnetUsdcFaucet";
 import { toast } from "sonner";
@@ -283,23 +282,6 @@ const FLOW_STEPS = [
   },
 ];
 
-const HERO_FLOW = [
-  {
-    value: "01",
-    label: "Trader proves",
-    body: "Trades in proof mode for 30 days, building a public performance record and reputation before touching investor capital.",
-  },
-  {
-    value: "02",
-    label: "Vault opens",
-    body: "If profitable and credible, the vault opens with the trader’s first-loss junior capital targeting 20% and investors supplying up to 80% senior capital.",
-  },
-  {
-    value: "03",
-    label: "Capital aligns",
-    body: "Investors access verified managers. If losses occur, trader capital absorbs them first; if performance holds, capable traders can scale earnings.",
-  },
-];
 
 const ProblemCard = ({
   column,
@@ -464,27 +446,6 @@ const Landing = () => {
               </Button>
             </motion.div>
 
-            <motion.div
-              variants={fadeUp}
-              custom={4}
-              className="relative mt-12 ml-[calc(50%-50vw)] w-screen"
-            >
-              <div className="apex-terminal arcadia-flow-panel mx-4 rounded-xl sm:mx-6 lg:mx-10">
-                <div className="flex w-full items-center justify-between border-b border-border/60 px-5 py-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:px-8 lg:px-12">
-                  <span>&gt; arcadia.flow</span>
-                  <span>20 / 80 capital model</span>
-                </div>
-                <div className="grid w-full divide-y divide-border/60 bg-border/40 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-                  {HERO_FLOW.map((item) => (
-                    <div key={item.label} className="flow-step-cell bg-background/95 px-5 py-6 sm:px-8 lg:min-h-[13rem] lg:px-12">
-                      <div className="font-display text-4xl font-bold leading-none tracking-[-0.04em] text-primary md:text-5xl">{item.value}</div>
-                      <div className="mt-4 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{item.label}</div>
-                      <p className="mt-4 max-w-[28rem] text-sm leading-6 text-foreground/75">{item.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
 
           <motion.a
@@ -733,8 +694,6 @@ const Landing = () => {
       {/* 7b. Try it on Devnet */}
       <DevnetSection />
 
-      {/* 8. Integrations */}
-      <InfiniteSlider />
 
       {/* 9. FAQ */}
       <section id="faq" className="border-t border-border/35 py-20 scroll-mt-16">
@@ -776,31 +735,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* 10. Final CTA */}
-      <section className="border-t border-border/35 py-20">
-        <div className="container">
-          <div className="surface-elevated mx-auto max-w-3xl rounded-[11px] p-8 text-center md:p-12">
-            <h2 className="font-display type-h2 font-semibold">Start exploring performance-based capital.</h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-              Review live vaults or launch a vault to begin building a verified record.
-            </p>
-            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild size="lg" className="border-0 bg-primary font-display font-semibold text-primary-foreground hover:bg-primary-glow">
-                <Link to="/vaults">
-                  Explore Vaults
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="font-display font-semibold">
-                <Link to="/manager/create">Launch Vault</Link>
-              </Button>
-              <Button asChild size="lg" variant="ghost" className="font-display font-semibold text-muted-foreground hover:bg-secondary/60 hover:text-foreground">
-                <Link to="/demo-control">View Surfpool Demo</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
     </Layout>
   );
 };
