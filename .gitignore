@@ -18,7 +18,10 @@ dist-ssr/
 app/dist/
 mobile/dist/
 target/
-Arcadia_program/target
+arcadia_vault/.anchor/
+arcadia_vault/target/
+arcadia_vault/test-ledger/
+arcadia_vault/.surfpool/
 
 # ─── Expo / React Native ──────────────────────────────────────────────────────
 mobile/.expo/
@@ -63,4 +66,3 @@ Thumbs.db
 
 # ─── Rust ─────────────────────────────────────────────────────────────────────
 **/*.rs.bk
-Arcadia_program/Cargo.lock

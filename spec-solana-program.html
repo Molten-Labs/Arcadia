@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcadia &mdash; Solana Program Spec (arcadia_vault)</title>
+<style>
+  :root{
+    --accent:#1a5f4a;
+    --accent-light:#e6f2ee;
+    --accent-soft:#2f8068;
+    --ink:#1a1f24;
+    --muted:#5a6570;
+    --line:#d9dee3;
+    --code-bg:#0e1115;
+    --code-ink:#e7ecf2;
+    --warn:#8a4b00;
+    --warn-bg:#fff4e5;
+    --bad:#7a1d1d;
+    --bad-bg:#fdeaea;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    line-height:1.6;
+    margin:0;
+    background:#fbfcfc;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:40px 28px 100px;}
+  header.masthead{
+    border-bottom:4px solid var(--accent);
+    padding-bottom:22px;margin-bottom:10px;
+  }
+  header.masthead .kicker{
+    text-transform:uppercase;letter-spacing:.14em;font-size:.72rem;
+    color:var(--accent);font-weight:700;margin-bottom:6px;
+  }
+  h1{font-size:2.1rem;margin:0 0 6px;line-height:1.15;}
+  .sub{color:var(--muted);font-size:1.02rem;margin:0;}
+  .meta{margin-top:14px;font-size:.82rem;color:var(--muted);}
+  .meta span{display:inline-block;margin-right:18px;}
+  .meta b{color:var(--ink);}
+
+  h2{
+    font-size:1.42rem;margin:54px 0 14px;padding:8px 0 8px 14px;
+    border-left:5px solid var(--accent);
+    background:linear-gradient(90deg,var(--accent-light),transparent);
+  }
+  h3{font-size:1.12rem;margin:30px 0 8px;color:var(--accent);}
+  h4{font-size:.98rem;margin:20px 0 6px;color:var(--ink);}
+  p{margin:10px 0;}
+  ul,ol{margin:10px 0;padding-left:24px;}
+  li{margin:5px 0;}
+
+  code{
+    font-family:"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+    background:#eef1f3;border-radius:4px;padding:1px 5px;font-size:.86em;
+  }
+  pre{
+    background:var(--code-bg);color:var(--code-ink);
+    border-radius:8px;padding:16px 18px;overflow-x:auto;
+    font-family:"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+    font-size:.83rem;line-height:1.5;margin:14px 0;
+    border:1px solid #1d2530;
+  }
+  pre code{background:none;padding:0;color:inherit;font-size:inherit;}
+  .tok-c{color:#7f8c98;}      /* comment */
+  .tok-k{color:#ff9d6b;}      /* keyword */
+  .tok-s{color:#9ae6b4;}      /* string */
+  .tok-t{color:#82c8ff;}      /* type */
+  .tok-n{color:#f6c177;}      /* number/const */
+
+  table{
+    border-collapse:collapse;width:100%;margin:16px 0;font-size:.88rem;
+    background:#fff;
+  }
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:var(--accent);color:#fff;font-weight:600;}
+  tr:nth-child(even) td{background:#f6f8f8;}
+  td code{font-size:.84em;}
+
+  .toc{
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:18px 24px;margin:26px 0;
+  }
+  .toc h2{border:none;background:none;padding:0;margin:0 0 10px;font-size:1.05rem;color:var(--ink);}
+  .toc ol{columns:2;column-gap:40px;padding-left:20px;font-size:.9rem;}
+  .toc a{color:var(--accent);text-decoration:none;}
+  .toc a:hover{text-decoration:underline;}
+
+  .callout{
+    border-radius:8px;padding:12px 16px;margin:16px 0;font-size:.92rem;
+    border-left:5px solid var(--accent);background:var(--accent-light);
+  }
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-bg);}
+  .callout.bad{border-left-color:var(--bad);background:var(--bad-bg);}
+  .callout .tag{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.72rem;display:block;margin-bottom:3px;}
+  .callout.warn .tag{color:var(--warn);}
+  .callout.bad .tag{color:var(--bad);}
+  .callout.ok .tag{color:var(--accent);}
+
+  .pill{display:inline-block;background:var(--accent);color:#fff;border-radius:20px;padding:2px 11px;font-size:.74rem;font-weight:600;letter-spacing:.03em;}
+  .pill.alt{background:var(--accent-soft);}
+  .pill.gray{background:#7a868f;}
+
+  .instr-card{border:1px solid var(--line);border-radius:10px;padding:4px 22px 18px;margin:22px 0;background:#fff;}
+  .instr-card h3{border-top:none;}
+  .sig{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.86rem;color:var(--accent);}
+
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0;}
+  .small{font-size:.84rem;color:var(--muted);}
+  .nowrap{white-space:nowrap;}
+  footer{margin-top:60px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:.82rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="kicker">Arcadia &middot; Technical Specification &middot; Part 2 of 3</div>
+  <h1>The <code>arcadia_vault</code> Solana Program</h1>
+  <p class="sub">Onchain Anchor 1.0 program spec &mdash; build-ready for one engineer over 8 weeks (MVP + investor deposits).</p>
+  <div class="meta">
+    <span><b>Framework:</b> Anchor 1.0.2 (Rust)</span>
+    <span><b>Cluster:</b> Devnet</span>
+    <span><b>Base token:</b> devnet USDC (6 decimals)</span>
+    <span><b>Share scale:</b> SHARE_SCALE = 1_000_000</span>
+    <span><b>Accounts:</b> 4 custom PDAs</span>
+    <span><b>Instruction handlers:</b> 10</span>
+    <span><b>Date:</b> 2026-06-16</span>
+  </div>
+</header>
+
+<div class="callout ok">
+  <span class="tag">Anchor 1.0 / Rust guidelines applied</span>
+  This revision was rewritten to comply with the official Anchor 1.0.2 conventions and the Solana onchain financial-math
+  guidelines: <code>instructions/</code> + <code>state/</code> + <code>error.rs</code> layout, <code>#[derive(InitSpace)]</code>
+  sizing (no magic numbers), <code>token_interface</code> + <code>transfer_checked</code> token CPIs, integer-only math with
+  <code>u128</code> intermediates and <code>checked_*</code> arithmetic rounded in the protocol's favour, and the corrected
+  single-asset USDC share formulas. Every number, percentage, and formula is written explicitly in &sect;6a and used throughout.
+</div>
+
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#overview">Overview &amp; dev responsibilities</a></li>
+    <li><a href="#structure">Project structure, program id, PDA seeds</a></li>
+    <li><a href="#accounts">Account structs &amp; space sizing</a></li>
+    <li><a href="#instructions">Instruction-by-instruction spec</a></li>
+    <li><a href="#trade-model">Simulated-trade model (record_trade)</a></li>
+    <li><a href="#nav-math">NAV / shares integer math &amp; early-investor edge</a></li>
+    <li><a href="#settlement">Settlement math (HWM, splits)</a></li>
+    <li><a href="#capacity">Capacity enforcement</a></li>
+    <li><a href="#security">Security model, hard rules, errors</a></li>
+    <li><a href="#integration">Integration contract (events &amp; instructions)</a></li>
+    <li><a href="#testplan">Test plan &amp; 8-week build plan</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="overview">1. Overview &amp; Program Developer Responsibilities</h2>
+
+<p><strong>Arcadia</strong> is a Solana platform where skilled traders build a verified, permanent, risk-adjusted onchain
+reputation from real trades, and investors fund proven traders and share in their profits. This document specifies the
+<strong>onchain Anchor program</strong> &mdash; internally called <em>"the vault"</em> &mdash; one of three technical parts
+(<span class="pill gray">frontend</span> <span class="pill gray">solana-program</span> <span class="pill gray">indexer</span>)
+built by a 3-person team in 8 weeks.</p>
+
+<p>A <strong>trader profile</strong> is a per-trader onchain PDA that <em>is</em> the vault: it custodies USDC, is the
+authority over its own vault USDC token account, mints/burns investor shares (held purely as data) against a
+net-asset-value (NAV), records the realized PnL of (simulated) trades, and settles profit splits with a high-water-mark.
+The <code>TraderProfile</code> PDA &mdash; never the trader's wallet &mdash; signs over the deposited funds.
+<strong>One trader = one profile = one vault.</strong> This is a <strong>program-owned vault: the TraderProfile PDA signs,
+and there is no admin escape hatch</strong> that can move depositor funds to an arbitrary destination.</p>
+
+<div class="callout ok">
+  <span class="tag">v2 architecture &mdash; what changed</span>
+  The old separate <code>Vault</code> account has been <strong>merged into <code>TraderProfile</code></strong>, which now
+  holds all vault state and is the authority over its vault USDC token account. The account set is exactly
+  <strong>4 custom PDAs</strong> (<code>PlatformConfig</code>, <code>TraderProfile</code>, <code>InvestorAccount</code>,
+  <code>InvestorPosition</code>) and there are <strong>10 instruction handlers</strong>. Shares are <strong>data in
+  <code>InvestorPosition</code> (a <code>u64</code>), never a Token mint</strong>. There is <strong>no</strong> ban, slashing,
+  strikes, alignment stake, first-loss or earn-in: a trader simply funds their own vault via the ordinary
+  <code>deposit</code> (own capital, exempt from the capacity cap, withdrawable normally, tracked as
+  <code>trader_shares</code>) to trade until investors join.
+</div>
+
+<h3>What this MVP includes / excludes</h3>
+<table>
+  <tr><th>In scope (MVP + investor deposits)</th><th>Deferred to v2 (stub only)</th></tr>
+  <tr>
+    <td>
+      <ul style="margin:0;">
+        <li>Investor deposits, shares (data) &amp; NAV accounting</li>
+        <li>One investor funding multiple traders via multiple <code>InvestorPosition</code> PDAs under one <code>InvestorAccount</code></li>
+        <li>Trader self-funds own vault via ordinary <code>deposit</code> (own capital, cap-exempt, tracked as <code>trader_shares</code>)</li>
+        <li>Simulated trades via <code>record_trade</code> (real prices, offchain oracle)</li>
+        <li>Daily/periodic settlement / profit-split with HWM + trader accrual (<code>trader_claimable</code>)</li>
+        <li>Capacity cap enforcement on investor deposits</li>
+        <li>Size-scaled withdrawal notice (request/process)</li>
+        <li>Per-trade notional &amp; leverage guards</li>
+      </ul>
+    </td>
+    <td>
+      <ul style="margin:0;">
+        <li>Full capacity <em>ratchet</em> (gradual growth) &mdash; v2</li>
+        <li>Compliance / KYC gating onchain &mdash; v2</li>
+        <li>Live <code>execute_trade</code> &rarr; Flash perps CPI &mdash; mainnet</li>
+        <li>Tiered withdrawal queue with multiple notice tiers &mdash; v2 (size-scaled notice only in MVP)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<div class="callout ok">
+  <span class="tag">Core architectural decision</span>
+  <strong>Trades are simulated on devnet.</strong> The "trade source" is swappable. In MVP, a single
+  <code>record_trade</code> instruction handler applies realized PnL computed from <em>real market prices</em> supplied by an
+  offchain <code>oracle_authority</code> signer. On <strong>mainnet</strong> this single handler is replaced by
+  <code>execute_trade</code>, which performs a CPI to Flash perps. <em>Everything else in the program &mdash; NAV math,
+  shares, settlement, events, accounts &mdash; stays identical.</em>
+</div>
+
+<h3>The program developer's responsibilities</h3>
+<table>
+  <tr><th>Priority</th><th>Responsibility</th></tr>
+  <tr><td><span class="pill">Main</span></td><td>Build, test, and ship the <code>arcadia_vault</code> Anchor program: the 4 PDAs, 10 instruction handlers, NAV/shares integer math, simulated trade recording, settlement, capacity enforcement, and security invariants.</td></tr>
+  <tr><td><span class="pill alt">Integration</span></td><td>Emit the <strong>exact</strong> Anchor events defined in &sect;10 so the <em>indexer</em> can decode them without guesswork.</td></tr>
+  <tr><td><span class="pill alt">Integration</span></td><td>Expose a stable <strong>IDL</strong> + instruction/account shapes (&sect;10) so the <em>frontend</em> can build transactions and decode accounts.</td></tr>
+  <tr><td><span class="pill gray">Cross-team</span></td><td>The indexer computes score/capacity/tier offchain and pushes them in via <code>set_capacity</code> (signed by <code>oracle_authority</code>). The program does not compute scores, and the exponential capacity ceiling lives offchain.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="structure">2. Anchor Project Structure, Program ID &amp; PDA Seeds</h2>
+
+<h3>Repository layout (Anchor 1.0.2 convention)</h3>
+<p>Handlers live under <code>instructions/</code>, account structs under <code>state/</code>, the named error enum in
+<code>error.rs</code>, and admin-only handlers under <code>instructions/admin/</code>. Account-constraints structs are named
+distinctly from the handler function (a struct cannot do things), e.g. the <code>deposit</code> handler uses a
+<code>DepositAccountConstraints</code> struct.</p>
+<pre><code><span class="tok-c">// scaffold: anchor init arcadia_vault --package-manager npm --test-template litesvm</span>
+arcadia_vault/
+├── Anchor.toml                 <span class="tok-c"># cluster=devnet, program id, wallet</span>
+├── Cargo.toml
+├── programs/
+│   └── arcadia_vault/
+│       ├── Cargo.toml          <span class="tok-c"># features: idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]</span>
+│       ├── src/
+│       │   ├── lib.rs          <span class="tok-c"># #[program] entrypoints (10 handlers)</span>
+│       │   ├── error.rs        <span class="tok-c"># ArcadiaError named enum</span>
+│       │   ├── events.rs       <span class="tok-c"># emit! event structs</span>
+│       │   ├── constants.rs    <span class="tok-c"># seeds + SHARE_SCALE etc. (see 6a)</span>
+│       │   ├── state/
+│       │   │   ├── mod.rs
+│       │   │   ├── platform_config.rs
+│       │   │   ├── trader_profile.rs
+│       │   │   ├── investor_account.rs
+│       │   │   └── investor_position.rs
+│       │   └── instructions/
+│       │       ├── mod.rs
+│       │       ├── admin/
+│       │       │   ├── mod.rs
+│       │       │   ├── initialize_platform.rs   <span class="tok-c"># admin-only</span>
+│       │       │   └── set_capacity.rs          <span class="tok-c"># oracle_authority-only</span>
+│       │       ├── initialize_profile.rs
+│       │       ├── initialize_investor.rs
+│       │       ├── deposit.rs
+│       │       ├── withdraw.rs                  <span class="tok-c"># request_withdraw + process_withdraw</span>
+│       │       ├── record_trade.rs              <span class="tok-c"># mainnet: execute_trade.rs</span>
+│       │       ├── settle.rs
+│       │       └── trader_withdraw_profit.rs
+│       └── tests/              <span class="tok-c"># LiteSVM Rust tests (include_bytes! the .so)</span>
+│           ├── common/mod.rs
+│           ├── deposit.rs
+│           ├── trade.rs
+│           ├── withdraw.rs
+│           └── settle.rs
+└── migrations/deploy.ts</code></pre>
+
+<h3>Program ID &amp; cluster</h3>
+<pre><code><span class="tok-c">// Anchor.toml</span>
+[programs.devnet]
+arcadia_vault = <span class="tok-s">"Arcad1aVau1t11111111111111111111111111111111"</span>  <span class="tok-c"># placeholder; replace with `anchor keys list`</span>
+
+[provider]
+cluster = <span class="tok-s">"devnet"</span>
+wallet  = <span class="tok-s">"~/.config/solana/id.json"</span>
+
+<span class="tok-c">// lib.rs</span>
+<span class="tok-k">declare_id!</span>(<span class="tok-s">"Arcad1aVau1t11111111111111111111111111111111"</span>);</code></pre>
+
+<h3>PDA seeds (4 custom PDAs)</h3>
+<p>Every account is bound with seeds and/or <code>has_one</code>. Per-user records include the signer key in their seeds.
+The <code>InvestorPosition</code> additionally stores the <code>TraderProfile</code> pubkey and validates it (instance
+discriminator) so an account from one vault cannot be passed to another. The USDC mint is bound with <code>has_one</code>
+everywhere balances are read.</p>
+<table>
+  <tr><th>PDA</th><th>Seeds</th><th>Notes</th></tr>
+  <tr>
+    <td><code>PlatformConfig</code></td>
+    <td><code>[b"platform"]</code></td>
+    <td>Singleton. Holds admin, oracle_authority, treasury token account, USDC mint, and fee bps. Created once by admin.</td>
+  </tr>
+  <tr>
+    <td><code>TraderProfile</code></td>
+    <td><code>[b"profile", trader.key().as_ref()]</code></td>
+    <td>One profile per trader &mdash; this PDA <strong>is the vault</strong> and is the authority over its <code>vault_token</code> account. Holds all vault state. <code>has_one = base_mint</code>.</td>
+  </tr>
+  <tr>
+    <td><code>InvestorAccount</code></td>
+    <td><code>[b"investor", wallet.key().as_ref()]</code></td>
+    <td>One per depositor wallet (investor OR a trader funding their own vault). Main account; tracks position_count + lifetime deposits.</td>
+  </tr>
+  <tr>
+    <td><code>InvestorPosition</code></td>
+    <td><code>[b"position", wallet.key().as_ref(), profile.key().as_ref()]</code></td>
+    <td>One per (investor &times; trader). Holds <code>shares:u64</code> (data, never a Token mint) and <code>profile:Pubkey</code> bound by <code>has_one = profile</code>. One investor funds many traders via many of these under one <code>InvestorAccount</code>.</td>
+  </tr>
+</table>
+<p class="small">Plus Token accounts that are <strong>not</strong> custom PDAs: a per-profile vault USDC token account whose authority is the
+<code>TraderProfile</code> PDA, and the platform treasury token account referenced by <code>PlatformConfig</code>. Both are
+<code>InterfaceAccount&lt;'info, TokenAccount&gt;</code> so the program works unchanged against the Classic Token Program and the
+Token Extensions Program.</p>
+
+<div class="callout">
+  <span class="tag">Constants (full list in &sect;6a)</span>
+  <code>SHARE_SCALE = 1_000_000</code> &middot; USDC decimals = 6 &middot; <code>BPS_DENOMINATOR = 10_000</code> &middot;
+  <code>SECONDS_PER_YEAR = 31_557_600</code> &middot; <code>PLATFORM_PERF_FEE_BPS = 500</code> (5%) &middot;
+  <code>PLATFORM_MGMT_FEE_BPS = 100</code> (1%/yr) &middot; <code>MAX_NOTIONAL_BPS = 2000</code> (20% of AUM per trade) &middot;
+  <code>INSTANT_WITHDRAW_BPS = 500</code> (&lt;5% of AUM withdraws instant next tick).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="accounts">3. Account Structs &amp; Space Sizing</h2>
+
+<p><strong>Account count: 4 custom PDAs.</strong> Every struct derives <code>#[derive(InitSpace)]</code>, carries a
+<code>pub bump: u8</code> (saved at init via <code>ctx.bumps.&lt;name&gt;</code>), and is allocated with
+<code>space = MyStruct::DISCRIMINATOR.len() + MyStruct::INIT_SPACE</code> &mdash; <strong>no magic numbers and no hand-counted
+size constants.</strong> There are no <code>String</code>/<code>Vec</code> fields here; if one were added it would carry
+<code>#[max_len(N)]</code>.</p>
+
+<pre><code><span class="tok-c">// state/platform_config.rs</span>
+<span class="tok-k">use</span> anchor_lang::prelude::*;
+
+#[account]
+#[derive(InitSpace)]
+<span class="tok-k">pub struct</span> <span class="tok-t">PlatformConfig</span> {        <span class="tok-c">// singleton, seed ["platform"]</span>
+    <span class="tok-k">pub</span> admin:            <span class="tok-t">Pubkey</span>,    <span class="tok-c">// one-time initializer / governance</span>
+    <span class="tok-k">pub</span> oracle_authority: <span class="tok-t">Pubkey</span>,    <span class="tok-c">// offchain price/score signer</span>
+    <span class="tok-k">pub</span> treasury_token:   <span class="tok-t">Pubkey</span>,    <span class="tok-c">// platform USDC token account (fees in / devnet top-up out)</span>
+    <span class="tok-k">pub</span> base_mint:        <span class="tok-t">Pubkey</span>,    <span class="tok-c">// devnet USDC mint, bound by has_one everywhere</span>
+    <span class="tok-k">pub</span> perf_fee_bps:     <span class="tok-t">u16</span>,       <span class="tok-c">// platform performance fee = 500 (5%)</span>
+    <span class="tok-k">pub</span> mgmt_fee_bps:     <span class="tok-t">u16</span>,       <span class="tok-c">// management fee = 100 (1%/yr)</span>
+    <span class="tok-k">pub</span> bump:             <span class="tok-t">u8</span>,        <span class="tok-c">// PDA bump, saved at init</span>
+}
+
+<span class="tok-c">// state/trader_profile.rs &mdash; seed ["profile", trader]; IS the vault &amp; authority of vault_token</span>
+#[account]
+#[derive(InitSpace)]
+<span class="tok-k">pub struct</span> <span class="tok-t">TraderProfile</span> {
+    <span class="tok-k">pub</span> trader:           <span class="tok-t">Pubkey</span>,    <span class="tok-c">// owner / operator (stored authority for withdraws)</span>
+    <span class="tok-k">pub</span> base_mint:        <span class="tok-t">Pubkey</span>,    <span class="tok-c">// devnet USDC mint (has_one)</span>
+    <span class="tok-k">pub</span> vault_token:      <span class="tok-t">Pubkey</span>,    <span class="tok-c">// vault USDC token account (authority = this PDA)</span>
+    <span class="tok-k">pub</span> total_shares:     <span class="tok-t">u64</span>,       <span class="tok-c">// all shares outstanding (investor + trader)</span>
+    <span class="tok-k">pub</span> trader_shares:    <span class="tok-t">u64</span>,       <span class="tok-c">// shares from the trader's own-capital deposits</span>
+    <span class="tok-k">pub</span> hwm_per_share:    <span class="tok-t">u64</span>,       <span class="tok-c">// SHARE_SCALE-scaled high-water mark; init 1_000_000</span>
+    <span class="tok-k">pub</span> capacity_cap_usd: <span class="tok-t">u64</span>,       <span class="tok-c">// max investor AUM allowed (USDC minor units), pushed by oracle</span>
+    <span class="tok-k">pub</span> trader_claimable: <span class="tok-t">u64</span>,       <span class="tok-c">// accrued perf fee earmarked for trader (USDC minor units, EXCLUDED from NAV)</span>
+    <span class="tok-k">pub</span> last_settle_ts:   <span class="tok-t">i64</span>,       <span class="tok-c">// unix ts of last settle()</span>
+    <span class="tok-k">pub</span> created_at:       <span class="tok-t">i64</span>,       <span class="tok-c">// unix ts of initialize_profile</span>
+    <span class="tok-k">pub</span> status:           <span class="tok-t">u8</span>,        <span class="tok-c">// 0 active, 1 closed</span>
+    <span class="tok-k">pub</span> score_tier:       <span class="tok-t">u8</span>,        <span class="tok-c">// 0 Verified / 1 Established / 2 Advanced / 3 Elite / 255 not fundable</span>
+    <span class="tok-k">pub</span> max_leverage:     <span class="tok-t">u8</span>,        <span class="tok-c">// leverage cap (whole x)</span>
+    <span class="tok-k">pub</span> bump:             <span class="tok-t">u8</span>,        <span class="tok-c">// PDA bump, saved at init</span>
+}
+<span class="tok-c">// NOTE: nav_per_share is NOT stored. It is DERIVED on read from the vault</span>
+<span class="tok-c">// token balance: nav_per_share = (total_assets - trader_claimable) * SHARE_SCALE / total_shares.</span>
+<span class="tok-c">// total_assets = the vault_token account amount (USDC minor units). See 6a.</span>
+
+<span class="tok-c">// state/investor_account.rs &mdash; seed ["investor", wallet]; main account</span>
+#[account]
+#[derive(InitSpace)]
+<span class="tok-k">pub struct</span> <span class="tok-t">InvestorAccount</span> {
+    <span class="tok-k">pub</span> owner:               <span class="tok-t">Pubkey</span>, <span class="tok-c">// the depositor wallet</span>
+    <span class="tok-k">pub</span> position_count:      <span class="tok-t">u32</span>,    <span class="tok-c">// number of InvestorPosition PDAs opened</span>
+    <span class="tok-k">pub</span> total_deposited_usd: <span class="tok-t">u64</span>,    <span class="tok-c">// lifetime deposits across all traders (USDC minor units)</span>
+    <span class="tok-k">pub</span> created_at:          <span class="tok-t">i64</span>,    <span class="tok-c">// unix ts</span>
+    <span class="tok-k">pub</span> bump:                <span class="tok-t">u8</span>,     <span class="tok-c">// PDA bump, saved at init</span>
+}
+
+<span class="tok-c">// state/investor_position.rs &mdash; seed ["position", wallet, profile]; one per investor x trader</span>
+#[account]
+#[derive(InitSpace)]
+<span class="tok-k">pub struct</span> <span class="tok-t">InvestorPosition</span> {
+    <span class="tok-k">pub</span> owner:                   <span class="tok-t">Pubkey</span>, <span class="tok-c">// depositor wallet (in seeds)</span>
+    <span class="tok-k">pub</span> profile:                 <span class="tok-t">Pubkey</span>, <span class="tok-c">// the TraderProfile funded; validated via has_one = profile</span>
+    <span class="tok-k">pub</span> shares:                  <span class="tok-t">u64</span>,    <span class="tok-c">// shares held (DATA, never a Token mint)</span>
+    <span class="tok-k">pub</span> cost_basis_usd:          <span class="tok-t">u64</span>,    <span class="tok-c">// USDC minor units paid in (for early-investor edge / PnL)</span>
+    <span class="tok-k">pub</span> pending_withdraw_shares: <span class="tok-t">u64</span>,    <span class="tok-c">// shares queued for withdrawal</span>
+    <span class="tok-k">pub</span> withdraw_ready_ts:       <span class="tok-t">i64</span>,    <span class="tok-c">// earliest process_withdraw ts</span>
+    <span class="tok-k">pub</span> deposited_at:            <span class="tok-t">i64</span>,    <span class="tok-c">// ts of (last) deposit</span>
+    <span class="tok-k">pub</span> bump:                    <span class="tok-t">u8</span>,     <span class="tok-c">// PDA bump, saved at init</span>
+}</code></pre>
+
+<p>The allocation constraint for each is, for example:</p>
+<pre><code>#[account(
+    init,
+    payer = trader,
+    seeds = [<span class="tok-s">b"profile"</span>, trader.key().as_ref()],
+    bump,
+    space = TraderProfile::DISCRIMINATOR.len() + TraderProfile::INIT_SPACE,
+)]
+<span class="tok-k">pub</span> profile: <span class="tok-t">Account</span>&lt;<span class="tok-s">'info</span>, <span class="tok-t">TraderProfile</span>&gt;,</code></pre>
+
+<table>
+  <tr><th>Account</th><th>Allocation</th><th>Bump</th><th>Binding</th></tr>
+  <tr><td><code>PlatformConfig</code></td><td><code>DISCRIMINATOR.len() + INIT_SPACE</code></td><td><code>bump</code> saved</td><td>seeds <code>["platform"]</code></td></tr>
+  <tr><td><code>TraderProfile</code></td><td><code>DISCRIMINATOR.len() + INIT_SPACE</code></td><td><code>bump</code> saved</td><td>seeds + <code>has_one = base_mint</code></td></tr>
+  <tr><td><code>InvestorAccount</code></td><td><code>DISCRIMINATOR.len() + INIT_SPACE</code></td><td><code>bump</code> saved</td><td>seeds include <code>wallet</code></td></tr>
+  <tr><td><code>InvestorPosition</code></td><td><code>DISCRIMINATOR.len() + INIT_SPACE</code></td><td><code>bump</code> saved</td><td>seeds include <code>wallet</code> + <code>profile</code>; <code>has_one = profile</code></td></tr>
+</table>
+
+<p class="small">Shares live only inside <code>InvestorPosition.shares</code> and the aggregate
+<code>TraderProfile.total_shares</code>; there is no share mint and no Token share token anywhere in the program. NAV per share
+is never stored: it is derived from the live vault token balance on every read (see &sect;6a), which makes total-asset
+conservation trivially checkable.</p>
+
+<!-- ============================================================ -->
+<h2 id="instructions">4. Instruction-by-Instruction Specification</h2>
+
+<p><strong>Instruction-handler count: 10.</strong> Each handler below lists its accounts, instruction inputs, checks,
+step-by-step logic, errors, and the event emitted, with Rust-flavoured pseudocode. Conventions: account-constraints structs are
+named distinctly from the handler (e.g. <code>DepositAccountConstraints</code>); all token CPIs use
+<code>transfer_checked</code> (carrying the USDC mint + 6 decimals) through <code>anchor_spl::token_interface</code>; all
+arithmetic is <code>checked_*</code> with <code>u128</code> intermediates, multiply-before-divide, floor rounding; state is
+updated <strong>before</strong> the transfer CPI (checks-effects-interactions). Helper reads:
+<code>total_assets</code> = the vault token account <code>amount</code> (USDC minor units);
+<code>nav_per_share()</code> and <code>aum()</code> are defined in &sect;6a.</p>
+
+<!-- 4.1 -->
+<div class="instr-card">
+<h3>4.1 &nbsp;initialize_platform &nbsp;<span class="pill gray">admin-only</span></h3>
+<p class="sig">initialize_platform(perf_fee_bps: u16, mgmt_fee_bps: u16, oracle_authority: Pubkey)</p>
+<p>Admin creates the singleton <code>PlatformConfig</code>. Handler lives in <code>instructions/admin/</code>. Called
+<strong>once</strong>. Validates the fee configuration at initialize time.</p>
+<table>
+  <tr><th>Accounts (<code>InitializePlatformAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>admin</code> (Signer)</td><td>mut</td><td>Pays rent; becomes <code>config.admin</code>.</td></tr>
+  <tr><td><code>config</code></td><td>init</td><td>PDA <code>[b"platform"]</code>; <code>space = PlatformConfig::DISCRIMINATOR.len() + PlatformConfig::INIT_SPACE</code>.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>devnet USDC mint, recorded in config.</td></tr>
+  <tr><td><code>treasury_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>&mdash;</td><td>Platform USDC token account; <code>token::mint = base_mint</code>.</td></tr>
+  <tr><td><code>system_program</code></td><td>&mdash;</td><td>CPI dep.</td></tr>
+</table>
+<h4>Checks (config validation)</h4>
+<ul>
+  <li><code>perf_fee_bps &lt;= BPS_DENOMINATOR</code> and <code>mgmt_fee_bps &lt;= BPS_DENOMINATOR</code>.</li>
+  <li>Fees do not combine unsafely: <code>perf_fee_bps + MAX_TIER_BPS (3500) &lt;= BPS_DENOMINATOR (10_000)</code> so the trader
+      cut plus the platform performance fee can never exceed 100% of crystallized profit &rarr; else <code>InvalidFeeConfig</code>.</li>
+</ul>
+<h4>Logic</h4>
+<pre><code><span class="tok-k">require!</span>(perf_fee_bps &lt;= BPS_DENOMINATOR, ArcadiaError::InvalidFeeConfig);
+<span class="tok-k">require!</span>(mgmt_fee_bps &lt;= BPS_DENOMINATOR, ArcadiaError::InvalidFeeConfig);
+<span class="tok-k">require!</span>((perf_fee_bps as u32 + MAX_TIER_BPS as u32) &lt;= BPS_DENOMINATOR as u32, ArcadiaError::InvalidFeeConfig);
+
+config.admin            = admin.key();
+config.oracle_authority = oracle_authority;
+config.treasury_token   = treasury_token.key();
+config.base_mint        = base_mint.key();
+config.perf_fee_bps     = perf_fee_bps;   <span class="tok-c">// 500</span>
+config.mgmt_fee_bps     = mgmt_fee_bps;   <span class="tok-c">// 100</span>
+config.bump             = ctx.bumps.config;</code></pre>
+<p><strong>Errors:</strong> <code>InvalidFeeConfig</code> (re-init blocked by Anchor <code>init</code>). &nbsp; <strong>Event:</strong> none (MVP).</p>
+</div>
+
+<!-- 4.2 -->
+<div class="instr-card">
+<h3>4.2 &nbsp;initialize_profile</h3>
+<p class="sig">initialize_profile(max_leverage: u8)</p>
+<p>Trader opens their profile/vault. The HWM starts at par (<code>SHARE_SCALE = 1_000_000</code>). The profile PDA becomes the
+authority of its <code>vault_token</code> account.</p>
+<table>
+  <tr><th>Accounts (<code>InitializeProfileAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>trader</code> (Signer)</td><td>mut</td><td>Pays rent; becomes <code>profile.trader</code> (the stored authority).</td></tr>
+  <tr><td><code>config</code></td><td>&mdash;</td><td><code>has_one = base_mint</code>; oracle_authority stored on platform, not per-profile.</td></tr>
+  <tr><td><code>profile</code></td><td>init</td><td>PDA <code>[b"profile", trader]</code>; <code>has_one = base_mint</code>.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>devnet USDC mint; must equal <code>config.base_mint</code>.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>init</td><td><code>token::mint = base_mint</code>, <code>token::authority = profile</code>.</td></tr>
+  <tr><td><code>system_program / token_program (Interface&lt;TokenInterface&gt;) / rent</code></td><td>&mdash;</td><td>CPI deps.</td></tr>
+</table>
+<h4>Checks</h4>
+<ul><li><code>max_leverage &gt; 0</code> and <code>max_leverage &lt;= MAX_LEVERAGE_CEILING (50)</code> &rarr; else <code>InvalidLeverage</code>.</li><li>PDA not already initialized (Anchor <code>init</code> enforces).</li></ul>
+<h4>Logic</h4>
+<pre><code><span class="tok-k">let</span> now = Clock::get()?.unix_timestamp;
+profile.trader           = trader.key();
+profile.base_mint        = base_mint.key();
+profile.vault_token      = vault_token.key();
+profile.total_shares     = <span class="tok-n">0</span>;
+profile.trader_shares    = <span class="tok-n">0</span>;
+profile.hwm_per_share    = SHARE_SCALE;     <span class="tok-c">// 1_000_000 (par)</span>
+profile.capacity_cap_usd = <span class="tok-n">0</span>;             <span class="tok-c">// 0 until set_capacity; investor deposits blocked</span>
+profile.trader_claimable = <span class="tok-n">0</span>;
+profile.status           = <span class="tok-n">0</span>;             <span class="tok-c">// active</span>
+profile.score_tier       = <span class="tok-n">255</span>;           <span class="tok-c">// not fundable until scored (&lt;600)</span>
+profile.max_leverage     = max_leverage;
+profile.last_settle_ts   = now;
+profile.created_at       = now;
+profile.bump             = ctx.bumps.profile;
+emit!(ProfileInitialized { profile: profile.key(), trader: trader.key(), ts: now });</code></pre>
+<p><strong>Errors:</strong> <code>InvalidLeverage</code>. &nbsp; <strong>Event:</strong> <code>ProfileInitialized</code>.</p>
+</div>
+
+<!-- 4.3 -->
+<div class="instr-card">
+<h3>4.3 &nbsp;set_capacity &nbsp;<span class="pill gray">oracle_authority-only</span></h3>
+<p class="sig">set_capacity(cap_usd: u64, score_tier: u8)</p>
+<p>The <strong>indexer</strong> computes the risk score, capacity ceiling, and tier offchain and pushes them in. The
+exponential capacity formula <code>e^(...)</code> is NOT computable onchain, so <code>capacity_cap_usd</code> is a plain
+<code>u64</code> (USDC minor units) PUSHED here. Handler lives in <code>instructions/admin/</code>.
+<strong>Only <code>oracle_authority</code></strong> may call this.</p>
+<table>
+  <tr><th>Accounts (<code>SetCapacityAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>oracle_authority</code> (Signer)</td><td>&mdash;</td><td>Must equal <code>config.oracle_authority</code> (<code>has_one</code>).</td></tr>
+  <tr><td><code>config</code></td><td>&mdash;</td><td><code>has_one = oracle_authority</code>.</td></tr>
+  <tr><td><code>profile</code></td><td>mut</td><td></td></tr>
+</table>
+<h4>Checks</h4>
+<ul>
+  <li><code>oracle_authority.key() == config.oracle_authority</code> (via <code>has_one</code>) &rarr; else <code>Unauthorized</code>.</li>
+  <li><code>score_tier &lt;= 3 || score_tier == 255</code> &rarr; else <code>InvalidTier</code>.</li>
+  <li><code>profile.status == 0</code> (active).</li>
+</ul>
+<h4>Logic</h4>
+<pre><code>profile.capacity_cap_usd = cap_usd;     <span class="tok-c">// USDC minor units, exponential ceiling computed offchain</span>
+profile.score_tier       = score_tier;
+<span class="tok-c">// score_tier: 0 Verified(600), 1 Established(700), 2 Advanced(800), 3 Elite(900), 255 not fundable (&lt;600)</span></code></pre>
+<div class="callout warn"><span class="tag">Offchain math</span>The capacity ceiling uses <code>capacity_cap_usd = base * e^(k * score)</code> which an onchain program cannot evaluate. The indexer computes the exponential and pushes the resulting plain <code>u64</code> here. The full capacity <em>ratchet</em> (only allow gradual, time-gated increases) is deferred to v2; MVP trusts the oracle's computed value directly.</div>
+<p><strong>Errors:</strong> <code>Unauthorized</code>, <code>InvalidTier</code>. &nbsp; <strong>Event:</strong> none (MVP; indexer already knows what it pushed).</p>
+</div>
+
+<!-- 4.4 -->
+<div class="instr-card">
+<h3>4.4 &nbsp;initialize_investor</h3>
+<p class="sig">initialize_investor()</p>
+<p>Any depositor (an investor, OR a trader funding their own vault) creates their <code>InvestorAccount</code> once. This is the
+"main" account under which one or many <code>InvestorPosition</code> PDAs (one per trader) hang.</p>
+<table>
+  <tr><th>Accounts (<code>InitializeInvestorAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>wallet</code> (Signer)</td><td>mut</td><td>Pays rent; becomes <code>account.owner</code>; in seeds.</td></tr>
+  <tr><td><code>investor_account</code></td><td>init</td><td>PDA <code>[b"investor", wallet]</code>.</td></tr>
+  <tr><td><code>system_program</code></td><td>&mdash;</td><td></td></tr>
+</table>
+<h4>Logic</h4>
+<pre><code><span class="tok-k">let</span> now = Clock::get()?.unix_timestamp;
+investor_account.owner               = wallet.key();
+investor_account.position_count      = <span class="tok-n">0</span>;
+investor_account.total_deposited_usd = <span class="tok-n">0</span>;
+investor_account.created_at          = now;
+investor_account.bump                = ctx.bumps.investor_account;
+emit!(InvestorInitialized { investor: investor_account.key(), ts: now });</code></pre>
+<p><strong>Errors:</strong> re-init blocked by Anchor <code>init</code>. &nbsp; <strong>Event:</strong> <code>InvestorInitialized</code>.</p>
+</div>
+
+<!-- 4.5 -->
+<div class="instr-card">
+<h3>4.5 &nbsp;deposit</h3>
+<p class="sig">deposit(amount: u64)</p>
+<p>A depositor deposits USDC into a trader's vault and is minted shares (as data) against the current NAV. The
+<code>InvestorPosition</code> for <code>(depositor, profile)</code> is lazily initialized on first deposit. If the depositor is
+<strong>the trader funding their own vault</strong>, the deposit is <strong>exempt from the capacity cap</strong> and also bumps
+<code>trader_shares</code>. Otherwise it is <strong>rejected if it would exceed capacity.</strong> This is a single-asset (USDC)
+vault, so it uses the linear share formula (NOT the two-asset AMM geometric mean).</p>
+<table>
+  <tr><th>Accounts (<code>DepositAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>depositor</code> (Signer)</td><td>mut</td><td>Pays position rent on first deposit; in position seeds.</td></tr>
+  <tr><td><code>investor_account</code></td><td>mut</td><td>PDA <code>[b"investor", depositor]</code>; bumps position_count/total.</td></tr>
+  <tr><td><code>profile</code></td><td>mut</td><td>The vault; <code>has_one = base_mint</code>, <code>has_one = vault_token</code>.</td></tr>
+  <tr><td><code>position</code></td><td>init_if_needed</td><td>PDA <code>[b"position", depositor, profile]</code>; <code>has_one = profile</code>.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>Carries decimals for <code>transfer_checked</code>; bound by <code>has_one</code>.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Destination; <code>token::mint = base_mint</code>.</td></tr>
+  <tr><td><code>depositor_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Source; <code>token::mint = base_mint</code>, <code>token::authority = depositor</code>.</td></tr>
+  <tr><td><code>token_program (Interface&lt;TokenInterface&gt;) / system_program</code></td><td>&mdash;</td><td></td></tr>
+</table>
+<h4>Checks (range validation)</h4>
+<ul>
+  <li><code>profile.status == 0</code> (active) &rarr; else <code>VaultNotActive</code>.</li>
+  <li><code>amount &gt; 0</code> &rarr; else <code>ZeroAmount</code>.</li>
+  <li><code>amount &lt;= depositor_token.amount</code> &rarr; else <code>InsufficientFunds</code>.</li>
+  <li>Resulting <code>shares_minted &gt; 0</code> &rarr; else <code>DustDeposit</code> (blocks the empty-vault inflation/donation attack).</li>
+  <li>If <code>depositor != profile.trader</code>: capacity must be set and <code>(total_assets + amount) &lt;= capacity_cap_usd</code>. Trader own-capital is exempt.</li>
+</ul>
+<h4>Logic (state before transfer; floor rounding)</h4>
+<pre><code><span class="tok-k">let</span> now = Clock::get()?.unix_timestamp;
+<span class="tok-k">let</span> is_trader = depositor.key() == profile.trader;
+<span class="tok-k">let</span> total_assets = vault_token.amount;          <span class="tok-c">// u64, USDC minor units (BEFORE this deposit)</span>
+
+<span class="tok-c">// capacity: investor deposits only; trader own-capital is EXEMPT</span>
+<span class="tok-k">if</span> !is_trader {
+    <span class="tok-k">require!</span>(profile.capacity_cap_usd &gt; <span class="tok-n">0</span>, ArcadiaError::CapacityNotSet);
+    <span class="tok-k">let</span> after = total_assets.checked_add(amount).ok_or(ArcadiaError::MathOverflow)?;
+    <span class="tok-k">require!</span>(after &lt;= profile.capacity_cap_usd, ArcadiaError::CapacityExceeded);
+}
+
+<span class="tok-c">// SINGLE-ASSET share mint (NOT sqrt(a*b)). Multiply BEFORE divide; u128; floor.</span>
+<span class="tok-k">let</span> shares_minted: u64 = <span class="tok-k">if</span> profile.total_shares == <span class="tok-n">0</span> {
+    amount                                       <span class="tok-c">// first deposit: shares == amount</span>
+} <span class="tok-k">else</span> {
+    <span class="tok-k">let</span> num = (amount as u128)
+        .checked_mul(profile.total_shares as u128).ok_or(ArcadiaError::MathOverflow)?;
+    <span class="tok-k">let</span> s = num.checked_div(total_assets as u128).ok_or(ArcadiaError::MathOverflow)?; <span class="tok-c">// floor</span>
+    s.try_into().map_err(|_| ArcadiaError::MathOverflow)?
+};
+<span class="tok-k">require!</span>(shares_minted &gt; <span class="tok-n">0</span>, ArcadiaError::DustDeposit);   <span class="tok-c">// donation-attack guard</span>
+
+<span class="tok-c">// EFFECTS (state) BEFORE INTERACTION (transfer)</span>
+profile.total_shares = profile.total_shares.checked_add(shares_minted).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">if</span> is_trader {
+    profile.trader_shares = profile.trader_shares.checked_add(shares_minted).ok_or(ArcadiaError::MathOverflow)?;
+}
+<span class="tok-k">let</span> fresh = position.shares == <span class="tok-n">0</span>;
+position.owner          = depositor.key();
+position.profile        = profile.key();
+position.shares         = position.shares.checked_add(shares_minted).ok_or(ArcadiaError::MathOverflow)?;
+position.cost_basis_usd = position.cost_basis_usd.checked_add(amount).ok_or(ArcadiaError::MathOverflow)?;
+position.deposited_at   = now;
+position.bump           = ctx.bumps.position;
+investor_account.total_deposited_usd =
+    investor_account.total_deposited_usd.checked_add(amount).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">if</span> fresh { investor_account.position_count += <span class="tok-n">1</span>; }
+
+<span class="tok-c">// INTERACTION: transfer_checked carries mint + 6 decimals; depositor signs</span>
+transfer_checked(
+    CpiContext::new(token_program, TransferChecked {
+        from: depositor_token, mint: base_mint, to: vault_token, authority: depositor,
+    }),
+    amount, base_mint.decimals,   <span class="tok-c">// 6</span>
+)?;
+
+<span class="tok-c">// token conservation: vault_token.amount increased by exactly `amount`</span>
+emit!(Deposited {
+    profile: profile.key(), depositor: depositor.key(), is_trader,
+    amount_usd: amount, shares_minted, ts: now
+});</code></pre>
+<p><strong>Errors:</strong> <code>VaultNotActive</code>, <code>ZeroAmount</code>, <code>InsufficientFunds</code>, <code>CapacityNotSet</code>, <code>CapacityExceeded</code>, <code>DustDeposit</code>, <code>MathOverflow</code>. &nbsp; <strong>Event:</strong> <code>Deposited</code>.</p>
+<div class="callout warn"><span class="tag">Donation-attack mitigation</span>The first deposit (where <code>total_shares == 0 &rarr; shares_minted = amount</code>) is made by the <strong>trader funding their own vault</strong>, so an attacker cannot grief an empty vault by donating tokens before the first investor. The <code>shares_minted &gt; 0</code> reject closes the rounding/inflation vector for all later deposits. An optional virtual-shares offset (add a fixed constant to <code>total_shares</code> and <code>total_assets</code> in the ratio) can be enabled in v2 for belt-and-braces protection.</div>
+</div>
+
+<!-- 4.6 -->
+<div class="instr-card">
+<h3>4.6 &nbsp;request_withdraw / process_withdraw</h3>
+<p class="sig">request_withdraw(shares: u64) &nbsp;|&nbsp; process_withdraw()</p>
+<p>Two-step, <strong>size-scaled notice</strong>. Investors may withdraw <em>any portion at any time</em> at the prevailing NAV.
+Small exits (value &lt; 5% of AUM, i.e. <code>INSTANT_WITHDRAW_BPS = 500</code>) are instant on the next tick; larger exits wait
+for the next daily settlement window. No lockups, penalties, or forced redemption.</p>
+
+<h4>request_withdraw &mdash; accounts (<code>RequestWithdrawAccountConstraints</code>)</h4>
+<table>
+  <tr><th>Account</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>owner</code> (Signer)</td><td>&mdash;</td><td>Must own the position (in seeds); stored authority check.</td></tr>
+  <tr><td><code>profile</code></td><td>&mdash;</td><td><code>has_one = vault_token, has_one = base_mint</code>; reads NAV / AUM.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>&mdash;</td><td>Read for <code>total_assets</code>.</td></tr>
+  <tr><td><code>position</code></td><td>mut</td><td><code>has_one = profile</code> (validates the right vault).</td></tr>
+</table>
+<h4>request_withdraw &mdash; checks &amp; logic</h4>
+<pre><code><span class="tok-k">require!</span>(shares &gt; <span class="tok-n">0</span>, ArcadiaError::ZeroAmount);
+<span class="tok-k">require!</span>(shares &lt;= position.shares, ArcadiaError::InsufficientShares);
+
+<span class="tok-k">let</span> now = Clock::get()?.unix_timestamp;
+<span class="tok-k">let</span> total_assets = vault_token.amount;
+<span class="tok-k">let</span> nav_excl     = total_assets.checked_sub(profile.trader_claimable).ok_or(ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// value of this withdrawal and current AUM both exclude trader_claimable</span>
+<span class="tok-c">// withdraw_value = shares * nav_excl / total_shares  (u128, floor)</span>
+<span class="tok-k">let</span> withdraw_value = (shares as u128)
+    .checked_mul(nav_excl as u128).ok_or(ArcadiaError::MathOverflow)?
+    .checked_div(profile.total_shares as u128).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">let</span> aum = nav_excl as u128;   <span class="tok-c">// AUM == total NAV-bearing assets</span>
+
+position.pending_withdraw_shares =
+    position.pending_withdraw_shares.checked_add(shares).ok_or(ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// &lt;5% of AUM -&gt; instant next tick; else next daily settlement window.</span>
+<span class="tok-c">// compare withdraw_value * 10_000  &lt;  aum * 500   (INSTANT_WITHDRAW_BPS)</span>
+<span class="tok-k">let</span> lhs = withdraw_value.checked_mul(BPS_DENOMINATOR as u128).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">let</span> rhs = aum.checked_mul(INSTANT_WITHDRAW_BPS as u128).ok_or(ArcadiaError::MathOverflow)?;
+position.withdraw_ready_ts = <span class="tok-k">if</span> lhs &lt; rhs { now } <span class="tok-k">else</span> { next_daily_settlement_window(now) };
+
+emit!(WithdrawRequested {
+    profile: profile.key(), owner: owner.key(),
+    shares, withdraw_ready_ts: position.withdraw_ready_ts
+});</code></pre>
+
+<h4>process_withdraw &mdash; accounts (<code>ProcessWithdrawAccountConstraints</code>)</h4>
+<table>
+  <tr><th>Account</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>owner</code> (Signer)</td><td>&mdash;</td><td>In seeds; the verified caller.</td></tr>
+  <tr><td><code>profile</code></td><td>mut</td><td>Signs token-out via PDA seeds; <code>has_one = vault_token, base_mint</code>.</td></tr>
+  <tr><td><code>position</code></td><td>mut</td><td><code>has_one = profile</code>. Closed (rent to owner) when shares hit 0.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>Decimals for <code>transfer_checked</code>.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Source.</td></tr>
+  <tr><td><code>owner_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Destination; <code>token::authority = owner</code>.</td></tr>
+  <tr><td><code>token_program (Interface&lt;TokenInterface&gt;)</code></td><td>&mdash;</td><td></td></tr>
+</table>
+<h4>process_withdraw &mdash; checks &amp; logic</h4>
+<pre><code><span class="tok-k">require!</span>(position.pending_withdraw_shares &gt; <span class="tok-n">0</span>, ArcadiaError::NothingPending);
+<span class="tok-k">let</span> now = Clock::get()?.unix_timestamp;
+<span class="tok-k">require!</span>(now &gt;= position.withdraw_ready_ts, ArcadiaError::NoticeNotElapsed);
+
+<span class="tok-k">let</span> burn = position.pending_withdraw_shares;
+<span class="tok-k">let</span> total_assets = vault_token.amount;
+<span class="tok-k">let</span> nav_excl     = total_assets.checked_sub(profile.trader_claimable).ok_or(ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// assets_out = burn * (total_assets - trader_claimable) / total_shares  (u128, floor)</span>
+<span class="tok-k">let</span> assets_out: u64 = (burn as u128)
+    .checked_mul(nav_excl as u128).ok_or(ArcadiaError::MathOverflow)?
+    .checked_div(profile.total_shares as u128).ok_or(ArcadiaError::MathOverflow)?
+    .try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+<span class="tok-k">require!</span>(assets_out &lt;= total_assets, ArcadiaError::InsufficientVaultLiquidity);
+
+<span class="tok-c">// EFFECTS before INTERACTION</span>
+profile.total_shares = profile.total_shares.checked_sub(burn).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">if</span> owner.key() == profile.trader {
+    profile.trader_shares = profile.trader_shares.saturating_sub(burn);
+}
+position.shares = position.shares.checked_sub(burn).ok_or(ArcadiaError::MathOverflow)?;
+position.pending_withdraw_shares = <span class="tok-n">0</span>;
+
+<span class="tok-c">// INTERACTION: signed by profile PDA seeds</span>
+<span class="tok-k">let</span> seeds: &amp;[&amp;[u8]] = &amp;[<span class="tok-s">b"profile"</span>, profile.trader.as_ref(), &amp;[profile.bump]];
+transfer_checked(
+    CpiContext::new_with_signer(token_program, TransferChecked {
+        from: vault_token, mint: base_mint, to: owner_token, authority: profile.to_account_info(),
+    }, &amp;[seeds]),
+    assets_out, base_mint.decimals,   <span class="tok-c">// 6</span>
+)?;
+
+emit!(Withdrawn {
+    profile: profile.key(), owner: owner.key(),
+    shares_burned: burn, amount_usd: assets_out
+});</code></pre>
+<div class="callout"><span class="tag">Withdrawal policy</span>Any portion, anytime; prevailing NAV; value &lt; 5% of AUM (<code>INSTANT_WITHDRAW_BPS = 500</code>) is instant on the next tick, otherwise the next daily settlement window. No lockups, no penalties, no forced redemption. Withdrawers receive the floor of the share-value (rounding favours the vault). The trader's own-capital position withdraws by the same rules (and reduces <code>trader_shares</code>).</div>
+<p><strong>Errors:</strong> <code>ZeroAmount</code>, <code>InsufficientShares</code>, <code>NothingPending</code>, <code>NoticeNotElapsed</code>, <code>InsufficientVaultLiquidity</code>, <code>MathOverflow</code>. &nbsp; <strong>Events:</strong> <code>WithdrawRequested</code> (on request), <code>Withdrawn</code> (on process).</p>
+</div>
+
+<!-- 4.7 -->
+<div class="instr-card">
+<h3>4.7 &nbsp;record_trade &nbsp;<span class="pill alt">simulated trade source</span></h3>
+<p class="sig">record_trade(market: String, direction: u8, size_usd: u64, leverage_x100: u16, entry_px: u64, exit_px: u64, fees_usd: u64, was_liquidated: bool, opened_at: i64, closed_at: i64)</p>
+<p>Applies the realized PnL of a closed (simulated) position to the vault. <strong>Dual-signed by <code>oracle_authority</code>
+(attests real prices) AND <code>trader</code> (authorizes the trade).</strong> Because NAV is derived from the vault token
+balance, realized PnL is applied by an actual <code>transfer_checked</code> of USDC into or out of the vault (devnet: against
+the treasury). See &sect;5 for the full model. (The <code>market</code> String is an event field only; if it were stored it
+would carry <code>#[max_len(N)]</code>.)</p>
+<table>
+  <tr><th>Accounts (<code>RecordTradeAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>trader</code> (Signer)</td><td>&mdash;</td><td>== profile.trader (stored authority).</td></tr>
+  <tr><td><code>oracle_authority</code> (Signer)</td><td>&mdash;</td><td>== config.oracle_authority (<code>has_one</code>).</td></tr>
+  <tr><td><code>config</code></td><td>&mdash;</td><td><code>has_one = oracle_authority, has_one = treasury_token, has_one = base_mint</code>.</td></tr>
+  <tr><td><code>profile</code></td><td>mut</td><td>The vault; <code>has_one = trader, vault_token, base_mint</code>.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>Decimals for <code>transfer_checked</code>.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Gain destination / loss source.</td></tr>
+  <tr><td><code>treasury_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td><span class="pill gray">devnet only</span> gain source / loss destination.</td></tr>
+  <tr><td><code>treasury_authority</code> (Signer)</td><td>&mdash;</td><td><span class="pill gray">devnet only</span> signs the gain top-up (= oracle_authority in practice).</td></tr>
+  <tr><td><code>token_program (Interface&lt;TokenInterface&gt;)</code></td><td>&mdash;</td><td></td></tr>
+</table>
+<h4>Checks (range + guards)</h4>
+<ul>
+  <li><code>trader.key() == profile.trader</code> &amp;&amp; <code>oracle_authority.key() == config.oracle_authority</code> &rarr; else <code>Unauthorized</code>.</li>
+  <li><code>profile.status == 0</code> (active); <code>profile.total_shares &gt; 0</code> (else NAV undefined &rarr; <code>NoShares</code>).</li>
+  <li><code>direction &lt;= 1</code>; <code>entry_px &gt; 0</code>; <code>exit_px &gt; 0</code>; <code>size_usd &gt; 0</code>; <code>closed_at &gt;= opened_at</code> &rarr; else <code>InvalidTradeParams</code>.</li>
+  <li><strong>Leverage guard:</strong> <code>leverage_x100 / 100 &lt;= max_leverage</code> &rarr; else <code>LeverageTooHigh</code>.</li>
+  <li><strong>Per-trade notional guard:</strong> <code>size_usd &lt;= total_assets * MAX_NOTIONAL_BPS / BPS_DENOMINATOR</code> (= 20% of AUM) &rarr; else <code>NotionalTooLarge</code>.</li>
+</ul>
+<h4>Logic (realized PnL, i128, multiply before divide)</h4>
+<pre><code><span class="tok-k">let</span> total_assets = vault_token.amount;
+
+<span class="tok-c">// notional guard: size_usd &lt;= total_assets * 2000 / 10_000</span>
+<span class="tok-k">let</span> cap = (total_assets as u128)
+    .checked_mul(MAX_NOTIONAL_BPS as u128).ok_or(ArcadiaError::MathOverflow)?
+    .checked_div(BPS_DENOMINATOR as u128).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">require!</span>((size_usd as u128) &lt;= cap, ArcadiaError::NotionalTooLarge);
+<span class="tok-k">require!</span>((leverage_x100 / <span class="tok-n">100</span>) as u8 &lt;= profile.max_leverage, ArcadiaError::LeverageTooHigh);
+
+<span class="tok-c">// dir_sign: long(0)=+1, short(1)=-1</span>
+<span class="tok-k">let</span> dir_sign: i128 = <span class="tok-k">if</span> direction == <span class="tok-n">0</span> { <span class="tok-n">1</span> } <span class="tok-k">else</span> { <span class="tok-n">-1</span> };
+
+<span class="tok-c">// realized_pnl = dir_sign * (size_usd * leverage_x100 * (exit_px - entry_px)) / (entry_px * 100) - fees_usd</span>
+<span class="tok-c">// multiply BEFORE divide; entry_px &gt; 0 guaranteed above</span>
+<span class="tok-k">let</span> px_diff: i128 = exit_px as i128 - entry_px as i128;
+<span class="tok-k">let</span> gross: i128 = dir_sign
+    .checked_mul(size_usd as i128).ok_or(ArcadiaError::MathOverflow)?
+    .checked_mul(leverage_x100 as i128).ok_or(ArcadiaError::MathOverflow)?
+    .checked_mul(px_diff).ok_or(ArcadiaError::MathOverflow)?
+    .checked_div((entry_px as i128).checked_mul(<span class="tok-n">100</span>).ok_or(ArcadiaError::MathOverflow)?)
+    .ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">let</span> realized_pnl: i128 = gross.checked_sub(fees_usd as i128).ok_or(ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// Apply via transfer_checked on devnet (mainnet: derived from Flash CPI, see swap note)</span>
+<span class="tok-k">if</span> realized_pnl &gt; <span class="tok-n">0</span> {
+    <span class="tok-c">// gain: treasury -&gt; vault (free devnet USDC keeps the vault token-backed)</span>
+    <span class="tok-k">let</span> amt: u64 = (realized_pnl as u128).try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+    transfer_checked(
+        CpiContext::new(token_program, TransferChecked {
+            from: treasury_token, mint: base_mint, to: vault_token, authority: treasury_authority,
+        }),
+        amt, base_mint.decimals,   <span class="tok-c">// 6</span>
+    )?;
+} <span class="tok-k">else if</span> realized_pnl &lt; <span class="tok-n">0</span> {
+    <span class="tok-c">// loss: vault -&gt; treasury, bounded by available (NAV-bearing) assets</span>
+    <span class="tok-k">let</span> loss: u64 = ((-realized_pnl) as u128).try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+    <span class="tok-k">let</span> nav_excl = total_assets.checked_sub(profile.trader_claimable).ok_or(ArcadiaError::MathOverflow)?;
+    <span class="tok-k">let</span> applied = loss.min(nav_excl);   <span class="tok-c">// NAV floored at 0; cannot touch earmarked trader_claimable</span>
+    <span class="tok-k">let</span> seeds: &amp;[&amp;[u8]] = &amp;[<span class="tok-s">b"profile"</span>, profile.trader.as_ref(), &amp;[profile.bump]];
+    transfer_checked(
+        CpiContext::new_with_signer(token_program, TransferChecked {
+            from: vault_token, mint: base_mint, to: treasury_token, authority: profile.to_account_info(),
+        }, &amp;[seeds]),
+        applied, base_mint.decimals,
+    )?;
+}
+<span class="tok-c">// total_shares unchanged: a trade reprices existing shares; derived nav_per_share moves.</span>
+
+emit!(TradeClosed {
+    profile: profile.key(), trader: profile.trader, market,
+    direction, size_usd, leverage_x100, entry_px, exit_px,
+    realized_pnl: realized_pnl.try_into().map_err(|_| ArcadiaError::MathOverflow)?, <span class="tok-c">// i64</span>
+    fees_usd, was_liquidated, opened_at, closed_at
+});</code></pre>
+<div class="callout bad">
+  <span class="tag">Mainnet swap</span>
+  On mainnet, <code>record_trade</code> is replaced by <code>execute_trade</code>, which opens/closes a real position via a
+  <strong>CPI to the whitelisted Flash perps program</strong> and derives <code>entry_px/exit_px/realized_pnl</code> from the
+  CPI result instead of trusting the oracle. The devnet treasury top-up is removed (real PnL settles in real USDC through the
+  CPI). <strong>Everything downstream &mdash; the NAV derivation, events, accounts, settlement &mdash; is byte-for-byte
+  identical.</strong>
+</div>
+<p><strong>Errors:</strong> <code>Unauthorized</code>, <code>VaultNotActive</code>, <code>NoShares</code>, <code>InvalidTradeParams</code>, <code>LeverageTooHigh</code>, <code>NotionalTooLarge</code>, <code>MathOverflow</code>. &nbsp; <strong>Event:</strong> <code>TradeClosed</code>.</p>
+</div>
+
+<!-- 4.8 -->
+<div class="instr-card">
+<h3>4.8 &nbsp;settle</h3>
+<p class="sig">settle()</p>
+<p>Periodic (daily/monthly) per profile. Crystallizes profit above the high-water mark into a trader cut (earmarked to
+<code>trader_claimable</code>, kept in the vault token account but EXCLUDED from NAV) and a platform cut (sent to treasury);
+resets HWM. Optional management-fee accrual is shown. See &sect;7.</p>
+<table>
+  <tr><th>Accounts (<code>SettleAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>caller</code> (Signer)</td><td>&mdash;</td><td>trader or oracle_authority may trigger.</td></tr>
+  <tr><td><code>config</code></td><td>&mdash;</td><td><code>has_one = treasury_token, base_mint</code>; perf_fee_bps, mgmt_fee_bps.</td></tr>
+  <tr><td><code>profile</code></td><td>mut</td><td>Signs token-out via PDA seeds; <code>has_one = vault_token, base_mint</code>.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>Decimals for <code>transfer_checked</code>.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Source for platform + mgmt cut.</td></tr>
+  <tr><td><code>treasury_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Destination for platform cut (and mgmt accrual).</td></tr>
+  <tr><td><code>token_program (Interface&lt;TokenInterface&gt;)</code></td><td>&mdash;</td><td></td></tr>
+</table>
+<h4>Checks</h4>
+<ul><li>caller is <code>profile.trader</code> or <code>config.oracle_authority</code> &rarr; else <code>Unauthorized</code>.</li><li><code>profile.total_shares &gt; 0</code> &rarr; else <code>NoShares</code>.</li></ul>
+<h4>Logic (multiply before divide; floor)</h4>
+<pre><code><span class="tok-k">let</span> now = Clock::get()?.unix_timestamp;
+<span class="tok-k">let</span> total_assets = vault_token.amount;
+<span class="tok-k">let</span> nav_excl     = total_assets.checked_sub(profile.trader_claimable).ok_or(ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// current_nav = (total_assets - trader_claimable) * SHARE_SCALE / total_shares  (u128, floor)</span>
+<span class="tok-k">let</span> current_nav: u64 = (nav_excl as u128)
+    .checked_mul(SHARE_SCALE as u128).ok_or(ArcadiaError::MathOverflow)?
+    .checked_div(profile.total_shares as u128).ok_or(ArcadiaError::MathOverflow)?
+    .try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// Optional management accrual: mgmt = total_assets * 100 * elapsed / (10_000 * 31_557_600)</span>
+<span class="tok-k">let</span> elapsed = (now - profile.last_settle_ts).max(<span class="tok-n">0</span>) as u128;
+<span class="tok-k">let</span> mgmt: u64 = (total_assets as u128)
+    .checked_mul(config.mgmt_fee_bps as u128).ok_or(ArcadiaError::MathOverflow)?  <span class="tok-c">// * 100</span>
+    .checked_mul(elapsed).ok_or(ArcadiaError::MathOverflow)?
+    .checked_div((BPS_DENOMINATOR as u128) * (SECONDS_PER_YEAR as u128)).ok_or(ArcadiaError::MathOverflow)? <span class="tok-c">// /(10_000*31_557_600)</span>
+    .try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+
+<span class="tok-c">// NO performance fees when current_nav &lt;= hwm_per_share</span>
+<span class="tok-k">if</span> current_nav &gt; profile.hwm_per_share {
+    <span class="tok-k">let</span> per_share_gain = (current_nav - profile.hwm_per_share) as u128;
+    <span class="tok-c">// profit_assets = (current_nav - hwm_per_share) * total_shares / SHARE_SCALE  (floor)</span>
+    <span class="tok-k">let</span> profit_assets: u64 = per_share_gain
+        .checked_mul(profile.total_shares as u128).ok_or(ArcadiaError::MathOverflow)?
+        .checked_div(SHARE_SCALE as u128).ok_or(ArcadiaError::MathOverflow)?
+        .try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+
+    <span class="tok-k">let</span> tier_bps = tier_bps(profile.score_tier);   <span class="tok-c">// 2000/2500/3000/3500</span>
+    <span class="tok-c">// trader_cut = profit_assets * tier_bps / 10_000   (floor)</span>
+    <span class="tok-k">let</span> trader_cut: u64 = (profit_assets as u128)
+        .checked_mul(tier_bps as u128).ok_or(ArcadiaError::MathOverflow)?
+        .checked_div(BPS_DENOMINATOR as u128).ok_or(ArcadiaError::MathOverflow)?
+        .try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+    <span class="tok-c">// platform_cut = profit_assets * 500 / 10_000   (floor)</span>
+    <span class="tok-k">let</span> platform_cut: u64 = (profit_assets as u128)
+        .checked_mul(config.perf_fee_bps as u128).ok_or(ArcadiaError::MathOverflow)?  <span class="tok-c">// * 500</span>
+        .checked_div(BPS_DENOMINATOR as u128).ok_or(ArcadiaError::MathOverflow)?
+        .try_into().map_err(|_| ArcadiaError::MathOverflow)?;
+
+    <span class="tok-c">// EFFECTS: trader cut earmarked (excluded from NAV); platform cut leaves the vault</span>
+    profile.trader_claimable = profile.trader_claimable.checked_add(trader_cut).ok_or(ArcadiaError::MathOverflow)?;
+
+    <span class="tok-k">let</span> seeds: &amp;[&amp;[u8]] = &amp;[<span class="tok-s">b"profile"</span>, profile.trader.as_ref(), &amp;[profile.bump]];
+    transfer_checked(
+        CpiContext::new_with_signer(token_program, TransferChecked {
+            from: vault_token, mint: base_mint, to: treasury_token, authority: profile.to_account_info(),
+        }, &amp;[seeds]),
+        platform_cut, base_mint.decimals,
+    )?;
+
+    <span class="tok-c">// hwm_per_share = current_nav (reset AFTER crystallization)</span>
+    profile.hwm_per_share = current_nav;
+    profile.last_settle_ts = now;
+    emit!(Settled { profile: profile.key(), profit_usd: profit_assets, trader_cut, platform_cut,
+                    hwm_per_share: profile.hwm_per_share });
+} <span class="tok-k">else</span> {
+    <span class="tok-c">// no profit: no performance fee, no event</span>
+    profile.last_settle_ts = now;
+}</code></pre>
+<p class="small">The platform cut physically leaves the vault to the treasury immediately. The trader cut stays as USDC inside the
+vault token account but is now <em>earmarked</em> as <code>trader_claimable</code> and <strong>excluded from NAV</strong>, so
+investors' NAV reflects only the profit they actually keep. The trader cut is pulled out separately by
+<code>trader_withdraw_profit</code>. HWM is reset to the post-crystallization <code>current_nav</code>. (The optional management
+accrual transfer <code>mgmt</code> vault &rarr; treasury can be applied on the same PDA-signed path; it is shown above and
+omitted from the worked example for clarity.)</p>
+<p><strong>Errors:</strong> <code>Unauthorized</code>, <code>NoShares</code>, <code>MathOverflow</code>. &nbsp; <strong>Event:</strong> <code>Settled</code> (only when <code>current_nav &gt; hwm_per_share</code>).</p>
+</div>
+
+<!-- 4.9 -->
+<div class="instr-card">
+<h3>4.9 &nbsp;trader_withdraw_profit</h3>
+<p class="sig">trader_withdraw_profit(amount: u64)</p>
+<p>The trader pulls some or all of their earmarked performance fee (<code>trader_claimable</code>) out of the vault to their own
+wallet. This is separate from the trader's own-capital investor position (which withdraws via the normal withdraw path). Every
+withdraw verifies the caller against the stored owner (Signer + <code>profile.trader</code>).</p>
+<table>
+  <tr><th>Accounts (<code>TraderWithdrawProfitAccountConstraints</code>)</th><th>Mut?</th><th>Notes</th></tr>
+  <tr><td><code>trader</code> (Signer)</td><td>&mdash;</td><td>== profile.trader (stored authority; <code>has_one = trader</code>).</td></tr>
+  <tr><td><code>profile</code></td><td>mut</td><td>Signs token-out via PDA seeds; <code>has_one = vault_token, base_mint</code>.</td></tr>
+  <tr><td><code>base_mint</code> (<code>InterfaceAccount&lt;Mint&gt;</code>)</td><td>&mdash;</td><td>Decimals for <code>transfer_checked</code>.</td></tr>
+  <tr><td><code>vault_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Source.</td></tr>
+  <tr><td><code>trader_token</code> (<code>InterfaceAccount&lt;TokenAccount&gt;</code>)</td><td>mut</td><td>Destination; <code>token::authority = trader</code>.</td></tr>
+  <tr><td><code>token_program (Interface&lt;TokenInterface&gt;)</code></td><td>&mdash;</td><td></td></tr>
+</table>
+<h4>Checks</h4>
+<ul>
+  <li><code>trader.key() == profile.trader</code> (via <code>has_one</code>) &rarr; else <code>Unauthorized</code>.</li>
+  <li><code>amount &gt; 0</code> &rarr; else <code>ZeroAmount</code>.</li>
+  <li><code>amount &lt;= profile.trader_claimable</code> &rarr; else <code>InsufficientClaimable</code>.</li>
+</ul>
+<h4>Logic</h4>
+<pre><code><span class="tok-k">require!</span>(amount &gt; <span class="tok-n">0</span>, ArcadiaError::ZeroAmount);
+<span class="tok-k">require!</span>(amount &lt;= profile.trader_claimable, ArcadiaError::InsufficientClaimable);
+<span class="tok-k">require!</span>(amount &lt;= vault_token.amount, ArcadiaError::InsufficientVaultLiquidity);
+
+<span class="tok-c">// EFFECTS before INTERACTION</span>
+profile.trader_claimable = profile.trader_claimable.checked_sub(amount).ok_or(ArcadiaError::MathOverflow)?;
+
+<span class="tok-k">let</span> seeds: &amp;[&amp;[u8]] = &amp;[<span class="tok-s">b"profile"</span>, profile.trader.as_ref(), &amp;[profile.bump]];
+transfer_checked(
+    CpiContext::new_with_signer(token_program, TransferChecked {
+        from: vault_token, mint: base_mint, to: trader_token, authority: profile.to_account_info(),
+    }, &amp;[seeds]),
+    amount, base_mint.decimals,
+)?;
+emit!(ProfitWithdrawn { profile: profile.key(), trader: profile.trader, amount_usd: amount });</code></pre>
+<p class="small">Because the trader cut was earmarked out of NAV at settle time (it is excluded via <code>trader_claimable</code>),
+paying it out here does not move NAV &mdash; it merely drains the USDC that was earmarked. <code>nav_per_share</code> is derived
+from <code>(total_assets - trader_claimable)</code>, and this handler decreases both by exactly <code>amount</code>.</p>
+<p><strong>Errors:</strong> <code>Unauthorized</code>, <code>ZeroAmount</code>, <code>InsufficientClaimable</code>, <code>InsufficientVaultLiquidity</code>, <code>MathOverflow</code>. &nbsp; <strong>Event:</strong> <code>ProfitWithdrawn</code>.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="trade-model">5. The Simulated-Trade Model In Depth (<code>record_trade</code>)</h2>
+
+<h3>5.1 Why &amp; how it is simulated</h3>
+<p>On devnet there is no real perps venue and no real capital at risk, but Arcadia's whole value proposition is a reputation
+built from <em>real</em> trades. The bridge: an offchain <code>oracle_authority</code> watches real markets, computes the
+realized PnL of a position using <strong>real entry/exit prices</strong>, and submits it via <code>record_trade</code>. The
+program does not invent prices; it trusts a co-signing oracle that the platform controls.</p>
+
+<h3>5.2 The dual-signature requirement</h3>
+<p><code>record_trade</code> requires <strong>two signers</strong>:</p>
+<ul>
+  <li><strong><code>trader</code></strong> &mdash; authorizes that this trade belongs to them and was their decision (this is what builds reputation; the trader can never spoof prices).</li>
+  <li><strong><code>oracle_authority</code></strong> &mdash; attests that <code>entry_px</code>, <code>exit_px</code>, and the other market facts are real. Without the oracle's signature the trader cannot fabricate a profit.</li>
+</ul>
+<p>This separation is the core integrity mechanism: the trader controls <em>what</em> was traded; the oracle controls
+<em>at what price</em>. Neither alone can move the vault dishonestly.</p>
+
+<h3>5.3 The realized-PnL formula (integers, i128, multiply before divide)</h3>
+<pre><code>dir_sign     = (direction == 0) ? +1 : -1            <span class="tok-c">// long / short</span>
+realized_pnl = dir_sign * (size_usd * leverage_x100 * (exit_px - entry_px))
+                          / (entry_px * 100)
+             - fees_usd</code></pre>
+<p>All intermediate arithmetic uses <code>i128</code> with <code>checked_*</code> to prevent overflow, multiplies before
+dividing, then narrows the result to <code>i64</code> for the event via <code>try_into().map_err(|_| ArcadiaError::MathOverflow)?</code>.
+<code>leverage_x100</code> carries leverage &times; 100 (so 3.50&times; is <code>350</code>); dividing by 100 inside the formula
+keeps the leverage integral. <code>entry_px &gt; 0</code> is checked before the divide. <code>was_liquidated</code> is
+informational for the indexer/scoring; the PnL it produces is already encoded in <code>exit_px</code>.</p>
+
+<h3>5.4 The two per-trade guards</h3>
+<ul>
+  <li><strong>Leverage guard:</strong> <code>leverage_x100 / 100 &lt;= max_leverage</code> &mdash; the trade cannot exceed the leverage cap set at profile init.</li>
+  <li><strong>Notional guard:</strong> <code>size_usd &lt;= total_assets * MAX_NOTIONAL_BPS / BPS_DENOMINATOR</code> = <code>total_assets * 2000 / 10_000</code> (20% of AUM) &mdash; a single trade can never risk more than one-fifth of the vault's assets.</li>
+</ul>
+
+<h3>5.5 How PnL reaches NAV</h3>
+<p>NAV is <strong>not stored</strong>; it is derived from the live vault token balance:
+<code>nav_per_share = (total_assets - trader_claimable) * SHARE_SCALE / total_shares</code>. Realized PnL is therefore applied by
+moving USDC: a gain transfers into the vault (raising <code>total_assets</code> and hence NAV), a loss transfers out (lowering
+it). Shares are unchanged &mdash; a trade reprices existing shares; it never mints or burns. Losses are bounded so NAV floors at
+0 and never touch the earmarked <code>trader_claimable</code>.</p>
+
+<h3>5.6 Devnet treasury top-up (devnet-only mechanism)</h3>
+<div class="callout warn">
+  <span class="tag">Devnet only &mdash; document clearly</span>
+  When <code>realized_pnl &gt; 0</code>, the simulated profit is <strong>not</strong> backed by real trading gains, so the vault's
+  token balance would otherwise fall short of the new (higher) NAV when investors withdraw. To keep the vault
+  <strong>token-backed for withdrawals</strong>, the handler does a <code>transfer_checked</code> of <code>realized_pnl</code>
+  worth of <em>free test USDC</em> from a platform-funded <code>treasury_token</code> account into <code>vault_token</code>. This
+  is a devnet faucet mechanism and <strong>does not exist on mainnet</strong>, where gains come from real settled USDC via the
+  Flash CPI. On a loss, USDC moves the other way (vault &rarr; treasury), so the token balance always matches the derived NAV;
+  the loss is shared pro-rata across all shares (including the trader's own-capital <code>trader_shares</code>).
+</div>
+
+<h3>5.7 The mainnet swap (everything else unchanged)</h3>
+<table>
+  <tr><th>Aspect</th><th>Devnet (<code>record_trade</code>)</th><th>Mainnet (<code>execute_trade</code>)</th></tr>
+  <tr><td>Price source</td><td>oracle_authority co-signs real prices</td><td>Flash perps CPI returns fills</td></tr>
+  <tr><td>Funds</td><td>treasury top-up on gains / drain on losses (faucet)</td><td>real USDC settles through CPI</td></tr>
+  <tr><td>External program</td><td>none</td><td>CPI to whitelisted Flash program ONLY</td></tr>
+  <tr><td>NAV derivation / shares / settlement / events / accounts</td><td colspan="2" style="text-align:center;"><strong>IDENTICAL</strong></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="nav-math">6. NAV / Shares Integer Math &amp; Early-Investor Edge</h2>
+
+<p>This is a <strong>single-asset (USDC) vault</strong>. It does NOT use the two-asset AMM <code>sqrt(a*b)</code> geometric-mean
+formula. All math is integer-only: no floats, no <code>rust_decimal</code>, no fixed-point libraries in the program.
+Intermediate products use <code>u128</code> and narrow with <code>try_into().map_err(|_| ArcadiaError::MathOverflow)?</code>;
+every operation is <code>checked_*</code> with multiply-before-divide; division floors, which rounds in the protocol's favour
+(depositors and withdrawers get the floor). USDC and shares both carry 6 decimals, which keeps the par mapping clean.</p>
+
+<!-- ===================== 6a NEW REFERENCE SECTION ===================== -->
+<h3 id="numbers">6a. Numbers, Constants &amp; Formulas (reference)</h3>
+<p>This is the single source of truth for every constant, percentage, and formula used in the program. Everything else in this
+document references it.</p>
+
+<h4>Constants (<code>constants.rs</code>)</h4>
+<pre><code><span class="tok-k">pub const</span> SHARE_SCALE: <span class="tok-t">u64</span>           = <span class="tok-n">1_000_000</span>;       <span class="tok-c">// 1e6, scale for nav_per_share</span>
+<span class="tok-k">pub const</span> USDC_DECIMALS: <span class="tok-t">u8</span>          = <span class="tok-n">6</span>;               <span class="tok-c">// USDC has 6 decimals (transfer_checked)</span>
+<span class="tok-k">pub const</span> BPS_DENOMINATOR: <span class="tok-t">u16</span>       = <span class="tok-n">10_000</span>;          <span class="tok-c">// basis-point denominator</span>
+<span class="tok-k">pub const</span> SECONDS_PER_YEAR: <span class="tok-t">u64</span>      = <span class="tok-n">31_557_600</span>;      <span class="tok-c">// 365.25 days</span>
+
+<span class="tok-c">// platform fees</span>
+<span class="tok-k">pub const</span> PLATFORM_PERF_FEE_BPS: <span class="tok-t">u16</span> = <span class="tok-n">500</span>;             <span class="tok-c">// 5% performance fee</span>
+<span class="tok-k">pub const</span> PLATFORM_MGMT_FEE_BPS: <span class="tok-t">u16</span> = <span class="tok-n">100</span>;             <span class="tok-c">// 1%/yr management fee</span>
+
+<span class="tok-c">// per-trade / withdrawal thresholds</span>
+<span class="tok-k">pub const</span> MAX_NOTIONAL_BPS: <span class="tok-t">u16</span>     = <span class="tok-n">2000</span>;            <span class="tok-c">// 20% of AUM per trade</span>
+<span class="tok-k">pub const</span> INSTANT_WITHDRAW_BPS: <span class="tok-t">u16</span> = <span class="tok-n">500</span>;             <span class="tok-c">// &lt;5% of AUM -&gt; instant next tick</span>
+
+<span class="tok-c">// leverage / tiers</span>
+<span class="tok-k">pub const</span> MAX_LEVERAGE_CEILING: <span class="tok-t">u8</span> = <span class="tok-n">50</span>;              <span class="tok-c">// max_leverage hard ceiling</span>
+<span class="tok-k">pub const</span> MAX_TIER_BPS: <span class="tok-t">u16</span>        = <span class="tok-n">3500</span>;            <span class="tok-c">// highest trader cut (Elite, used in fee-config check)</span></code></pre>
+
+<h4>Tier score thresholds &amp; tier byte</h4>
+<table>
+  <tr><th>Tier name</th><th>Score threshold</th><th>score_tier (u8)</th><th>Trader profit-share</th><th>tier_bps</th></tr>
+  <tr><td>Verified</td><td>600</td><td>0</td><td>20%</td><td>2000</td></tr>
+  <tr><td>Established</td><td>700</td><td>1</td><td>25%</td><td>2500</td></tr>
+  <tr><td>Advanced</td><td>800</td><td>2</td><td>30%</td><td>3000</td></tr>
+  <tr><td>Elite</td><td>900</td><td>3</td><td>35%</td><td>3500</td></tr>
+  <tr><td>Not fundable</td><td>&lt;600</td><td>255</td><td>&mdash;</td><td>&mdash; (cannot take investor deposits)</td></tr>
+</table>
+<pre><code><span class="tok-k">pub fn</span> tier_bps(score_tier: <span class="tok-t">u8</span>) -&gt; <span class="tok-t">u16</span> {
+    <span class="tok-k">match</span> score_tier {
+        <span class="tok-n">0</span> =&gt; <span class="tok-n">2000</span>,   <span class="tok-c">// Verified    20%</span>
+        <span class="tok-n">1</span> =&gt; <span class="tok-n">2500</span>,   <span class="tok-c">// Established  25%</span>
+        <span class="tok-n">2</span> =&gt; <span class="tok-n">3000</span>,   <span class="tok-c">// Advanced     30%</span>
+        <span class="tok-n">3</span> =&gt; <span class="tok-n">3500</span>,   <span class="tok-c">// Elite        35%</span>
+        _ =&gt; <span class="tok-n">0</span>,      <span class="tok-c">// 255 not fundable: never reaches settlement with investors</span>
+    }
+}</code></pre>
+
+<h4>Core formulas (all integer, floor)</h4>
+<table>
+  <tr><th>Quantity</th><th>Formula</th></tr>
+  <tr><td><code>total_assets</code></td><td>vault token account <code>amount</code> (USDC minor units)</td></tr>
+  <tr><td><code>nav_per_share</code></td><td><code>(total_assets - trader_claimable) * SHARE_SCALE / total_shares</code> &nbsp;[u128, floor] &mdash; <code>trader_claimable</code> is earmarked and EXCLUDED from NAV</td></tr>
+  <tr><td><code>aum</code></td><td><code>total_assets - trader_claimable</code> (the NAV-bearing assets)</td></tr>
+  <tr><td><code>shares_minted</code> (first deposit, <code>total_shares == 0</code>)</td><td><code>amount</code></td></tr>
+  <tr><td><code>shares_minted</code> (subsequent)</td><td><code>amount * total_shares / total_assets</code> &nbsp;[u128 try_into u64, floor]; require <code>&gt; 0</code></td></tr>
+  <tr><td><code>assets_out</code> (withdraw)</td><td><code>shares * total_assets / total_shares</code> &nbsp;[u128 try_into u64, floor]</td></tr>
+  <tr><td>investor capacity gate</td><td><code>(total_assets + amount) &lt;= capacity_cap_usd</code> (trader self-funding is EXEMPT)</td></tr>
+  <tr><td>per-trade notional cap</td><td><code>size_usd &lt;= total_assets * 2000 / 10_000</code></td></tr>
+  <tr><td>withdrawal instant threshold</td><td>value <code>&lt; aum * 500 / 10_000</code> &rarr; instant next tick; else next daily window</td></tr>
+  <tr><td><code>realized_pnl</code></td><td><code>dir_sign * (size_usd * leverage_x100 * (exit_px - entry_px)) / (entry_px * 100) - fees_usd</code> &nbsp;[i128]</td></tr>
+  <tr><td><code>current_nav</code> (settle)</td><td><code>(total_assets - trader_claimable) * SHARE_SCALE / total_shares</code></td></tr>
+  <tr><td><code>profit_assets</code> (settle, if <code>current_nav &gt; hwm_per_share</code>)</td><td><code>(current_nav - hwm_per_share) * total_shares / SHARE_SCALE</code></td></tr>
+  <tr><td><code>trader_cut</code></td><td><code>profit_assets * tier_bps / 10_000</code></td></tr>
+  <tr><td><code>platform_cut</code></td><td><code>profit_assets * 500 / 10_000</code></td></tr>
+  <tr><td><code>mgmt</code> (optional)</td><td><code>total_assets * 100 * elapsed_seconds / (10_000 * 31_557_600)</code></td></tr>
+</table>
+
+<h3>6.1 NAV / early-investor edge</h3>
+<div class="callout ok">
+  <span class="tag">How the edge works</span>
+  Shares are always minted at the <strong>current</strong> NAV. A profitable trade raises <code>total_assets</code> and so the
+  derived <code>nav_per_share</code>, which marks up <em>every</em> existing share. <strong>Earlier investors (lower cost basis)
+  gain</strong> because their shares were bought cheaper and are now worth more. <strong>New deposits buy at the current
+  NAV</strong>, so a late depositor pays full price for each share and <strong>does not dilute</strong> the earlier holders
+  &mdash; they simply receive proportionally fewer shares per dollar. No one's claim is diluted by a new deposit; NAV is the
+  great equalizer.
+</div>
+
+<h3>6.2 Worked NAV example (integers, USDC minor units)</h3>
+<p>A single trader profile, starting empty, in <strong>USDC minor units</strong> throughout (1 USDC major unit = 1_000_000 minor
+units). The trader funds their own vault first, records a +500 USDC simulated trade, then an investor deposits at the new NAV.</p>
+
+<table>
+  <tr><th>#</th><th>Action</th><th>Explicit integer math</th><th>nav_per_share</th><th>total_shares</th><th>total_assets</th></tr>
+  <tr>
+    <td>0</td><td>initialize_profile</td>
+    <td>hwm_per_share = SHARE_SCALE = 1_000_000</td>
+    <td><code>&mdash;</code></td><td><code>0</code></td><td><code>0</code></td>
+  </tr>
+  <tr>
+    <td>1</td><td>Trader self-funds 5,000 USDC (= 5_000_000_000 minor units; own capital, cap-exempt)</td>
+    <td>first deposit: total_shares == 0 &rarr; shares_minted = amount = <strong>5_000_000_000</strong>; trader_shares += 5_000_000_000</td>
+    <td><code>1_000_000</code></td><td><code>5_000_000_000</code></td><td><code>5_000_000_000</code></td>
+  </tr>
+  <tr>
+    <td>2</td><td>record_trade: +500 USDC realized PnL (treasury &rarr; vault 500_000_000)</td>
+    <td>total_assets = 5_000_000_000 + 500_000_000 = 5_500_000_000; nav = 5_500_000_000 &middot; 1_000_000 / 5_000_000_000 = <strong>1_100_000</strong></td>
+    <td><code>1_100_000</code></td><td><code>5_000_000_000</code></td><td><code>5_500_000_000</code></td>
+  </tr>
+  <tr>
+    <td>3</td><td>Investor Iris deposits 1,100 USDC (= 1_100_000_000 minor units) at the new NAV</td>
+    <td>shares = 1_100_000_000 &middot; 5_000_000_000 / 5_500_000_000 = <strong>1_000_000_000</strong> (floor)</td>
+    <td><code>1_100_000</code></td><td><code>6_000_000_000</code></td><td><code>6_600_000_000</code></td>
+  </tr>
+  <tr>
+    <td>4</td><td>Trader withdraws all 5_000_000_000 shares (own capital)</td>
+    <td>assets_out = 5_000_000_000 &middot; 6_600_000_000 / 6_000_000_000 = <strong>5_500_000_000</strong> (5,500 USDC); trader_shares &rarr; 0</td>
+    <td><code>1_100_000</code></td><td><code>1_000_000_000</code></td><td><code>1_100_000_000</code></td>
+  </tr>
+  <tr>
+    <td>5</td><td>Iris withdraws all 1_000_000_000 shares</td>
+    <td>assets_out = 1_000_000_000 &middot; 1_100_000_000 / 1_000_000_000 = <strong>1_100_000_000</strong> (1,100 USDC)</td>
+    <td><code>&mdash;</code></td><td><code>0</code></td><td><code>0</code></td>
+  </tr>
+</table>
+<p class="small">Key invariants: the trader earned the full 500 USDC gain on their own capital (deposited 5,000 USDC, withdrew
+5,500 USDC), and Iris &mdash; who arrived <em>after</em> the gain &mdash; paid 1.1&times; per share and is neutral; she neither
+captured the trader's prior 500 USDC nor diluted it. This is the early-investor edge in action: being early (lower cost basis)
+is what captures appreciation. Token conservation holds at every step: total assets paid out (5,500 + 1,100 = 6,600 USDC)
+equals total assets in the vault before withdrawals (6,600 USDC).</p>
+
+<div class="callout"><span class="tag">Rounding &amp; safety</span>Always compute with <code>u128</code> and divide last; floor division means a tiny amount of dust may remain in the vault, which only ever benefits remaining holders. Reject any deposit where <code>shares_minted == 0</code> (<code>DustDeposit</code>) &mdash; this, together with the trader making the first deposit, blocks the empty-vault inflation/donation attack. Token conservation is asserted on every fund-moving handler.</div>
+
+<!-- ============================================================ -->
+<h2 id="settlement">7. Settlement Math (HWM &amp; Splits)</h2>
+
+<h3>7.1 Rules</h3>
+<ul>
+  <li><strong>Periodic, per profile.</strong> <code>settle()</code> crystallizes performance fees on a daily/monthly cadence.</li>
+  <li><strong>High-water mark per share.</strong> Fees are charged only on NAV growth above the prior peak:
+      performance fees apply only when <code>current_nav &gt; hwm_per_share</code>.</li>
+  <li><strong>No fees on down/flat periods.</strong> If <code>current_nav &lt;= hwm_per_share</code>, <code>settle()</code> is a
+      no-op for performance fees (no event, no perf transfers; only <code>last_settle_ts</code> updates).</li>
+  <li><strong>Splits of <code>profit_assets</code>:</strong> trader gets <code>tier_bps</code> (2000/2500/3000/3500, earmarked to
+      <code>trader_claimable</code>), platform gets <code>500</code> bps (5%, sent to treasury), investors keep the remainder
+      (it stays in NAV).</li>
+  <li><strong>Earmark, not NAV stored:</strong> the trader cut stays as USDC in the vault token account but is excluded from NAV
+      via <code>trader_claimable</code>; the platform cut leaves immediately. NAV is derived, so removing/earmarking these
+      assets automatically lowers it.</li>
+  <li><strong>HWM reset:</strong> after crystallization, <code>hwm_per_share = current_nav</code>.</li>
+  <li><strong>Optional management fee:</strong> <code>mgmt = total_assets * 100 * elapsed_seconds / (10_000 * 31_557_600)</code>
+      &rarr; treasury (1%/yr, time-prorated).</li>
+  <li><strong>No skin-in-the-game machinery:</strong> there is no alignment stake, first-loss, retention, strikes or slashing.
+      The trader's alignment comes purely from their own-capital position riding the same NAV.</li>
+</ul>
+
+<h3>7.2 Tier percentages</h3>
+<p>See &sect;6a for the canonical table. Platform performance fee = 5% (500 bps) at every fundable tier; management fee = 1%/yr
+(100 bps). Trader cut by tier: Verified 2000 bps (20%), Established 2500 bps (25%), Advanced 3000 bps (30%), Elite 3500 bps
+(35%).</p>
+
+<h3>7.3 Worked settlement example (bps arithmetic shown by hand, USDC minor units)</h3>
+<p>A profile with <code>total_shares = 6_000_000_000</code>, derived <code>current_nav = 1_100_000</code>,
+<code>hwm_per_share = 1_000_000</code>, tier = Established (<code>tier_bps = 2500</code>, 25%),
+<code>trader_claimable = 0</code>, <code>total_assets = 6_600_000_000</code> (6,600 USDC).</p>
+<table>
+  <tr><th>Step</th><th>Explicit computation</th><th>Result (minor units)</th></tr>
+  <tr><td>per-share gain</td><td>1_100_000 &minus; 1_000_000</td><td>100_000</td></tr>
+  <tr><td>profit_assets</td><td>(1_100_000 &minus; 1_000_000) &middot; 6_000_000_000 / 1_000_000 = 100_000 &middot; 6_000_000_000 / 1_000_000</td><td><strong>600_000_000</strong> (600 USDC)</td></tr>
+  <tr><td>trader_cut (2500 bps)</td><td>600_000_000 &middot; 2500 / 10_000</td><td>150_000_000 (150 USDC) &rarr; trader_claimable</td></tr>
+  <tr><td>platform_cut (500 bps)</td><td>600_000_000 &middot; 500 / 10_000</td><td>30_000_000 (30 USDC) &rarr; treasury</td></tr>
+  <tr><td>investors keep</td><td>600_000_000 &minus; 150_000_000 &minus; 30_000_000</td><td>420_000_000 (420 USDC, stays in NAV)</td></tr>
+  <tr><td>total_assets after platform transfer out</td><td>6_600_000_000 &minus; 30_000_000</td><td>6_570_000_000</td></tr>
+  <tr><td>trader_claimable after earmark</td><td>0 + 150_000_000</td><td><strong>150_000_000</strong> (excluded from NAV)</td></tr>
+  <tr><td>NAV-bearing assets (total_assets &minus; trader_claimable)</td><td>6_570_000_000 &minus; 150_000_000</td><td>6_420_000_000 (6,420 USDC)</td></tr>
+  <tr><td>new derived nav_per_share</td><td>6_420_000_000 &middot; 1_000_000 / 6_000_000_000</td><td><strong>1_070_000</strong></td></tr>
+  <tr><td>new hwm_per_share</td><td>reset to current derived NAV</td><td><strong>1_070_000</strong></td></tr>
+</table>
+<p class="small">Investors' 420 USDC share of profit is reflected because the new derived NAV (1_070_000) stays well above the
+prior HWM par (1_000_000): the 30 USDC platform cut physically left the vault and the 150 USDC trader cut is earmarked out of
+NAV. The 150 USDC sits in the vault token account as <code>trader_claimable</code> until the trader calls
+<code>trader_withdraw_profit</code> (which moves USDC but not NAV, because both <code>total_assets</code> and
+<code>trader_claimable</code> drop by the same amount). The next settlement only charges performance fees on growth above
+1_070_000.</p>
+
+<!-- ============================================================ -->
+<h2 id="capacity">8. Capacity Enforcement</h2>
+<p>Capacity caps how much <strong>investor</strong> AUM a vault may hold, scaled to the trader's proven track record. The
+<strong>indexer computes it offchain</strong> and pushes it onchain via <code>set_capacity</code> (signed by
+<code>oracle_authority</code> only). The program enforces it on every investor <code>deposit</code>.</p>
+<div class="callout warn"><span class="tag">Exponential ceiling is offchain</span>The capacity ceiling uses <code>capacity_cap_usd = base * e^(k * score)</code>, an exponential that is NOT computable onchain. So <code>capacity_cap_usd</code> is a plain <code>u64</code> (USDC minor units) PUSHED by the offchain oracle authority via <code>set_capacity</code>; the exponential formula lives in the indexer (offchain).</div>
+<pre><code><span class="tok-c">// in deposit(), only when depositor != trader:</span>
+<span class="tok-k">let</span> total_assets = vault_token.amount;
+<span class="tok-k">require!</span>(profile.capacity_cap_usd &gt; <span class="tok-n">0</span>, ArcadiaError::CapacityNotSet);
+<span class="tok-k">let</span> after = total_assets.checked_add(amount).ok_or(ArcadiaError::MathOverflow)?;
+<span class="tok-k">require!</span>(after &lt;= profile.capacity_cap_usd, ArcadiaError::CapacityExceeded);</code></pre>
+<ul>
+  <li>Until <code>set_capacity</code> is called, <code>capacity_cap_usd = 0</code> and all <em>investor</em> deposits are rejected (<code>CapacityNotSet</code>) &mdash; an unproven vault cannot take outside money.</li>
+  <li><strong>The trader's own-capital deposit is EXEMPT from the cap</strong> &mdash; the trader funds their own vault and trades until investors join. These deposits bump <code>trader_shares</code> and are withdrawable by the normal withdraw path.</li>
+  <li>Withdrawals are never capacity-gated (anyone can always exit).</li>
+</ul>
+<div class="callout warn"><span class="tag">v2</span>The capacity <em>ratchet</em> &mdash; only allowing the cap to grow gradually over time and with sustained performance &mdash; is a v2 stub. MVP applies the oracle's value directly.</div>
+
+<!-- ============================================================ -->
+<h2 id="security">9. Security Model, Hard Rules &amp; Errors</h2>
+
+<h3>9.1 Hard rules (invariants that must hold at all times)</h3>
+<table>
+  <tr><th>#</th><th>Rule</th><th>Enforced by</th></tr>
+  <tr><td>1</td><td>The <strong>TraderProfile PDA is the sole authority</strong> over <code>vault_token</code>. Only program logic (signing with profile seeds) moves funds. This is a program-owned vault: the TraderProfile PDA signs, and there is no admin escape hatch.</td><td>Token-account authority = profile PDA; all token-out CPIs use <code>transfer_checked</code> + <code>signer_seeds</code>.</td></tr>
+  <tr><td>2</td><td>The <strong>trader can NEVER transfer vault funds to an arbitrary external wallet.</strong> Trader has execute/record authority only. Every withdraw verifies the caller against the stored owner (Signer + stored authority).</td><td>No handler lets the trader name an arbitrary recipient. Outflows go only to: a depositor's own pro-rata payout (their own <code>owner_token</code>), the fixed <code>treasury_token</code> in <code>settle</code>/loss, and the trader's own <code>trader_token</code> bounded by <code>trader_claimable</code> in <code>trader_withdraw_profit</code>.</td></tr>
+  <tr><td>3</td><td>On mainnet, <code>execute_trade</code> may CPI <strong>ONLY to the whitelisted Flash program</strong>.</td><td>Hard-coded program id check before CPI; reject any other target.</td></tr>
+  <tr><td>4</td><td><strong>Leverage &le; max_leverage.</strong></td><td><code>record_trade</code>: <code>leverage_x100 / 100 &lt;= max_leverage</code>.</td></tr>
+  <tr><td>5</td><td><strong>Per-trade notional &le; 20% of AUM.</strong></td><td><code>record_trade</code>: <code>size_usd &lt;= total_assets * 2000 / 10_000</code>.</td></tr>
+  <tr><td>6</td><td>Price honesty: NAV-moving trades require the <strong>oracle_authority co-signature.</strong></td><td>Dual signer check in <code>record_trade</code>.</td></tr>
+  <tr><td>7</td><td><strong>trader_claimable is the only path</strong> by which the trader's performance fee leaves the vault, and it is bounded by the earmarked amount.</td><td><code>trader_withdraw_profit</code>: <code>amount &lt;= trader_claimable</code>.</td></tr>
+  <tr><td>8</td><td><strong>Account binding:</strong> every account is bound by seeds / <code>has_one</code>; per-user records include the signer key in seeds; <code>InvestorPosition.profile</code> is validated (<code>has_one = profile</code>) so an account from one vault cannot be passed to another; the USDC mint is bound by <code>has_one</code> everywhere balances are read.</td><td>Anchor seeds + <code>has_one</code> constraints in every account-constraints struct.</td></tr>
+  <tr><td>9</td><td><strong>Checks-effects-interactions &amp; token conservation.</strong> State is updated before the <code>transfer_checked</code> CPI; zero amounts, <code>amount &gt; balance</code>, and zero-share deposits are rejected; token conservation is asserted on every fund-moving handler.</td><td>Handler ordering + range guards; <code>checked_*</code> with <code>MathOverflow</code>.</td></tr>
+  <tr><td>10</td><td><strong>Two independent audits</strong> are required before any mainnet deployment.</td><td>Process gate (not code).</td></tr>
+</table>
+
+<h3>9.2 Access-control table</h3>
+<table>
+  <tr><th>Instruction handler</th><th>trader</th><th>oracle_authority</th><th>investor</th><th>admin</th></tr>
+  <tr><td>initialize_platform</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&#10003; (once)</td></tr>
+  <tr><td>initialize_profile</td><td>&#10003;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td>set_capacity</td><td>&mdash;</td><td>&#10003; (only)</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td>initialize_investor</td><td>&#10003; (own vault funding)</td><td>&mdash;</td><td>&#10003;</td><td>&mdash;</td></tr>
+  <tr><td>deposit</td><td>&#10003; (own capital, cap-exempt)</td><td>&mdash;</td><td>&#10003;</td><td>&mdash;</td></tr>
+  <tr><td>request_withdraw / process_withdraw</td><td>&#10003; (own position)</td><td>&mdash;</td><td>&#10003; (own position)</td><td>&mdash;</td></tr>
+  <tr><td>record_trade</td><td>&#10003; (co-sign)</td><td>&#10003; (co-sign)</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td>settle</td><td>&#10003;</td><td>&#10003;</td><td>&mdash;</td><td>&mdash;</td></tr>
+  <tr><td>trader_withdraw_profit</td><td>&#10003; (only)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h3>9.3 Named error enum (<code>error.rs</code>)</h3>
+<pre><code><span class="tok-c">// error.rs &mdash; named enum; no ProgramError::Custom anywhere</span>
+#[error_code]
+<span class="tok-k">pub enum</span> <span class="tok-t">ArcadiaError</span> {
+    #[msg(<span class="tok-s">"Caller is not authorized for this action"</span>)]                Unauthorized,
+    #[msg(<span class="tok-s">"Profile/vault is not active"</span>)]                            VaultNotActive,
+    #[msg(<span class="tok-s">"Amount must be greater than zero"</span>)]                      ZeroAmount,
+    #[msg(<span class="tok-s">"Insufficient funds in source token account"</span>)]            InsufficientFunds,
+    #[msg(<span class="tok-s">"Leverage must be valid and within limits"</span>)]             InvalidLeverage,
+    #[msg(<span class="tok-s">"Leverage exceeds profile max_leverage"</span>)]               LeverageTooHigh,
+    #[msg(<span class="tok-s">"Trade notional exceeds 20% of AUM"</span>)]                   NotionalTooLarge,
+    #[msg(<span class="tok-s">"Invalid trade parameters"</span>)]                            InvalidTradeParams,
+    #[msg(<span class="tok-s">"Vault has no shares; NAV undefined"</span>)]                  NoShares,
+    #[msg(<span class="tok-s">"Capacity has not been set by oracle"</span>)]                CapacityNotSet,
+    #[msg(<span class="tok-s">"Deposit would exceed capacity cap"</span>)]                  CapacityExceeded,
+    #[msg(<span class="tok-s">"Deposit too small; mints zero shares"</span>)]               DustDeposit,
+    #[msg(<span class="tok-s">"Invalid score tier"</span>)]                                  InvalidTier,
+    #[msg(<span class="tok-s">"Invalid or unsafe fee configuration"</span>)]                InvalidFeeConfig,
+    #[msg(<span class="tok-s">"Insufficient shares for withdrawal"</span>)]                 InsufficientShares,
+    #[msg(<span class="tok-s">"No pending withdrawal"</span>)]                               NothingPending,
+    #[msg(<span class="tok-s">"Withdrawal window not yet reached"</span>)]                  NoticeNotElapsed,
+    #[msg(<span class="tok-s">"Vault token balance insufficient for payout"</span>)]        InsufficientVaultLiquidity,
+    #[msg(<span class="tok-s">"Amount exceeds trader claimable"</span>)]                     InsufficientClaimable,
+    #[msg(<span class="tok-s">"Arithmetic overflow"</span>)]                                 MathOverflow,
+}</code></pre>
+<p class="small">All arithmetic uses <code>checked_*</code> with <code>u128</code> intermediates; on failure return
+<code>MathOverflow</code> via <code>.ok_or(ArcadiaError::MathOverflow)?</code> or
+<code>.map_err(|_| ArcadiaError::MathOverflow)?</code>. There is no <code>ProgramError::Custom</code> anywhere. Note: there is
+no <code>VaultBanned</code> error in v2 &mdash; banning, strikes and slashing have been removed entirely.</p>
+
+<!-- ============================================================ -->
+<h2 id="integration">10. Integration Contract (Events &amp; Instructions)</h2>
+<div class="callout"><span class="tag">Canonical</span>These shapes are <strong>locked</strong> for v2. The indexer decodes these events; the frontend calls these 10 instruction handlers and decodes these 4 accounts. Do not change names, types, ordering, or scaling without a coordinated change across all three parts.</div>
+
+<h3>10.1 Events for the indexer (Anchor <code>emit!</code>)</h3>
+<pre><code>#[event] <span class="tok-k">pub struct</span> <span class="tok-t">ProfileInitialized</span> { <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> trader: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> ts: <span class="tok-t">i64</span> }
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">InvestorInitialized</span> { <span class="tok-k">pub</span> investor: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> ts: <span class="tok-t">i64</span> }
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">Deposited</span> {
+    <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> depositor: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> is_trader: <span class="tok-t">bool</span>,
+    <span class="tok-k">pub</span> amount_usd: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> shares_minted: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> ts: <span class="tok-t">i64</span>
+}
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">WithdrawRequested</span> {
+    <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> owner: <span class="tok-t">Pubkey</span>,
+    <span class="tok-k">pub</span> shares: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> withdraw_ready_ts: <span class="tok-t">i64</span>
+}
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">Withdrawn</span> {
+    <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> owner: <span class="tok-t">Pubkey</span>,
+    <span class="tok-k">pub</span> shares_burned: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> amount_usd: <span class="tok-t">u64</span>
+}
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">TradeClosed</span> {
+    <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> trader: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> market: <span class="tok-t">String</span>,
+    <span class="tok-k">pub</span> direction: <span class="tok-t">u8</span>, <span class="tok-k">pub</span> size_usd: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> leverage_x100: <span class="tok-t">u16</span>,
+    <span class="tok-k">pub</span> entry_px: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> exit_px: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> realized_pnl: <span class="tok-t">i64</span>,
+    <span class="tok-k">pub</span> fees_usd: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> was_liquidated: <span class="tok-t">bool</span>,
+    <span class="tok-k">pub</span> opened_at: <span class="tok-t">i64</span>, <span class="tok-k">pub</span> closed_at: <span class="tok-t">i64</span>
+}
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">Settled</span> {
+    <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> profit_usd: <span class="tok-t">u64</span>,
+    <span class="tok-k">pub</span> trader_cut: <span class="tok-t">u64</span>, <span class="tok-k">pub</span> platform_cut: <span class="tok-t">u64</span>,
+    <span class="tok-k">pub</span> hwm_per_share: <span class="tok-t">u64</span>
+}
+
+#[event] <span class="tok-k">pub struct</span> <span class="tok-t">ProfitWithdrawn</span> {
+    <span class="tok-k">pub</span> profile: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> trader: <span class="tok-t">Pubkey</span>, <span class="tok-k">pub</span> amount_usd: <span class="tok-t">u64</span>
+}</code></pre>
+
+<h3>10.2 Instruction handlers for the frontend (10)</h3>
+<table>
+  <tr><th>Handler</th><th>Instruction inputs</th></tr>
+  <tr><td><code>initialize_platform</code></td><td><code>(perf_fee_bps: u16, mgmt_fee_bps: u16, oracle_authority: Pubkey)</code> &mdash; admin once; validates fee config</td></tr>
+  <tr><td><code>initialize_profile</code></td><td><code>(max_leverage: u8)</code> &mdash; hwm_per_share init = 1_000_000</td></tr>
+  <tr><td><code>set_capacity</code></td><td><code>(cap_usd: u64, score_tier: u8)</code> &mdash; oracle_authority only; tier 0/1/2/3 or 255; cap is a plain u64 pushed from offchain</td></tr>
+  <tr><td><code>initialize_investor</code></td><td><code>()</code> &mdash; any depositor once (investor or self-funding trader)</td></tr>
+  <tr><td><code>deposit</code></td><td><code>(amount: u64)</code> &mdash; lazily inits position; first deposit shares = amount; subsequent shares = amount &middot; total_shares / total_assets (floor, &gt; 0); non-trader rejected if total_assets+amount &gt; capacity_cap_usd; trader own-capital cap-exempt &amp; bumps trader_shares</td></tr>
+  <tr><td><code>request_withdraw</code></td><td><code>(shares: u64)</code> &mdash; value &lt; 5% AUM (500 bps) instant next tick, else next daily window</td></tr>
+  <tr><td><code>process_withdraw</code></td><td><code>()</code> &mdash; assets_out = shares &middot; total_assets / total_shares (floor)</td></tr>
+  <tr><td><code>record_trade</code></td><td><code>(market: String, direction: u8, size_usd: u64, leverage_x100: u16, entry_px: u64, exit_px: u64, fees_usd: u64, was_liquidated: bool, opened_at: i64, closed_at: i64)</code></td></tr>
+  <tr><td><code>settle</code></td><td><code>()</code> &mdash; periodic; HWM splits; trader cut (tier_bps) &rarr; trader_claimable; platform 500 bps &rarr; treasury</td></tr>
+  <tr><td><code>trader_withdraw_profit</code></td><td><code>(amount: u64)</code> &mdash; trader pulls from trader_claimable</td></tr>
+</table>
+
+<h3>10.3 Accounts the frontend decodes (4)</h3>
+<table>
+  <tr><th>Account</th><th>Fields</th></tr>
+  <tr><td><code>PlatformConfig</code></td><td>admin:Pubkey, oracle_authority:Pubkey, treasury_token:Pubkey, base_mint:Pubkey, perf_fee_bps:u16 (500), mgmt_fee_bps:u16 (100), bump:u8</td></tr>
+  <tr><td><code>TraderProfile</code></td><td>trader:Pubkey, base_mint:Pubkey, vault_token:Pubkey, total_shares:u64, trader_shares:u64, hwm_per_share:u64 (1e6), capacity_cap_usd:u64, trader_claimable:u64, last_settle_ts:i64, created_at:i64, status:u8 (0 active,1 closed), score_tier:u8 (0/1/2/3,255), max_leverage:u8, bump:u8. NOTE: nav_per_share is derived = (vault_token.amount &minus; trader_claimable) &middot; 1e6 / total_shares.</td></tr>
+  <tr><td><code>InvestorAccount</code></td><td>owner:Pubkey, position_count:u32, total_deposited_usd:u64, created_at:i64, bump:u8</td></tr>
+  <tr><td><code>InvestorPosition</code></td><td>owner:Pubkey, profile:Pubkey, shares:u64, cost_basis_usd:u64, pending_withdraw_shares:u64, withdraw_ready_ts:i64, deposited_at:i64, bump:u8</td></tr>
+</table>
+
+<div class="callout"><span class="tag">idl-build feature</span>To generate the IDL with <code>token_interface</code> types, the program's <code>Cargo.toml</code> declares <code>idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]</code> and is built with <code>anchor build</code> (which runs the <code>idl-build</code> feature). The same program binary works unchanged against the Classic Token Program and the Token Extensions Program because every token account is an <code>InterfaceAccount</code> and every CPI is <code>transfer_checked</code>.</div>
+
+<!-- ============================================================ -->
+<h2 id="testplan">11. Test Plan &amp; 8-Week Build Plan</h2>
+
+<div class="callout"><span class="tag">Test harness</span>Scaffold with <code>anchor init arcadia_vault --package-manager npm --test-template litesvm</code>. Tests are <strong>Rust + LiteSVM</strong> under <code>programs/arcadia_vault/tests/</code>; the compiled program is embedded with <code>include_bytes!</code>, so run <code>cargo build-sbf</code> (or <code>anchor build</code>) <strong>before</strong> the tests. Every piece of state is created through the program's own instruction handlers &mdash; <strong>no pre-fabricated accounts</strong> except a mock price feed (a plain treasury-funded mint/token account used as the devnet faucet). No placeholder tests.</div>
+
+<h3>11.1 LiteSVM Rust tests (under <code>programs/arcadia_vault/tests/</code>)</h3>
+<table>
+  <tr><th>Suite</th><th>Cases</th></tr>
+  <tr><td>Platform &amp; profile init</td><td>initialize_platform sets fees/oracle/treasury/base_mint and rejects unsafe fee config (InvalidFeeConfig); second platform init fails; initialize_profile sets hwm=1_000_000, score_tier=255, saved bump, correct PDAs; second init for same trader fails; profile PDA is authority of vault_token.</td></tr>
+  <tr><td>Investor account</td><td>initialize_investor sets owner/counters; second init for same wallet fails; one wallet opens positions across multiple profiles (position_count increments); InvestorPosition from vault A rejected when passed for vault B (has_one = profile).</td></tr>
+  <tr><td>Capacity</td><td>investor deposit before set_capacity &rarr; CapacityNotSet; non-oracle set_capacity &rarr; Unauthorized; invalid tier &rarr; InvalidTier; tier 255 accepted; cap pushed as plain u64 enforced exactly at the boundary.</td></tr>
+  <tr><td>Deposit / shares (both branches)</td><td><strong>First-deposit branch:</strong> trader self-funds &rarr; total_shares == 0 &rarr; shares_minted = amount (5_000_000_000). <strong>Subsequent branch:</strong> investor deposits 1_100_000_000 at NAV 1_100_000 &rarr; shares = 1_100_000_000 &middot; 5_000_000_000 / 5_500_000_000 = 1_000_000_000 (asymmetric, nonzero). Investor deposit exceeding cap &rarr; CapacityExceeded; trader own-capital deposit cap-exempt &amp; bumps trader_shares; amount &gt; balance &rarr; InsufficientFunds; dust deposit &rarr; DustDeposit; cost_basis_usd accumulates; Deposited event (incl. is_trader) exact.</td></tr>
+  <tr><td>record_trade (both directions)</td><td><strong>Long (+1):</strong> exit_px &gt; entry_px raises total_assets &amp; derived NAV (treasury &rarr; vault transfer_checked). <strong>Short (-1):</strong> exit_px &lt; entry_px on a short raises NAV; a long loss / short gain lowers it (vault &rarr; treasury), NAV floored at 0; single-signer (missing oracle OR trader) fails Unauthorized; leverage &gt; max &rarr; LeverageTooHigh; size &gt; total_assets &middot; 2000 / 10_000 &rarr; NotionalTooLarge; realized_pnl sign &amp; magnitude exact per the i128 formula; TradeClosed fields exact.</td></tr>
+  <tr><td>Withdraw (threshold boundary, asymmetric values)</td><td>assets_out = shares &middot; total_assets / total_shares (floor); partial &amp; full; over-withdraw &rarr; InsufficientShares; <strong>boundary:</strong> with total_assets such that a 4.99% withdrawal &rarr; instant (withdraw_ready_ts = now) and a 5.01% withdrawal &rarr; next daily window, using nonzero asymmetric share counts (e.g. AUM 6_420_000_000; request valued 320_000_000 instant vs 330_000_000 deferred); process before window &rarr; NoticeNotElapsed; vault solvent after gain; position closed at 0 shares; trader own-capital withdraw reduces trader_shares; WithdrawRequested + Withdrawn events exact.</td></tr>
+  <tr><td>Settle</td><td>no profit (current_nav &le; hwm) &rarr; no-op/no event (last_settle_ts updates); profit splits per tier (profit_assets 600_000_000 &rarr; trader_cut 150_000_000 @ 2500 bps, platform_cut 30_000_000 @ 500 bps); platform 5% always sent via transfer_checked; trader cut earmarked to trader_claimable (excluded from NAV); derived NAV drops to 1_070_000; HWM resets; no double-fee on flat re-settle; optional mgmt accrual; Settled event exact.</td></tr>
+  <tr><td>trader_withdraw_profit</td><td>trader pulls &le; trader_claimable; over-pull &rarr; InsufficientClaimable; zero &rarr; ZeroAmount; non-trader &rarr; Unauthorized; derived NAV unchanged by the pull (total_assets and trader_claimable both drop by amount); ProfitWithdrawn event exact.</td></tr>
+  <tr><td>Math/security</td><td>overflow paths &rarr; MathOverflow; trader cannot send funds to arbitrary wallet (no such path exists); profile PDA is sole vault_token authority; token conservation asserted on every fund-moving handler; end-to-end total-asset conservation across the &sect;6.2 sequence.</td></tr>
+</table>
+
+<h3>11.2 Devnet tests</h3>
+<ul>
+  <li><code>anchor build</code> / <code>cargo build-sbf</code>, deploy to devnet; mint devnet USDC to trader, investors, and the treasury_token account; run initialize_platform once.</li>
+  <li>Run the full happy path: trader self-funds &rarr; trades &rarr; investor deposits at new NAV &rarr; settle &rarr; trader_withdraw_profit &rarr; both withdraw, with a real (separate) oracle_authority keypair co-signing record_trade.</li>
+  <li>Confirm the indexer decodes every event correctly (coordinate with indexer dev) and the frontend can build all 10 instructions from the IDL and decode all 4 accounts.</li>
+  <li>Verify token-backed solvency against both the Classic Token Program and the Token Extensions Program: after a series of gains/losses and a settlement, every depositor can withdraw their full payout and the trader can pull trader_claimable.</li>
+</ul>
+
+<h3>11.3 Eight-week build plan (program dev)</h3>
+<table>
+  <tr><th>Week</th><th>Focus</th><th>Deliverable</th></tr>
+  <tr><td>1</td><td>Scaffold</td><td><code>anchor init</code> with litesvm template; program id; <code>state/</code> (4 PDAs, InitSpace), <code>error.rs</code>, <code>events.rs</code>, <code>constants.rs</code> (&sect;6a); initialize_platform + initialize_profile + LiteSVM tests green.</td></tr>
+  <tr><td>2</td><td>Funds in</td><td>initialize_investor, set_capacity, deposit (both share branches, lazy position init, trader cap-exempt own-capital + trader_shares, transfer_checked); Deposited + InvestorInitialized events; tests.</td></tr>
+  <tr><td>3</td><td>Withdrawals</td><td>request_withdraw / process_withdraw, size-scaled notice (&lt;5% / 500 bps instant else daily window), assets_out math, position close; WithdrawRequested + Withdrawn events; threshold-boundary tests.</td></tr>
+  <tr><td>4</td><td>Simulated trades</td><td>record_trade: i128 PnL math, dual-sign, transfer_checked gain/loss, devnet treasury faucet; TradeClosed event; leverage + 20%-AUM (2000 bps) notional guards; long &amp; short tests.</td></tr>
+  <tr><td>5</td><td>Settlement</td><td>settle: periodic HWM, tier splits, platform 500 bps, trader cut &rarr; trader_claimable (NAV-excluded), optional mgmt accrual; trader_withdraw_profit; Settled + ProfitWithdrawn events; no-fee-on-down; tests.</td></tr>
+  <tr><td>6</td><td>Safety</td><td>Security invariant tests (sole PDA authority, no arbitrary-recipient path, claimable bound, has_one cross-vault rejection, token conservation), edge cases; freeze the integration contract (IDL).</td></tr>
+  <tr><td>7</td><td>Devnet integration</td><td>Deploy to devnet; end-to-end with indexer + frontend; bug-fix; finalize IDL; document the devnet treasury faucet mechanism.</td></tr>
+  <tr><td>8</td><td>Harden</td><td>Fuzz/overflow review, edge-case tests, compute-budget tuning, demo data, handoff docs. Stub <code>execute_trade</code> signature for mainnet. Note: 2 audits required pre-mainnet (out of 8-week scope).</td></tr>
+</table>
+
+<h3>11.4 Day-1 steps</h3>
+<ol>
+  <li><code>anchor init arcadia_vault --package-manager npm --test-template litesvm</code>; set <code>cluster = devnet</code> in Anchor.toml; <code>anchor keys list</code> &rarr; paste real program id into <code>declare_id!</code> and Anchor.toml.</li>
+  <li>Create <code>state/</code> with the 4 PDAs (<code>PlatformConfig</code>, <code>TraderProfile</code>, <code>InvestorAccount</code>, <code>InvestorPosition</code>) exactly per &sect;3, each with <code>#[derive(InitSpace)]</code> and a saved <code>bump</code>.</li>
+  <li>Create <code>constants.rs</code> (<code>SHARE_SCALE</code>, <code>BPS_DENOMINATOR</code>, <code>SECONDS_PER_YEAR</code>, fee bps, <code>MAX_NOTIONAL_BPS</code>, <code>INSTANT_WITHDRAW_BPS</code>, seeds) verbatim from &sect;6a.</li>
+  <li>Create <code>events.rs</code> with the eight locked events from &sect;10 verbatim, and <code>error.rs</code> with the named <code>ArcadiaError</code> enum from &sect;9.3.</li>
+  <li>Add the <code>idl-build</code> feature to the program <code>Cargo.toml</code>; use <code>anchor_spl::token_interface</code> throughout.</li>
+  <li>Implement <code>initialize_platform</code> + <code>initialize_profile</code> (PDA + token-account init, hwm=1e6, fee-config validation) and write their LiteSVM tests; run <code>cargo build-sbf</code> then <code>anchor test</code> green.</li>
+  <li>Commit and share the generated IDL with the frontend &amp; indexer devs so all three parts agree on the contract from day one.</li>
+</ol>
+
+<footer>
+  <p>Arcadia &mdash; <code>arcadia_vault</code> Solana program specification &middot; MVP + investor deposits &middot; Anchor 1.0.2 / Devnet / devnet USDC (6 decimals) &middot; SHARE_SCALE = 1_000_000 &middot; 4 custom PDAs &middot; 10 instruction handlers.<br>
+  Single-asset USDC vault (linear shares, not sqrt(a&middot;b)); integer-only checked math; token_interface + transfer_checked; program-owned vault, the TraderProfile PDA signs, no admin escape hatch. Trades are simulated on devnet via <code>record_trade</code> (real prices, oracle-co-signed); mainnet replaces this with <code>execute_trade</code> &rarr; Flash CPI, everything else unchanged. No ban / slash / strikes / first-loss / alignment-stake. Two audits required before mainnet.</p>
+</footer>
+
+</div>
+</body>
+</html>

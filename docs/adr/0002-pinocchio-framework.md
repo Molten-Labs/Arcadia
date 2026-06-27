@@ -1,4 +1,8 @@
-# Pinocchio Framework Over Anchor
+# Superseded: Pinocchio Framework Over Anchor
+
+> Status: Superseded by the Phase 1 Anchor workspace reset. The active on-chain
+> workspace is now `arcadia_vault/` using Anchor 1.0.2. This ADR is retained as
+> historical context for the earlier framework decision.
 
 We chose Pinocchio (raw Solana program) over Anchor for the Arcadia on-chain program.
 

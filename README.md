@@ -1,108 +1,91 @@
-# Arcadia Protocol 
+# Arcadia Protocol
 <img width="1983" height="793" alt="banner" src="https://github.com/user-attachments/assets/03bb0814-4144-431b-a2bf-64e0a6349e1e" />
 
 **Proof-of-Performance Capital Protocol on Solana.**
 
-Arcadia lets traders raise capital through verified on-chain performance and execute strategies privately, while investors get automatic protection and clean exits — all enforced by code, no trust required.
+Arcadia lets traders build verified onchain performance and gives investors a clean, program-enforced way to allocate capital to proven traders.
 
 ---
 
-## What it does
-
-Traders deposit their own capital first. They trade publicly on-chain for 30 days in paper mode, building a verifiable track record before any investor can deposit. When the vault graduates, investors join the senior tranche. When trades lose money, the trader's junior capital absorbs losses first. Investor capital is protected until the junior buffer is fully wiped.
-
-The protocol enforces five guarantees at the program level — no operator override:
-
-- **First-loss waterfall** — junior capital absorbs all losses before investors feel anything
-- **20% liquid reserve floor** — the vault guard rejects any swap that would leave less than 20% of NAV in liquid stablecoin, so investors can always exit
-- **Dynamic position limits** — max trade size shrinks automatically as junior health falls (10% → 6% → 3% → 1% → disabled)
-- **Pro-rata withdrawal** — investors receive their proportional share of every token in the vault instantly, with no trader involvement
-- **High-water mark fees** — performance fees (up to 20%) only accrue on gains above the previous HWM, never during drawdowns
-
----
-
-## Repository structure
+## Repository Structure
 
 ```
-Arcadia_program/          # On-chain program
-  program/src/
-    instructions/         # 10 program instructions
-    states/               # Zero-copy account structs (bytemuck, Pod)
-  kiln-tests/             # LiteSVM integration tests
-app/                      # Frontend (Vite + React + TypeScript + Tailwind)
-  src/pages/              # Route pages
-  src/hooks/              # Data fetching
-  src/lib/                # Wallet, Solana helpers, formatting
-server-rs/                # Axum indexer + Helius webhook handler
-clients/                  # Generated TypeScript SDK (Shank + Codama)
+arcadia_vault/             # Anchor 1.0.2 Solana program scaffold
+  Anchor.toml              # Devnet provider config
+  programs/arcadia_vault/  # Placeholder Anchor program; Arcadia logic comes next
+  programs/arcadia_vault/tests/
+                            # LiteSVM Rust scaffold tests
+docs/
+  arcadia-vault-program-spec.md
+                            # Canonical Markdown program spec converted from HTML
+app/                       # Frontend (Vite + React + TypeScript + Tailwind)
+mobile/                    # Expo + React Native app
+server-rs/                 # Axum indexer/API backend
+clients/                   # Placeholder TypeScript SDK package; generated from Anchor IDL later
 ```
 
 ---
 
-## Program instructions
+## Program Status
 
-| # | Instruction | Who calls it |
-|---|---|---|
-| 0 | `init_manager` | Trader — one-time profile creation |
-| 1 | `create_vault` | Trader — opens a vault in paper mode |
-| 2 | `deposit_junior` | Trader — posts first-loss capital |
-| 3 | `update_nav` | Anyone — recomputes NAV from oracle prices |
-| 4 | `graduate_vault` | Anyone — promotes a vault that meets all requirements |
-| 5 | `deposit_senior` | Investor — deposits into a graduated vault |
-| 6 | `withdraw_senior` | Investor — pro-rata withdrawal of vault assets |
-| 7 | `withdraw_junior` | Trader — reclaims junior capital (respects ratio floor) |
-| 8 | `claim_fees` | Trader — claims performance fees above HWM |
-| 9 | `execute_swap` | Trader — vault-guarded Jupiter CPI swap |
+The active on-chain workspace is now `arcadia_vault/`.
+
+Phase 1 only resets the workspace to Anchor and preserves the program spec. It does **not** implement the Arcadia vault instructions yet. The intended program behavior, accounts, events, math, and test matrix live in [docs/arcadia-vault-program-spec.md](/Users/deepeshsinghrathore/Projects/Arcadia/docs/arcadia-vault-program-spec.md).
 
 ---
 
-## Vault guard
+## Quick Start
 
-Every `execute_swap` runs ten checks before the swap executes. Any failure rejects the transaction:
+### Frontend
 
-1. Vault is not frozen
-2. Vault has graduated from paper mode
-3. Trading is enabled (junior health above threshold)
-4. Position size is within the dynamic limit
-5. Input and output mints are different
-6. Output token is on the vault whitelist
-7. Trade cooldown has expired
-8. Slippage: actual output ≥ minimum out
-9. Oracle price is fresh and within confidence bounds (Pyth, max 30s staleness, max 1.5% confidence)
-10. Post-swap stablecoin balance ≥ 20% of total NAV
-
----
-
-## Account model
-
-```
-ManagerProfile    PDA: ["manager", manager_pubkey]
-VaultConfig       PDA: ["vault-config", manager_pubkey, vault_index]
-VaultState        PDA: ["vault-state", vault_config_pubkey]
-InvestorPosition  PDA: ["investor-position", investor_pubkey, vault_config_pubkey]
-Treasury          PDA: ["vault-treasury", vault_config_pubkey]
+```bash
+bash setup.sh
+bash dev.sh
 ```
 
-No share token mints. Investor ownership is tracked in `InvestorPosition` and derived at withdrawal time:
+The web app runs on port 5000.
 
+### Backend
+
+```bash
+cargo run --manifest-path server-rs/Cargo.toml
 ```
-investor_pct = investor.senior_shares / vault.senior_shares_outstanding
+
+### Anchor Program
+
+Use Anchor `1.0.2` for this workspace.
+
+```bash
+cd arcadia_vault
+anchor keys list
+anchor build
+anchor test --skip-local-validator
+```
+
+Root helper scripts are also available:
+
+```bash
+pnpm program:keys
+pnpm program:build
+pnpm program:test
 ```
 
 ---
 
-## Graduation requirements
+## Code Generation
 
-A vault graduates automatically when all three conditions are met:
+Anchor emits the IDL at `arcadia_vault/target/idl/arcadia_vault.json` after `anchor build`.
 
-- Junior capital is still positive
-- Current NAV exceeds the original junior deposit (positive paper PnL)
-- Minimum qualifying trades have been completed
-- The 30-day paper window has elapsed
+```bash
+pnpm program:build
+pnpm --dir clients generate
+```
+
+The generated SDK is written under `clients/src/generated/` and currently reflects the Anchor smoke-test IDL.
 
 ---
 
-## Environment variables
+## Environment Variables
 
 ```bash
 # Frontend

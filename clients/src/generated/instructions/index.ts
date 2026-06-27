@@ -6,8 +6,6 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from "./createVault";
-export * from "./depositJunior";
-export * from "./graduateVault";
-export * from "./initManager";
-export * from "./updateNav";
+export * from "./initialize";
+export * from "./initializeSmoke";
+export * from "./ping";
