@@ -1,0 +1,88 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/db",
+    "crates/decode",
+    "crates/scoring",
+    "crates/chain",
+    "crates/prices",
+    "crates/api",
+    "crates/workers",
+    "bin",
+]
+
+[workspace.package]
+edition   = "2021"
+version   = "0.1.0"
+authors   = ["Arcadia Team"]
+license   = "MIT"
+
+# ─── shared dependencies ──────────────────────────────────────────────────────
+[workspace.dependencies]
+# async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP server
+axum        = { version = "0.7", features = ["macros"] }
+tower       = "0.4"
+tower-http  = { version = "0.5", features = ["cors", "trace", "compression-gzip", "request-id", "timeout"] }
+
+# database
+sqlx = { version = "0.8", features = [
+    "postgres", "runtime-tokio-rustls",
+    "chrono", "rust_decimal", "uuid", "macros",
+] }
+
+# decimal money
+rust_decimal        = { version = "1", features = ["serde-with-str", "db-postgres"] }
+rust_decimal_macros = "1"
+
+# serialization
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# cache / sessions
+redis = { version = "0.25", features = ["tokio-comp", "aio"] }
+
+# crypto / auth
+ed25519-dalek  = { version = "2", features = ["serde"] }
+jsonwebtoken   = "9"
+sha2           = "0.10"
+hex            = "0.4"
+bs58           = "0.5"
+rand           = "0.8"
+
+# HTTP client (prices)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# base64 encoding/decoding
+base64 = "0.22"
+
+# NOTE: solana-sdk and yellowstone-grpc-* are intentionally NOT listed here.
+# They create dependency conflicts with ed25519-dalek v2 (which we use for SIWS).
+# Add them directly to crates/chain and crates/workers Cargo.toml files after
+# verifying compatible versions. See server-rs/FEATURES.md for details.
+
+# borsh (Anchor event decoding)
+borsh = { version = "1", features = ["derive"] }
+
+# utilities
+chrono             = { version = "0.4", features = ["serde"] }
+uuid               = { version = "1", features = ["v4", "serde"] }
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
+anyhow             = "1"
+thiserror          = "1"
+dotenvy            = "0.15"
+config             = "0.14"
+
+# workspace-internal crates
+arcadia-core    = { path = "crates/core" }
+arcadia-db      = { path = "crates/db" }
+arcadia-decode  = { path = "crates/decode" }
+arcadia-scoring = { path = "crates/scoring" }
+arcadia-chain   = { path = "crates/chain" }
+arcadia-prices  = { path = "crates/prices" }
+arcadia-api     = { path = "crates/api" }
+arcadia-workers = { path = "crates/workers" }

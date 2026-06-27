@@ -1,0 +1,33 @@
+[package]
+name    = "arcadia-chain"
+edition.workspace = true
+version.workspace = true
+
+# ── To enable live Solana integration ─────────────────────────────────────────
+# Add a [features] section and the following optional deps, then rebuild with
+# --features solana. Pin to versions that are compatible with ed25519-dalek v2.
+#
+# [features]
+# solana = ["dep:solana-sdk", "dep:solana-client"]
+#
+# [dependencies]
+# solana-sdk    = { version = "=1.18.26", optional = true }
+# solana-client = { version = "=1.18.26", optional = true }
+#
+# And uncomment the solana_impl module in src/lib.rs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[dependencies]
+arcadia-core = { workspace = true }
+anyhow       = { workspace = true }
+thiserror    = { workspace = true }
+tracing      = { workspace = true }
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+rust_decimal = { workspace = true }
+borsh        = { workspace = true }
+bs58         = { workspace = true }
+hex          = { workspace = true }
+sha2         = { workspace = true }
+tokio        = { workspace = true }
+reqwest      = { workspace = true }

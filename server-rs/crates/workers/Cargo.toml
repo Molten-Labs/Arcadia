@@ -1,0 +1,40 @@
+[package]
+name    = "arcadia-workers"
+edition.workspace = true
+version.workspace = true
+
+# ── To enable Yellowstone gRPC ingest ─────────────────────────────────────────
+# Add a [features] section and the following optional deps, then rebuild with
+# --features grpc. Use a yellowstone version compatible with your solana-sdk.
+#
+# [features]
+# grpc = ["dep:yellowstone-grpc-client", "dep:yellowstone-grpc-proto"]
+#
+# [dependencies]
+# yellowstone-grpc-client = { version = "...", optional = true }
+# yellowstone-grpc-proto  = { version = "...", optional = true }
+#
+# And uncomment the grpc_impl module in src/ingest.rs.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[dependencies]
+arcadia-core    = { workspace = true }
+arcadia-db      = { workspace = true }
+arcadia-decode  = { workspace = true }
+arcadia-scoring = { workspace = true }
+arcadia-chain   = { workspace = true }
+arcadia-prices  = { workspace = true }
+
+tokio        = { workspace = true }
+sqlx         = { workspace = true }
+redis        = { workspace = true }
+serde        = { workspace = true }
+serde_json   = { workspace = true }
+chrono       = { workspace = true }
+tracing      = { workspace = true }
+anyhow       = { workspace = true }
+rust_decimal = { workspace = true }
+borsh        = { workspace = true }
+base64       = { workspace = true }
+bs58         = { workspace = true }
+reqwest      = { workspace = true }

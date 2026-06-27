@@ -1,0 +1,18 @@
+[package]
+name    = "arcadia-db"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+arcadia-core        = { workspace = true }
+sqlx                = { workspace = true }
+rust_decimal        = { workspace = true }
+rust_decimal_macros = { workspace = true }
+serde               = { workspace = true }
+serde_json          = { workspace = true }
+chrono              = { workspace = true }
+uuid                = { workspace = true }
+anyhow              = { workspace = true }
+thiserror           = { workspace = true }
+tracing             = { workspace = true }
+tokio               = { workspace = true }

@@ -1,0 +1,20 @@
+[package]
+name = "arcadia_vault"
+version = "0.1.0"
+description = "Arcadia Protocol — trading reputation and fund management vault"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "arcadia_vault"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = { version = "=1.0.2", features = ["init-if-needed"] }
+anchor-spl = { version = "=1.0.2", features = ["token", "token_2022"] }

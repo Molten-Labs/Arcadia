@@ -1,0 +1,34 @@
+[package]
+name    = "arcadia-api"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+arcadia-core    = { workspace = true }
+arcadia-db      = { workspace = true }
+arcadia-scoring = { workspace = true }
+arcadia-prices  = { workspace = true }
+arcadia-chain   = { workspace = true }
+rust_decimal_macros = { workspace = true }
+
+axum            = { workspace = true }
+tower           = { workspace = true }
+tower-http      = { workspace = true }
+tokio           = { workspace = true }
+serde           = { workspace = true }
+serde_json      = { workspace = true }
+redis           = { workspace = true }
+sqlx            = { workspace = true }
+rust_decimal    = { workspace = true }
+chrono          = { workspace = true }
+uuid            = { workspace = true }
+tracing         = { workspace = true }
+anyhow          = { workspace = true }
+thiserror       = { workspace = true }
+jsonwebtoken    = { workspace = true }
+ed25519-dalek   = { workspace = true }
+bs58            = { workspace = true }
+sha2            = { workspace = true }
+hex             = { workspace = true }
+rand            = { workspace = true }
+reqwest         = { workspace = true }
