@@ -27,6 +27,7 @@ pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smok
 pub(crate) use instructions::ping::__client_accounts_ping;
 pub(crate) use instructions::record_trade::__client_accounts_record_trade;
 pub(crate) use instructions::settle::__client_accounts_settle;
+pub(crate) use instructions::trader_withdraw_profit::__client_accounts_trader_withdraw_profit;
 pub(crate) use instructions::withdraw::__client_accounts_process_withdraw;
 pub(crate) use instructions::withdraw::__client_accounts_request_withdraw;
 
@@ -105,6 +106,10 @@ pub mod arcadia_vault {
 
     pub fn settle(ctx: Context<Settle>) -> Result<()> {
         instructions::settle::handler(ctx)
+    }
+
+    pub fn trader_withdraw_profit(ctx: Context<TraderWithdrawProfit>, amount: u64) -> Result<()> {
+        instructions::trader_withdraw_profit::handler(ctx, amount)
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

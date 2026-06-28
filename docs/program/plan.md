@@ -14,8 +14,8 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 ## Current Gate
 
 - Branch: `anchor`.
-- Current phase: `trader_withdraw_profit`.
-- Current instruction: `trader_withdraw_profit`.
+- Current phase: full local instruction flow.
+- Current instruction: none; all 10 planned instruction gates are implemented and tested.
 - Smoke harness status: keep existing `initialize_smoke` and `ping` tests as scaffold health checks until real instruction tests replace them. Smoke instructions are not part of the Arcadia business API.
 - Skills refresh: `curl -fsSL https://www.solana.new/setup.sh | bash` was requested, but direct remote-script execution was blocked by the approvals reviewer as too risky for automated execution. This remains pending explicit manual execution or a safer approved installer path.
 
@@ -44,7 +44,7 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 | `process_withdraw` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `record_trade` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `settle` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
-| `trader_withdraw_profit` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
+| `trader_withdraw_profit` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | Devnet Integration | planned | Full local LiteSVM flow green, deployed devnet flow green, frontend/indexer can consume IDL/events. |
 
 ## Per-Instruction Gate Checklist

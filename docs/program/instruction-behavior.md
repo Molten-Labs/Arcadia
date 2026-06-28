@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, `request_withdraw`, `process_withdraw`, `record_trade`, and `settle` are complete; the next gate is `trader_withdraw_profit`.
+- All 10 instruction gates are complete through `trader_withdraw_profit`.
 
 ## Module Order
 
@@ -38,7 +38,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 7 | `process_withdraw` | `instructions/withdraw.rs` | complete |
 | 8 | `record_trade` | `instructions/record_trade.rs` | complete |
 | 9 | `settle` | `instructions/settle.rs` | complete |
-| 10 | `trader_withdraw_profit` | `instructions/trader_withdraw_profit.rs` | planned |
+| 10 | `trader_withdraw_profit` | `instructions/trader_withdraw_profit.rs` | complete |
 
 ## `initialize_platform`
 
@@ -159,13 +159,13 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `trader_withdraw_profit`
 
-- Status: planned.
+- Status: complete.
 - Purpose: let the trader withdraw earmarked performance fees from `trader_claimable`.
 - Inputs: `amount: u64`.
 - Accounts: trader signer, mutable profile, base mint, vault token, trader token, token interface program.
 - Access control: trader signer must equal `profile.trader`; profile PDA signs token-out.
 - State writes: decreases `profile.trader_claimable` by amount.
-- Token movement: signed `transfer_checked` from vault token to trader token.
+- Token movement: signed `transfer_checked` from vault token to trader-owned token account with exact post-CPI token-conservation checks.
 - Event: `ProfitWithdrawn`.
-- Errors: `Unauthorized`, `ZeroAmount`, `InsufficientClaimable`, `InsufficientVaultLiquidity`, `MathOverflow`.
-- Done criteria: rejects zero, non-trader, over-claim, and insolvent withdrawals; derived NAV is unchanged because total assets and claimable both decrease by amount.
+- Errors: `Unauthorized`, `ZeroAmount`, `InsufficientClaimable`, `InsufficientVaultLiquidity`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; rejects zero, non-trader, over-claim, insolvent withdrawals, wrong trader-token authority, wrong trader-token mint, and wrong vault authority; only the trader-owned destination can receive funds; exact vault/trader token deltas equal amount; derived NAV is unchanged because total assets and claimable both decrease by amount.

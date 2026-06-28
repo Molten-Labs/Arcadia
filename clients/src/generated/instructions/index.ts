@@ -17,3 +17,4 @@ export * from "./recordTrade";
 export * from "./requestWithdraw";
 export * from "./setCapacity";
 export * from "./settle";
+export * from "./traderWithdrawProfit";

@@ -28,6 +28,7 @@ import {
   parseRequestWithdrawInstruction,
   parseSetCapacityInstruction,
   parseSettleInstruction,
+  parseTraderWithdrawProfitInstruction,
   type ParsedDepositInstruction,
   type ParsedInitializeInvestorInstruction,
   type ParsedInitializePlatformInstruction,
@@ -39,6 +40,7 @@ import {
   type ParsedRequestWithdrawInstruction,
   type ParsedSetCapacityInstruction,
   type ParsedSettleInstruction,
+  type ParsedTraderWithdrawProfitInstruction,
 } from "../instructions";
 
 export const ARCADIA_VAULT_PROGRAM_ADDRESS =
@@ -128,6 +130,7 @@ export enum ArcadiaVaultInstruction {
   RequestWithdraw,
   SetCapacity,
   Settle,
+  TraderWithdrawProfit,
 }
 
 export function identifyArcadiaVaultInstruction(
@@ -255,6 +258,17 @@ export function identifyArcadiaVaultInstruction(
   ) {
     return ArcadiaVaultInstruction.Settle;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([87, 1, 195, 95, 15, 124, 120, 152]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.TraderWithdrawProfit;
+  }
   throw new Error(
     "The provided instruction could not be identified as a arcadiaVault instruction.",
   );
@@ -295,7 +309,10 @@ export type ParsedArcadiaVaultInstruction<
     } & ParsedSetCapacityInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.Settle;
-    } & ParsedSettleInstruction<TProgram>);
+    } & ParsedSettleInstruction<TProgram>)
+  | ({
+      instructionType: ArcadiaVaultInstruction.TraderWithdrawProfit;
+    } & ParsedTraderWithdrawProfitInstruction<TProgram>);
 
 export function parseArcadiaVaultInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
@@ -377,6 +394,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.Settle,
         ...parseSettleInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.TraderWithdrawProfit: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.TraderWithdrawProfit,
+        ...parseTraderWithdrawProfitInstruction(instruction),
       };
     }
     default:

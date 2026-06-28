@@ -137,12 +137,14 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `trader_withdraw_profit`
 
-- Happy path: trader withdraws amount up to claimable to their own token account.
-- Authorization/account binding: non-trader signer fails; destination token not owned by trader fails; wrong mint/vault fails.
-- Invalid input: zero amount, amount greater than claimable, amount greater than vault token balance.
-- Conservation: vault token and trader token deltas equal amount; `trader_claimable` decreases by amount; derived NAV remains unchanged.
-- Event assertions: `ProfitWithdrawn`.
-- CU: record `trader_withdraw_profit`.
+- Status: complete.
+- Happy path, partial: passing; trader withdraws part of claimable to their own token account and derived NAV is unchanged.
+- Happy path, full: passing; trader withdraws all claimable, `trader_claimable` reaches zero, and derived NAV remains at the post-settlement HWM.
+- Authorization/account binding: passing; non-trader signer, destination token not owned by trader, wrong destination mint, and wrong vault authority fail.
+- Invalid input: passing; zero amount, amount greater than claimable, and amount greater than vault token balance fail.
+- Conservation: passing; vault token and trader token deltas equal amount, `trader_claimable` decreases by amount, and NAV-bearing assets are unchanged.
+- Event assertions: passing at log-emission level for `ProfitWithdrawn`.
+- CU: serial LiteSVM run recorded partial and full withdrawals at about 15.7k CUs each.
 
 ## End-to-End Local Flow
 
