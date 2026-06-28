@@ -112,14 +112,16 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `record_trade`
 
-- Happy path, long gain: long with exit above entry transfers gain from treasury to vault and raises NAV.
-- Happy path, short gain: short with exit below entry transfers gain from treasury to vault.
-- Happy path, loss: long loss or short loss transfers from vault to treasury, floors at NAV-bearing assets, and never drains `trader_claimable`.
-- Authorization: missing trader signer, missing oracle signer, non-oracle signer, or non-trader signer fails.
-- Invalid input: invalid direction, zero entry price, zero exit price, zero size, closed timestamp before opened timestamp, leverage above max, notional above 20 percent AUM.
-- Conservation: token deltas equal applied PnL; total shares unchanged.
-- Event assertions: `TradeClosed` fields and realized PnL sign/magnitude.
-- CU: record `record_trade:gain` and `record_trade:loss`.
+- Status: complete.
+- Happy path, long gain: passing; long with exit above entry transfers exact realized PnL from treasury to vault and raises derived NAV.
+- Happy path, short gain: passing; short with exit below entry transfers exact realized PnL from treasury to vault.
+- Happy path, loss: passing; long loss transfers from vault to treasury, floors at NAV-bearing assets, and never drains `trader_claimable`.
+- Authorization: passing; missing trader signer, missing oracle signer, non-oracle signer, and non-trader signer fail.
+- Invalid input: passing; invalid direction, zero entry price, zero exit price, zero size, closed timestamp before opened timestamp, leverage above max, and notional above 20 percent of `total_assets` fail.
+- Account binding/funding: passing; wrong treasury authority, wrong treasury mint, and underfunded treasury fail.
+- Conservation: passing; token deltas equal applied PnL and total/trader shares remain unchanged.
+- Event assertions: passing at log-emission level for `TradeClosed`; math assertions verify realized PnL sign/magnitude for long gain, short gain, and loss.
+- CU: serial LiteSVM run recorded `record_trade:long_gain` at about 18.4k CUs, `record_trade:short_gain` at about 18.4k CUs, and `record_trade:loss_floor` at about 18.3k CUs.
 
 ## `settle`
 

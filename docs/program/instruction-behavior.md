@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, `request_withdraw`, and `process_withdraw` are complete; the next gate is `record_trade`.
+- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, `request_withdraw`, `process_withdraw`, and `record_trade` are complete; the next gate is `settle`.
 
 ## Module Order
 
@@ -36,7 +36,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 5 | `deposit` | `instructions/deposit.rs` | complete |
 | 6 | `request_withdraw` | `instructions/withdraw.rs` | complete |
 | 7 | `process_withdraw` | `instructions/withdraw.rs` | complete |
-| 8 | `record_trade` | `instructions/record_trade.rs` | planned |
+| 8 | `record_trade` | `instructions/record_trade.rs` | complete |
 | 9 | `settle` | `instructions/settle.rs` | planned |
 | 10 | `trader_withdraw_profit` | `instructions/trader_withdraw_profit.rs` | planned |
 
@@ -133,16 +133,16 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `record_trade`
 
-- Status: planned.
+- Status: complete.
 - Purpose: apply realized PnL from a simulated closed trade to the vault token balance on devnet.
 - Inputs: `market: String`, `direction: u8`, `size_usd: u64`, `leverage_x100: u16`, `entry_px: u64`, `exit_px: u64`, `fees_usd: u64`, `was_liquidated: bool`, `opened_at: i64`, `closed_at: i64`.
 - Accounts: trader signer, oracle authority signer, config, mutable profile, base mint, vault token, treasury token, treasury authority signer, token interface program.
-- Access control: trader must equal `profile.trader`; oracle authority must equal `config.oracle_authority`; devnet treasury authority signs positive-PnL top-ups.
+- Access control: trader must equal `profile.trader`; oracle authority must equal `config.oracle_authority`; fixed treasury token must equal `config.treasury_token`; devnet treasury authority must own/sign for the treasury token used for positive-PnL top-ups.
 - State writes: no share count changes; NAV changes through token balance movement.
 - Token movement: positive PnL transfers treasury to vault; negative PnL transfers vault to treasury with profile PDA signing and does not drain `trader_claimable`.
 - Event: `TradeClosed`.
-- Errors: `Unauthorized`, `VaultNotActive`, `NoShares`, `InvalidTradeParams`, `LeverageTooHigh`, `NotionalTooLarge`, `MathOverflow`.
-- Done criteria: validates dual signature, trade direction, prices, time ordering, leverage, 20 percent AUM notional cap, exact i128 PnL formula, long/short gain/loss directions, and token deltas.
+- Errors: `Unauthorized`, `VaultNotActive`, `NoShares`, `InvalidTradeParams`, `LeverageTooHigh`, `NotionalTooLarge`, `InsufficientFunds`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; validates dual signature, trader/profile binding, oracle/config binding, treasury token/authority/mint binding, active profile and nonzero shares, trade direction, prices, time ordering, exact x100 leverage bound, 20 percent `total_assets` notional cap from the HTML spec, exact i128 PnL formula, long/short gain directions, loss flooring at NAV-bearing assets so `trader_claimable` is untouched, unchanged share counts, event log emission, and exact token deltas after CPI.
 
 ## `settle`
 

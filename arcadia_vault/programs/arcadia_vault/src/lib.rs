@@ -25,6 +25,7 @@ pub(crate) use instructions::initialize_investor::__client_accounts_initialize_i
 pub(crate) use instructions::initialize_profile::__client_accounts_initialize_profile;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;
 pub(crate) use instructions::ping::__client_accounts_ping;
+pub(crate) use instructions::record_trade::__client_accounts_record_trade;
 pub(crate) use instructions::withdraw::__client_accounts_process_withdraw;
 pub(crate) use instructions::withdraw::__client_accounts_request_withdraw;
 
@@ -70,6 +71,35 @@ pub mod arcadia_vault {
 
     pub fn process_withdraw(ctx: Context<ProcessWithdraw>) -> Result<()> {
         instructions::withdraw::process_withdraw_handler(ctx)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_trade(
+        ctx: Context<RecordTrade>,
+        market: String,
+        direction: u8,
+        size_usd: u64,
+        leverage_x100: u16,
+        entry_px: u64,
+        exit_px: u64,
+        fees_usd: u64,
+        was_liquidated: bool,
+        opened_at: i64,
+        closed_at: i64,
+    ) -> Result<()> {
+        instructions::record_trade::handler(
+            ctx,
+            market,
+            direction,
+            size_usd,
+            leverage_x100,
+            entry_px,
+            exit_px,
+            fees_usd,
+            was_liquidated,
+            opened_at,
+            closed_at,
+        )
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

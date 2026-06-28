@@ -13,5 +13,6 @@ export * from "./initializeProfile";
 export * from "./initializeSmoke";
 export * from "./ping";
 export * from "./processWithdraw";
+export * from "./recordTrade";
 export * from "./requestWithdraw";
 export * from "./setCapacity";

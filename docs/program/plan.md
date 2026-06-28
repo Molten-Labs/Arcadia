@@ -14,8 +14,8 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 ## Current Gate
 
 - Branch: `anchor`.
-- Current phase: `record_trade`.
-- Current instruction: `record_trade`.
+- Current phase: `settle`.
+- Current instruction: `settle`.
 - Smoke harness status: keep existing `initialize_smoke` and `ping` tests as scaffold health checks until real instruction tests replace them. Smoke instructions are not part of the Arcadia business API.
 - Skills refresh: `curl -fsSL https://www.solana.new/setup.sh | bash` was requested, but direct remote-script execution was blocked by the approvals reviewer as too risky for automated execution. This remains pending explicit manual execution or a safer approved installer path.
 
@@ -42,7 +42,7 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 | `deposit` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `request_withdraw` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `process_withdraw` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
-| `record_trade` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
+| `record_trade` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `settle` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `trader_withdraw_profit` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | Devnet Integration | planned | Full local LiteSVM flow green, deployed devnet flow green, frontend/indexer can consume IDL/events. |

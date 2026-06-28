@@ -24,6 +24,7 @@ import {
   parseInitializeSmokeInstruction,
   parsePingInstruction,
   parseProcessWithdrawInstruction,
+  parseRecordTradeInstruction,
   parseRequestWithdrawInstruction,
   parseSetCapacityInstruction,
   type ParsedDepositInstruction,
@@ -33,6 +34,7 @@ import {
   type ParsedInitializeSmokeInstruction,
   type ParsedPingInstruction,
   type ParsedProcessWithdrawInstruction,
+  type ParsedRecordTradeInstruction,
   type ParsedRequestWithdrawInstruction,
   type ParsedSetCapacityInstruction,
 } from "../instructions";
@@ -120,6 +122,7 @@ export enum ArcadiaVaultInstruction {
   InitializeSmoke,
   Ping,
   ProcessWithdraw,
+  RecordTrade,
   RequestWithdraw,
   SetCapacity,
 }
@@ -209,6 +212,17 @@ export function identifyArcadiaVaultInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([83, 201, 2, 171, 223, 122, 186, 127]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.RecordTrade;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([137, 95, 187, 96, 250, 138, 31, 182]),
       ),
       0,
@@ -256,6 +270,9 @@ export type ParsedArcadiaVaultInstruction<
   | ({
       instructionType: ArcadiaVaultInstruction.ProcessWithdraw;
     } & ParsedProcessWithdrawInstruction<TProgram>)
+  | ({
+      instructionType: ArcadiaVaultInstruction.RecordTrade;
+    } & ParsedRecordTradeInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.RequestWithdraw;
     } & ParsedRequestWithdrawInstruction<TProgram>)
@@ -315,6 +332,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.ProcessWithdraw,
         ...parseProcessWithdrawInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.RecordTrade: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.RecordTrade,
+        ...parseRecordTradeInstruction(instruction),
       };
     }
     case ArcadiaVaultInstruction.RequestWithdraw: {
