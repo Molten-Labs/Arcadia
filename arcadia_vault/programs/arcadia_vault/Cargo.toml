@@ -26,11 +26,15 @@ anchor-spl = "=1.0.2"
 
 [dev-dependencies]
 litesvm = "0.10.0"
+solana-account = "3.4.0"
 solana-message = "3.0.1"
 solana-transaction = "3.0.2"
 solana-signer = "3.0.0"
 solana-keypair = "3.0.1"
 solana-native-token = "3.0.0"
+solana-program-option = "3.0.0"
+solana-program-pack = "3.0.0"
+spl-token-interface = "2.0.0"
 
 
 [lints.rust]

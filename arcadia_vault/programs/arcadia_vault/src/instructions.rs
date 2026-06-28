@@ -1,7 +1,7 @@
-pub mod initialize;
+pub mod admin;
 pub mod initialize_smoke;
 pub mod ping;
 
-pub use initialize::Initialize;
+pub use admin::initialize_platform::InitializePlatform;
 pub use initialize_smoke::InitializeSmoke;
 pub use ping::Ping;

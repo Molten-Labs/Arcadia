@@ -14,8 +14,8 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 ## Current Gate
 
 - Branch: `anchor`.
-- Current phase: `initialize_platform`.
-- Current instruction: `initialize_platform`.
+- Current phase: `initialize_profile`.
+- Current instruction: `initialize_profile`.
 - Smoke harness status: keep existing `initialize_smoke` and `ping` tests as scaffold health checks until real instruction tests replace them. Smoke instructions are not part of the Arcadia business API.
 - Skills refresh: `curl -fsSL https://www.solana.new/setup.sh | bash` was requested, but direct remote-script execution was blocked by the approvals reviewer as too risky for automated execution. This remains pending explicit manual execution or a safer approved installer path.
 
@@ -35,7 +35,7 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 | --- | --- | --- |
 | Docs + Tooling Gate | complete | Three program docs added; Anchor 1.0.2 build/test green; setup-script status recorded. |
 | Foundation Module | complete | Real constants, errors, events, state structs, math helpers, token helpers, PDA seeds compile with IDL generation. |
-| `initialize_platform` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
+| `initialize_platform` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `initialize_profile` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `set_capacity` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `initialize_investor` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
@@ -99,3 +99,7 @@ Use this checklist before moving to the next instruction:
 - 2026-06-28: Foundation Module `anchor test --skip-local-validator --skip-deploy` passed from `arcadia_vault/`; 6 foundation unit tests, 1 scaffold init test, and 5 LiteSVM smoke tests passed.
 - 2026-06-28: `pnpm codegen` was attempted but the package-manager preflight attempted a workspace install and hit non-interactive/build-script policy plus npm DNS limits; direct `clients/node_modules/.bin/tsx clients/codama.ts` regenerated the Anchor-derived client.
 - 2026-06-28: `pnpm --dir clients build` was attempted but the same package-manager preflight attempted a workspace install; direct `clients/node_modules/.bin/tsc -p clients/tsconfig.json` passed.
+- 2026-06-28: `initialize_platform` `anchor build` passed from `arcadia_vault/`.
+- 2026-06-28: `initialize_platform` `anchor test --skip-local-validator --skip-deploy` passed; tests covered happy path, reinit failure, unsafe fee config failures, wrong config PDA, treasury mint mismatch, exact state writes, and CU recording.
+- 2026-06-28: `initialize_platform` direct `clients/node_modules/.bin/tsx clients/codama.ts` regenerated client output and direct `clients/node_modules/.bin/tsc -p clients/tsconfig.json` passed.
+- 2026-06-28: `initialize_platform` `pnpm program:build` was attempted again but the wrapper stopped on non-interactive module purge before running Anchor; direct Anchor verification remains the executable gate in this environment.

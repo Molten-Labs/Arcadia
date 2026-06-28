@@ -6,6 +6,6 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from "./initialize";
+export * from "./initializePlatform";
 export * from "./initializeSmoke";
 export * from "./ping";

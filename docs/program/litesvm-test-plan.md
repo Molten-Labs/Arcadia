@@ -31,18 +31,19 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 ## Foundation Module
 
 - Status: complete.
-- Passing checks: share mint flooring, NAV excluding `trader_claimable`, strict 500 bps withdrawal threshold, long/short realized PnL sign and magnitude, fee/notional/profit/management-fee math, scaffold initialize, and the temporary LiteSVM smoke round trip/negative tests.
+- Passing checks: share mint flooring, NAV excluding `trader_claimable`, strict 500 bps withdrawal threshold, long/short realized PnL sign and magnitude, fee/notional/profit/management-fee math, and the temporary LiteSVM smoke round trip/negative tests.
 - Pending until instruction gates: Token Interface fixture mints/accounts, event-log assertions for real Arcadia events, and token-conservation assertions on fund-moving handlers.
 - Completion rule: keep the smoke tests only as scaffold health checks; retire or replace them once real instruction coverage reaches equivalent build/test confidence.
 
 ## `initialize_platform`
 
+- Status: complete.
 - Happy path: initializes config with admin, oracle authority, base mint, treasury token, fee bps, and bump.
 - Authorization/reinit: second init of the singleton config fails.
 - Invalid input: perf fee greater than denominator fails; management fee greater than denominator fails; perf fee plus max trader tier over denominator fails.
-- Account assertions: config PDA seed, base mint, treasury mint, and saved bump.
-- Event assertions: none expected.
-- CU: record `initialize_platform`.
+- Account assertions: config PDA seed, base mint, treasury mint, treasury token mint binding, and saved bump.
+- Event assertions: none expected; no event is emitted in MVP.
+- CU: recorded `initialize_platform` at about 9.9k CUs in the current LiteSVM run.
 
 ## `initialize_profile`
 

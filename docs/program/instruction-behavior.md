@@ -23,13 +23,13 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- No Arcadia business instruction has been implemented yet; the next gate is `initialize_platform`.
+- `initialize_platform` is complete; the next gate is `initialize_profile`.
 
 ## Module Order
 
 | Order | Instruction | Module | Status |
 | --- | --- | --- | --- |
-| 1 | `initialize_platform` | `instructions/admin/initialize_platform.rs` | planned |
+| 1 | `initialize_platform` | `instructions/admin/initialize_platform.rs` | complete |
 | 2 | `initialize_profile` | `instructions/initialize_profile.rs` | planned |
 | 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | planned |
 | 4 | `initialize_investor` | `instructions/initialize_investor.rs` | planned |
@@ -42,7 +42,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `initialize_platform`
 
-- Status: planned.
+- Status: complete.
 - Purpose: create the singleton `PlatformConfig` once, record the admin, oracle authority, base mint, treasury token account, and fee parameters.
 - Inputs: `perf_fee_bps: u16`, `mgmt_fee_bps: u16`, `oracle_authority: Pubkey`.
 - Accounts: admin signer payer, `PlatformConfig` PDA `[b"platform"]`, base mint, treasury token account, system program.
@@ -51,7 +51,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Token movement: none.
 - Event: none in MVP.
 - Errors: `InvalidFeeConfig`; reinit blocked by Anchor.
-- Done criteria: rejects unsafe fee sums, records mint/treasury/oracle exactly, stores bump, second init fails, IDL exposes the expected account and args.
+- Done criteria: complete; LiteSVM covers happy path, unsafe fee configs, second init, wrong config PDA, treasury mint mismatch, saved bump, and exact config writes. IDL/client generation exposes `initializePlatform` and `platformConfig`.
 
 ## `initialize_profile`
 

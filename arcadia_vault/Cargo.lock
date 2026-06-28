@@ -366,11 +366,15 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "litesvm",
+ "solana-account",
  "solana-keypair",
  "solana-message",
  "solana-native-token",
+ "solana-program-option",
+ "solana-program-pack",
  "solana-signer",
  "solana-transaction",
+ "spl-token-interface",
 ]
 
 [[package]]

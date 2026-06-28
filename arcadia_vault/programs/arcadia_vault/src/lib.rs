@@ -18,7 +18,7 @@ pub use smoke::*;
 pub use state::*;
 pub use token::*;
 
-pub(crate) use instructions::initialize::__client_accounts_initialize;
+pub(crate) use instructions::admin::initialize_platform::__client_accounts_initialize_platform;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;
 pub(crate) use instructions::ping::__client_accounts_ping;
 
@@ -28,8 +28,18 @@ declare_id!("gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C");
 pub mod arcadia_vault {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        instructions::initialize::handler(ctx)
+    pub fn initialize_platform(
+        ctx: Context<InitializePlatform>,
+        perf_fee_bps: u16,
+        mgmt_fee_bps: u16,
+        oracle_authority: Pubkey,
+    ) -> Result<()> {
+        instructions::admin::initialize_platform::handler(
+            ctx,
+            perf_fee_bps,
+            mgmt_fee_bps,
+            oracle_authority,
+        )
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

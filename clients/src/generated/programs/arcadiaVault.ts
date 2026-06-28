@@ -17,10 +17,10 @@ import {
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import {
-  parseInitializeInstruction,
+  parseInitializePlatformInstruction,
   parseInitializeSmokeInstruction,
   parsePingInstruction,
-  type ParsedInitializeInstruction,
+  type ParsedInitializePlatformInstruction,
   type ParsedInitializeSmokeInstruction,
   type ParsedPingInstruction,
 } from "../instructions";
@@ -29,6 +29,7 @@ export const ARCADIA_VAULT_PROGRAM_ADDRESS =
   "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C" as Address<"gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C">;
 
 export enum ArcadiaVaultAccount {
+  PlatformConfig,
   SmokeState,
 }
 
@@ -36,6 +37,17 @@ export function identifyArcadiaVaultAccount(
   account: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): ArcadiaVaultAccount {
   const data = "data" in account ? account.data : account;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([160, 78, 128, 0, 248, 83, 230, 160]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultAccount.PlatformConfig;
+  }
   if (
     containsBytes(
       data,
@@ -53,7 +65,7 @@ export function identifyArcadiaVaultAccount(
 }
 
 export enum ArcadiaVaultInstruction {
-  Initialize,
+  InitializePlatform,
   InitializeSmoke,
   Ping,
 }
@@ -66,12 +78,12 @@ export function identifyArcadiaVaultInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237]),
+        new Uint8Array([119, 201, 101, 45, 75, 122, 89, 3]),
       ),
       0,
     )
   ) {
-    return ArcadiaVaultInstruction.Initialize;
+    return ArcadiaVaultInstruction.InitializePlatform;
   }
   if (
     containsBytes(
@@ -104,8 +116,8 @@ export type ParsedArcadiaVaultInstruction<
   TProgram extends string = "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C",
 > =
   | ({
-      instructionType: ArcadiaVaultInstruction.Initialize;
-    } & ParsedInitializeInstruction<TProgram>)
+      instructionType: ArcadiaVaultInstruction.InitializePlatform;
+    } & ParsedInitializePlatformInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.InitializeSmoke;
     } & ParsedInitializeSmokeInstruction<TProgram>)
@@ -118,10 +130,11 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
 ): ParsedArcadiaVaultInstruction<TProgram> {
   const instructionType = identifyArcadiaVaultInstruction(instruction);
   switch (instructionType) {
-    case ArcadiaVaultInstruction.Initialize: {
+    case ArcadiaVaultInstruction.InitializePlatform: {
+      assertIsInstructionWithAccounts(instruction);
       return {
-        instructionType: ArcadiaVaultInstruction.Initialize,
-        ...parseInitializeInstruction(instruction),
+        instructionType: ArcadiaVaultInstruction.InitializePlatform,
+        ...parseInitializePlatformInstruction(instruction),
       };
     }
     case ArcadiaVaultInstruction.InitializeSmoke: {
