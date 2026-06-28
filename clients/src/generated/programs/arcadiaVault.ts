@@ -27,6 +27,7 @@ import {
   parseRecordTradeInstruction,
   parseRequestWithdrawInstruction,
   parseSetCapacityInstruction,
+  parseSettleInstruction,
   type ParsedDepositInstruction,
   type ParsedInitializeInvestorInstruction,
   type ParsedInitializePlatformInstruction,
@@ -37,6 +38,7 @@ import {
   type ParsedRecordTradeInstruction,
   type ParsedRequestWithdrawInstruction,
   type ParsedSetCapacityInstruction,
+  type ParsedSettleInstruction,
 } from "../instructions";
 
 export const ARCADIA_VAULT_PROGRAM_ADDRESS =
@@ -125,6 +127,7 @@ export enum ArcadiaVaultInstruction {
   RecordTrade,
   RequestWithdraw,
   SetCapacity,
+  Settle,
 }
 
 export function identifyArcadiaVaultInstruction(
@@ -241,6 +244,17 @@ export function identifyArcadiaVaultInstruction(
   ) {
     return ArcadiaVaultInstruction.SetCapacity;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([175, 42, 185, 87, 144, 131, 102, 212]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.Settle;
+  }
   throw new Error(
     "The provided instruction could not be identified as a arcadiaVault instruction.",
   );
@@ -278,7 +292,10 @@ export type ParsedArcadiaVaultInstruction<
     } & ParsedRequestWithdrawInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.SetCapacity;
-    } & ParsedSetCapacityInstruction<TProgram>);
+    } & ParsedSetCapacityInstruction<TProgram>)
+  | ({
+      instructionType: ArcadiaVaultInstruction.Settle;
+    } & ParsedSettleInstruction<TProgram>);
 
 export function parseArcadiaVaultInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
@@ -353,6 +370,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.SetCapacity,
         ...parseSetCapacityInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.Settle: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.Settle,
+        ...parseSettleInstruction(instruction),
       };
     }
     default:

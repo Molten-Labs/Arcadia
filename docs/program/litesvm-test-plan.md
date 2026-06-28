@@ -125,13 +125,15 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `settle`
 
-- Happy path, no profit: current NAV at or below HWM updates `last_settle_ts`, emits no `Settled`, and moves no tokens.
-- Happy path, profit: computes profit assets, trader cut, platform cut, updates claimable, transfers platform cut to treasury, resets HWM.
-- Authorization: caller neither trader nor oracle authority fails.
-- Invalid state: total shares zero fails.
-- Conservation: platform cut vault-to-treasury transfer matches event; trader cut remains in vault but is excluded from NAV.
-- Event assertions: `Settled` only on profit.
-- CU: record `settle:no_profit` and `settle:profit`.
+- Status: complete.
+- Happy path, no profit: passing; current NAV at or below HWM updates `last_settle_ts`, emits no `Settled`, and moves no tokens.
+- Happy path, profit: passing; computes profit assets, trader cut, platform cut, updates claimable, transfers platform cut to treasury, and resets HWM to post-crystallization NAV.
+- Repeated flat settlement: passing; immediate second settle after crystallization moves no tokens, emits no event, and does not double charge.
+- Authorization: passing; caller neither trader nor oracle authority fails.
+- Invalid state/account binding: passing; total shares zero, wrong treasury mint, wrong vault authority, and `trader_claimable > vault_token.amount` fail.
+- Conservation: passing; platform cut vault-to-treasury transfer matches exact token deltas; trader cut remains in vault but is excluded from NAV.
+- Event assertions: passing at log-emission level for `Settled` only on profit.
+- CU: serial LiteSVM run recorded `settle:no_profit` at about 7.6k CUs, `settle:profit` at about 17.7k CUs, and `settle:flat_repeat` at about 7.6k CUs.
 
 ## `trader_withdraw_profit`
 

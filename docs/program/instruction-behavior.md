@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, `request_withdraw`, `process_withdraw`, and `record_trade` are complete; the next gate is `settle`.
+- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, `request_withdraw`, `process_withdraw`, `record_trade`, and `settle` are complete; the next gate is `trader_withdraw_profit`.
 
 ## Module Order
 
@@ -37,7 +37,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 6 | `request_withdraw` | `instructions/withdraw.rs` | complete |
 | 7 | `process_withdraw` | `instructions/withdraw.rs` | complete |
 | 8 | `record_trade` | `instructions/record_trade.rs` | complete |
-| 9 | `settle` | `instructions/settle.rs` | planned |
+| 9 | `settle` | `instructions/settle.rs` | complete |
 | 10 | `trader_withdraw_profit` | `instructions/trader_withdraw_profit.rs` | planned |
 
 ## `initialize_platform`
@@ -146,16 +146,16 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `settle`
 
-- Status: planned.
+- Status: complete.
 - Purpose: crystallize profit above high-water mark into platform and trader performance fee accounting.
 - Inputs: none.
 - Accounts: caller signer, config, mutable profile, base mint, vault token, treasury token, token interface program.
 - Access control: caller must be profile trader or config oracle authority.
-- State writes: updates `last_settle_ts`; on profit, increases `trader_claimable` and resets `hwm_per_share`.
-- Token movement: signed `transfer_checked` from vault token to treasury token for platform performance cut and any implemented management accrual.
+- State writes: updates `last_settle_ts`; on profit, increases `trader_claimable` and resets `hwm_per_share` to the post-crystallization derived NAV.
+- Token movement: signed `transfer_checked` from vault token to treasury token for the platform performance cut. Management accrual remains optional/unimplemented in this gate.
 - Event: `Settled` only when `current_nav > hwm_per_share`.
-- Errors: `Unauthorized`, `NoShares`, `MathOverflow`.
-- Done criteria: no performance fee on flat/down NAV, exact tier split, platform cut leaves vault, trader cut remains earmarked and excluded from NAV, repeated flat settlement does not double charge.
+- Errors: `Unauthorized`, `NoShares`, `InvalidTier`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; no performance fee on flat/down NAV, oracle or trader can call, unauthorized/no-share calls fail, exact tier/platform split, platform cut leaves vault with exact token deltas, trader cut remains earmarked and excluded from NAV, HWM resets to post-fee NAV per the worked example in `spec-solana-program.html`, repeated flat settlement does not double charge, wrong token bindings and invalid NAV state fail.
 
 ## `trader_withdraw_profit`
 
