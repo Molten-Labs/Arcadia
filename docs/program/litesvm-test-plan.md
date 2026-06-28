@@ -28,6 +28,13 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 - Do not fabricate program-owned state accounts directly; create state through prior instructions.
 - Devnet-only treasury top-up behavior for `record_trade` is tested locally with funded fixture token accounts.
 
+## Foundation Module
+
+- Status: complete.
+- Passing checks: share mint flooring, NAV excluding `trader_claimable`, strict 500 bps withdrawal threshold, long/short realized PnL sign and magnitude, fee/notional/profit/management-fee math, scaffold initialize, and the temporary LiteSVM smoke round trip/negative tests.
+- Pending until instruction gates: Token Interface fixture mints/accounts, event-log assertions for real Arcadia events, and token-conservation assertions on fund-moving handlers.
+- Completion rule: keep the smoke tests only as scaffold health checks; retire or replace them once real instruction coverage reaches equivalent build/test confidence.
+
 ## `initialize_platform`
 
 - Happy path: initializes config with admin, oracle authority, base mint, treasury token, fee bps, and bump.

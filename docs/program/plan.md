@@ -14,8 +14,8 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 ## Current Gate
 
 - Branch: `anchor`.
-- Current phase: Foundation Module.
-- Current instruction: none; implementation resumes with Foundation Module after this gate.
+- Current phase: `initialize_platform`.
+- Current instruction: `initialize_platform`.
 - Smoke harness status: keep existing `initialize_smoke` and `ping` tests as scaffold health checks until real instruction tests replace them. Smoke instructions are not part of the Arcadia business API.
 - Skills refresh: `curl -fsSL https://www.solana.new/setup.sh | bash` was requested, but direct remote-script execution was blocked by the approvals reviewer as too risky for automated execution. This remains pending explicit manual execution or a safer approved installer path.
 
@@ -34,7 +34,7 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 | Milestone | Status | Exit Criteria |
 | --- | --- | --- |
 | Docs + Tooling Gate | complete | Three program docs added; Anchor 1.0.2 build/test green; setup-script status recorded. |
-| Foundation Module | planned | Real constants, errors, events, state structs, math helpers, token helpers, PDA seeds compile with IDL generation. |
+| Foundation Module | complete | Real constants, errors, events, state structs, math helpers, token helpers, PDA seeds compile with IDL generation. |
 | `initialize_platform` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `initialize_profile` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `set_capacity` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
@@ -68,15 +68,15 @@ Use this checklist before moving to the next instruction:
 
 ## Foundation Module Checklist
 
-- [ ] Remove or quarantine smoke-only state from active business modules.
-- [ ] Add `anchor-spl` token interface dependency.
-- [ ] Add `events.rs` with locked event names and fields from the HTML spec.
-- [ ] Replace smoke `ErrorCode` with full `ArcadiaError` enum from the HTML spec.
-- [ ] Add real state structs with `#[derive(InitSpace)]`, saved bumps, and no unbounded `String` or `Vec` fields.
-- [ ] Add constants for seeds, `SHARE_SCALE`, BPS values, notional limits, withdrawal threshold, fee defaults, and time constants.
-- [ ] Add checked math helpers using `u128`/`i128` intermediates and explicit rounding direction.
-- [ ] Add token helper wrappers for `transfer_checked` and PDA signer seeds.
-- [ ] Keep IDL generation working with `idl-build`.
+- [x] Remove or quarantine smoke-only state from active business modules.
+- [x] Add `anchor-spl` token interface dependency.
+- [x] Add `events.rs` with locked event names and fields from the HTML spec.
+- [x] Replace smoke `ErrorCode` with full `ArcadiaError` enum from the HTML spec.
+- [x] Add real state structs with `#[derive(InitSpace)]`, saved bumps, and no unbounded `String` or `Vec` fields.
+- [x] Add constants for seeds, `SHARE_SCALE`, BPS values, notional limits, withdrawal threshold, fee defaults, and time constants.
+- [x] Add checked math helpers using `u128`/`i128` intermediates and explicit rounding direction.
+- [x] Add token helper wrappers for `transfer_checked` and PDA signer seeds.
+- [x] Keep IDL generation working with `idl-build`.
 
 ## Acceptance Rules
 
@@ -95,3 +95,7 @@ Use this checklist before moving to the next instruction:
 - 2026-06-28: `anchor test --skip-local-validator --skip-deploy` passed from `arcadia_vault/`.
 - 2026-06-28: `clients/node_modules/.bin/tsc -p clients/tsconfig.json` passed.
 - 2026-06-28: `pnpm program:build` was attempted but the package-manager preflight stopped on non-interactive module purge/build-script approval before reaching Anchor; direct Anchor verification is the recorded tooling gate.
+- 2026-06-28: Foundation Module `anchor build` passed from `arcadia_vault/`.
+- 2026-06-28: Foundation Module `anchor test --skip-local-validator --skip-deploy` passed from `arcadia_vault/`; 6 foundation unit tests, 1 scaffold init test, and 5 LiteSVM smoke tests passed.
+- 2026-06-28: `pnpm codegen` was attempted but the package-manager preflight attempted a workspace install and hit non-interactive/build-script policy plus npm DNS limits; direct `clients/node_modules/.bin/tsx clients/codama.ts` regenerated the Anchor-derived client.
+- 2026-06-28: `pnpm --dir clients build` was attempted but the same package-manager preflight attempted a workspace install; direct `clients/node_modules/.bin/tsc -p clients/tsconfig.json` passed.

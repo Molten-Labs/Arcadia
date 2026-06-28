@@ -1,13 +1,22 @@
 pub mod constants;
 pub mod error;
+pub mod events;
 pub mod instructions;
+pub mod math;
+pub mod smoke;
 pub mod state;
+pub mod token;
 
 use anchor_lang::prelude::*;
 
 pub use constants::*;
+pub use error::*;
+pub use events::*;
 pub use instructions::*;
+pub use math::*;
+pub use smoke::*;
 pub use state::*;
+pub use token::*;
 
 pub(crate) use instructions::initialize::__client_accounts_initialize;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;

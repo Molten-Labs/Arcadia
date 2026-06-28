@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::ErrorCode as ArcadiaError, SmokeState, MAX_SMOKE_MESSAGE_LEN, SMOKE_SEED};
+use crate::{ArcadiaError, SmokeState, MAX_SMOKE_MESSAGE_LEN, SMOKE_SEED};
 
 #[derive(Accounts)]
 pub struct Ping<'info> {

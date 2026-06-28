@@ -18,6 +18,13 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Shares are data in `InvestorPosition.shares`, not SPL tokens.
 - The `TraderProfile` PDA is the vault authority. There is no admin escape hatch for depositor funds.
 
+## Foundation Module
+
+- Status: complete.
+- Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
+- Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
+- No Arcadia business instruction has been implemented yet; the next gate is `initialize_platform`.
+
 ## Module Order
 
 | Order | Instruction | Module | Status |
