@@ -14,13 +14,13 @@ import {
   type ProgramDerivedAddress,
 } from "@solana/kit";
 
-export type RequestWithdrawPositionSeeds = {
+export type ProcessWithdrawPositionSeeds = {
   owner: Address;
   profile: Address;
 };
 
-export async function findRequestWithdrawPositionPda(
-  seeds: RequestWithdrawPositionSeeds,
+export async function findProcessWithdrawPositionPda(
+  seeds: ProcessWithdrawPositionSeeds,
   config: { programAddress?: Address | undefined } = {},
 ): Promise<ProgramDerivedAddress> {
   const {

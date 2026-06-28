@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, and `request_withdraw` are complete; the next gate is `process_withdraw`.
+- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, `request_withdraw`, and `process_withdraw` are complete; the next gate is `record_trade`.
 
 ## Module Order
 
@@ -35,7 +35,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 4 | `initialize_investor` | `instructions/initialize_investor.rs` | complete |
 | 5 | `deposit` | `instructions/deposit.rs` | complete |
 | 6 | `request_withdraw` | `instructions/withdraw.rs` | complete |
-| 7 | `process_withdraw` | `instructions/withdraw.rs` | planned |
+| 7 | `process_withdraw` | `instructions/withdraw.rs` | complete |
 | 8 | `record_trade` | `instructions/record_trade.rs` | planned |
 | 9 | `settle` | `instructions/settle.rs` | planned |
 | 10 | `trader_withdraw_profit` | `instructions/trader_withdraw_profit.rs` | planned |
@@ -120,16 +120,16 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `process_withdraw`
 
-- Status: planned.
+- Status: complete.
 - Purpose: burn pending shares and pay the owner their pro-rata USDC from the vault.
 - Inputs: none.
 - Accounts: owner signer, mutable profile, mutable position, base mint, vault token, owner token, token interface program.
-- Access control: owner signer must own the position; profile signs token-out via PDA seeds.
-- State writes: decreases profile total shares, decreases trader shares if the owner is the trader, decreases position shares, clears pending withdrawal shares, closes empty positions when supported by the implementation gate.
-- Token movement: signed `transfer_checked` from vault token to owner token.
+- Access control: owner signer must own the position; position is bound to owner/profile by seeds and stored owner/profile checks; owner token must be owned by the owner; profile signs token-out via PDA seeds.
+- State writes: decreases profile total shares, decreases trader shares if the owner is the trader, decreases position shares, clears pending withdrawal fields, and closes the position account when shares reach zero.
+- Token movement: signed `transfer_checked` from vault token to owner token with exact post-CPI token-conservation checks.
 - Event: `Withdrawn`.
-- Errors: `NothingPending`, `NoticeNotElapsed`, `InsufficientVaultLiquidity`, `MathOverflow`.
-- Done criteria: rejects early processing, pays floor `pending_shares * (total_assets - trader_claimable) / total_shares`, never touches arbitrary recipients, keeps trader claimable excluded from investor NAV.
+- Errors: `Unauthorized`, `NothingPending`, `NoticeNotElapsed`, `InsufficientVaultLiquidity`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; rejects missing/early pending withdrawal, non-owner/wrong-PDA calls, wrong owner-token authority, and wrong owner-token mint; computes floor payout from NAV excluding trader claimable; updates share accounting before CPI; transfers only to the owner's token account; validates token deltas; closes zero-share positions and returns rent to owner.
 
 ## `record_trade`
 

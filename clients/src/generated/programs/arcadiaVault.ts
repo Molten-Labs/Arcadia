@@ -23,6 +23,7 @@ import {
   parseInitializeProfileInstruction,
   parseInitializeSmokeInstruction,
   parsePingInstruction,
+  parseProcessWithdrawInstruction,
   parseRequestWithdrawInstruction,
   parseSetCapacityInstruction,
   type ParsedDepositInstruction,
@@ -31,6 +32,7 @@ import {
   type ParsedInitializeProfileInstruction,
   type ParsedInitializeSmokeInstruction,
   type ParsedPingInstruction,
+  type ParsedProcessWithdrawInstruction,
   type ParsedRequestWithdrawInstruction,
   type ParsedSetCapacityInstruction,
 } from "../instructions";
@@ -117,6 +119,7 @@ export enum ArcadiaVaultInstruction {
   InitializeProfile,
   InitializeSmoke,
   Ping,
+  ProcessWithdraw,
   RequestWithdraw,
   SetCapacity,
 }
@@ -195,6 +198,17 @@ export function identifyArcadiaVaultInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([166, 189, 47, 170, 19, 135, 210, 19]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.ProcessWithdraw;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([137, 95, 187, 96, 250, 138, 31, 182]),
       ),
       0,
@@ -239,6 +253,9 @@ export type ParsedArcadiaVaultInstruction<
   | ({
       instructionType: ArcadiaVaultInstruction.Ping;
     } & ParsedPingInstruction<TProgram>)
+  | ({
+      instructionType: ArcadiaVaultInstruction.ProcessWithdraw;
+    } & ParsedProcessWithdrawInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.RequestWithdraw;
     } & ParsedRequestWithdrawInstruction<TProgram>)
@@ -291,6 +308,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.Ping,
         ...parsePingInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.ProcessWithdraw: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.ProcessWithdraw,
+        ...parseProcessWithdrawInstruction(instruction),
       };
     }
     case ArcadiaVaultInstruction.RequestWithdraw: {

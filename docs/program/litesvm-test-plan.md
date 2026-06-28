@@ -100,13 +100,15 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `process_withdraw`
 
-- Happy path: after ready timestamp, burns pending shares and transfers floor asset value to owner token.
-- Authorization/account binding: non-owner signer fails; wrong owner token authority fails; wrong profile/vault/mint fails.
-- Sequence failure: no pending shares fails; processing before ready timestamp fails.
-- Conservation: vault token decreases by payout, owner token increases by payout, profile total shares decreases, pending shares clears.
-- Account lifecycle: if implementation closes zero-share positions, assert lamports zero, data empty, owner system program; otherwise assert zero-share retained state exactly as documented.
-- Event assertions: `Withdrawn`.
-- CU: record `process_withdraw`.
+- Status: complete.
+- Happy path, partial: passing; after instant ready timestamp, burns pending shares, transfers floor asset value to owner token, and keeps nonzero position open.
+- Happy path, full: passing; delayed full withdrawal after clock warp drains the vault, zeroes aggregate shares, and closes/removes the zero-share position.
+- Authorization/account binding: passing; non-owner signer, wrong position PDA, wrong owner-token authority, and wrong owner-token mint fail.
+- Sequence failure: passing; no pending shares fails and processing before ready timestamp fails.
+- Conservation: passing; vault token decreases by payout, owner token increases by payout, profile total shares/trader shares decrease, pending fields clear, and handler rejects non-exact post-CPI token deltas with `TokenConservationFailed`.
+- Account lifecycle: passing; zero-share position is closed, with LiteSVM representing the closed account as removed or zero/data-empty/system-owned.
+- Event assertions: passing at log-emission level for `Withdrawn`; full binary event decoding remains optional future polish.
+- CU: current LiteSVM run recorded `process_withdraw:partial` at about 20.7k CUs and `process_withdraw:full` at about 20.4k CUs.
 
 ## `record_trade`
 

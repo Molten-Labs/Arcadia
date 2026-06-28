@@ -10,6 +10,6 @@ export * from "./config";
 export * from "./initializeInvestorInvestorAccount";
 export * from "./investorAccount";
 export * from "./position";
+export * from "./processWithdrawPosition";
 export * from "./profile";
-export * from "./requestWithdrawPosition";
 export * from "./smokeState";

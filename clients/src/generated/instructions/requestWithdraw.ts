@@ -32,7 +32,7 @@ import {
   type TransactionSigner,
   type WritableAccount,
 } from "@solana/kit";
-import { findRequestWithdrawPositionPda } from "../pdas";
+import { findProcessWithdrawPositionPda } from "../pdas";
 import { ARCADIA_VAULT_PROGRAM_ADDRESS } from "../programs";
 import {
   expectAddress,
@@ -169,7 +169,7 @@ export async function getRequestWithdrawInstructionAsync<
 
   // Resolve default values.
   if (!accounts.position.value) {
-    accounts.position.value = await findRequestWithdrawPositionPda({
+    accounts.position.value = await findProcessWithdrawPositionPda({
       owner: expectAddress(accounts.owner.value),
       profile: expectAddress(accounts.profile.value),
     });

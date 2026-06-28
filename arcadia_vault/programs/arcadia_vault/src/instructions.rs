@@ -13,4 +13,4 @@ pub use initialize_investor::InitializeInvestor;
 pub use initialize_profile::InitializeProfile;
 pub use initialize_smoke::InitializeSmoke;
 pub use ping::Ping;
-pub use withdraw::RequestWithdraw;
+pub use withdraw::{ProcessWithdraw, RequestWithdraw};
