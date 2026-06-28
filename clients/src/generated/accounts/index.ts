@@ -8,3 +8,4 @@
 
 export * from "./platformConfig";
 export * from "./smokeState";
+export * from "./traderProfile";

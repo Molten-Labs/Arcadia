@@ -19,6 +19,7 @@ pub use state::*;
 pub use token::*;
 
 pub(crate) use instructions::admin::initialize_platform::__client_accounts_initialize_platform;
+pub(crate) use instructions::initialize_profile::__client_accounts_initialize_profile;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;
 pub(crate) use instructions::ping::__client_accounts_ping;
 
@@ -40,6 +41,10 @@ pub mod arcadia_vault {
             mgmt_fee_bps,
             oracle_authority,
         )
+    }
+
+    pub fn initialize_profile(ctx: Context<InitializeProfile>, max_leverage: u8) -> Result<()> {
+        instructions::initialize_profile::handler(ctx, max_leverage)
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

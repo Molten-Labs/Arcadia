@@ -23,14 +23,14 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform` is complete; the next gate is `initialize_profile`.
+- `initialize_platform` and `initialize_profile` are complete; the next gate is `set_capacity`.
 
 ## Module Order
 
 | Order | Instruction | Module | Status |
 | --- | --- | --- | --- |
 | 1 | `initialize_platform` | `instructions/admin/initialize_platform.rs` | complete |
-| 2 | `initialize_profile` | `instructions/initialize_profile.rs` | planned |
+| 2 | `initialize_profile` | `instructions/initialize_profile.rs` | complete |
 | 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | planned |
 | 4 | `initialize_investor` | `instructions/initialize_investor.rs` | planned |
 | 5 | `deposit` | `instructions/deposit.rs` | planned |
@@ -55,7 +55,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `initialize_profile`
 
-- Status: planned.
+- Status: complete.
 - Purpose: let a trader create one vault/profile; the profile PDA becomes the vault token account authority.
 - Inputs: `max_leverage: u8`.
 - Accounts: trader signer payer, config, `TraderProfile` PDA `[b"profile", trader]`, base mint, vault token account, system program, token interface program, rent.
@@ -64,7 +64,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Token movement: none, but initializes/validates vault token account authority as profile PDA.
 - Event: `ProfileInitialized`.
 - Errors: `InvalidLeverage`; reinit blocked by Anchor.
-- Done criteria: HWM starts at par, profile is active and not fundable, vault token authority is profile PDA, invalid leverage fails, second profile init fails.
+- Done criteria: complete; LiteSVM covers par HWM, active/not-fundable defaults, saved bump, config/base-mint binding, profile PDA derivation, invalid leverage, reinit failure, `ProfileInitialized` log emission, and vault token authority = profile PDA.
 
 ## `set_capacity`
 

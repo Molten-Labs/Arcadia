@@ -14,8 +14,8 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 ## Current Gate
 
 - Branch: `anchor`.
-- Current phase: `initialize_profile`.
-- Current instruction: `initialize_profile`.
+- Current phase: `set_capacity`.
+- Current instruction: `set_capacity`.
 - Smoke harness status: keep existing `initialize_smoke` and `ping` tests as scaffold health checks until real instruction tests replace them. Smoke instructions are not part of the Arcadia business API.
 - Skills refresh: `curl -fsSL https://www.solana.new/setup.sh | bash` was requested, but direct remote-script execution was blocked by the approvals reviewer as too risky for automated execution. This remains pending explicit manual execution or a safer approved installer path.
 
@@ -36,7 +36,7 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 | Docs + Tooling Gate | complete | Three program docs added; Anchor 1.0.2 build/test green; setup-script status recorded. |
 | Foundation Module | complete | Real constants, errors, events, state structs, math helpers, token helpers, PDA seeds compile with IDL generation. |
 | `initialize_platform` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
-| `initialize_profile` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
+| `initialize_profile` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `set_capacity` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `initialize_investor` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `deposit` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
@@ -103,3 +103,7 @@ Use this checklist before moving to the next instruction:
 - 2026-06-28: `initialize_platform` `anchor test --skip-local-validator --skip-deploy` passed; tests covered happy path, reinit failure, unsafe fee config failures, wrong config PDA, treasury mint mismatch, exact state writes, and CU recording.
 - 2026-06-28: `initialize_platform` direct `clients/node_modules/.bin/tsx clients/codama.ts` regenerated client output and direct `clients/node_modules/.bin/tsc -p clients/tsconfig.json` passed.
 - 2026-06-28: `initialize_platform` `pnpm program:build` was attempted again but the wrapper stopped on non-interactive module purge before running Anchor; direct Anchor verification remains the executable gate in this environment.
+- 2026-06-28: `initialize_profile` `anchor build` passed from `arcadia_vault/`.
+- 2026-06-28: `initialize_profile` `anchor test --skip-local-validator --skip-deploy` passed; tests covered happy path, reinit failure, invalid leverage, wrong profile PDA, config/base-mint binding, event log emission, exact profile state, and vault token authority = profile PDA.
+- 2026-06-28: `initialize_profile` direct `clients/node_modules/.bin/tsx clients/codama.ts` regenerated client output and direct `clients/node_modules/.bin/tsc -p clients/tsconfig.json` passed.
+- 2026-06-28: `initialize_profile` `pnpm program:test` was attempted but the wrapper stopped on non-interactive module purge before running Anchor; direct Anchor verification remains the executable gate in this environment.

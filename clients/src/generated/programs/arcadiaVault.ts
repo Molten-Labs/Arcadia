@@ -18,9 +18,11 @@ import {
 } from "@solana/kit";
 import {
   parseInitializePlatformInstruction,
+  parseInitializeProfileInstruction,
   parseInitializeSmokeInstruction,
   parsePingInstruction,
   type ParsedInitializePlatformInstruction,
+  type ParsedInitializeProfileInstruction,
   type ParsedInitializeSmokeInstruction,
   type ParsedPingInstruction,
 } from "../instructions";
@@ -31,6 +33,7 @@ export const ARCADIA_VAULT_PROGRAM_ADDRESS =
 export enum ArcadiaVaultAccount {
   PlatformConfig,
   SmokeState,
+  TraderProfile,
 }
 
 export function identifyArcadiaVaultAccount(
@@ -59,6 +62,17 @@ export function identifyArcadiaVaultAccount(
   ) {
     return ArcadiaVaultAccount.SmokeState;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([99, 135, 170, 100, 49, 79, 225, 169]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultAccount.TraderProfile;
+  }
   throw new Error(
     "The provided account could not be identified as a arcadiaVault account.",
   );
@@ -66,6 +80,7 @@ export function identifyArcadiaVaultAccount(
 
 export enum ArcadiaVaultInstruction {
   InitializePlatform,
+  InitializeProfile,
   InitializeSmoke,
   Ping,
 }
@@ -84,6 +99,17 @@ export function identifyArcadiaVaultInstruction(
     )
   ) {
     return ArcadiaVaultInstruction.InitializePlatform;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([32, 145, 77, 213, 58, 39, 251, 234]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.InitializeProfile;
   }
   if (
     containsBytes(
@@ -119,6 +145,9 @@ export type ParsedArcadiaVaultInstruction<
       instructionType: ArcadiaVaultInstruction.InitializePlatform;
     } & ParsedInitializePlatformInstruction<TProgram>)
   | ({
+      instructionType: ArcadiaVaultInstruction.InitializeProfile;
+    } & ParsedInitializeProfileInstruction<TProgram>)
+  | ({
       instructionType: ArcadiaVaultInstruction.InitializeSmoke;
     } & ParsedInitializeSmokeInstruction<TProgram>)
   | ({
@@ -135,6 +164,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.InitializePlatform,
         ...parseInitializePlatformInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.InitializeProfile: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.InitializeProfile,
+        ...parseInitializeProfileInstruction(instruction),
       };
     }
     case ArcadiaVaultInstruction.InitializeSmoke: {

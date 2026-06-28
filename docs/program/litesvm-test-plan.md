@@ -47,12 +47,14 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `initialize_profile`
 
+- Status: complete.
 - Happy path: trader creates profile and vault token authority is profile PDA.
 - Authorization/reinit: second profile for same trader fails; profile PDA derived for a different trader cannot be used.
 - Invalid input: max leverage zero fails; max leverage above ceiling fails.
 - Account assertions: `hwm_per_share = SHARE_SCALE`, shares are zero, `score_tier = 255`, status active, timestamps set, bump saved.
-- Event assertions: `ProfileInitialized`.
-- CU: record `initialize_profile`.
+- Event assertions: `ProfileInitialized` Anchor event log is emitted.
+- Token assertions: initialized vault token account has mint = base mint, amount = 0, and owner/authority = profile PDA.
+- CU: recorded `initialize_profile` at about 22.7k CUs in the current LiteSVM run.
 
 ## `set_capacity`
 
