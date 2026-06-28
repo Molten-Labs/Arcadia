@@ -69,11 +69,12 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `initialize_investor`
 
+- Status: complete.
 - Happy path: wallet creates investor account.
 - Authorization/reinit: second init for same wallet fails; PDA for another wallet fails.
 - Account assertions: owner, zero position count, zero total deposited, created timestamp, bump.
 - Event assertions: `InvestorInitialized`.
-- CU: record `initialize_investor`.
+- CU: recorded `initialize_investor` at about 11.7k CUs in the current LiteSVM run.
 
 ## `deposit`
 

@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, and `set_capacity` are complete; the next gate is `initialize_investor`.
+- `initialize_platform`, `initialize_profile`, `set_capacity`, and `initialize_investor` are complete; the next gate is `deposit`.
 
 ## Module Order
 
@@ -32,7 +32,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 1 | `initialize_platform` | `instructions/admin/initialize_platform.rs` | complete |
 | 2 | `initialize_profile` | `instructions/initialize_profile.rs` | complete |
 | 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | complete |
-| 4 | `initialize_investor` | `instructions/initialize_investor.rs` | planned |
+| 4 | `initialize_investor` | `instructions/initialize_investor.rs` | complete |
 | 5 | `deposit` | `instructions/deposit.rs` | planned |
 | 6 | `request_withdraw` | `instructions/withdraw.rs` | planned |
 | 7 | `process_withdraw` | `instructions/withdraw.rs` | planned |
@@ -81,7 +81,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `initialize_investor`
 
-- Status: planned.
+- Status: complete.
 - Purpose: create a depositor account used by investors or by a trader self-funding their own vault.
 - Inputs: none.
 - Accounts: wallet signer payer, `InvestorAccount` PDA `[b"investor", wallet]`, system program.
@@ -90,7 +90,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Token movement: none.
 - Event: `InvestorInitialized`.
 - Errors: reinit blocked by Anchor.
-- Done criteria: stored owner matches wallet, counters start at zero, bump is saved, second init fails.
+- Done criteria: complete; LiteSVM covers stored owner, zero counters, saved bump, event log emission, second init failure, wrong PDA failure, and distinct wallet independence.
 
 ## `deposit`
 

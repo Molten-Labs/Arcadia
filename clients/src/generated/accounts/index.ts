@@ -6,6 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from "./investorAccount";
 export * from "./platformConfig";
 export * from "./smokeState";
 export * from "./traderProfile";

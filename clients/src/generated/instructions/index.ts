@@ -6,6 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from "./initializeInvestor";
 export * from "./initializePlatform";
 export * from "./initializeProfile";
 export * from "./initializeSmoke";

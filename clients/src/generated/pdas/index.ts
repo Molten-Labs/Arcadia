@@ -7,5 +7,6 @@
  */
 
 export * from "./config";
+export * from "./investorAccount";
 export * from "./profile";
 export * from "./smokeState";
