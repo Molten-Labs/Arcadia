@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, `set_capacity`, and `initialize_investor` are complete; the next gate is `deposit`.
+- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, and `deposit` are complete; the next gate is `request_withdraw`.
 
 ## Module Order
 
@@ -33,7 +33,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 2 | `initialize_profile` | `instructions/initialize_profile.rs` | complete |
 | 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | complete |
 | 4 | `initialize_investor` | `instructions/initialize_investor.rs` | complete |
-| 5 | `deposit` | `instructions/deposit.rs` | planned |
+| 5 | `deposit` | `instructions/deposit.rs` | complete |
 | 6 | `request_withdraw` | `instructions/withdraw.rs` | planned |
 | 7 | `process_withdraw` | `instructions/withdraw.rs` | planned |
 | 8 | `record_trade` | `instructions/record_trade.rs` | planned |
@@ -94,16 +94,16 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `deposit`
 
-- Status: planned.
+- Status: complete.
 - Purpose: move USDC into a trader vault and mint data shares to the depositor position at current NAV.
 - Inputs: `amount: u64`.
 - Accounts: depositor signer, investor account, mutable profile, `InvestorPosition` PDA `[b"position", depositor, profile]`, base mint, vault token, depositor token, token interface program, system program.
-- Access control: depositor signs and must own the source token account; investor account and position are bound to depositor/profile by seeds and `has_one`.
+- Access control: depositor signs and must own the source token account; investor account is bound to depositor by seeds and stored owner; position is bound to depositor/profile by seeds and stored owner/profile checks on existing lazy-initialized accounts.
 - State writes: profile total shares, optional trader shares, position owner/profile/shares/cost basis/deposit timestamp/bump, investor account lifetime deposits and position count on first position.
 - Token movement: `transfer_checked` from depositor token account to vault token account.
 - Event: `Deposited`.
-- Errors: `VaultNotActive`, `ZeroAmount`, `InsufficientFunds`, `CapacityNotSet`, `CapacityExceeded`, `DustDeposit`, `MathOverflow`.
-- Done criteria: first deposit mints `shares = amount`; later deposits use floor `amount * total_shares / total_assets`; investor deposits are capacity gated; trader own-capital deposits are cap-exempt; zero-share deposits fail; vault token delta equals amount.
+- Errors: `VaultNotActive`, `ZeroAmount`, `InsufficientFunds`, `CapacityNotSet`, `CapacityExceeded`, `DustDeposit`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; first deposit mints `shares = amount` only for trader self-funding, later deposits use floor `amount * total_shares / total_assets`, investor deposits are capacity gated, trader own-capital deposits are cap-exempt and increase `trader_shares`, zero-share and empty-vault investor deposits fail, existing positions accumulate without double-counting `position_count`, and source/vault token deltas equal `amount`.
 
 ## `request_withdraw`
 

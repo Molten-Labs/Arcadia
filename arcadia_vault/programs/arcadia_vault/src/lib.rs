@@ -20,6 +20,7 @@ pub use token::*;
 
 pub(crate) use instructions::admin::initialize_platform::__client_accounts_initialize_platform;
 pub(crate) use instructions::admin::set_capacity::__client_accounts_set_capacity;
+pub(crate) use instructions::deposit::__client_accounts_deposit;
 pub(crate) use instructions::initialize_investor::__client_accounts_initialize_investor;
 pub(crate) use instructions::initialize_profile::__client_accounts_initialize_profile;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;
@@ -55,6 +56,10 @@ pub mod arcadia_vault {
 
     pub fn initialize_investor(ctx: Context<InitializeInvestor>) -> Result<()> {
         instructions::initialize_investor::handler(ctx)
+    }
+
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+        instructions::deposit::handler(ctx, amount)
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

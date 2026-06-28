@@ -17,12 +17,14 @@ import {
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import {
+  parseDepositInstruction,
   parseInitializeInvestorInstruction,
   parseInitializePlatformInstruction,
   parseInitializeProfileInstruction,
   parseInitializeSmokeInstruction,
   parsePingInstruction,
   parseSetCapacityInstruction,
+  type ParsedDepositInstruction,
   type ParsedInitializeInvestorInstruction,
   type ParsedInitializePlatformInstruction,
   type ParsedInitializeProfileInstruction,
@@ -36,6 +38,7 @@ export const ARCADIA_VAULT_PROGRAM_ADDRESS =
 
 export enum ArcadiaVaultAccount {
   InvestorAccount,
+  InvestorPosition,
   PlatformConfig,
   SmokeState,
   TraderProfile,
@@ -55,6 +58,17 @@ export function identifyArcadiaVaultAccount(
     )
   ) {
     return ArcadiaVaultAccount.InvestorAccount;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([145, 143, 236, 150, 229, 40, 195, 88]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultAccount.InvestorPosition;
   }
   if (
     containsBytes(
@@ -95,6 +109,7 @@ export function identifyArcadiaVaultAccount(
 }
 
 export enum ArcadiaVaultInstruction {
+  Deposit,
   InitializeInvestor,
   InitializePlatform,
   InitializeProfile,
@@ -107,6 +122,17 @@ export function identifyArcadiaVaultInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): ArcadiaVaultInstruction {
   const data = "data" in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([242, 35, 198, 137, 82, 225, 242, 182]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.Deposit;
+  }
   if (
     containsBytes(
       data,
@@ -182,6 +208,9 @@ export type ParsedArcadiaVaultInstruction<
   TProgram extends string = "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C",
 > =
   | ({
+      instructionType: ArcadiaVaultInstruction.Deposit;
+    } & ParsedDepositInstruction<TProgram>)
+  | ({
       instructionType: ArcadiaVaultInstruction.InitializeInvestor;
     } & ParsedInitializeInvestorInstruction<TProgram>)
   | ({
@@ -205,6 +234,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
 ): ParsedArcadiaVaultInstruction<TProgram> {
   const instructionType = identifyArcadiaVaultInstruction(instruction);
   switch (instructionType) {
+    case ArcadiaVaultInstruction.Deposit: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.Deposit,
+        ...parseDepositInstruction(instruction),
+      };
+    }
     case ArcadiaVaultInstruction.InitializeInvestor: {
       assertIsInstructionWithAccounts(instruction);
       return {

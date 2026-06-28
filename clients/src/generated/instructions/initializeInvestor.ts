@@ -30,7 +30,7 @@ import {
   type WritableAccount,
   type WritableSignerAccount,
 } from "@solana/kit";
-import { findInvestorAccountPda } from "../pdas";
+import { findInitializeInvestorInvestorAccountPda } from "../pdas";
 import { ARCADIA_VAULT_PROGRAM_ADDRESS } from "../programs";
 import {
   expectAddress,
@@ -149,9 +149,10 @@ export async function getInitializeInvestorInstructionAsync<
 
   // Resolve default values.
   if (!accounts.investorAccount.value) {
-    accounts.investorAccount.value = await findInvestorAccountPda({
-      wallet: expectAddress(accounts.wallet.value),
-    });
+    accounts.investorAccount.value =
+      await findInitializeInvestorInvestorAccountPda({
+        wallet: expectAddress(accounts.wallet.value),
+      });
   }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =

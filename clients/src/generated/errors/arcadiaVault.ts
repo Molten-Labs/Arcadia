@@ -54,10 +54,12 @@ export const ARCADIA_VAULT_ERROR__INSUFFICIENT_VAULT_LIQUIDITY = 0x1781; // 6017
 export const ARCADIA_VAULT_ERROR__INSUFFICIENT_CLAIMABLE = 0x1782; // 6018
 /** MathOverflow: Arithmetic overflow */
 export const ARCADIA_VAULT_ERROR__MATH_OVERFLOW = 0x1783; // 6019
+/** TokenConservationFailed: Token transfer did not conserve the requested amount */
+export const ARCADIA_VAULT_ERROR__TOKEN_CONSERVATION_FAILED = 0x1784; // 6020
 /** SmokeMessageTooLong: Smoke message is too long */
-export const ARCADIA_VAULT_ERROR__SMOKE_MESSAGE_TOO_LONG = 0x1784; // 6020
+export const ARCADIA_VAULT_ERROR__SMOKE_MESSAGE_TOO_LONG = 0x1785; // 6021
 /** SmokeCounterOverflow: Smoke ping counter overflowed */
-export const ARCADIA_VAULT_ERROR__SMOKE_COUNTER_OVERFLOW = 0x1785; // 6021
+export const ARCADIA_VAULT_ERROR__SMOKE_COUNTER_OVERFLOW = 0x1786; // 6022
 
 export type ArcadiaVaultError =
   | typeof ARCADIA_VAULT_ERROR__CAPACITY_EXCEEDED
@@ -79,6 +81,7 @@ export type ArcadiaVaultError =
   | typeof ARCADIA_VAULT_ERROR__NOTIONAL_TOO_LARGE
   | typeof ARCADIA_VAULT_ERROR__SMOKE_COUNTER_OVERFLOW
   | typeof ARCADIA_VAULT_ERROR__SMOKE_MESSAGE_TOO_LONG
+  | typeof ARCADIA_VAULT_ERROR__TOKEN_CONSERVATION_FAILED
   | typeof ARCADIA_VAULT_ERROR__UNAUTHORIZED
   | typeof ARCADIA_VAULT_ERROR__VAULT_NOT_ACTIVE
   | typeof ARCADIA_VAULT_ERROR__ZERO_AMOUNT;
@@ -105,6 +108,7 @@ if (process.env.NODE_ENV !== "production") {
     [ARCADIA_VAULT_ERROR__NOTIONAL_TOO_LARGE]: `Trade notional exceeds 20% of AUM`,
     [ARCADIA_VAULT_ERROR__SMOKE_COUNTER_OVERFLOW]: `Smoke ping counter overflowed`,
     [ARCADIA_VAULT_ERROR__SMOKE_MESSAGE_TOO_LONG]: `Smoke message is too long`,
+    [ARCADIA_VAULT_ERROR__TOKEN_CONSERVATION_FAILED]: `Token transfer did not conserve the requested amount`,
     [ARCADIA_VAULT_ERROR__UNAUTHORIZED]: `Caller is not authorized for this action`,
     [ARCADIA_VAULT_ERROR__VAULT_NOT_ACTIVE]: `Profile/vault is not active`,
     [ARCADIA_VAULT_ERROR__ZERO_AMOUNT]: `Amount must be greater than zero`,

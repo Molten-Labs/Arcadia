@@ -7,6 +7,8 @@
  */
 
 export * from "./config";
+export * from "./initializeInvestorInvestorAccount";
 export * from "./investorAccount";
+export * from "./position";
 export * from "./profile";
 export * from "./smokeState";

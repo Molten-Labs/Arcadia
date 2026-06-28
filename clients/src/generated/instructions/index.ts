@@ -6,6 +6,7 @@
  * @see https://github.com/codama-idl/codama
  */
 
+export * from "./deposit";
 export * from "./initializeInvestor";
 export * from "./initializePlatform";
 export * from "./initializeProfile";

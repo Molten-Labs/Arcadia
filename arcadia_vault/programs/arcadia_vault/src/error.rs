@@ -42,6 +42,8 @@ pub enum ArcadiaError {
     InsufficientClaimable,
     #[msg("Arithmetic overflow")]
     MathOverflow,
+    #[msg("Token transfer did not conserve the requested amount")]
+    TokenConservationFailed,
 
     #[msg("Smoke message is too long")]
     SmokeMessageTooLong,

@@ -78,13 +78,14 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `deposit`
 
-- Happy path, first branch: trader self-funds an empty vault; shares minted equals amount; trader shares increases; vault token receives amount.
-- Happy path, later branch: investor deposits at non-par NAV; shares equal floor `amount * total_shares / total_assets`.
-- Authorization/account binding: wrong investor account, wrong position PDA, wrong profile, wrong token owner, wrong mint, or wrong vault token fails.
-- Invalid input: zero amount, amount greater than token balance, investor deposit before capacity, capacity exceeded, dust deposit, arithmetic overflow path.
-- Conservation: depositor token decreases by amount, vault token increases by amount, total shares and position shares match.
-- Event assertions: `Deposited` with `is_trader`, amount, shares, depositor, profile.
-- CU: record `deposit:first` and `deposit:investor`.
+- Status: complete.
+- Happy path, first branch: passing; trader self-funds an empty vault, shares minted equals amount, trader shares increases, vault token receives amount.
+- Happy path, later branch: passing; investor deposits at non-par NAV and shares equal floor `amount * total_shares / total_assets`.
+- Authorization/account binding: passing; wrong investor account, wrong position PDA, wrong token owner, and wrong mint fail.
+- Invalid input/sequence: passing; zero amount, amount greater than token balance, inactive profile, investor deposit before capacity, investor as first depositor even with capacity, and capacity exceeded fail.
+- Conservation: passing; depositor token decreases by amount, vault token increases by amount, total shares and position shares match; handler also rejects non-exact post-CPI token deltas with `TokenConservationFailed`.
+- Event assertions: passing at log-emission level for `Deposited`; full binary event decoding remains optional future polish.
+- CU: current LiteSVM run recorded `deposit:trader_first` at about 32.0k CUs and `deposit:investor_nav` at about 30.7k CUs.
 
 ## `request_withdraw`
 
