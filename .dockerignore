@@ -1,0 +1,9 @@
+.git
+.DS_Store
+node_modules
+**/node_modules
+target
+**/target
+app/dist
+mobile/.expo
+magicblock-test-storage

@@ -1,3 +1,0 @@
-- [Arcadia design system](arcadia-design.md) — dark purple-tinted palette, Inter font, 44px sidebar, full-width Topbar; no Syne/chartreuse.
-- [Nav cleanup pattern](nav-cleanup.md) — old Nav component replaced by layout-level Topbar; remove `import { Nav }` + `<Nav />` from all pages when layout handles it.
-- [Rust indexer build constraints](rust-indexer-build.md) — server-rs Cargo workspace compile constraints: no sqlx macros, no solana-sdk in workspace deps, use rustls not native-tls.

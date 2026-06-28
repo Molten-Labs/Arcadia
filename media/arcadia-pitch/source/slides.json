@@ -1,0 +1,78 @@
+{
+  "title": "Arcadia Colosseum Pitch",
+  "subtitle": "Proof-gated Solana vaults",
+  "audience": "Colosseum/Solana hackathon judges",
+  "slides": [
+    {
+      "eyebrow": "01 / Hook",
+      "title": "Arcadia makes capital follow proof.",
+      "claim": "A Solana vault marketplace where traders earn allocation only after proving performance with their own first-loss capital.",
+      "bullets": ["Trader starts in paper mode", "Junior capital absorbs losses first", "Investors see public risk buffers before depositing"],
+      "proof": "Live app: marketplace, vault detail, manager console, trade terminal."
+    },
+    {
+      "eyebrow": "02 / Problem",
+      "title": "Managed DeFi vaults still run on trust.",
+      "claim": "Investors are asked to fund managers before seeing enough proof, while managers keep upside without enough downside.",
+      "bullets": ["No required skin in the game", "No enforced track record before deposits", "Manual unwinds create trust assumptions"],
+      "proof": "Arcadia turns those social assumptions into protocol checks."
+    },
+    {
+      "eyebrow": "03 / Why Now",
+      "title": "Solana rails make proof-gated vaults practical.",
+      "claim": "Fast settlement, public program state, Pyth prices, and Jupiter routing let Arcadia enforce risk controls in the product loop.",
+      "bullets": ["Public records replace unverifiable claims", "Fresh NAV makes withdrawals measurable", "Routing support can unwind exposure when liquidity is short"],
+      "proof": "No off-chain spreadsheet needs to decide whether an investor can exit."
+    },
+    {
+      "eyebrow": "04 / Product",
+      "title": "A marketplace for traders who prove first.",
+      "claim": "Investors browse graduated vaults by buffer, performance, health, and strategy instead of trusting a pitch.",
+      "bullets": ["Compact vault discovery", "Risk and buffer visible upfront", "Portfolio and alerts built around withdrawal confidence"],
+      "proof": "The marketplace is designed as the first product surface, not a marketing page."
+    },
+    {
+      "eyebrow": "05 / Mechanic",
+      "title": "The trader’s money is the first fuse.",
+      "claim": "Junior capital protects senior investor capital and shrinks trading freedom as the buffer deteriorates.",
+      "bullets": ["Paper mode before investor access", "First-loss junior buffer", "Dynamic position limits as health falls"],
+      "proof": "The manager UI shows progress, capital, status, and limits as operating constraints."
+    },
+    {
+      "eyebrow": "06 / Demo",
+      "title": "One flow, two roles, strict boundaries.",
+      "claim": "Arcadia separates investor discovery from trader operations so each role sees the right controls.",
+      "bullets": ["Landing to marketplace", "Vault detail to deposit/withdrawal clarity", "Manager console to trade limits and operations"],
+      "proof": "Investor views do not expose execution controls; trader views focus on vault management."
+    },
+    {
+      "eyebrow": "07 / Safety",
+      "title": "Withdrawal safety is part of accounting, not support.",
+      "claim": "The v1 model uses USDC base liquidity and WSOL exposure so withdrawals can be valued and protected.",
+      "bullets": ["Pyth-backed SOL/USDC NAV", "10% liquid USDC reserve guard", "Jupiter-assisted WSOL unwind design"],
+      "proof": "Shares were removed from the user model; investor data now tracks principal and claim."
+    },
+    {
+      "eyebrow": "08 / Solana Edge",
+      "title": "Arcadia is stronger because it is on-chain.",
+      "claim": "The product relies on public state, non-custodial custody, composable vault records, and deterministic execution paths.",
+      "bullets": ["Managers cannot edit their past", "Investors can verify state", "Indexers can materialize public performance"],
+      "proof": "The program, generated clients, frontend, and indexer are designed as one Solana-native loop."
+    },
+    {
+      "eyebrow": "09 / Progress",
+      "title": "The MVP is already a real product surface.",
+      "claim": "Arcadia has a polished frontend, role-gated flows, program design, indexer scaffold, and tests around core accounting behavior.",
+      "bullets": ["Arcadia UI and SVG brand system", "USDC/WSOL accounting plan implemented in program direction", "Frontend tests/build/lint passing before media work"],
+      "proof": "The demo package captures the app directly from localhost."
+    },
+    {
+      "eyebrow": "10 / Ask",
+      "title": "Help Arcadia recruit the first serious managers.",
+      "claim": "Colosseum support helps move Arcadia from MVP to pilot vaults with disciplined traders and real feedback.",
+      "bullets": ["Select Arcadia for the Solana DeFi track", "Introduce pilot traders and protocol reviewers", "Pressure-test withdrawal safety before mainnet"],
+      "proof": "The next milestone is not more hype. It is guarded live capital with visible proof."
+    }
+  ]
+}
+

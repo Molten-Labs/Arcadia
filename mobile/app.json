@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Arcadia Protocol",
+    "slug": "arcadia-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "arcadia",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#050C0F",
+    "splash": {
+      "backgroundColor": "#050C0F",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.arcadia.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#050C0F"
+      },
+      "package": "com.arcadia.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

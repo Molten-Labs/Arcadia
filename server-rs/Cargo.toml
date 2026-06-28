@@ -1,88 +1,65 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/core",
-    "crates/db",
-    "crates/decode",
-    "crates/scoring",
-    "crates/chain",
-    "crates/prices",
-    "crates/api",
-    "crates/workers",
-    "bin",
-]
+[package]
+name = "server-rs"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89.0"
+authors = ["Kiln Team <dev@kiln.example>"]
+license = "MIT"
+description = "Axum-based indexer & API server for Kiln — receives Helius webhooks, indexes events to Postgres and exposes read APIs for the frontend."
+repository = "https://example.com/kiln"
 
-[workspace.package]
-edition   = "2021"
-version   = "0.1.0"
-authors   = ["Arcadia Team"]
-license   = "MIT"
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["ws"] }
 
-# ─── shared dependencies ──────────────────────────────────────────────────────
-[workspace.dependencies]
-# async runtime
-tokio = { version = "1", features = ["full"] }
+# Async runtime
+tokio = { version = "1.29", features = ["full"] }
 
-# HTTP server
-axum        = { version = "0.7", features = ["macros"] }
-tower       = "0.4"
-tower-http  = { version = "0.5", features = ["cors", "trace", "compression-gzip", "request-id", "timeout"] }
+# Database: SQLx for Postgres (compile-time checked if enabled via env)
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "macros", "uuid", "chrono"] }
 
-# database
-sqlx = { version = "0.8", features = [
-    "postgres", "runtime-tokio-rustls",
-    "chrono", "rust_decimal", "uuid", "macros",
-] }
+# JSON (request/response)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
-# decimal money
-rust_decimal        = { version = "1", features = ["serde-with-str", "db-postgres"] }
-rust_decimal_macros = "1"
+# Structured error handling & convenience
+anyhow = "1.0"
+thiserror = "1.0"
 
-# serialization
-serde      = { version = "1", features = ["derive"] }
-serde_json = "1"
-
-# cache / sessions
-redis = { version = "0.25", features = ["tokio-comp", "aio"] }
-
-# crypto / auth
-ed25519-dalek  = { version = "2", features = ["serde"] }
-jsonwebtoken   = "9"
-sha2           = "0.10"
-hex            = "0.4"
-bs58           = "0.5"
-rand           = "0.8"
-
-# HTTP client (prices)
-reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
-
-# base64 encoding/decoding
-base64 = "0.22"
-
-# NOTE: solana-sdk and yellowstone-grpc-* are intentionally NOT listed here.
-# They create dependency conflicts with ed25519-dalek v2 (which we use for SIWS).
-# Add them directly to crates/chain and crates/workers Cargo.toml files after
-# verifying compatible versions. See server-rs/FEATURES.md for details.
-
-# borsh (Anchor event decoding)
-borsh = { version = "1", features = ["derive"] }
-
-# utilities
-chrono             = { version = "0.4", features = ["serde"] }
-uuid               = { version = "1", features = ["v4", "serde"] }
-tracing            = "0.1"
+# Logging / telemetry
+tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
-anyhow             = "1"
-thiserror          = "1"
-dotenvy            = "0.15"
-config             = "0.14"
 
-# workspace-internal crates
-arcadia-core    = { path = "crates/core" }
-arcadia-db      = { path = "crates/db" }
-arcadia-decode  = { path = "crates/decode" }
-arcadia-scoring = { path = "crates/scoring" }
-arcadia-chain   = { path = "crates/chain" }
-arcadia-prices  = { path = "crates/prices" }
-arcadia-api     = { path = "crates/api" }
-arcadia-workers = { path = "crates/workers" }
+# Environment / config helpers
+dotenvy = "0.15"
+config = "0.14"
+
+# Utilities for HTTP helpers (CORS, compression, etc.)
+tower-http = { version = "0.5", features = ["cors"] }
+
+# Optional: graceful shutdown helpers
+tokio-util = "0.7"
+
+[dev-dependencies]
+tower = "0.5"
+
+[features]
+# Nothing required by default. Consumers can enable DB compile-time checks by setting
+# the `DATABASE_URL` env and running `cargo sqlx prepare` if desired.
+default = []
+
+[package.metadata]
+# Helpful notes for maintainers
+notes = """
+This crate is an Axum server scaffold that connects to a Postgres database using SQLx.
+Typical env vars expected at runtime:
+- DATABASE_URL=postgres://user:pass@host:port/dbname
+- HELIUS_API_KEY=...
+- PORT=3000
+
+Common dev tasks:
+- Run migrations (depending on your chosen migration tool e.g. sqlx-cli, refinery, or diesel)
+- Set env vars in .env for local development
+- Start server: `cargo run -p server-rs`
+"""

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arcadia — Proof-gated Solana vaults</title>
+    <meta name="description" content="Arcadia lets traders earn allocation only after proving performance with first-loss capital, while investors see the risk buffer before depositing.">
+    <meta name="author" content="Arcadia" />
+
+    <!-- PWA / installability -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0C0C0E" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Arcadia" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/arcadia-logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/arcadia-logo.svg" />
+
+    <!-- Open Graph — og:image is the branded card generated at /og.png -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Arcadia — Proof-gated Solana vaults" />
+    <meta property="og:description" content="Back traders by proof, not promises. Arcadia lets traders earn allocation only after proving performance with first-loss capital." />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1408" />
+    <meta property="og:image:height" content="768" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Arcadia — Proof-gated Solana vaults" />
+    <meta name="twitter:description" content="Back traders by proof, not promises. Arcadia lets traders earn allocation only after proving performance with first-loss capital." />
+    <meta name="twitter:image" content="/og.png" />
+
+    <!-- Preconnect to Solana RPC -->
+    <link rel="preconnect" href="https://api.devnet.solana.com" crossorigin />
+
+    <!-- ─── Node / browser polyfills ─────────────────────────────────────────
+         Must run synchronously before any ES module (which are deferred),
+         so put in <head> as a plain inline script.
+    ────────────────────────────────────────────────────────────────────────── -->
+    <script>
+      (function () {
+        // global → window (required by many Solana/Node packages)
+        if (typeof window.global === "undefined") window.global = window;
+
+        // Buffer (belt-and-suspenders — main.tsx also polyfills via ESM)
+        if (typeof window.Buffer === "undefined" && typeof window.global.Buffer === "undefined") {
+          // Minimal Buffer shim for packages that only need .isBuffer / .from
+          var _B = { isBuffer: function() { return false; }, from: function(v) { return v; } };
+          window.Buffer = _B;
+          window.global.Buffer = _B;
+        }
+
+        // process (Solana packages check process.browser / process.env.NODE_ENV)
+        if (typeof window.process === "undefined") {
+          window.process = { env: { NODE_ENV: "production" }, browser: true, version: "" };
+        } else {
+          window.process.browser = window.process.browser || true;
+          window.process.env = window.process.env || {};
+          window.process.env.NODE_ENV = window.process.env.NODE_ENV || "production";
+        }
+      })();
+    </script>
+
+    <!-- ─── Inline loading screen ─────────────────────────────────────────── -->
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { height: 100%; }
+      body {
+        background: #0C0C0E;
+        color: #fff;
+        font-family: system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #app-loader {
+        position: fixed; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 20px;
+        background: #0C0C0E;
+        z-index: 9999;
+        transition: opacity 0.3s ease;
+      }
+      #app-loader.hidden  { opacity: 0; pointer-events: none; }
+      #app-loader.errored { gap: 12px; }
+
+      .loader-wordmark {
+        font-size: 13px; font-weight: 700;
+        letter-spacing: 5px; color: #A3E635;
+        font-family: 'Courier New', monospace;
+      }
+      .loader-ring {
+        width: 36px; height: 36px;
+        border: 2px solid #27272A;
+        border-top-color: #A3E635;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      .loader-ring.stopped { animation: none; border-top-color: #ef4444; }
+      .loader-sub {
+        font-size: 11px; color: #52525B;
+        letter-spacing: 0.5px;
+        font-family: 'Courier New', monospace;
+        text-align: center; max-width: 280px;
+      }
+      .loader-retry {
+        margin-top: 4px;
+        padding: 6px 18px;
+        background: #27272A; border: 1px solid #3f3f46;
+        color: #A3E635; border-radius: 6px;
+        font-size: 11px; cursor: pointer;
+        font-family: 'Courier New', monospace;
+      }
+      .loader-retry:hover { background: #3f3f46; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+
+  <body>
+    <div id="app-loader">
+      <span class="loader-wordmark">ARCADIA</span>
+      <div class="loader-ring" id="loader-ring"></div>
+      <span class="loader-sub" id="loader-sub-text">Loading protocol…</span>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.tsx"></script>
+
+    <!-- ─── Loader lifecycle ──────────────────────────────────────────────── -->
+    <script>
+      (function () {
+        var root    = document.getElementById('root');
+        var loader  = document.getElementById('app-loader');
+        var ring    = document.getElementById('loader-ring');
+        var subText = document.getElementById('loader-sub-text');
+        if (!root || !loader) return;
+
+        // "Serving from cache" hint when SW is already active
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistration('/').then(function (reg) {
+            if (reg && reg.active && subText) {
+              subText.textContent = 'Serving from cache…';
+            }
+          });
+        }
+
+        function dismiss() {
+          loader.classList.add('hidden');
+          setTimeout(function () {
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+          }, 350);
+        }
+
+        function showError(msg) {
+          if (!loader || !ring || !subText) return;
+          ring.classList.add('stopped');
+          loader.classList.add('errored');
+          subText.textContent = msg || 'Something went wrong loading the app.';
+          subText.style.color = '#ef4444';
+          // Add a reload button
+          var btn = document.createElement('button');
+          btn.className = 'loader-retry';
+          btn.textContent = 'Reload';
+          btn.onclick = function () { window.location.reload(); };
+          loader.appendChild(btn);
+        }
+
+        // Dismiss once React adds children to #root
+        var obs = new MutationObserver(function () {
+          if (root.childElementCount > 0) { dismiss(); obs.disconnect(); }
+        });
+        obs.observe(root, { childList: true });
+
+        // Catch uncaught JS errors that prevent React from mounting
+        window.addEventListener('error', function (e) {
+          // Only intercept if React hasn't mounted yet
+          if (root.childElementCount === 0) {
+            showError('JS error: ' + (e.message || 'unknown'));
+          }
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          if (root.childElementCount === 0) {
+            var msg = (e.reason && (e.reason.message || String(e.reason))) || 'Promise rejected';
+            showError('Load error: ' + msg);
+          }
+        });
+
+        // Hard fallback — after 12 s show error rather than silent blank page
+        setTimeout(function () {
+          if (root.childElementCount === 0) {
+            showError('App is taking too long. Check your connection and reload.');
+          }
+        }, 12000);
+      })();
+    </script>
+  </body>
+</html>

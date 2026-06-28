@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "react-native-skills",
+  "owner": "secondsky",
+  "repo": "claude-skills",
+  "path": "plugins/react-native-skills/skills/react-native-skills",
+  "branch": "main",
+  "sha": "c114cff18024f157b62ddb30b9601abf86be829a",
+  "source": "manual"
+}

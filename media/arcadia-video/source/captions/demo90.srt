@@ -1,0 +1,28 @@
+1
+00:00:00,000 --> 00:00:06,000
+Most vaults ask for trust. Arcadia requires proof.
+
+2
+00:00:06,000 --> 00:00:18,000
+No skin. No verified track record. No guaranteed liquidity path.
+
+3
+00:00:18,000 --> 00:00:32,000
+Traders prove first with paper mode, junior capital, and public performance.
+
+4
+00:00:32,000 --> 00:00:52,000
+Investors browse vault health, buffer, status, and strategy before capital moves.
+
+5
+00:00:52,000 --> 00:01:08,000
+Deposit and withdrawal decisions sit next to health, NAV, and activity.
+
+6
+00:01:08,000 --> 00:01:22,000
+Managers operate inside guardrails: progress, capital, limits, and status.
+
+7
+00:01:22,000 --> 00:01:30,000
+USDC liquidity, WSOL exposure, Pyth NAV, and unwind paths protect withdrawals.
+

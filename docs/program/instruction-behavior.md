@@ -1,0 +1,171 @@
+# Arcadia Vault Instruction Behavior
+
+Source of truth: `spec-solana-program.html`.
+
+This file is a derived working plan. If anything here conflicts with `spec-solana-program.html`, the HTML spec wins and this file must be refreshed before implementation continues.
+
+Status values: `planned`, `in_progress`, `tested`, `complete`.
+
+Risk level: Critical. This program controls token custody through PDAs, NAV/share math, oracle-authorized trade inputs, and fee settlement.
+
+## Integration Contract
+
+- Framework: Anchor 1.0.2.
+- Primary test gate: Rust LiteSVM.
+- Base token: devnet USDC-style mint with 6 decimals.
+- Token CPIs: `anchor_spl::token_interface::transfer_checked` only.
+- Custom PDAs: `PlatformConfig`, `TraderProfile`, `InvestorAccount`, `InvestorPosition`.
+- Shares are data in `InvestorPosition.shares`, not SPL tokens.
+- The `TraderProfile` PDA is the vault authority. There is no admin escape hatch for depositor funds.
+
+## Foundation Module
+
+- Status: complete.
+- Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
+- Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
+- All 10 instruction gates are complete through `trader_withdraw_profit`.
+
+## Module Order
+
+| Order | Instruction | Module | Status |
+| --- | --- | --- | --- |
+| 1 | `initialize_platform` | `instructions/admin/initialize_platform.rs` | complete |
+| 2 | `initialize_profile` | `instructions/initialize_profile.rs` | complete |
+| 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | complete |
+| 4 | `initialize_investor` | `instructions/initialize_investor.rs` | complete |
+| 5 | `deposit` | `instructions/deposit.rs` | complete |
+| 6 | `request_withdraw` | `instructions/withdraw.rs` | complete |
+| 7 | `process_withdraw` | `instructions/withdraw.rs` | complete |
+| 8 | `record_trade` | `instructions/record_trade.rs` | complete |
+| 9 | `settle` | `instructions/settle.rs` | complete |
+| 10 | `trader_withdraw_profit` | `instructions/trader_withdraw_profit.rs` | complete |
+
+## `initialize_platform`
+
+- Status: complete.
+- Purpose: create the singleton `PlatformConfig` once, record the admin, oracle authority, base mint, treasury token account, and fee parameters.
+- Inputs: `perf_fee_bps: u16`, `mgmt_fee_bps: u16`, `oracle_authority: Pubkey`.
+- Accounts: admin signer payer, `PlatformConfig` PDA `[b"platform"]`, base mint, treasury token account, system program.
+- Access control: permissionless first initializer becomes `config.admin`; Anchor `init` prevents reinitialization.
+- State writes: all `PlatformConfig` fields and saved canonical bump.
+- Token movement: none.
+- Event: none in MVP.
+- Errors: `InvalidFeeConfig`; reinit blocked by Anchor.
+- Done criteria: complete; LiteSVM covers happy path, unsafe fee configs, second init, wrong config PDA, treasury mint mismatch, saved bump, and exact config writes. IDL/client generation exposes `initializePlatform` and `platformConfig`.
+
+## `initialize_profile`
+
+- Status: complete.
+- Purpose: let a trader create one vault/profile; the profile PDA becomes the vault token account authority.
+- Inputs: `max_leverage: u8`.
+- Accounts: trader signer payer, config, `TraderProfile` PDA `[b"profile", trader]`, base mint, vault token account, system program, token interface program, rent.
+- Access control: trader signer; one profile per trader via PDA `init`.
+- State writes: trader, base mint, vault token, zero share/accounting fields, `hwm_per_share = SHARE_SCALE`, active status, `score_tier = 255`, timestamps, max leverage, bump.
+- Token movement: none, but initializes/validates vault token account authority as profile PDA.
+- Event: `ProfileInitialized`.
+- Errors: `InvalidLeverage`; reinit blocked by Anchor.
+- Done criteria: complete; LiteSVM covers par HWM, active/not-fundable defaults, saved bump, config/base-mint binding, profile PDA derivation, invalid leverage, reinit failure, `ProfileInitialized` log emission, and vault token authority = profile PDA.
+
+## `set_capacity`
+
+- Status: complete.
+- Purpose: let the oracle authority push offchain-computed capacity and score tier onto a profile.
+- Inputs: `cap_usd: u64`, `score_tier: u8`.
+- Accounts: oracle authority signer, config, mutable profile.
+- Access control: signer must equal `config.oracle_authority`.
+- State writes: `profile.capacity_cap_usd`, `profile.score_tier`.
+- Token movement: none.
+- Event: none in MVP.
+- Errors: `Unauthorized`, `InvalidTier`, `VaultNotActive` if the profile is not active.
+- Done criteria: complete; LiteSVM covers oracle-only authorization, tiers `0..=3`/`255`, invalid tier rejection, inactive profile rejection, exact cap/tier writes, and no on-chain exponential math.
+
+## `initialize_investor`
+
+- Status: complete.
+- Purpose: create a depositor account used by investors or by a trader self-funding their own vault.
+- Inputs: none.
+- Accounts: wallet signer payer, `InvestorAccount` PDA `[b"investor", wallet]`, system program.
+- Access control: wallet signer; one investor account per wallet via PDA `init`.
+- State writes: owner, zero position count, zero lifetime deposited, created timestamp, bump.
+- Token movement: none.
+- Event: `InvestorInitialized`.
+- Errors: reinit blocked by Anchor.
+- Done criteria: complete; LiteSVM covers stored owner, zero counters, saved bump, event log emission, second init failure, wrong PDA failure, and distinct wallet independence.
+
+## `deposit`
+
+- Status: complete.
+- Purpose: move USDC into a trader vault and mint data shares to the depositor position at current NAV.
+- Inputs: `amount: u64`.
+- Accounts: depositor signer, investor account, mutable profile, `InvestorPosition` PDA `[b"position", depositor, profile]`, base mint, vault token, depositor token, token interface program, system program.
+- Access control: depositor signs and must own the source token account; investor account is bound to depositor by seeds and stored owner; position is bound to depositor/profile by seeds and stored owner/profile checks on existing lazy-initialized accounts.
+- State writes: profile total shares, optional trader shares, position owner/profile/shares/cost basis/deposit timestamp/bump, investor account lifetime deposits and position count on first position.
+- Token movement: `transfer_checked` from depositor token account to vault token account.
+- Event: `Deposited`.
+- Errors: `VaultNotActive`, `ZeroAmount`, `InsufficientFunds`, `CapacityNotSet`, `CapacityExceeded`, `DustDeposit`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; first deposit mints `shares = amount` only for trader self-funding, later deposits use floor `amount * total_shares / total_assets`, investor deposits are capacity gated, trader own-capital deposits are cap-exempt and increase `trader_shares`, zero-share and empty-vault investor deposits fail, existing positions accumulate without double-counting `position_count`, and source/vault token deltas equal `amount`.
+
+## `request_withdraw`
+
+- Status: complete.
+- Purpose: record a pending share withdrawal and compute when it can be processed.
+- Inputs: `shares: u64`.
+- Accounts: owner signer, profile, vault token, mutable position.
+- Access control: owner signer must own the position; position is bound to owner/profile by seeds and stored owner/profile checks; vault token mint must match `profile.base_mint`.
+- State writes: increases `position.pending_withdraw_shares`, sets `position.withdraw_ready_ts`.
+- Token movement: none.
+- Event: `WithdrawRequested`.
+- Errors: `ZeroAmount`, `InsufficientShares`, `Unauthorized`, `MathOverflow`.
+- Done criteria: complete; rejects zero shares, requests above owned shares, cumulative pending requests above owned shares, non-owner/wrong-PDA calls, and wrong vault mint; computes withdrawal value from NAV excluding `trader_claimable`; uses instant window for value strictly under 500 bps of AUM and next daily window at/above threshold.
+
+## `process_withdraw`
+
+- Status: complete.
+- Purpose: burn pending shares and pay the owner their pro-rata USDC from the vault.
+- Inputs: none.
+- Accounts: owner signer, mutable profile, mutable position, base mint, vault token, owner token, token interface program.
+- Access control: owner signer must own the position; position is bound to owner/profile by seeds and stored owner/profile checks; owner token must be owned by the owner; profile signs token-out via PDA seeds.
+- State writes: decreases profile total shares, decreases trader shares if the owner is the trader, decreases position shares, clears pending withdrawal fields, and closes the position account when shares reach zero.
+- Token movement: signed `transfer_checked` from vault token to owner token with exact post-CPI token-conservation checks.
+- Event: `Withdrawn`.
+- Errors: `Unauthorized`, `NothingPending`, `NoticeNotElapsed`, `InsufficientVaultLiquidity`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; rejects missing/early pending withdrawal, non-owner/wrong-PDA calls, wrong owner-token authority, and wrong owner-token mint; computes floor payout from NAV excluding trader claimable; updates share accounting before CPI; transfers only to the owner's token account; validates token deltas; closes zero-share positions and returns rent to owner.
+
+## `record_trade`
+
+- Status: complete.
+- Purpose: apply realized PnL from a simulated closed trade to the vault token balance on devnet.
+- Inputs: `market: String`, `direction: u8`, `size_usd: u64`, `leverage_x100: u16`, `entry_px: u64`, `exit_px: u64`, `fees_usd: u64`, `was_liquidated: bool`, `opened_at: i64`, `closed_at: i64`.
+- Accounts: trader signer, oracle authority signer, config, mutable profile, base mint, vault token, treasury token, treasury authority signer, token interface program.
+- Access control: trader must equal `profile.trader`; oracle authority must equal `config.oracle_authority`; fixed treasury token must equal `config.treasury_token`; devnet treasury authority must own/sign for the treasury token used for positive-PnL top-ups.
+- State writes: no share count changes; NAV changes through token balance movement.
+- Token movement: positive PnL transfers treasury to vault; negative PnL transfers vault to treasury with profile PDA signing and does not drain `trader_claimable`.
+- Event: `TradeClosed`.
+- Errors: `Unauthorized`, `VaultNotActive`, `NoShares`, `InvalidTradeParams`, `LeverageTooHigh`, `NotionalTooLarge`, `InsufficientFunds`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; validates dual signature, trader/profile binding, oracle/config binding, treasury token/authority/mint binding, active profile and nonzero shares, trade direction, prices, time ordering, exact x100 leverage bound, 20 percent `total_assets` notional cap from the HTML spec, exact i128 PnL formula, long/short gain directions, loss flooring at NAV-bearing assets so `trader_claimable` is untouched, unchanged share counts, event log emission, and exact token deltas after CPI.
+
+## `settle`
+
+- Status: complete.
+- Purpose: crystallize profit above high-water mark into platform and trader performance fee accounting.
+- Inputs: none.
+- Accounts: caller signer, config, mutable profile, base mint, vault token, treasury token, token interface program.
+- Access control: caller must be profile trader or config oracle authority.
+- State writes: updates `last_settle_ts`; on profit, increases `trader_claimable` and resets `hwm_per_share` to the post-crystallization derived NAV.
+- Token movement: signed `transfer_checked` from vault token to treasury token for the platform performance cut. Management accrual remains optional/unimplemented in this gate.
+- Event: `Settled` only when `current_nav > hwm_per_share`.
+- Errors: `Unauthorized`, `NoShares`, `InvalidTier`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; no performance fee on flat/down NAV, oracle or trader can call, unauthorized/no-share calls fail, exact tier/platform split, platform cut leaves vault with exact token deltas, trader cut remains earmarked and excluded from NAV, HWM resets to post-fee NAV per the worked example in `spec-solana-program.html`, repeated flat settlement does not double charge, wrong token bindings and invalid NAV state fail.
+
+## `trader_withdraw_profit`
+
+- Status: complete.
+- Purpose: let the trader withdraw earmarked performance fees from `trader_claimable`.
+- Inputs: `amount: u64`.
+- Accounts: trader signer, mutable profile, base mint, vault token, trader token, token interface program.
+- Access control: trader signer must equal `profile.trader`; profile PDA signs token-out.
+- State writes: decreases `profile.trader_claimable` by amount.
+- Token movement: signed `transfer_checked` from vault token to trader-owned token account with exact post-CPI token-conservation checks.
+- Event: `ProfitWithdrawn`.
+- Errors: `Unauthorized`, `ZeroAmount`, `InsufficientClaimable`, `InsufficientVaultLiquidity`, `MathOverflow`, `TokenConservationFailed`.
+- Done criteria: complete; rejects zero, non-trader, over-claim, insolvent withdrawals, wrong trader-token authority, wrong trader-token mint, and wrong vault authority; only the trader-owned destination can receive funds; exact vault/trader token deltas equal amount; derived NAV is unchanged because total assets and claimable both decrease by amount.

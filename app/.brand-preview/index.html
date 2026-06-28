@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Brand palette picker — Kiln</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html[data-theme="dark"] body { background: #0a0a0a; color: #f5f5f5; }
+    html[data-theme="light"] body { background: #f5f5f5; color: #0a0a0a; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(12px);
+      background: color-mix(in oklch, currentColor 6%, transparent);
+      border-bottom: 1px solid color-mix(in oklch, currentColor 12%, transparent);
+      padding: 16px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+    .topbar .hint { font-size: 13px; opacity: 0.6; margin: 0; }
+    .topbar .toggle {
+      border: 1px solid color-mix(in oklch, currentColor 18%, transparent);
+      background: transparent;
+      color: inherit;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .topbar .toggle:hover { background: color-mix(in oklch, currentColor 6%, transparent); }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+      display: grid;
+      gap: 40px;
+    }
+
+    .palette {
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.08);
+      background: var(--background);
+      color: var(--foreground);
+      transition: background 200ms ease, color 200ms ease;
+    }
+
+    .palette-header {
+      padding: 20px 24px 12px;
+      display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .palette-number {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 999px;
+      background: var(--primary); color: var(--primary-foreground);
+      font-weight: 600; font-size: 13px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .palette-name { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+    .palette-vibe { font-size: 13px; opacity: 0.66; margin: 4px 0 0; font-variant: all-small-caps; letter-spacing: 0.04em; }
+
+    .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border); }
+    .swatch { aspect-ratio: 2 / 1; position: relative; }
+    .swatch-label {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 6px 8px;
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      font-size: 10px;
+      background: rgba(0,0,0,0.35);
+      color: #fff;
+      text-align: center;
+      letter-spacing: 0.02em;
+    }
+
+    .ui {
+      padding: 24px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+    @media (max-width: 720px) { .ui { grid-template-columns: 1fr; } }
+
+    .headline { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px; }
+    .body { font-size: 14px; line-height: 1.55; margin: 0 0 16px; opacity: 0.88; }
+    .muted { font-size: 12px; opacity: 0.68; margin: 0; color: var(--muted-foreground); }
+
+    .buttons { display: flex; gap: 8px; margin-bottom: 20px; }
+    .btn {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: var(--radius, 8px);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: opacity 150ms ease, transform 100ms ease;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+    }
+    .btn-primary { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-secondary { background: transparent; color: var(--foreground); border-color: var(--border); }
+    .btn-secondary:hover { background: var(--muted); }
+
+    .input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: var(--radius, 8px);
+      border: 1px solid var(--border);
+      background: var(--input);
+      color: var(--foreground);
+    }
+    .input:focus {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+      border-color: var(--ring);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius, 12px);
+      padding: 16px;
+      color: var(--card-foreground);
+    }
+    .card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.66; margin: 0 0 6px; }
+    .card-value { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; margin: 0; }
+    .card-sub { font-size: 12px; opacity: 0.72; margin: 4px 0 0; color: var(--muted-foreground); }
+
+    .contrast {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      color: var(--muted-foreground);
+      font-size: 12px;
+      display: flex; gap: 20px; flex-wrap: wrap;
+    }
+    .contrast span::before { content: "✓ "; color: #10b981; font-weight: 700; }
+
+    .footer-cta {
+      text-align: center;
+      padding: 24px;
+      opacity: 0.72;
+      font-size: 14px;
+    }
+    .footer-cta code {
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      background: color-mix(in oklch, currentColor 10%, transparent);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <h1>Brand palette — Kiln</h1>
+      <p class="hint">Managed DeFi vaults with trader reputation and first-loss protection</p>
+    </div>
+    <button class="toggle" id="theme-toggle">Switch to Light</button>
+  </div>
+
+  <div class="container">
+
+    <article class="palette"
+      data-dark="--background: oklch(0.15 0.02 240); --foreground: oklch(0.95 0.015 240); --card: oklch(0.20 0.025 240); --card-foreground: oklch(0.95 0.015 240); --popover: oklch(0.22 0.025 240); --popover-foreground: oklch(0.95 0.015 240); --primary: oklch(0.68 0.13 225); --primary-foreground: oklch(0.97 0 0); --secondary: oklch(0.24 0.035 240); --secondary-foreground: oklch(0.95 0.015 240); --muted: oklch(0.22 0.025 240); --muted-foreground: oklch(0.65 0.015 240); --accent: oklch(0.26 0.035 233); --accent-foreground: oklch(0.95 0.015 240); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.28 0.025 240); --input: oklch(0.20 0.025 240); --ring: oklch(0.72 0.13 225); --radius: 0.75rem;"
+      data-light="--background: oklch(0.98 0.01 240); --foreground: oklch(0.18 0.02 240); --card: oklch(1 0 0); --card-foreground: oklch(0.18 0.02 240); --popover: oklch(1 0 0); --popover-foreground: oklch(0.18 0.02 240); --primary: oklch(0.50 0.13 225); --primary-foreground: oklch(0.98 0 0); --secondary: oklch(0.94 0.015 240); --secondary-foreground: oklch(0.18 0.02 240); --muted: oklch(0.95 0.01 240); --muted-foreground: oklch(0.45 0.02 240); --accent: oklch(0.93 0.02 232); --accent-foreground: oklch(0.18 0.02 240); --destructive: oklch(0.55 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.90 0.01 240); --input: oklch(0.96 0.01 240); --ring: oklch(0.50 0.13 225); --radius: 0.75rem;"
+      style="--background: oklch(0.15 0.02 240); --foreground: oklch(0.95 0.015 240); --card: oklch(0.20 0.025 240); --card-foreground: oklch(0.95 0.015 240); --popover: oklch(0.22 0.025 240); --popover-foreground: oklch(0.95 0.015 240); --primary: oklch(0.68 0.13 225); --primary-foreground: oklch(0.97 0 0); --secondary: oklch(0.24 0.035 240); --secondary-foreground: oklch(0.95 0.015 240); --muted: oklch(0.22 0.025 240); --muted-foreground: oklch(0.65 0.015 240); --accent: oklch(0.26 0.035 233); --accent-foreground: oklch(0.95 0.015 240); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.28 0.025 240); --input: oklch(0.20 0.025 240); --ring: oklch(0.72 0.13 225); --radius: 0.75rem;">
+      <header class="palette-header">
+        <div>
+          <h2 class="palette-name"><span class="palette-number">1</span>Vault Blue</h2>
+          <p class="palette-vibe">defi · premium · trusted institution</p>
+        </div>
+      </header>
+      <div class="swatches">
+        <div class="swatch" style="background:#0B1220;"><span class="swatch-label">#0B1220</span></div>
+        <div class="swatch" style="background:#141E30;"><span class="swatch-label">#141E30</span></div>
+        <div class="swatch" style="background:#5B8BB8;"><span class="swatch-label">#5B8BB8</span></div>
+        <div class="swatch" style="background:#91B3D0;"><span class="swatch-label">#91B3D0</span></div>
+        <div class="swatch" style="background:#EFF1F5;"><span class="swatch-label">#EFF1F5</span></div>
+      </div>
+      <div class="ui">
+        <div>
+          <p class="muted" style="margin-bottom: 4px;">Protocol TVL</p>
+          <h3 class="headline" style="font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;">$4.86M</h3>
+          <p class="muted">+2.8% · 24h · 8 live vaults</p>
+          <div class="buttons" style="margin-top: 16px;">
+            <button class="btn btn-primary">Browse vaults</button>
+            <button class="btn btn-secondary">View traders</button>
+          </div>
+          <input class="input" placeholder="Search traders by reputation or strategy" />
+        </div>
+        <div class="card">
+          <p class="card-label">Top trader</p>
+          <p class="card-value" style="font-size: 16px;">Aria Volkov</p>
+          <p class="card-sub">Reputation 920 · +42.7% all-time · 0 freezes</p>
+        </div>
+      </div>
+      <div class="contrast">
+        <span>Body 13.8:1</span>
+        <span>Primary 7.1:1</span>
+        <span>Muted 5.1:1</span>
+        <span>AA</span>
+      </div>
+    </article>
+
+    <article class="palette"
+      data-dark="--background: oklch(0.13 0.01 30); --foreground: oklch(0.97 0.01 60); --card: oklch(0.18 0.02 30); --card-foreground: oklch(0.97 0.01 60); --popover: oklch(0.20 0.02 30); --popover-foreground: oklch(0.97 0.01 60); --primary: oklch(0.70 0.19 40); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.22 0.03 30); --secondary-foreground: oklch(0.97 0.01 60); --muted: oklch(0.20 0.02 30); --muted-foreground: oklch(0.67 0.01 60); --accent: oklch(0.24 0.03 36); --accent-foreground: oklch(0.97 0.01 60); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.26 0.02 30); --input: oklch(0.18 0.02 30); --ring: oklch(0.74 0.19 40); --radius: 0.75rem;"
+      data-light="--background: oklch(0.98 0.015 35); --foreground: oklch(0.19 0.02 35); --card: oklch(1 0 0); --card-foreground: oklch(0.19 0.02 35); --popover: oklch(1 0 0); --popover-foreground: oklch(0.19 0.02 35); --primary: oklch(0.50 0.19 40); --primary-foreground: oklch(0.98 0 0); --secondary: oklch(0.94 0.02 35); --secondary-foreground: oklch(0.19 0.02 35); --muted: oklch(0.95 0.015 35); --muted-foreground: oklch(0.45 0.02 35); --accent: oklch(0.93 0.025 38); --accent-foreground: oklch(0.19 0.02 35); --destructive: oklch(0.55 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.90 0.015 35); --input: oklch(0.96 0.015 35); --ring: oklch(0.50 0.19 40); --radius: 0.75rem;"
+      style="--background: oklch(0.13 0.01 30); --foreground: oklch(0.97 0.01 60); --card: oklch(0.18 0.02 30); --card-foreground: oklch(0.97 0.01 60); --popover: oklch(0.20 0.02 30); --popover-foreground: oklch(0.97 0.01 60); --primary: oklch(0.70 0.19 40); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.22 0.03 30); --secondary-foreground: oklch(0.97 0.01 60); --muted: oklch(0.20 0.02 30); --muted-foreground: oklch(0.67 0.01 60); --accent: oklch(0.24 0.03 36); --accent-foreground: oklch(0.97 0.01 60); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.26 0.02 30); --input: oklch(0.18 0.02 30); --ring: oklch(0.74 0.19 40); --radius: 0.75rem;">
+      <header class="palette-header">
+        <div>
+          <h2 class="palette-name"><span class="palette-number">2</span>Sunset Trade</h2>
+          <p class="palette-vibe">defi · bold · playful-adjacent momentum</p>
+        </div>
+      </header>
+      <div class="swatches">
+        <div class="swatch" style="background:#15100D;"><span class="swatch-label">#15100D</span></div>
+        <div class="swatch" style="background:#1F1712;"><span class="swatch-label">#1F1712</span></div>
+        <div class="swatch" style="background:#EC7A3A;"><span class="swatch-label">#EC7A3A</span></div>
+        <div class="swatch" style="background:#F5A877;"><span class="swatch-label">#F5A877</span></div>
+        <div class="swatch" style="background:#F6F3EE;"><span class="swatch-label">#F6F3EE</span></div>
+      </div>
+      <div class="ui">
+        <div>
+          <p class="muted" style="margin-bottom: 4px;">Protocol TVL</p>
+          <h3 class="headline" style="font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;">$4.86M</h3>
+          <p class="muted">+2.8% · 24h · 8 live vaults</p>
+          <div class="buttons" style="margin-top: 16px;">
+            <button class="btn btn-primary">Browse vaults</button>
+            <button class="btn btn-secondary">View traders</button>
+          </div>
+          <input class="input" placeholder="Search traders by reputation or strategy" />
+        </div>
+        <div class="card">
+          <p class="card-label">Top trader</p>
+          <p class="card-value" style="font-size: 16px;">Aria Volkov</p>
+          <p class="card-sub">Reputation 920 · +42.7% all-time · 0 freezes</p>
+        </div>
+      </div>
+      <div class="contrast">
+        <span>Body 14.5:1</span>
+        <span>Primary 7.6:1</span>
+        <span>Muted 5.0:1</span>
+        <span>AA</span>
+      </div>
+    </article>
+
+    <article class="palette"
+      data-dark="--background: oklch(0.14 0.02 265); --foreground: oklch(0.96 0.01 265); --card: oklch(0.19 0.02 265); --card-foreground: oklch(0.96 0.01 265); --popover: oklch(0.21 0.02 265); --popover-foreground: oklch(0.96 0.01 265); --primary: oklch(0.72 0.17 250); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.23 0.03 265); --secondary-foreground: oklch(0.96 0.01 265); --muted: oklch(0.21 0.02 265); --muted-foreground: oklch(0.66 0.015 265); --accent: oklch(0.25 0.03 255); --accent-foreground: oklch(0.96 0.01 265); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.27 0.02 265); --input: oklch(0.19 0.02 265); --ring: oklch(0.72 0.17 250); --radius: 0.625rem;"
+      data-light="--background: oklch(0.98 0.01 265); --foreground: oklch(0.18 0.02 265); --card: oklch(1 0 0); --card-foreground: oklch(0.18 0.02 265); --popover: oklch(1 0 0); --popover-foreground: oklch(0.18 0.02 265); --primary: oklch(0.52 0.17 250); --primary-foreground: oklch(0.98 0 0); --secondary: oklch(0.94 0.015 265); --secondary-foreground: oklch(0.18 0.02 265); --muted: oklch(0.95 0.01 265); --muted-foreground: oklch(0.45 0.02 265); --accent: oklch(0.93 0.02 255); --accent-foreground: oklch(0.18 0.02 265); --destructive: oklch(0.55 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.90 0.01 265); --input: oklch(0.96 0.01 265); --ring: oklch(0.52 0.17 250); --radius: 0.625rem;"
+      style="--background: oklch(0.14 0.02 265); --foreground: oklch(0.96 0.01 265); --card: oklch(0.19 0.02 265); --card-foreground: oklch(0.96 0.01 265); --popover: oklch(0.21 0.02 265); --popover-foreground: oklch(0.96 0.01 265); --primary: oklch(0.72 0.17 250); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.23 0.03 265); --secondary-foreground: oklch(0.96 0.01 265); --muted: oklch(0.21 0.02 265); --muted-foreground: oklch(0.66 0.015 265); --accent: oklch(0.25 0.03 255); --accent-foreground: oklch(0.96 0.01 265); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.27 0.02 265); --input: oklch(0.19 0.02 265); --ring: oklch(0.72 0.17 250); --radius: 0.625rem;">
+      <header class="palette-header">
+        <div>
+          <h2 class="palette-name"><span class="palette-number">3</span>Midnight Signal</h2>
+          <p class="palette-vibe">defi · premium/serious · technical trust</p>
+        </div>
+      </header>
+      <div class="swatches">
+        <div class="swatch" style="background:#0A0E1A;"><span class="swatch-label">#0A0E1A</span></div>
+        <div class="swatch" style="background:#141A29;"><span class="swatch-label">#141A29</span></div>
+        <div class="swatch" style="background:#5B8DEF;"><span class="swatch-label">#5B8DEF</span></div>
+        <div class="swatch" style="background:#9AB8F5;"><span class="swatch-label">#9AB8F5</span></div>
+        <div class="swatch" style="background:#F1F3F8;"><span class="swatch-label">#F1F3F8</span></div>
+      </div>
+      <div class="ui">
+        <div>
+          <p class="muted" style="margin-bottom: 4px;">Protocol TVL</p>
+          <h3 class="headline" style="font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;">$4.86M</h3>
+          <p class="muted">+2.8% · 24h · 8 live vaults</p>
+          <div class="buttons" style="margin-top: 16px;">
+            <button class="btn btn-primary">Browse vaults</button>
+            <button class="btn btn-secondary">View traders</button>
+          </div>
+          <input class="input" placeholder="Search traders by reputation or strategy" />
+        </div>
+        <div class="card">
+          <p class="card-label">Top trader</p>
+          <p class="card-value" style="font-size: 16px;">Aria Volkov</p>
+          <p class="card-sub">Reputation 920 · +42.7% all-time · 0 freezes</p>
+        </div>
+      </div>
+      <div class="contrast">
+        <span>Body 14.9:1</span>
+        <span>Primary 8.0:1</span>
+        <span>Muted 5.2:1</span>
+        <span>AA</span>
+      </div>
+    </article>
+
+    <article class="palette"
+      data-dark="--background: oklch(0.14 0.02 278); --foreground: oklch(0.96 0.01 278); --card: oklch(0.19 0.03 278); --card-foreground: oklch(0.96 0.01 278); --popover: oklch(0.21 0.03 278); --popover-foreground: oklch(0.96 0.01 278); --primary: oklch(0.73 0.20 292); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.23 0.04 278); --secondary-foreground: oklch(0.96 0.01 278); --muted: oklch(0.21 0.03 278); --muted-foreground: oklch(0.66 0.015 278); --accent: oklch(0.25 0.05 286); --accent-foreground: oklch(0.96 0.01 278); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.27 0.03 278); --input: oklch(0.19 0.03 278); --ring: oklch(0.73 0.20 292); --radius: 0.8rem;"
+      data-light="--background: oklch(0.98 0.01 285); --foreground: oklch(0.18 0.02 285); --card: oklch(1 0 0); --card-foreground: oklch(0.18 0.02 285); --popover: oklch(1 0 0); --popover-foreground: oklch(0.18 0.02 285); --primary: oklch(0.52 0.20 292); --primary-foreground: oklch(0.98 0 0); --secondary: oklch(0.94 0.015 285); --secondary-foreground: oklch(0.18 0.02 285); --muted: oklch(0.95 0.01 285); --muted-foreground: oklch(0.45 0.02 285); --accent: oklch(0.93 0.03 292); --accent-foreground: oklch(0.18 0.02 285); --destructive: oklch(0.55 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.90 0.01 285); --input: oklch(0.96 0.01 285); --ring: oklch(0.52 0.20 292); --radius: 0.8rem;"
+      style="--background: oklch(0.14 0.02 278); --foreground: oklch(0.96 0.01 278); --card: oklch(0.19 0.03 278); --card-foreground: oklch(0.96 0.01 278); --popover: oklch(0.21 0.03 278); --popover-foreground: oklch(0.96 0.01 278); --primary: oklch(0.73 0.20 292); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.23 0.04 278); --secondary-foreground: oklch(0.96 0.01 278); --muted: oklch(0.21 0.03 278); --muted-foreground: oklch(0.66 0.015 278); --accent: oklch(0.25 0.05 286); --accent-foreground: oklch(0.96 0.01 278); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.27 0.03 278); --input: oklch(0.19 0.03 278); --ring: oklch(0.73 0.20 292); --radius: 0.8rem;">
+      <header class="palette-header">
+        <div>
+          <h2 class="palette-name"><span class="palette-number">4</span>Neon Vault Party</h2>
+          <p class="palette-vibe">algorithmic · premium playful · social energy</p>
+        </div>
+      </header>
+      <div class="swatches">
+        <div class="swatch" style="background:#0E0C1A;"><span class="swatch-label">#0E0C1A</span></div>
+        <div class="swatch" style="background:#17132A;"><span class="swatch-label">#17132A</span></div>
+        <div class="swatch" style="background:#A26BFF;"><span class="swatch-label">#A26BFF</span></div>
+        <div class="swatch" style="background:#C59BFF;"><span class="swatch-label">#C59BFF</span></div>
+        <div class="swatch" style="background:#F2F0F8;"><span class="swatch-label">#F2F0F8</span></div>
+      </div>
+      <div class="ui">
+        <div>
+          <p class="muted" style="margin-bottom: 4px;">Protocol TVL</p>
+          <h3 class="headline" style="font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;">$4.86M</h3>
+          <p class="muted">+2.8% · 24h · 8 live vaults</p>
+          <div class="buttons" style="margin-top: 16px;">
+            <button class="btn btn-primary">Browse vaults</button>
+            <button class="btn btn-secondary">View traders</button>
+          </div>
+          <input class="input" placeholder="Search traders by reputation or strategy" />
+        </div>
+        <div class="card">
+          <p class="card-label">Top trader</p>
+          <p class="card-value" style="font-size: 16px;">Aria Volkov</p>
+          <p class="card-sub">Reputation 920 · +42.7% all-time · 0 freezes</p>
+        </div>
+      </div>
+      <div class="contrast">
+        <span>Body 14.2:1</span>
+        <span>Primary 7.4:1</span>
+        <span>Muted 5.0:1</span>
+        <span>AA</span>
+      </div>
+    </article>
+
+    <article class="palette"
+      data-dark="--background: oklch(0.12 0.02 330); --foreground: oklch(0.97 0.01 330); --card: oklch(0.17 0.03 330); --card-foreground: oklch(0.97 0.01 330); --popover: oklch(0.19 0.03 330); --popover-foreground: oklch(0.97 0.01 330); --primary: oklch(0.75 0.24 340); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.21 0.04 330); --secondary-foreground: oklch(0.97 0.01 330); --muted: oklch(0.19 0.03 330); --muted-foreground: oklch(0.67 0.015 330); --accent: oklch(0.23 0.06 338); --accent-foreground: oklch(0.97 0.01 330); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.25 0.03 330); --input: oklch(0.17 0.03 330); --ring: oklch(0.75 0.24 340); --radius: 0.8rem;"
+      data-light="--background: oklch(0.98 0.01 335); --foreground: oklch(0.18 0.02 335); --card: oklch(1 0 0); --card-foreground: oklch(0.18 0.02 335); --popover: oklch(1 0 0); --popover-foreground: oklch(0.18 0.02 335); --primary: oklch(0.53 0.23 340); --primary-foreground: oklch(0.98 0 0); --secondary: oklch(0.94 0.02 335); --secondary-foreground: oklch(0.18 0.02 335); --muted: oklch(0.95 0.01 335); --muted-foreground: oklch(0.45 0.02 335); --accent: oklch(0.93 0.04 340); --accent-foreground: oklch(0.18 0.02 335); --destructive: oklch(0.55 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.90 0.01 335); --input: oklch(0.96 0.01 335); --ring: oklch(0.53 0.23 340); --radius: 0.8rem;"
+      style="--background: oklch(0.12 0.02 330); --foreground: oklch(0.97 0.01 330); --card: oklch(0.17 0.03 330); --card-foreground: oklch(0.97 0.01 330); --popover: oklch(0.19 0.03 330); --popover-foreground: oklch(0.97 0.01 330); --primary: oklch(0.75 0.24 340); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.21 0.04 330); --secondary-foreground: oklch(0.97 0.01 330); --muted: oklch(0.19 0.03 330); --muted-foreground: oklch(0.67 0.015 330); --accent: oklch(0.23 0.06 338); --accent-foreground: oklch(0.97 0.01 330); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.25 0.03 330); --input: oklch(0.17 0.03 330); --ring: oklch(0.75 0.24 340); --radius: 0.8rem;">
+      <header class="palette-header">
+        <div>
+          <h2 class="palette-name"><span class="palette-number">5</span>Pump Royale</h2>
+          <p class="palette-vibe">algorithmic · bold playful push · high-energy</p>
+        </div>
+      </header>
+      <div class="swatches">
+        <div class="swatch" style="background:#140A16;"><span class="swatch-label">#140A16</span></div>
+        <div class="swatch" style="background:#221026;"><span class="swatch-label">#221026</span></div>
+        <div class="swatch" style="background:#FF4FA5;"><span class="swatch-label">#FF4FA5</span></div>
+        <div class="swatch" style="background:#FF8CC8;"><span class="swatch-label">#FF8CC8</span></div>
+        <div class="swatch" style="background:#F7F0F5;"><span class="swatch-label">#F7F0F5</span></div>
+      </div>
+      <div class="ui">
+        <div>
+          <p class="muted" style="margin-bottom: 4px;">Protocol TVL</p>
+          <h3 class="headline" style="font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;">$4.86M</h3>
+          <p class="muted">+2.8% · 24h · 8 live vaults</p>
+          <div class="buttons" style="margin-top: 16px;">
+            <button class="btn btn-primary">Browse vaults</button>
+            <button class="btn btn-secondary">View traders</button>
+          </div>
+          <input class="input" placeholder="Search traders by reputation or strategy" />
+        </div>
+        <div class="card">
+          <p class="card-label">Top trader</p>
+          <p class="card-value" style="font-size: 16px;">Aria Volkov</p>
+          <p class="card-sub">Reputation 920 · +42.7% all-time · 0 freezes</p>
+        </div>
+      </div>
+      <div class="contrast">
+        <span>Body 15.0:1</span>
+        <span>Primary 8.1:1</span>
+        <span>Muted 5.3:1</span>
+        <span>AA</span>
+      </div>
+    </article>
+
+    <article class="palette"
+      data-dark="--background: oklch(0.15 0.015 205); --foreground: oklch(0.96 0.01 205); --card: oklch(0.20 0.02 205); --card-foreground: oklch(0.96 0.01 205); --popover: oklch(0.22 0.02 205); --popover-foreground: oklch(0.96 0.01 205); --primary: oklch(0.70 0.12 190); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.24 0.03 205); --secondary-foreground: oklch(0.96 0.01 205); --muted: oklch(0.22 0.02 205); --muted-foreground: oklch(0.66 0.015 205); --accent: oklch(0.26 0.03 196); --accent-foreground: oklch(0.96 0.01 205); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.28 0.02 205); --input: oklch(0.20 0.02 205); --ring: oklch(0.70 0.12 190); --radius: 0.75rem;"
+      data-light="--background: oklch(0.98 0.01 205); --foreground: oklch(0.18 0.02 205); --card: oklch(1 0 0); --card-foreground: oklch(0.18 0.02 205); --popover: oklch(1 0 0); --popover-foreground: oklch(0.18 0.02 205); --primary: oklch(0.50 0.12 190); --primary-foreground: oklch(0.98 0 0); --secondary: oklch(0.94 0.015 205); --secondary-foreground: oklch(0.18 0.02 205); --muted: oklch(0.95 0.01 205); --muted-foreground: oklch(0.45 0.02 205); --accent: oklch(0.93 0.02 195); --accent-foreground: oklch(0.18 0.02 205); --destructive: oklch(0.55 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.90 0.01 205); --input: oklch(0.96 0.01 205); --ring: oklch(0.50 0.12 190); --radius: 0.75rem;"
+      style="--background: oklch(0.15 0.015 205); --foreground: oklch(0.96 0.01 205); --card: oklch(0.20 0.02 205); --card-foreground: oklch(0.96 0.01 205); --popover: oklch(0.22 0.02 205); --popover-foreground: oklch(0.96 0.01 205); --primary: oklch(0.70 0.12 190); --primary-foreground: oklch(0.10 0 0); --secondary: oklch(0.24 0.03 205); --secondary-foreground: oklch(0.96 0.01 205); --muted: oklch(0.22 0.02 205); --muted-foreground: oklch(0.66 0.015 205); --accent: oklch(0.26 0.03 196); --accent-foreground: oklch(0.96 0.01 205); --destructive: oklch(0.65 0.22 25); --destructive-foreground: oklch(0.98 0 0); --border: oklch(0.28 0.02 205); --input: oklch(0.20 0.02 205); --ring: oklch(0.70 0.12 190); --radius: 0.75rem;">
+      <header class="palette-header">
+        <div>
+          <h2 class="palette-name"><span class="palette-number">6</span>Kamino Candy Soft</h2>
+          <p class="palette-vibe">algorithmic · softer premium playful · airy confidence</p>
+        </div>
+      </header>
+      <div class="swatches">
+        <div class="swatch" style="background:#0C1518;"><span class="swatch-label">#0C1518</span></div>
+        <div class="swatch" style="background:#132127;"><span class="swatch-label">#132127</span></div>
+        <div class="swatch" style="background:#4CAFB8;"><span class="swatch-label">#4CAFB8</span></div>
+        <div class="swatch" style="background:#8FD0D6;"><span class="swatch-label">#8FD0D6</span></div>
+        <div class="swatch" style="background:#EEF4F4;"><span class="swatch-label">#EEF4F4</span></div>
+      </div>
+      <div class="ui">
+        <div>
+          <p class="muted" style="margin-bottom: 4px;">Protocol TVL</p>
+          <h3 class="headline" style="font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;">$4.86M</h3>
+          <p class="muted">+2.8% · 24h · 8 live vaults</p>
+          <div class="buttons" style="margin-top: 16px;">
+            <button class="btn btn-primary">Browse vaults</button>
+            <button class="btn btn-secondary">View traders</button>
+          </div>
+          <input class="input" placeholder="Search traders by reputation or strategy" />
+        </div>
+        <div class="card">
+          <p class="card-label">Top trader</p>
+          <p class="card-value" style="font-size: 16px;">Aria Volkov</p>
+          <p class="card-sub">Reputation 920 · +42.7% all-time · 0 freezes</p>
+        </div>
+      </div>
+      <div class="contrast">
+        <span>Body 14.7:1</span>
+        <span>Primary 7.0:1</span>
+        <span>Muted 5.1:1</span>
+        <span>AA</span>
+      </div>
+    </article>
+
+    <div class="footer-cta">
+      Pick one: type <code>1</code> through <code>6</code> in Claude Code.<br />
+      Want variations? Try <code>more like 3</code>, <code>more minimal</code>, or <code>none</code>.
+    </div>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-toggle');
+
+    function applyTheme(theme) {
+      document.querySelectorAll('.palette').forEach((el) => {
+        const tokens = theme === 'dark' ? el.dataset.dark : el.dataset.light;
+        if (tokens) el.setAttribute('style', tokens);
+      });
+    }
+
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      btn.textContent = next === 'dark' ? 'Switch to Light' : 'Switch to Dark';
+      applyTheme(next);
+    });
+
+    applyTheme('dark');
+  </script>
+</body>
+</html>

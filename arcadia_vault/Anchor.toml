@@ -1,0 +1,19 @@
+[toolchain]
+anchor_version = "1.0.2"
+package_manager = "npm"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+arcadia_vault = "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "cargo test -- --test-threads=1 --nocapture"
+
+[hooks]

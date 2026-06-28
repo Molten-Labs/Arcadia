@@ -1,16 +1,23 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
-  },
+  "name": "kiln-workspace",
   "private": true,
-  "devDependencies": {
-    "prettier": "^3.8.4",
-    "typescript": "~5.9.3"
+  "scripts": {
+    "dev": "bash dev.sh",
+    "setup": "bash setup.sh",
+    "dev:app": "cd app && node node_modules/vite/bin/vite.js --config vite.config.ts",
+    "build:app": "cd app && node node_modules/vite/bin/vite.js build --config vite.config.ts",
+    "dev:server": "cargo run --manifest-path server-rs/Cargo.toml",
+    "build:server": "cargo build --manifest-path server-rs/Cargo.toml",
+    "media:capture": "node media/scripts/capture-app.mjs",
+    "media:deck": "node media/scripts/build-pitch.mjs",
+    "media:render:demo90": "node media/scripts/render-video.mjs demo90",
+    "media:render:social30": "node media/scripts/render-video.mjs social30",
+    "media:render": "node media/scripts/render-video.mjs all",
+    "media:all": "pnpm media:capture && pnpm media:deck && pnpm media:render",
+    "program:keys": "cd arcadia_vault && anchor keys list",
+    "program:build": "cd arcadia_vault && anchor build",
+    "program:test": "cd arcadia_vault && anchor test --skip-local-validator --skip-deploy",
+    "codegen:codama": "pnpm --dir clients generate",
+    "codegen": "pnpm program:build && pnpm codegen:codama"
   }
 }
