@@ -12,4 +12,5 @@ export * from "./initializePlatform";
 export * from "./initializeProfile";
 export * from "./initializeSmoke";
 export * from "./ping";
+export * from "./requestWithdraw";
 export * from "./setCapacity";

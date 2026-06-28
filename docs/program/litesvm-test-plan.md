@@ -89,13 +89,14 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `request_withdraw`
 
-- Happy path, instant: request value under 500 bps of AUM sets ready timestamp to current timestamp.
-- Happy path, delayed: request value above threshold sets next daily settlement window.
-- Authorization/account binding: non-owner signer fails; position from another profile fails.
-- Invalid input: zero shares, shares greater than position shares, arithmetic overflow path.
-- Account assertions: pending shares increment; ready timestamp exact; existing shares not burned yet.
-- Event assertions: `WithdrawRequested`.
-- CU: record `request_withdraw:instant` and `request_withdraw:delayed`.
+- Status: complete.
+- Happy path, instant: passing; request value under 500 bps of AUM sets ready timestamp to current timestamp.
+- Happy path, delayed: passing; request value at the 500 bps threshold sets next daily settlement window.
+- Authorization/account binding: passing; non-owner signer, wrong position PDA, and wrong vault mint fail.
+- Invalid input/sequence: passing; zero shares, shares greater than position shares, and cumulative pending requests greater than owned shares fail.
+- Account assertions: passing; pending shares increment, ready timestamp is exact, existing shares are not burned.
+- Event assertions: passing at log-emission level for `WithdrawRequested`; full binary event decoding remains optional future polish.
+- CU: current LiteSVM run recorded `request_withdraw:instant` at about 6.5k CUs and `request_withdraw:delayed` at about 6.6k CUs.
 
 ## `process_withdraw`
 

@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, and `deposit` are complete; the next gate is `request_withdraw`.
+- `initialize_platform`, `initialize_profile`, `set_capacity`, `initialize_investor`, `deposit`, and `request_withdraw` are complete; the next gate is `process_withdraw`.
 
 ## Module Order
 
@@ -34,7 +34,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | complete |
 | 4 | `initialize_investor` | `instructions/initialize_investor.rs` | complete |
 | 5 | `deposit` | `instructions/deposit.rs` | complete |
-| 6 | `request_withdraw` | `instructions/withdraw.rs` | planned |
+| 6 | `request_withdraw` | `instructions/withdraw.rs` | complete |
 | 7 | `process_withdraw` | `instructions/withdraw.rs` | planned |
 | 8 | `record_trade` | `instructions/record_trade.rs` | planned |
 | 9 | `settle` | `instructions/settle.rs` | planned |
@@ -107,16 +107,16 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `request_withdraw`
 
-- Status: planned.
+- Status: complete.
 - Purpose: record a pending share withdrawal and compute when it can be processed.
 - Inputs: `shares: u64`.
 - Accounts: owner signer, profile, vault token, mutable position.
-- Access control: owner signer must own the position; position is bound to profile.
+- Access control: owner signer must own the position; position is bound to owner/profile by seeds and stored owner/profile checks; vault token mint must match `profile.base_mint`.
 - State writes: increases `position.pending_withdraw_shares`, sets `position.withdraw_ready_ts`.
 - Token movement: none.
 - Event: `WithdrawRequested`.
-- Errors: `ZeroAmount`, `InsufficientShares`, `MathOverflow`.
-- Done criteria: rejects zero/over-share requests, computes withdrawal value from NAV excluding `trader_claimable`, uses instant window for value under 500 bps of AUM and next daily window otherwise.
+- Errors: `ZeroAmount`, `InsufficientShares`, `Unauthorized`, `MathOverflow`.
+- Done criteria: complete; rejects zero shares, requests above owned shares, cumulative pending requests above owned shares, non-owner/wrong-PDA calls, and wrong vault mint; computes withdrawal value from NAV excluding `trader_claimable`; uses instant window for value strictly under 500 bps of AUM and next daily window at/above threshold.
 
 ## `process_withdraw`
 

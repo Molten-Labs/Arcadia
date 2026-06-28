@@ -23,6 +23,7 @@ import {
   parseInitializeProfileInstruction,
   parseInitializeSmokeInstruction,
   parsePingInstruction,
+  parseRequestWithdrawInstruction,
   parseSetCapacityInstruction,
   type ParsedDepositInstruction,
   type ParsedInitializeInvestorInstruction,
@@ -30,6 +31,7 @@ import {
   type ParsedInitializeProfileInstruction,
   type ParsedInitializeSmokeInstruction,
   type ParsedPingInstruction,
+  type ParsedRequestWithdrawInstruction,
   type ParsedSetCapacityInstruction,
 } from "../instructions";
 
@@ -115,6 +117,7 @@ export enum ArcadiaVaultInstruction {
   InitializeProfile,
   InitializeSmoke,
   Ping,
+  RequestWithdraw,
   SetCapacity,
 }
 
@@ -192,6 +195,17 @@ export function identifyArcadiaVaultInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([137, 95, 187, 96, 250, 138, 31, 182]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.RequestWithdraw;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([144, 85, 95, 65, 125, 139, 44, 27]),
       ),
       0,
@@ -225,6 +239,9 @@ export type ParsedArcadiaVaultInstruction<
   | ({
       instructionType: ArcadiaVaultInstruction.Ping;
     } & ParsedPingInstruction<TProgram>)
+  | ({
+      instructionType: ArcadiaVaultInstruction.RequestWithdraw;
+    } & ParsedRequestWithdrawInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.SetCapacity;
     } & ParsedSetCapacityInstruction<TProgram>);
@@ -274,6 +291,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.Ping,
         ...parsePingInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.RequestWithdraw: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.RequestWithdraw,
+        ...parseRequestWithdrawInstruction(instruction),
       };
     }
     case ArcadiaVaultInstruction.SetCapacity: {

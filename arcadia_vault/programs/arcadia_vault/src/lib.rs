@@ -25,6 +25,7 @@ pub(crate) use instructions::initialize_investor::__client_accounts_initialize_i
 pub(crate) use instructions::initialize_profile::__client_accounts_initialize_profile;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;
 pub(crate) use instructions::ping::__client_accounts_ping;
+pub(crate) use instructions::withdraw::__client_accounts_request_withdraw;
 
 declare_id!("gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C");
 
@@ -60,6 +61,10 @@ pub mod arcadia_vault {
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         instructions::deposit::handler(ctx, amount)
+    }
+
+    pub fn request_withdraw(ctx: Context<RequestWithdraw>, shares: u64) -> Result<()> {
+        instructions::withdraw::request_withdraw_handler(ctx, shares)
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

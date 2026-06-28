@@ -14,8 +14,8 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 ## Current Gate
 
 - Branch: `anchor`.
-- Current phase: `request_withdraw`.
-- Current instruction: `request_withdraw`.
+- Current phase: `process_withdraw`.
+- Current instruction: `process_withdraw`.
 - Smoke harness status: keep existing `initialize_smoke` and `ping` tests as scaffold health checks until real instruction tests replace them. Smoke instructions are not part of the Arcadia business API.
 - Skills refresh: `curl -fsSL https://www.solana.new/setup.sh | bash` was requested, but direct remote-script execution was blocked by the approvals reviewer as too risky for automated execution. This remains pending explicit manual execution or a safer approved installer path.
 
@@ -40,7 +40,7 @@ This is the active module-by-module tracker for the Anchor implementation. It is
 | `set_capacity` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `initialize_investor` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `deposit` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
-| `request_withdraw` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
+| `request_withdraw` | complete | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `process_withdraw` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `record_trade` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
 | `settle` | planned | Implementation, LiteSVM tests, docs update, build/test/codegen/client build green. |
