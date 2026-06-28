@@ -10,3 +10,4 @@ export * from "./initializePlatform";
 export * from "./initializeProfile";
 export * from "./initializeSmoke";
 export * from "./ping";
+export * from "./setCapacity";

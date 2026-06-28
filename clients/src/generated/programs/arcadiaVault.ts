@@ -21,10 +21,12 @@ import {
   parseInitializeProfileInstruction,
   parseInitializeSmokeInstruction,
   parsePingInstruction,
+  parseSetCapacityInstruction,
   type ParsedInitializePlatformInstruction,
   type ParsedInitializeProfileInstruction,
   type ParsedInitializeSmokeInstruction,
   type ParsedPingInstruction,
+  type ParsedSetCapacityInstruction,
 } from "../instructions";
 
 export const ARCADIA_VAULT_PROGRAM_ADDRESS =
@@ -83,6 +85,7 @@ export enum ArcadiaVaultInstruction {
   InitializeProfile,
   InitializeSmoke,
   Ping,
+  SetCapacity,
 }
 
 export function identifyArcadiaVaultInstruction(
@@ -133,6 +136,17 @@ export function identifyArcadiaVaultInstruction(
   ) {
     return ArcadiaVaultInstruction.Ping;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([144, 85, 95, 65, 125, 139, 44, 27]),
+      ),
+      0,
+    )
+  ) {
+    return ArcadiaVaultInstruction.SetCapacity;
+  }
   throw new Error(
     "The provided instruction could not be identified as a arcadiaVault instruction.",
   );
@@ -152,7 +166,10 @@ export type ParsedArcadiaVaultInstruction<
     } & ParsedInitializeSmokeInstruction<TProgram>)
   | ({
       instructionType: ArcadiaVaultInstruction.Ping;
-    } & ParsedPingInstruction<TProgram>);
+    } & ParsedPingInstruction<TProgram>)
+  | ({
+      instructionType: ArcadiaVaultInstruction.SetCapacity;
+    } & ParsedSetCapacityInstruction<TProgram>);
 
 export function parseArcadiaVaultInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
@@ -185,6 +202,13 @@ export function parseArcadiaVaultInstruction<TProgram extends string>(
       return {
         instructionType: ArcadiaVaultInstruction.Ping,
         ...parsePingInstruction(instruction),
+      };
+    }
+    case ArcadiaVaultInstruction.SetCapacity: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: ArcadiaVaultInstruction.SetCapacity,
+        ...parseSetCapacityInstruction(instruction),
       };
     }
     default:

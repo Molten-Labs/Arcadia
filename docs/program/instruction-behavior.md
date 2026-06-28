@@ -23,7 +23,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Status: complete.
 - Shared modules now exist for constants/PDA seeds, `ArcadiaError`, locked events, the four fixed-size account structs, checked math helpers, Token Interface CPI helpers, and profile PDA signer seeds.
 - Smoke-only state and constants are quarantined in `smoke.rs` so the temporary scaffold health tests can remain until real instruction tests replace them.
-- `initialize_platform` and `initialize_profile` are complete; the next gate is `set_capacity`.
+- `initialize_platform`, `initialize_profile`, and `set_capacity` are complete; the next gate is `initialize_investor`.
 
 ## Module Order
 
@@ -31,7 +31,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 | --- | --- | --- | --- |
 | 1 | `initialize_platform` | `instructions/admin/initialize_platform.rs` | complete |
 | 2 | `initialize_profile` | `instructions/initialize_profile.rs` | complete |
-| 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | planned |
+| 3 | `set_capacity` | `instructions/admin/set_capacity.rs` | complete |
 | 4 | `initialize_investor` | `instructions/initialize_investor.rs` | planned |
 | 5 | `deposit` | `instructions/deposit.rs` | planned |
 | 6 | `request_withdraw` | `instructions/withdraw.rs` | planned |
@@ -68,7 +68,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 
 ## `set_capacity`
 
-- Status: planned.
+- Status: complete.
 - Purpose: let the oracle authority push offchain-computed capacity and score tier onto a profile.
 - Inputs: `cap_usd: u64`, `score_tier: u8`.
 - Accounts: oracle authority signer, config, mutable profile.
@@ -77,7 +77,7 @@ Risk level: Critical. This program controls token custody through PDAs, NAV/shar
 - Token movement: none.
 - Event: none in MVP.
 - Errors: `Unauthorized`, `InvalidTier`, `VaultNotActive` if the profile is not active.
-- Done criteria: accepts tiers `0..=3` and `255`, rejects other tiers, rejects non-oracle signers, writes cap exactly with no on-chain exponential math.
+- Done criteria: complete; LiteSVM covers oracle-only authorization, tiers `0..=3`/`255`, invalid tier rejection, inactive profile rejection, exact cap/tier writes, and no on-chain exponential math.
 
 ## `initialize_investor`
 

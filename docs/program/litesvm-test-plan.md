@@ -58,13 +58,14 @@ LiteSVM is the per-instruction completion gate. Devnet is useful after the local
 
 ## `set_capacity`
 
+- Status: complete.
 - Happy path: oracle authority sets cap and score tier on an active profile.
 - Authorization: non-oracle signer fails; missing oracle signer fails.
 - Invalid input: tier greater than 3 and not 255 fails.
-- Sequence failure: closed/inactive profile fails once status handling exists.
+- Sequence failure: closed/inactive profile fails.
 - Account assertions: exact cap write and tier write; no other profile accounting changes.
 - Event assertions: none expected.
-- CU: record `set_capacity`.
+- CU: recorded `set_capacity` at about 3.3k CUs in the current LiteSVM run.
 
 ## `initialize_investor`
 
