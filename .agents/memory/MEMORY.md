@@ -1,0 +1,6 @@
+- [Arcadia design system](arcadia-design.md) — dark purple-tinted palette, Inter font, 44px sidebar, full-width Topbar; no Syne/chartreuse.
+- [Nav cleanup pattern](nav-cleanup.md) — old Nav component replaced by layout-level Topbar; remove `import { Nav }` + `<Nav />` from all pages when layout handles it.
+- [Rust indexer build constraints](rust-indexer-build.md) — server-rs Cargo workspace compile constraints: no sqlx macros, no solana-sdk in workspace deps, use rustls not native-tls.
+- [SIWS auth contract](siws-auth-contract.md) — canonical message, payload shape, encoding, and Next mock vs Rust backend split.
+- [Simulate trade API shape](simulate-trade-shape.md) — Rust SimTradeReq uses `leverage` (decimal e.g. 3.0), not leverage_x100; server computes fees/liquidation itself.
+- [Arcadia gap fixes](arcadia-gap-fixes.md) — summary of all 10 architecture gaps found in audit and how each was resolved for MVP.

@@ -1,68 +1,26 @@
-# ─── Logs ─────────────────────────────────────────────────────────────────────
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
 
-# ─── Dependencies ─────────────────────────────────────────────────────────────
-node_modules/
-.pnp
-.pnp.js
-
-# ─── Build output ─────────────────────────────────────────────────────────────
-dist/
-dist-ssr/
-app/dist/
-mobile/dist/
-target/
-arcadia_vault/.anchor/
-arcadia_vault/target/
-arcadia_vault/test-ledger/
-arcadia_vault/.surfpool/
-
-# ─── Expo / React Native ──────────────────────────────────────────────────────
-mobile/.expo/
-.expo/
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-*.orig.*
-web-build/
-
-# ─── Environment files ────────────────────────────────────────────────────────
-.env
-.env.*
-!.env.example
-*.local
-
-# ─── Replit / Agent internals ─────────────────────────────────────────────────
-.agent/
-.agents/
-.local/
-.cache/
-.config/
-skills-lock.json
-claude-session.jsonl
-attached_assets/
-
-# ─── Editor / OS ──────────────────────────────────────────────────────────────
-.vscode/*
-!.vscode/extensions.json
-.idea/
+# System Files
 .DS_Store
 Thumbs.db
 
-# ─── Windows ──────────────────────────────────────────────────────────────────
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Replit
+.cache/
+.local/
 
-# ─── Rust ─────────────────────────────────────────────────────────────────────
-**/*.rs.bk
+node_modules/
+.next/
+artifacts/
+dist/
+build/
+target/
+*.log
+.env
