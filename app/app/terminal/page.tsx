@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -615,7 +615,7 @@ const MARKETS  = ["BTC-PERP", "SOL-PERP", "ETH-PERP", "ARB-PERP"];
 const INTERVALS = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const CHART_TOOLS = [Crosshair, BarChart2, TrendingUp, Circle, Square, Triangle, BookOpen];
 
-export default function TerminalPage() {
+function TerminalContent() {
   const { connected } = useWallet();
   const searchParams = useSearchParams();
 
@@ -1170,5 +1170,13 @@ export default function TerminalPage() {
       {/* ── Live ticker bar ───────────────────────────────────────── */}
       <TickerBar prices={prices} />
     </div>
+  );
+}
+
+export default function TerminalPage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-full bg-[var(--color-bg)]" />}>
+      <TerminalContent />
+    </Suspense>
   );
 }
