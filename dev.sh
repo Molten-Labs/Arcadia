@@ -1,15 +1,14 @@
 #!/bin/bash
-# dev.sh — starts the Arcadia frontend on port 5000
-# Auto-installs app/node_modules if missing, then launches Vite.
+# dev.sh — starts the Arcadia web app on port 5000
 
-set -e
+PNPM=/nix/store/61lr9izijvg30pcribjdxgjxvh3bysp4-pnpm-10.26.1/bin/pnpm
 
-# Auto-install dependencies if node_modules is missing
-if [ ! -d "app/node_modules" ]; then
-  echo "[dev] node_modules not found — running npm install in app/..."
-  cd app && npm install --legacy-peer-deps --ignore-scripts --prefer-offline 2>/dev/null || npm install --legacy-peer-deps --ignore-scripts
+if [ ! -f "app/node_modules/.bin/next" ]; then
+  echo "[dev] Installing dependencies in app/..."
+  cd app && $PNPM install --shamefully-hoist 2>/dev/null \
+    || npm install --legacy-peer-deps
   cd ..
 fi
 
-echo "[dev] Starting Vite dev server on port 5000..."
-cd app && node node_modules/vite/bin/vite.js --config vite.config.ts
+echo "[dev] Starting Next.js dev server on port 5000..."
+cd app && PORT=5000 node_modules/.bin/next dev --port 5000 --hostname 0.0.0.0

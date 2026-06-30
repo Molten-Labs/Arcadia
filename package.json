@@ -19,5 +19,10 @@
     "program:test": "cd arcadia_vault && anchor test --skip-local-validator --skip-deploy",
     "codegen:codama": "pnpm --dir clients generate",
     "codegen": "pnpm program:build && pnpm codegen:codama"
+  },
+  "dependencies": {
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   }
 }
