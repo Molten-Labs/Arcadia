@@ -1,0 +1,95 @@
+/* Transitions.dev — Input clear with dissolve */
+
+/*
+  Usage:
+    <!-- Drop .t-clear on a wrapper that you've sized like an
+         input field (positioning, padding, border, radius are
+         yours). Inside it stack a real <input>, a mirror that
+         visualizes the value, a fake placeholder for the new
+         empty state, and a glow layer that gets the per-word
+         radial-gradient stack written into it from JS. -->
+    <div class="t-clear has-value">
+      <input type="text" value="…" />
+      <div class="t-clear-mirror" aria-hidden="true">…</div>
+      <div class="t-clear-placeholder" aria-hidden="true">Search</div>
+      <div class="t-clear-glow" aria-hidden="true"></div>
+      <button class="t-clear-btn" aria-label="Clear">…</button>
+    </div>
+
+  Pair with a small JS routine (mirrors the gallery code) that
+  flips `.is-clearing`, animates the mirror's translateY/opacity
+  per frame, mirrors the math on the placeholder, and writes a
+  stack of `radial-gradient(...)` layers onto .t-clear-glow's
+  background so each word gets its own streak. Per-frame JS is
+  unavoidable: the streak's rise/peak/fall envelope cannot be
+  expressed as a static @keyframe.
+*/
+
+:root {
+  --clear-dur: 1000ms;
+  --clear-out-dur: 400ms;
+  --clear-in-dur: 400ms;
+  --clear-out-fly: 12px;
+  --clear-in-fly: 12px;
+  --clear-out-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --clear-in-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --clear-blur: 2px;
+  --glow-delay: 50ms;
+  --glow-peak-at: 0.15;
+  --glow-opacity: 0.85;
+  --glow-spread: 1.5;
+}
+
+/* The wrap clips the glow to its rounded box. The hairline
+   border is `inset` so it sits inside that clip — when the
+   glow's mix-blend-mode darkens its area, the border
+   underneath darkens with it. Bring your own width / height /
+   border-radius / surface color. */
+.t-clear {
+  position: relative;
+  overflow: hidden;
+}
+.t-clear-mirror,
+.t-clear-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 2;
+}
+.t-clear-mirror { opacity: 0; }
+.t-clear.has-value .t-clear-mirror,
+.t-clear.is-clearing .t-clear-mirror { opacity: 1; }
+/* Hide the input's own glyphs while the mirror owns them so
+   the cleared text doesn't double-render with the fly-up. */
+.t-clear.has-value > input,
+.t-clear.is-clearing > input {
+  -webkit-text-fill-color: transparent;
+}
+.t-clear.has-value .t-clear-placeholder { opacity: 0; }
+/* The streak overlay: empty by default; JS writes a stack of
+   `radial-gradient(...)` layers into background during a clear,
+   then animates opacity. mix-blend-mode: multiply darkens the
+   underlying input + hairline; flip to `screen` in dark mode
+   so the same alpha values lighten instead of vanish. */
+.t-clear-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+  mix-blend-mode: multiply;
+}
+
+/* The transitions live in JS (per-frame transform/opacity/
+   filter writes), so this stylesheet only owns the resting
+   state + the variables that JS reads. Read them with
+   `parseFloat(getComputedStyle(root).getPropertyValue(...))`
+   so live tweaks apply on the next clear without a reload. */
+
+@media (prefers-reduced-motion: reduce) {
+  .t-clear-glow { opacity: 0 !important; }
+}

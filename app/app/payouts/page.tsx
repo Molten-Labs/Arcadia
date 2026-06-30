@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Server, DollarSign, Clock, CheckCircle, ExternalLink } from "lucide-react";
+import {
+  Server, DollarSign, Clock, CheckCircle,
+  ExternalLink, Zap, ArrowRight,
+} from "lucide-react";
 import { MOCK_TRADERS } from "@/lib/mock-data";
 import { formatUSD } from "@/lib/types";
 
@@ -11,9 +14,9 @@ const TIER_SPLIT: Record<string, number> = {
   Elite: 35, Advanced: 30, Established: 25, Verified: 20,
 };
 
-const RESERVE_DATA = [120,140,200,180,220,260,280,320,290,340,360].map((v,i) => ({ v, i }));
-const PAYOUT_DATA  = [80,120,160,140,200,180,220,260,240].map((v,i) => ({ v, i }));
-const TIME_DATA    = [1.2,1.5,1.8,2.1,1.6,1.9,1.4,1.7].map((v,i) => ({ v, i }));
+const RESERVE_DATA  = [120,140,200,180,220,260,280,320,290,340,360].map((v,i) => ({ v, i }));
+const PAYOUT_DATA   = [80,120,160,140,200,180,220,260,240].map((v,i) => ({ v, i }));
+const TIME_DATA     = [1.2,1.5,1.8,2.1,1.6,1.9,1.4,1.7].map((v,i) => ({ v, i }));
 
 const RECENT_PAYOUTS = [
   { date: "1 Jun 26",  status: "Pending", hash: "5Nn7x3KqBz…R4mP", amount: 5200 },
@@ -23,23 +26,41 @@ const RECENT_PAYOUTS = [
   { date: "3 Feb 26",  status: "Paid",    hash: "7JtMvPq4Wr…N8fK", amount: 1899 },
 ];
 
+/* On-chain state steps */
+const ON_CHAIN_STEPS = [
+  { label: "Update Account", status: "done"       },
+  { label: "Update Equity",  status: "done"       },
+  { label: "Pass Evaluation",status: "done"       },
+  { label: "Sign Agreement", status: "done"       },
+  { label: "Process Withdrawal", status: "pending" },
+];
+
 const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 function fakeSig() {
   return Array.from({ length: 88 }, () => B58[Math.floor(Math.random() * 58)]).join("");
 }
 
-function MiniBar({ data }: { data: { v: number; i: number }[] }) {
-  const W = 80, H = 40;
+function MiniBar({ data, color = "var(--color-mint)" }: { data: { v: number; i: number }[]; color?: string }) {
+  const W = 80, H = 36;
   const max = Math.max(...data.map(d => d.v));
   const barW = 5;
   const gap = (W - barW * data.length) / (data.length - 1);
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ flexShrink: 0 }}>
       {data.map((d, i) => {
         const barH = Math.max(2, (d.v / max) * (H - 4));
-        const x = i * (barW + gap);
-        const y = H - barH;
-        return <rect key={i} x={x} y={y} width={barW} height={barH} rx={1} fill="var(--color-mint)" opacity={0.5 + (i / data.length) * 0.5} />;
+        return (
+          <rect
+            key={i}
+            x={i * (barW + gap)}
+            y={H - barH}
+            width={barW}
+            height={barH}
+            rx={1.5}
+            fill={color}
+            opacity={0.35 + (i / data.length) * 0.65}
+          />
+        );
       })}
     </svg>
   );
@@ -52,148 +73,241 @@ export default function PayoutsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  const traderSplit = TIER_SPLIT[DEMO.tier] ?? 20;
+  const traderSplit  = TIER_SPLIT[DEMO.tier] ?? 20;
   const platformSplit = 5;
   const MAX_WITHDRAWABLE = 10000;
+  const SUB_ACCOUNT_PROFIT = 14414.13;
 
-  const grossAmount = parseFloat(amount || "0");
-  const traderPayout = grossAmount * (traderSplit / 100);
-  const platformFee = grossAmount * (platformSplit / 100);
+  const grossAmount    = parseFloat(amount || "0");
+  const traderPayout   = grossAmount * (traderSplit / 100);
+  const platformFee    = grossAmount * (platformSplit / 100);
   const investorPayout = grossAmount - traderPayout - platformFee;
 
   const handleConfirm = () => {
     if (!amount) return;
     setSubmitting(true);
     setTxHash(null);
-    setTimeout(() => {
-      setSubmitting(false);
-      setTxHash(fakeSig());
-    }, 1800);
+    setTimeout(() => { setSubmitting(false); setTxHash(fakeSig()); }, 1800);
   };
 
   if (!connected) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
-        <p className="text-sm" style={{ color: "var(--color-muted)" }}>Connect wallet to view payouts</p>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "var(--color-bg)" }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--color-panel)", border: "1px solid var(--color-line)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Zap size={22} style={{ color: "var(--color-mint)" }} />
+        </div>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--color-ink)", marginBottom: 8 }}>Connect your wallet</h2>
+        <p style={{ fontSize: "0.875rem", color: "var(--color-muted)", textAlign: "center", maxWidth: 320 }}>
+          Connect to view payouts, on-chain payout reserve, and request profit settlements.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full" style={{ background: "var(--color-bg)" }}>
-      <div className="px-8 py-6">
-        <h1 className="text-xl font-bold mb-0.5" style={{ color: "var(--color-ink)" }}>Payouts</h1>
-        <p className="text-xs mb-5" style={{ color: "var(--color-faint)" }}>
-          Request profit share above HWM — instantly to your wallet.
-        </p>
+    <div style={{ minHeight: "100%", background: "var(--color-bg)" }}>
+      <div style={{ padding: "1.75rem clamp(1.25rem, 4vw, 2.5rem)", maxWidth: 1200 }}>
 
-        {/* Top stat cards */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="rounded p-4 card">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
+        {/* Header */}
+        <div style={{ marginBottom: "1.5rem" }}>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--color-ink)", letterSpacing: "-0.04em", marginBottom: 4 }}>
+            Payouts
+          </h1>
+          <p style={{ fontSize: "0.8125rem", color: "var(--color-faint)" }}>
+            Get payouts on funded accounts anytime, instantly to your wallet.
+          </p>
+        </div>
+
+        {/* ── Top stat cards (3-col) ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 10 }}>
+          {/* Payout Reserve */}
+          <div className="card" style={{ padding: "1.125rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <Server size={13} style={{ color: "var(--color-mint)" }} />
-                <p className="text-xs font-semibold" style={{ color: "var(--color-ink)" }}>Payout Reserve</p>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-ink)" }}>Payout Reserve</span>
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-green)" }} />
-                <span className="text-[10px]" style={{ color: "var(--color-green)" }}>On-chain ↗</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <a href="#" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 9, fontFamily: "var(--font-mono)", color: "var(--color-green)", textDecoration: "none" }}>
+                  On-chain <ExternalLink size={8} />
+                </a>
               </div>
             </div>
-            <div className="flex items-end justify-between">
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
               <div>
-                <p className="text-2xl font-black tnum" style={{ color: "var(--color-ink)" }}>$742,414</p>
-                <p className="text-[10px] mt-0.5" style={{ color: "var(--color-faint)" }}>On-chain and verifiable payout reserve</p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.5rem", fontWeight: 900, color: "var(--color-ink)", letterSpacing: "-0.04em" }}>$742,414</p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", marginTop: 3 }}>On-chain and verifiable payout reserve</p>
               </div>
-              <MiniBar data={RESERVE_DATA} />
+              <MiniBar data={RESERVE_DATA} color="var(--color-mint)" />
             </div>
           </div>
 
-          <div className="rounded p-4 card">
-            <div className="flex items-center gap-1.5 mb-2">
+          {/* Total Payouts */}
+          <div className="card" style={{ padding: "1.125rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "0.75rem" }}>
               <DollarSign size={13} style={{ color: "var(--color-green)" }} />
-              <p className="text-xs font-semibold" style={{ color: "var(--color-ink)" }}>Total Payouts Issued</p>
+              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-ink)" }}>Total Payouts Issued</span>
             </div>
-            <div className="flex items-end justify-between">
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
               <div>
-                <p className="text-2xl font-black tnum" style={{ color: "var(--color-ink)" }}>$28,592</p>
-                <p className="text-[10px] mt-0.5" style={{ color: "var(--color-faint)" }}>All time</p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.5rem", fontWeight: 900, color: "var(--color-ink)", letterSpacing: "-0.04em" }}>$28,592</p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", marginTop: 3 }}>All time</p>
               </div>
-              <MiniBar data={PAYOUT_DATA} />
+              <MiniBar data={PAYOUT_DATA} color="var(--color-green)" />
             </div>
           </div>
 
-          <div className="rounded p-4 card">
-            <div className="flex items-center gap-1.5 mb-2">
+          {/* Avg Payout Time */}
+          <div className="card" style={{ padding: "1.125rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "0.75rem" }}>
               <Clock size={13} style={{ color: "var(--color-gold)" }} />
-              <p className="text-xs font-semibold" style={{ color: "var(--color-ink)" }}>Avg. Payout Time</p>
+              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-ink)" }}>Avg. Payout Time</span>
             </div>
-            <div className="flex items-end justify-between">
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
               <div>
-                <p className="text-2xl font-black tnum" style={{ color: "var(--color-ink)" }}>1.8s</p>
-                <p className="text-[10px] mt-0.5" style={{ color: "var(--color-faint)" }}>All time</p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.5rem", fontWeight: 900, color: "var(--color-ink)", letterSpacing: "-0.04em" }}>1.8s</p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", marginTop: 3 }}>All time · Solana native speed</p>
               </div>
-              <MiniBar data={TIME_DATA} />
+              <MiniBar data={TIME_DATA} color="var(--color-gold)" />
             </div>
           </div>
         </div>
 
-        {/* Tier callout */}
-        <div
-          className="rounded-xl p-4 mb-4 flex items-center gap-4"
-          style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}
-        >
-          <div className="text-left">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Your tier</p>
-            <p className="text-base font-black" style={{ color: "var(--color-accent)" }}>{DEMO.tier} · Score {DEMO.score}</p>
+        {/* ── Big stats: Sub-Account Profit + Withdrawable + On-chain steps ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: "1.25rem" }}>
+          {/* Sub-Account Profit */}
+          <div className="card" style={{ padding: "1.25rem" }}>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "0.5rem" }}>
+              Sub-Account Profit
+            </p>
+            <p style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: "clamp(1.25rem, 2vw, 1.75rem)", color: "var(--color-green)", letterSpacing: "-0.04em" }}>
+              +{formatUSD(SUB_ACCOUNT_PROFIT)}
+            </p>
+            <p style={{ fontSize: "0.6875rem", color: "var(--color-faint)", marginTop: 4 }}>All-time sub-account gains</p>
           </div>
-          <div className="h-8 w-px" style={{ background: "var(--color-line)" }} />
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Trader split</p>
-            <p className="text-base font-black" style={{ color: "var(--color-mint)" }}>{traderSplit}% of profit above HWM</p>
+
+          {/* Withdrawable Profits */}
+          <div className="card" style={{ padding: "1.25rem" }}>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "0.5rem" }}>
+              Withdrawable Profits
+            </p>
+            <p style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: "clamp(1.25rem, 2vw, 1.75rem)", color: "var(--color-ink)", letterSpacing: "-0.04em" }}>
+              {formatUSD(MAX_WITHDRAWABLE)}
+            </p>
+            <p style={{ fontSize: "0.6875rem", color: "var(--color-faint)", marginTop: 4 }}>
+              Ready for instant payout · Above HWM
+            </p>
           </div>
-          <div className="h-8 w-px" style={{ background: "var(--color-line)" }} />
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Platform fee</p>
-            <p className="text-base font-black" style={{ color: "var(--color-muted)" }}>{platformSplit}%</p>
-          </div>
-          <div className="h-8 w-px" style={{ background: "var(--color-line)" }} />
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Investor gets</p>
-            <p className="text-base font-black" style={{ color: "var(--color-ink)" }}>{100 - traderSplit - platformSplit}%</p>
+
+          {/* On-chain State Updates */}
+          <div className="card" style={{ padding: "1.25rem" }}>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "0.875rem" }}>
+              On-chain State Updates
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {ON_CHAIN_STEPS.map((step, i) => (
+                <div key={step.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: "50%", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: step.status === "done" ? "var(--color-green-dim)" : "var(--color-panel-2)",
+                    border: `1px solid ${step.status === "done" ? "rgba(34,197,94,0.3)" : "var(--color-line)"}`,
+                  }}>
+                    {step.status === "done"
+                      ? <CheckCircle size={10} style={{ color: "var(--color-green)" }} />
+                      : <div style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-gold)" }} />
+                    }
+                  </div>
+                  <span style={{
+                    fontFamily: "var(--font-mono)", fontSize: 9,
+                    color: step.status === "done" ? "var(--color-muted)" : "var(--color-ink)",
+                    fontWeight: step.status !== "done" ? 700 : 400,
+                  }}>
+                    {step.label}
+                  </span>
+                  {i < ON_CHAIN_STEPS.length - 1 && step.status === "done" && (
+                    <ArrowRight size={8} style={{ color: "var(--color-faint)", flexShrink: 0 }} />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Request + Recent */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* ── Tier row ── */}
+        <div className="card" style={{
+          padding: "0.875rem 1.25rem",
+          display: "flex", alignItems: "center", gap: "2rem",
+          flexWrap: "wrap", marginBottom: "1.25rem",
+        }}>
+          {[
+            { label: "Your tier",    value: `${DEMO.tier} · Score ${DEMO.score}`,      color: "var(--color-ink)"   },
+            { label: "Trader split", value: `${traderSplit}% of profit above HWM`,      color: "var(--color-mint)"  },
+            { label: "Platform fee", value: `${platformSplit}%`,                         color: "var(--color-muted)" },
+            { label: "Investor gets",value: `${100 - traderSplit - platformSplit}%`,    color: "var(--color-ink)"   },
+          ].map((item, i) => (
+            <div key={item.label} style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+              {i > 0 && <div style={{ width: 1, height: 28, background: "var(--color-line)", flexShrink: 0 }} />}
+              <div>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 3 }}>
+                  {item.label}
+                </p>
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.875rem", fontWeight: 800, color: item.color, letterSpacing: "-0.02em" }}>
+                  {item.value}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Request + Recent ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+
           {/* Request Payout */}
           <div>
-            <p className="text-xs font-semibold mb-3" style={{ color: "var(--color-ink)" }}>Request Payout</p>
-            <div className="rounded card p-4">
-              <p className="text-[11px] mb-2 font-medium" style={{ color: "var(--color-faint)" }}>
-                Profit above HWM available: <span className="font-black tnum" style={{ color: "var(--color-green)" }}>{formatUSD(MAX_WITHDRAWABLE)}</span>
+            <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-ink)", marginBottom: "0.75rem", letterSpacing: "-0.01em" }}>
+              Request Payout
+            </p>
+            <div className="card" style={{ padding: "1.25rem" }}>
+              <p style={{ fontSize: "0.6875rem", color: "var(--color-faint)", marginBottom: "0.875rem" }}>
+                Profit above HWM:{" "}
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 800, color: "var(--color-green)" }}>
+                  {formatUSD(MAX_WITHDRAWABLE)}
+                </span>
               </p>
-              <div className="flex items-center gap-2 mb-2">
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => { setAmount(e.target.value); setPct(Math.round(parseFloat(e.target.value || "0") / MAX_WITHDRAWABLE * 100)); }}
-                  placeholder="Amount…"
-                  className="flex-1 rounded px-3 py-2 text-sm outline-none tnum"
-                  style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)", color: "var(--color-ink)" }}
-                />
-                <span className="text-sm font-semibold" style={{ color: "var(--color-muted)" }}>USDC</span>
+
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)", display: "block", marginBottom: 6 }}>
+                  Enter USDC Amount
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={(e) => {
+                      setAmount(e.target.value);
+                      setPct(Math.round(parseFloat(e.target.value || "0") / MAX_WITHDRAWABLE * 100));
+                    }}
+                    placeholder="0.00"
+                    className="input-dark"
+                    style={{ flex: 1, padding: "9px 12px", fontSize: "0.875rem" }}
+                  />
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: "var(--color-muted)", flexShrink: 0 }}>USDC</span>
+                </div>
               </div>
-              <div className="flex gap-2 mb-4">
+
+              <div style={{ display: "flex", gap: 6, marginBottom: "1rem" }}>
                 {[25, 50, 75, 100].map((p) => (
                   <button
                     key={p}
                     onClick={() => { const v = MAX_WITHDRAWABLE * p / 100; setAmount(v.toString()); setPct(p); }}
-                    className="text-[10px] px-2 py-1 rounded font-medium flex-1"
                     style={{
+                      flex: 1, padding: "6px 0", borderRadius: 6,
                       background: pct === p ? "var(--color-mint)" : "var(--color-panel-2)",
                       color: pct === p ? "#ffffff" : "var(--color-faint)",
-                      border: "1px solid var(--color-line)",
+                      border: `1px solid ${pct === p ? "rgba(79,158,255,0.4)" : "var(--color-line)"}`,
+                      fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
+                      cursor: "pointer", transition: "all 0.15s",
                     }}
                   >
                     {p === 100 ? "Max" : `${p}%`}
@@ -201,52 +315,58 @@ export default function PayoutsPage() {
                 ))}
               </div>
 
-              {/* Split breakdown */}
+              {/* Breakdown */}
               {grossAmount > 0 && (
-                <div className="rounded p-4 mb-4" style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)" }}>
-                  <p className="text-[11px] font-semibold mb-3" style={{ color: "var(--color-muted)" }}>Payout breakdown</p>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span style={{ color: "var(--color-faint)" }}>Gross profit above HWM</span>
-                      <span className="font-bold tnum" style={{ color: "var(--color-ink)" }}>{formatUSD(grossAmount)}</span>
+                <div style={{
+                  borderRadius: 8, padding: "1rem", marginBottom: "1rem",
+                  background: "var(--color-panel-2)", border: "1px solid var(--color-line)",
+                  animation: "fade-in 0.2s ease",
+                }}>
+                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "0.75rem" }}>
+                    Payout details
+                  </p>
+                  {[
+                    { label: `${DEMO.tier} profit split`, value: `${traderSplit}%`, valueStr: formatUSD(traderPayout), positive: true },
+                    { label: `Payout post profit split`, value: null, valueStr: formatUSD(grossAmount - traderPayout), positive: false },
+                    { label: `Equity after payout`,      value: null, valueStr: formatUSD(22000),                       positive: false },
+                  ].map((r) => (
+                    <div key={r.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontSize: "0.75rem", color: "var(--color-muted)" }}>
+                        {r.label}:
+                        {r.value && <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-faint)", marginLeft: 4 }}>{r.value}</span>}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: r.positive ? "var(--color-mint)" : "var(--color-ink)" }}>
+                        {r.positive ? "+" : ""}{r.valueStr}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span style={{ color: "var(--color-faint)" }}>Your share ({traderSplit}% · {DEMO.tier})</span>
-                      <span className="font-black tnum" style={{ color: "var(--color-green)" }}>+{formatUSD(traderPayout)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span style={{ color: "var(--color-faint)" }}>Platform fee ({platformSplit}%)</span>
-                      <span className="tnum" style={{ color: "var(--color-red)" }}>-{formatUSD(platformFee)}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2" style={{ borderTop: "1px solid var(--color-line)" }}>
-                      <span className="font-bold" style={{ color: "var(--color-ink)" }}>Investor NAV increase</span>
-                      <span className="font-bold tnum" style={{ color: "var(--color-ink)" }}>{formatUSD(investorPayout)}</span>
+                  ))}
+                  <div style={{ borderTop: "1px solid var(--color-line)", paddingTop: 8, marginTop: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-ink)" }}>Platform fee ({platformSplit}%)</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: "var(--color-red)" }}>
+                        -{formatUSD(platformFee)}
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
 
               {txHash ? (
-                <div className="rounded p-3" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle size={14} style={{ color: "var(--color-green)" }} />
-                    <span className="text-xs font-bold" style={{ color: "var(--color-green)" }}>Payout sent (devnet)</span>
+                <div style={{ borderRadius: 8, padding: "1rem", background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span className="t-success-check" data-state="in">
+                      <CheckCircle size={14} style={{ color: "var(--color-green)" }} />
+                    </span>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-green)" }}>Payout sent (devnet)</span>
                   </div>
-                  <a
-                    href={`https://solscan.io/tx/${txHash}?cluster=devnet`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
-                    style={{ color: "var(--color-mint)" }}
-                  >
-                    <span>{txHash.slice(0, 8)}…{txHash.slice(-6)}</span>
-                    <ExternalLink size={10} />
+                  <a href={`https://solscan.io/tx/${txHash}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-mint)", display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
+                    {txHash.slice(0, 8)}…{txHash.slice(-6)} <ExternalLink size={9} />
                   </a>
-                  <button
-                    onClick={() => { setTxHash(null); setAmount(""); setPct(0); }}
-                    className="mt-2 w-full py-1.5 rounded text-xs font-bold"
-                    style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)", color: "var(--color-faint)" }}
-                  >
+                  <button onClick={() => { setTxHash(null); setAmount(""); setPct(0); }} style={{
+                    width: "100%", padding: "7px", borderRadius: 7, fontSize: "0.75rem", fontWeight: 600,
+                    background: "var(--color-panel-2)", border: "1px solid var(--color-line)", color: "var(--color-faint)", cursor: "pointer",
+                  }}>
                     Request another
                   </button>
                 </div>
@@ -254,8 +374,17 @@ export default function PayoutsPage() {
                 <button
                   onClick={handleConfirm}
                   disabled={submitting || !amount || grossAmount <= 0}
-                  className="w-full py-2.5 rounded text-sm font-semibold mt-1 transition-all disabled:opacity-50"
-                  style={{ background: "var(--color-mint)", color: "#ffffff" }}
+                  style={{
+                    width: "100%", padding: "11px", borderRadius: 8,
+                    background: "var(--color-mint)", color: "#ffffff",
+                    fontWeight: 700, fontSize: "0.875rem", border: "none",
+                    cursor: submitting || !amount ? "not-allowed" : "pointer",
+                    opacity: submitting || !amount || grossAmount <= 0 ? 0.5 : 1,
+                    transition: "opacity 0.15s, background 0.15s",
+                    boxShadow: grossAmount > 0 ? "0 0 20px rgba(79,158,255,0.2)" : "none",
+                  }}
+                  onMouseEnter={(e) => { if (grossAmount > 0) e.currentTarget.style.background = "var(--color-mint-bright)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "var(--color-mint)"; }}
                 >
                   {submitting ? "Processing…" : "Confirm Payout"}
                 </button>
@@ -265,55 +394,67 @@ export default function PayoutsPage() {
 
           {/* Recent Payouts */}
           <div>
-            <p className="text-xs font-semibold mb-3" style={{ color: "var(--color-ink)" }}>Recent Payouts</p>
-            <div className="rounded card overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr style={{ background: "var(--color-panel-2)", borderBottom: "1px solid var(--color-line)" }}>
-                    {["Date", "Status", "Amount", "Verify"].map((h) => (
-                      <th key={h} className="py-2.5 px-3 text-left font-medium" style={{ color: "var(--color-faint)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {RECENT_PAYOUTS.map((r, i) => (
-                    <tr
-                      key={i}
-                      className="hover:bg-[var(--color-panel-2)] transition-colors"
-                      style={{ borderBottom: "1px solid var(--color-line)" }}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--color-ink)", letterSpacing: "-0.01em" }}>
+                Recent Payouts
+              </p>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)" }}>
+                This Account
+              </span>
+            </div>
+            <div className="card" style={{ overflow: "hidden" }}>
+              {/* Table headers */}
+              <div style={{
+                display: "grid", gridTemplateColumns: "4rem 1fr 4rem 4.5rem 5.5rem",
+                gap: "0.5rem", padding: "0.625rem 1rem",
+                borderBottom: "1px solid var(--color-line)", background: "var(--color-panel-2)",
+              }}>
+                {["Date", "Account", "Status", "TX Hash", "Amount"].map((h) => (
+                  <span key={h} style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)" }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+
+              {RECENT_PAYOUTS.map((r, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "grid", gridTemplateColumns: "4rem 1fr 4rem 4.5rem 5.5rem",
+                    gap: "0.5rem", padding: "0.75rem 1rem",
+                    borderBottom: i < RECENT_PAYOUTS.length - 1 ? "1px solid var(--color-line)" : "none",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-panel-2)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "var(--color-faint)" }}>{r.date}</span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", fontWeight: 700, color: "var(--color-muted)" }}>E1</span>
+                  <span>
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, letterSpacing: "0.08em",
+                      padding: "2px 7px", borderRadius: 4,
+                      background: r.status === "Pending" ? "var(--color-mint-dim)" : "rgba(34,197,94,0.1)",
+                      color: r.status === "Pending" ? "var(--color-mint)" : "var(--color-green)",
+                      border: `1px solid ${r.status === "Pending" ? "rgba(79,158,255,0.25)" : "rgba(34,197,94,0.25)"}`,
+                    }}>
+                      {r.status === "Paid" ? "✓ Paid" : r.status}
+                    </span>
+                  </span>
+                  <span>
+                    <a href={`https://solscan.io/tx/${r.hash}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
+                      style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-mint)", display: "flex", alignItems: "center", gap: 3, textDecoration: "none", transition: "opacity 0.15s" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
                     >
-                      <td className="py-2.5 px-3 tnum" style={{ color: "var(--color-muted)" }}>{r.date}</td>
-                      <td className="py-2.5 px-3">
-                        <span
-                          className="text-[10px] px-2 py-0.5 rounded font-semibold"
-                          style={{
-                            background: r.status === "Pending" ? "var(--color-mint-dim)" : "rgba(34,197,94,0.12)",
-                            color: r.status === "Pending" ? "var(--color-mint)" : "var(--color-green)",
-                            border: `1px solid ${r.status === "Pending" ? "rgba(79,158,255,0.25)" : "rgba(34,197,94,0.25)"}`,
-                          }}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 tnum font-semibold" style={{ color: "var(--color-ink)" }}>
-                        +{formatUSD(r.amount, 0)}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <a
-                          href={`https://solscan.io/tx/${r.hash.replace("…", "AAAA")}?cluster=devnet`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
-                          style={{ color: "var(--color-mint)" }}
-                        >
-                          <span>{r.hash.slice(0, 6)}…</span>
-                          <ExternalLink size={9} />
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      {r.hash.slice(0, 6)} <ExternalLink size={8} />
+                    </a>
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", fontWeight: 700, color: "var(--color-green)", textAlign: "right" }}>
+                    +{formatUSD(r.amount, 0)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
