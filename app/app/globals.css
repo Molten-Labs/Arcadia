@@ -2,56 +2,45 @@
 @import "@solana/wallet-adapter-react-ui/styles.css";
 
 @theme inline {
-  /* ── Pure black dark palette ── */
-  --color-bg:      #000000;   /* true black                   */
-  --color-panel:   #0d0d0d;   /* elevated surface             */
-  --color-panel-2: #151515;   /* deeper elevated              */
-  --color-line:    #1e1e1e;   /* neutral dark divider         */
-  --color-ink:     #f0f0f0;   /* near-white                   */
-  --color-muted:   #707070;   /* secondary text               */
-  --color-faint:   #3a3a3a;   /* disabled / dim               */
+  --color-bg:      #000000;
+  --color-panel:   #0c0c0c;
+  --color-panel-2: #141414;
+  --color-line:    #1c1c1c;
+  --color-ink:     #f0f0f0;
+  --color-muted:   #6a6a6a;
+  --color-faint:   #363636;
 
-  /* Blue — primary interactive (replaces old mint/green) */
   --color-mint:        #4f9eff;
   --color-mint-dim:    rgba(79,158,255,0.10);
   --color-mint-bright: #74b5ff;
   --color-mint-mid:    #3d88ee;
 
-  /* Compatibility aliases */
   --color-purple:        #4f9eff;
   --color-purple-dim:    rgba(79,158,255,0.10);
   --color-purple-bright: #74b5ff;
   --color-purple-mid:    #3d88ee;
 
-  /* White — data accent (scores, headlines) */
   --color-accent:     #ffffff;
   --color-accent-dim: rgba(255,255,255,0.06);
 
-  /* Green — positive PnL only */
   --color-green:     #22c55e;
   --color-green-dim: rgba(34,197,94,0.12);
 
-  /* Red — negative PnL */
   --color-red:     #ef4444;
   --color-red-dim: rgba(239,68,68,0.12);
 
-  /* Gold — rank / awards */
   --color-gold: #f0b429;
 
-  /* Tiers — no green */
-  --color-tier-verified:    #60a5fa;   /* blue     */
-  --color-tier-established: #818cf8;   /* indigo   */
-  --color-tier-advanced:    #f59e0b;   /* amber    */
-  --color-tier-elite:       #a855f7;   /* purple   */
+  --color-tier-verified:    #60a5fa;
+  --color-tier-established: #818cf8;
+  --color-tier-advanced:    #f59e0b;
+  --color-tier-elite:       #a855f7;
 
-  /* Typography */
-  --font-sans: "Inter", "system-ui", sans-serif;
-  --font-body: "Inter", "system-ui", sans-serif;
-  --font-mono: "JetBrains Mono", "Menlo", monospace;
+  --font-sans: "Geist", "Inter", "system-ui", sans-serif;
+  --font-body: "Geist", "Inter", "system-ui", sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", "Menlo", monospace;
   --radius: 0.5rem;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root { color-scheme: dark; }
 
@@ -60,7 +49,12 @@
   border-color: var(--color-line);
 }
 
-html, body {
+html {
+  overflow-x: clip;
+}
+
+body {
+  overflow-x: clip;
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
@@ -78,7 +72,7 @@ html, body {
 .pnl-neg  { color: var(--color-red); }
 .pnl-zero { color: var(--color-muted); }
 
-/* Wallet adapter — blue theme */
+/* Wallet adapter */
 .wallet-adapter-button {
   background: var(--color-mint) !important;
   color: #ffffff !important;
@@ -124,7 +118,6 @@ html, body {
     box-shadow: 0 0 0 1px rgba(79,158,255,0.06), 0 4px 24px rgba(0,0,0,0.5);
   }
 
-  /* Accent button — white */
   .btn-accent {
     display: inline-flex;
     align-items: center;
@@ -143,7 +136,6 @@ html, body {
   .btn-accent:hover  { opacity: 0.88; }
   .btn-accent:active { transform: scale(0.98); }
 
-  /* Primary button — blue */
   .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -157,12 +149,12 @@ html, body {
     letter-spacing: -0.01em;
     transition: background 0.15s, transform 0.15s;
     cursor: pointer;
+    white-space: nowrap;
   }
   .btn-primary:hover    { background: var(--color-mint-bright); }
   .btn-primary:active   { transform: scale(0.98); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Ghost button */
   .btn-ghost {
     display: inline-flex;
     align-items: center;
@@ -180,7 +172,6 @@ html, body {
   }
   .btn-ghost:hover { border-color: rgba(79,158,255,0.35); color: var(--color-ink); }
 
-  /* Danger button */
   .btn-danger {
     display: inline-flex;
     align-items: center;
@@ -197,7 +188,6 @@ html, body {
   }
   .btn-danger:hover { background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.4); }
 
-  /* Progress bars */
   .progress-track {
     height: 5px;
     background: var(--color-line);
@@ -208,11 +198,7 @@ html, body {
     height: 100%;
     background: linear-gradient(90deg, var(--color-mint), var(--color-mint-bright));
     border-radius: 3px;
-  }
-  .progress-fill-purple {
-    height: 100%;
-    background: linear-gradient(90deg, var(--color-mint), var(--color-mint-bright));
-    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .progress-fill-green {
     height: 100%;
@@ -225,7 +211,6 @@ html, body {
     border-radius: 3px;
   }
 
-  /* Blue badge (replaces mint badge) */
   .badge-mint {
     display: inline-flex;
     align-items: center;
@@ -240,7 +225,6 @@ html, body {
     color: var(--color-mint);
   }
 
-  /* Glow utility */
   .glow-mint {
     box-shadow: 0 0 20px rgba(79,158,255,0.18), 0 0 60px rgba(79,158,255,0.07);
   }
@@ -248,7 +232,6 @@ html, body {
     box-shadow: 0 0 8px rgba(79,158,255,0.14), 0 0 20px rgba(79,158,255,0.05);
   }
 
-  /* Input */
   .input-dark {
     background: var(--color-panel-2);
     border: 1px solid var(--color-line);
@@ -265,27 +248,32 @@ html, body {
   }
 }
 
-/* ── Hero card — gradient arc ── */
-.hero-arc::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% -70%,
-      transparent 60%,
-      rgba(40,80,180,0.04) 65%,
-      rgba(60,110,220,0.12) 71%,
-      rgba(80,140,255,0.22) 77%,
-      rgba(120,170,255,0.55) 85%,
-      rgba(180,210,255,0.80) 91%,
-      rgba(220,235,255,0.95) 93%,
-      #ffffff 95%),
-    radial-gradient(circle at 50% 35%, rgba(30,60,180,0.06) 0%, transparent 50%);
-  z-index: 0;
-  pointer-events: none;
+/* ── Animations ── */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
 }
 
-/* ── Splash animation ── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes faq-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes splash-anim {
   0%   { transform: scale(0.4); opacity: 0.8; }
   40%  { opacity: 0.6; }
@@ -295,36 +283,35 @@ html, body {
   animation: splash-anim 0.8s ease-out forwards;
 }
 
+/* ── Ticker scroll ── */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: flex;
+  animation: ticker-scroll 24s linear infinite;
+  width: max-content;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Count-up animation ── */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-up {
+  animation: count-up 0.4s ease forwards;
+}
+
 /* ── Icon node hover ── */
 .icon-node {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .icon-node:hover {
   transform: translateY(-1px);
-}
-
-/* ── Ticker scroll ── */
-@keyframes ticker-scroll {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-/* ── Pulse glow animation ── */
-@keyframes glow-pulse {
-  0%, 100% { opacity: 0.6; }
-  50%       { opacity: 1; }
-}
-
-/* ── Fade in ── */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── FAQ accordion ── */
-@keyframes faq-open {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Notification badge ── */
@@ -400,7 +387,68 @@ html, body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ── Transitions.dev — Menu dropdown ── */
+/* ── Transitions.dev — Tabs sliding ── */
+:root {
+  --tabs-dur: 250ms;
+  --tabs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tabs-text-muted: rgba(106, 106, 106, 0.9);
+  --tabs-text-active: #f0f0f0;
+  --tabs-bar-bg: #141414;
+  --tabs-pill-bg: #2a2a2a;
+}
+
+.t-tabs {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 48px;
+  background: var(--tabs-bar-bg);
+  border: 1px solid var(--color-line);
+}
+.t-tab {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  height: 30px;
+  padding: 4px 14px;
+  color: var(--tabs-text-muted);
+  cursor: pointer;
+  border-radius: 48px;
+  z-index: 1;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: color var(--tabs-dur) var(--tabs-ease);
+  white-space: nowrap;
+}
+.t-tab:not([aria-selected="true"]):hover,
+.t-tab[aria-selected="true"] {
+  color: var(--tabs-text-active);
+}
+.t-tabs-pill {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  height: 30px;
+  width: 0;
+  background: var(--tabs-pill-bg);
+  border-radius: 48px;
+  transform: translateX(0);
+  transition:
+    transform var(--tabs-dur) var(--tabs-ease),
+    width     var(--tabs-dur) var(--tabs-ease);
+  will-change: transform, width;
+  z-index: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-tabs-pill, .t-tab { transition: none !important; }
+}
+
+/* ── Dropdown ── */
 :root {
   --dropdown-open-dur: 250ms;
   --dropdown-close-dur: 150ms;
@@ -439,7 +487,7 @@ html, body {
     opacity   var(--dropdown-close-dur) var(--dropdown-ease);
 }
 
-/* ── Transitions.dev — Panel reveal ── */
+/* ── Panel reveal ── */
 :root {
   --panel-open-dur: 400ms;
   --panel-close-dur: 350ms;
@@ -470,12 +518,7 @@ html, body {
     filter    var(--panel-open-dur) var(--panel-ease);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .t-dropdown,
-  .t-panel-slide { transition: none !important; }
-}
-
-/* ── Transitions.dev — Text states swap ── */
+/* ── Text swap ── */
 :root {
   --text-swap-dur: 150ms;
   --text-swap-translate-y: 4px;
@@ -506,11 +549,7 @@ html, body {
   transition: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .t-text-swap { transition: none !important; }
-}
-
-/* ── Transitions.dev — Card hover tilt ── */
+/* ── Card hover tilt ── */
 :root {
   --tilt-perspective: 1000px;
   --tilt-return: 1000ms;
@@ -556,7 +595,7 @@ html, body {
 
 /* ── Tier card glows ── */
 @keyframes elite-pulse {
-  0%,100% { box-shadow: 0 0 0 1px rgba(168,85,247,0.35), 0 0 24px rgba(168,85,247,0.10), 0 0 0 0 transparent; }
+  0%,100% { box-shadow: 0 0 0 1px rgba(168,85,247,0.35), 0 0 24px rgba(168,85,247,0.10); }
   50%     { box-shadow: 0 0 0 1px rgba(168,85,247,0.55), 0 0 36px rgba(168,85,247,0.18), 0 4px 40px rgba(168,85,247,0.08); }
 }
 .tier-elite-card {
@@ -574,4 +613,39 @@ html, body {
 .tier-verified-card {
   border: 1px solid rgba(96,165,250,0.22) !important;
   box-shadow: 0 0 14px rgba(96,165,250,0.05);
+}
+
+/* ── Landing hero grid overlay ── */
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ── Score bar animation ── */
+@keyframes bar-grow {
+  from { width: 0; }
+}
+.score-bar {
+  animation: bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+/* ── Landing section fade-in on scroll ── */
+.section-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.section-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-reveal,
+  .t-dropdown,
+  .t-panel-slide,
+  .t-text-swap { transition: none !important; animation: none !important; }
 }

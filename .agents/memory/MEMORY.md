@@ -1,6 +1,9 @@
-- [Arcadia design system](arcadia-design.md) — dark purple-tinted palette, Inter font, 44px sidebar, full-width Topbar; no Syne/chartreuse.
+- [Arcadia design system](arcadia-design.md) — dark purple-tinted palette, Geist font (switched from Inter), 48px sidebar, full-width Topbar; no Syne/chartreuse.
 - [Nav cleanup pattern](nav-cleanup.md) — old Nav component replaced by layout-level Topbar; remove `import { Nav }` + `<Nav />` from all pages when layout handles it.
 - [Rust indexer build constraints](rust-indexer-build.md) — server-rs Cargo workspace compile constraints: no sqlx macros, no solana-sdk in workspace deps, use rustls not native-tls.
 - [SIWS auth contract](siws-auth-contract.md) — canonical message, payload shape, encoding, and Next mock vs Rust backend split.
 - [Simulate trade API shape](simulate-trade-shape.md) — Rust SimTradeReq uses `leverage` (decimal e.g. 3.0), not leverage_x100; server computes fees/liquidation itself.
 - [Arcadia gap fixes](arcadia-gap-fixes.md) — summary of all 10 architecture gaps found in audit and how each was resolved for MVP.
+- [Investor page consolidation](investor-consolidation.md) — /investments and /returns redirect to /portfolio; portfolio page has Overview/Positions/Activity tabs with SlidingTabs component.
+- [SVG gradient ID collision fix](svg-gradient-ids.md) — TraderCard MiniSparkline uses sanitised handle (uid.replace(/[^a-z0-9]/gi, '_')) as gradient ID, not numeric seed hash.
+- [Landing page pattern](landing-pattern.md) — anti-AI-slop split hero: left=editorial headline+CTAs, right=live leaderboard panel; no centered beam animation; section-reveal IntersectionObserver on scroll sections.

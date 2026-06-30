@@ -12,8 +12,8 @@ interface TraderCardProps {
   trader: TraderListItem;
 }
 
-/* Tiny inline sparkline — generates a simple SVG path from deterministic seed */
-function MiniSparkline({ seed, positive }: { seed: number; positive: boolean }) {
+/* Tiny inline sparkline — unique gradient ID per trader handle */
+function MiniSparkline({ seed, positive, uid }: { seed: number; positive: boolean; uid: string }) {
   const pts = Array.from({ length: 12 }, (_, i) => {
     const noise = Math.sin((seed + i) * 2.5) * 0.4 + Math.sin((seed + i) * 1.1) * 0.3;
     return 30 + noise * 20 + (positive ? i * 1.2 : -i * 0.5);
@@ -29,16 +29,18 @@ function MiniSparkline({ seed, positive }: { seed: number; positive: boolean }) 
   const path = coords.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
   const areaPath = `${path} L ${w} ${h} L 0 ${h} Z`;
   const color = positive ? "var(--color-mint)" : "var(--color-red)";
+  /* Use sanitised handle as gradient ID to avoid collisions */
+  const gradId = `spark-${uid.replace(/[^a-z0-9]/gi, "_")}`;
 
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} fill="none" style={{ overflow: "visible" }}>
       <defs>
-        <linearGradient id={`spark-${seed}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={positive ? "#4f9eff" : "#ef4444"} stopOpacity="0.3" />
           <stop offset="100%" stopColor={positive ? "#4f9eff" : "#ef4444"} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaPath} fill={`url(#spark-${seed})`} />
+      <path d={areaPath} fill={`url(#${gradId})`} />
       <path d={path} stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
@@ -59,27 +61,24 @@ export function TraderCard({ trader }: TraderCardProps) {
   const r30Arrow = pnlArrow(trader.return_30d);
   const isPos = trader.return_30d >= 0;
   const initials = trader.handle.slice(0, 2).toUpperCase();
-  const seed = trader.handle.charCodeAt(0) + trader.handle.charCodeAt(1);
+  const seed = trader.handle.charCodeAt(0) + (trader.handle.charCodeAt(1) || 0);
 
   return (
     <div
       className={`rounded-xl flex flex-col gap-0 overflow-hidden card card-hover ${tierCardClass(trader.tier)}`}
       style={{ background: "var(--color-panel)" }}
     >
-      {/* Inner content */}
       <div className="p-5 flex flex-col gap-4">
 
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            {/* Avatar */}
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
               style={{
                 background: "var(--color-panel-2)",
                 border: "1px solid rgba(79,158,255,0.15)",
                 color: "var(--color-mint)",
-                boxShadow: "0 0 12px rgba(79,158,255,0.08)",
               }}
             >
               {initials}
@@ -91,7 +90,7 @@ export function TraderCard({ trader }: TraderCardProps) {
                 </span>
                 <TierBadge tier={trader.tier} size="sm" />
               </div>
-              <span className="text-[11px] font-mono" style={{ color: "var(--color-faint)" }}>
+              <span className="text-[11px]" style={{ fontFamily: "var(--font-mono)", color: "var(--color-faint)" }}>
                 {shortAddr(trader.wallet)}
               </span>
             </div>
@@ -104,7 +103,7 @@ export function TraderCard({ trader }: TraderCardProps) {
             </p>
             <p
               className="text-2xl font-black tnum leading-none"
-              style={{ color: "var(--color-accent)", letterSpacing: "-0.03em", textShadow: "0 0 16px rgba(178,255,0,0.4)" }}
+              style={{ color: "var(--color-ink)", letterSpacing: "-0.03em" }}
             >
               {trader.score}
             </p>
@@ -120,8 +119,9 @@ export function TraderCard({ trader }: TraderCardProps) {
           {trader.style_tags.map((tag) => (
             <span
               key={tag}
-              className="text-[10px] px-1.5 py-0.5 rounded-md font-mono"
+              className="text-[10px] px-1.5 py-0.5 rounded-md"
               style={{
+                fontFamily: "var(--font-mono)",
                 color: "var(--color-faint)",
                 background: "var(--color-panel-2)",
                 border: "1px solid var(--color-line)",
@@ -164,9 +164,8 @@ export function TraderCard({ trader }: TraderCardProps) {
                 </p>
               </div>
             </div>
-            {/* Mini sparkline */}
             <div className="flex-shrink-0 ml-4 opacity-80">
-              <MiniSparkline seed={seed} positive={isPos} />
+              <MiniSparkline seed={seed} positive={isPos} uid={trader.handle} />
             </div>
           </div>
         </div>
@@ -177,7 +176,7 @@ export function TraderCard({ trader }: TraderCardProps) {
             <p className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: "var(--color-faint)" }}>
               AUM
             </p>
-            <p className="text-xs tnum font-semibold" style={{ color: "var(--color-muted)" }}>
+            <p className="text-xs tnum font-semibold" style={{ fontFamily: "var(--font-mono)", color: "var(--color-muted)" }}>
               {formatUSD(trader.aum, 0)}
             </p>
           </div>
@@ -186,16 +185,18 @@ export function TraderCard({ trader }: TraderCardProps) {
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-auto pt-1">
-          <p className="text-[10px] font-mono" style={{ color: "var(--color-faint)" }}>
+          <p className="text-[10px]" style={{ fontFamily: "var(--font-mono)", color: "var(--color-faint)" }}>
             Self {formatUSD(trader.trader_self_funded, 0)}
           </p>
           <Link
             href={`/t/${trader.handle}`}
-            className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-bold transition-all hover:bg-[var(--color-mint-bright)]"
+            className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-bold transition-all"
             style={{
               background: "var(--color-mint)",
               color: "#ffffff",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-mint-bright)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-mint)")}
           >
             Profile <ArrowUpRight size={11} />
           </Link>
