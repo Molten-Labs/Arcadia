@@ -23,7 +23,7 @@ import {
 import type { TraderProfile } from "@/lib/types";
 import { useRole } from "@/lib/role-context";
 import { MOCK_SCORE_HISTORY, MOCK_DAILY_PNL } from "@/lib/mock-data";
-import { Bookmark, BookmarkCheck, ExternalLink, TrendingDown, BarChart3, Share2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, Calendar, ExternalLink, TrendingDown, BarChart3, Share2 } from "lucide-react";
 import { ShareCardModal } from "@/components/ShareCardModal";
 
 function useWatchlist() {
