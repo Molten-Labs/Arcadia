@@ -24,14 +24,12 @@ const TRADER_NAV = [
 ];
 
 const INVESTOR_NAV = [
-  { href: "/dashboard",        icon: LayoutDashboard, label: "Dashboard",    primary: true  },
-  { href: "/portfolio",        icon: Briefcase,       label: "Portfolio",    primary: true  },
-  { href: "/investments",      icon: TrendingUp,      label: "Investments",  primary: true  },
-  { href: "/returns",          icon: ArrowLeftRight,  label: "Returns",      primary: true  },
-  { href: "/terminal?deposit=1", icon: DollarSign,    label: "Deposit USDC", primary: true  },
-  { href: "/traders",          icon: Users,           label: "Traders",      primary: false },
-  { href: "/leaderboard",      icon: Trophy,          label: "Leaderboard",  primary: false },
-  { href: "/analytics",        icon: TrendingUp,      label: "Analytics",    primary: false },
+  { href: "/dashboard",   icon: LayoutDashboard, label: "Dashboard",   primary: true  },
+  { href: "/portfolio",   icon: Briefcase,       label: "Portfolio",   primary: true  },
+  { href: "/investments", icon: TrendingUp,      label: "Investments", primary: true  },
+  { href: "/returns",     icon: ArrowLeftRight,  label: "Returns",     primary: true  },
+  { href: "/traders",     icon: Users,           label: "Traders",     primary: false },
+  { href: "/leaderboard", icon: Trophy,          label: "Leaderboard", primary: false },
 ];
 
 const GUEST_NAV = [
