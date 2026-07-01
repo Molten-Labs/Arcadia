@@ -28,3 +28,11 @@ outputType = "webview"
 
 [nix]
 channel = "stable-25_05"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 24837
+externalPort = 3000
