@@ -668,3 +668,50 @@ body {
   @keyframes float-b { from, to { transform: none; } }
   @keyframes float-c { from, to { transform: none; } }
 }
+
+/* ── Landing page responsive layout ─────────────────────────────────── */
+/* Tablet: 2-column grids stay, 5-column steps collapse to 2 */
+@media (max-width: 900px) {
+  .lp-hero      { grid-template-columns: 1fr !important; min-height: auto !important; }
+  .lp-hero-cards { display: none !important; }
+  .lp-steps     { grid-template-columns: repeat(2, 1fr) !important; }
+  .lp-3col      { grid-template-columns: 1fr !important; }
+  .lp-score-mid { border-right: none !important; border-bottom: 1px solid var(--color-line) !important; }
+}
+
+/* Mobile: everything stacks to 1 column */
+@media (max-width: 640px) {
+  .lp-2col      { grid-template-columns: 1fr !important; }
+  .lp-steps     { grid-template-columns: 1fr !important; }
+  .lp-nocust    { grid-template-columns: 1fr !important; }
+  .lp-faq-grid  { grid-template-columns: 1fr !important; gap: 2rem !important; }
+  .lp-dual-cta  { grid-template-columns: 1fr !important; }
+
+  /* Problem columns: remove internal border when stacked */
+  .lp-2col > *:first-child { border-right: none !important; border-bottom: 1px solid var(--color-line) !important; }
+
+  /* Score section stacked: remove side borders between cells */
+  .lp-3col > * { border-right: none !important; border-bottom: 1px solid var(--color-line) !important; }
+  .lp-3col > *:last-child { border-bottom: none !important; }
+
+  /* Nocust right column: remove top border */
+  .lp-nocust > *:last-child { border-top: 1px solid var(--color-line); padding-top: 0 !important; }
+
+  /* Steps: no connector lines on mobile */
+  .lp-step-connector { display: none !important; }
+
+  /* Dual CTA: left CTA loses right border */
+  .lp-dual-cta > *:first-child { border-right: none !important; border-bottom: 1px solid var(--color-line) !important; }
+
+  /* Trust strip */
+  .lp-trust-right { display: none !important; }
+
+  /* FAQ grid: collapse sidebar */
+  .lp-faq-sidebar { display: none !important; }
+  .lp-faq-content { padding-top: clamp(2rem, 4vw, 3rem) !important; }
+}
+
+/* Very small screens: bump down hero headline a touch */
+@media (max-width: 400px) {
+  .lp-hero-left { padding: 3rem 1.25rem !important; }
+}

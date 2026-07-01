@@ -295,14 +295,14 @@ export default function LandingPage() {
     <div style={{ background: "#000", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
 
       {/* ═══ HERO ════════════════════════════════════════════════════════ */}
-      <section style={{
+      <section className="lp-hero" style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
         minHeight: "calc(100vh - 3rem)",
         borderBottom: "1px solid #1c1c1c",
       }}>
         {/* Left */}
-        <div style={{
+        <div className="lp-hero-left" style={{
           padding: "clamp(4rem, 8vw, 7rem) clamp(2rem, 5vw, 5rem)",
           display: "flex", flexDirection: "column", justifyContent: "center",
           position: "relative", overflow: "hidden",
@@ -396,7 +396,7 @@ export default function LandingPage() {
         </div>
 
         {/* Right — floating cards */}
-        <div style={{
+        <div className="lp-hero-cards" style={{
           borderLeft: "1px solid #1c1c1c",
           padding: "4rem 3rem",
           display: "flex", alignItems: "center",
@@ -426,7 +426,7 @@ export default function LandingPage() {
             <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8125rem", fontWeight: 700, color: "#363636" }}>{p.name}</span>
           </div>
         ))}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="lp-trust-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636", letterSpacing: "0.1em" }}>All trades verified on-chain</span>
           <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", animation: "glow-pulse 2s ease-in-out infinite" }} />
         </div>
@@ -443,7 +443,7 @@ export default function LandingPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>The Problem</span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+        <div className="lp-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
           {/* Trader problem */}
           <div style={{
             borderRight: "1px solid #1c1c1c",
@@ -518,7 +518,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══ NO CUSTODY CALLOUT ══════════════════════════════════════════ */}
-      <section style={{
+      <section className="lp-nocust" style={{
         borderBottom: "1px solid #1c1c1c",
         background: "#050505",
         padding: "clamp(4rem, 8vw, 7rem) clamp(2rem, 5vw, 5rem)",
@@ -580,7 +580,7 @@ export default function LandingPage() {
             Five steps from first trade to first payout.
           </h2>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1.5rem" }}>
+          <div className="lp-steps" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1.5rem" }}>
             {HOW_STEPS.map((step, i) => (
               <div key={step.n} style={{
                 position: "relative",
@@ -588,7 +588,7 @@ export default function LandingPage() {
               }}>
                 {/* Connector line */}
                 {i < HOW_STEPS.length - 1 && (
-                  <div style={{
+                  <div className="lp-step-connector" style={{
                     position: "absolute", top: "1.5rem", left: "calc(100% + 0.5rem)",
                     width: "calc(1.5rem - 1px)", height: 1,
                     background: "linear-gradient(90deg, #1c1c1c, transparent)",
@@ -624,7 +624,7 @@ export default function LandingPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>The Score</span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+        <div className="lp-3col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
           {/* Big number */}
           <div style={{
             padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 5rem)",
@@ -655,7 +655,7 @@ export default function LandingPage() {
           </div>
 
           {/* Score bars */}
-          <div style={{
+          <div className="lp-score-mid" style={{
             padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4rem)",
             borderRight: "1px solid #1c1c1c",
             display: "flex", flexDirection: "column", justifyContent: "center",
@@ -738,7 +738,7 @@ export default function LandingPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>Two Sides, One Protocol</span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+        <div className="lp-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
           {/* Traders */}
           <div style={{ borderRight: "1px solid #1c1c1c", padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "1.75rem" }}>
@@ -961,12 +961,12 @@ export default function LandingPage() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>FAQ</span>
         </div>
 
-        <div style={{
+        <div className="lp-faq-grid" style={{
           display: "grid", gridTemplateColumns: "1fr 2fr",
           padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)",
           gap: "5rem", alignItems: "start",
         }}>
-          <div>
+          <div className="lp-faq-sidebar">
             <h2 style={{ fontSize: "clamp(1.5rem, 2.5vw, 2rem)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f0f0f0", margin: "0 0 1rem", lineHeight: 1.2 }}>
               Common questions, honest answers.
             </h2>
@@ -974,12 +974,12 @@ export default function LandingPage() {
               No jargon. If the answer requires a whitepaper, we haven't simplified it enough.
             </p>
           </div>
-          <FAQ />
+          <div className="lp-faq-content"><FAQ /></div>
         </div>
       </section>
 
       {/* ═══ DUAL CTA FOOTER ═════════════════════════════════════════════ */}
-      <section style={{
+      <section className="lp-dual-cta" style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
         borderBottom: "1px solid #1c1c1c",
       }}>
