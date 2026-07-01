@@ -1,0 +1,30 @@
+Good, clean gate pattern. Now let me walk through the actual dashboard/terminal pages themselves.I've now traced the full flow end to end. Here's my honest assessment.
+
+## The good — the core flows are genuinely solid
+
+**Trader side:** wallet connect → role gate → `/terminal` (real order book, ticker, positions) → `/manage` (vault controls, capacity, self-stake) → `/reputation` (score breakdown with actual Sortino/consistency weighting) → `/payouts` (HWM-gated profit claims). That's a complete, coherent loop and it uses your real mental model throughout.
+
+**Investor side:** `/traders` (marketplace, sortable by score/Sortino/AUM/30d return) → `/t/[handle]` (public trader profile with score dial, drawdown timeline, deposit flow) → `/portfolio` (positions, deposit/settle/withdraw activity log). Also coherent, also uses the real model.
+
+**One nice detail:** `/portfolio`'s withdrawal history shows a `"Withdraw request" / "Awaiting window"` status — implying a withdrawal cooldown rather than instant withdrawal.
+
+## Three real problems I found
+
+**1. `/dashboard` is orphaned and contradicts the rest of the product.** Both trader and investor nav configs route their primary "Dashboard" link to the same `/dashboard` page — but that page is 100% unrelated leftover content: hardcoded mock data (`Eval #4821`, `Active Funded`, `Profit Target`, `Daily Drawdown`), styled like a prop-firm challenge account (FTMO-style), with zero mention of score, vault, capacity, or HWM, and it doesn't branch by role at all. It reads like a starter template from before the current model was locked in, never removed. This is the single highest-priority fix — it's the first thing both trader and investor personas hit after choosing their role, and it actively contradicts everything else you've built.
+
+**2. The capacity formula in the live code doesn't match what we actually decided.** `/manage` shows `Score × $1,000` as the capacity formula — that's the original flat linear formula I first proposed, which you explicitly rejected in favor of `self-staked capital × multiplier(score)` specifically because a pure score-based formula doesn't require self-stake and undercuts the manipulation-resistance story. Right now the live product is running the version you decided *against*. Worth fixing since it's inconsistent with your reputation-page skin-in-the-game narrative and your whitepaper.
+
+**3. The withdrawal cooldown isn't disclosed anywhere in the trust copy.** The FAQ on the landing page says investor funds "stay inside a PDA" and imply access is always available (aside from trader restrictions) — but if there's genuinely a withdrawal window/delay, an investor needs to know that upfront, not discover it when they try to pull money out. This is a trust-copy gap, not a code bug, but it's exactly the kind of detail a "finance-literate investor" (the mentor's phrase) will notice and ask about.
+
+## Smaller things worth a pass
+
+- `dashboard`, `investments`, and `returns` routes are tangled — `investments`/`returns` redirect to `portfolio`, but `dashboard` is still live and reachable, unrelated to any of them. Worth deciding: kill `/dashboard` entirely and repoint both nav configs to `/terminal` (trader) and `/portfolio` (investor) directly, or repurpose it as a genuine unified overview.
+- Role is purely a `localStorage` client-side preference (`RoleProvider`), not derived from anything on-chain or server-verified — fine for a demo, but worth being conscious that nothing stops one wallet from toggling between trader/investor views. Presumably real permission enforcement lives in the vault program itself, which is the right place for it — just confirm the frontend role isn't being trusted anywhere it shouldn't be.
+
+## Priority order if you want to act on this
+
+1. Kill or rebuild `/dashboard` — it's actively misleading right now
+2. Fix the capacity formula on `/manage` to match your actual design (stake × multiplier, not score × flat rate)
+3. Add withdrawal-window disclosure to the no-custody FAQ copy
+
+Want me to fix any of these directly — starting with the dashboard page, since that's the biggest one?
