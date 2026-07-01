@@ -643,9 +643,28 @@ body {
   transform: translateY(0);
 }
 
+/* ── Hero floating card animations ── */
+@keyframes float-a {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-10px) rotate(0.4deg); }
+  66%       { transform: translateY(5px) rotate(-0.3deg); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  40%       { transform: translateY(-8px) rotate(-0.5deg); }
+  70%       { transform: translateY(6px) rotate(0.3deg); }
+}
+@keyframes float-c {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px) rotate(0.2deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .section-reveal,
   .t-dropdown,
   .t-panel-slide,
   .t-text-swap { transition: none !important; animation: none !important; }
+  @keyframes float-a { from, to { transform: none; } }
+  @keyframes float-b { from, to { transform: none; } }
+  @keyframes float-c { from, to { transform: none; } }
 }

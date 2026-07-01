@@ -1,0 +1,56 @@
+That file didn't upload correctly — it's not a readable image format on my end (no valid image header, just raw data), so I can't open it directly. No problem though — let me pull up the actual Sherlock page myself.Good reference — Sherlock's page is a strong model because it's built for exactly your problem: convincing a skeptical, technical audience to trust an unfamiliar process with real money at stake. Let me break this down through all four lenses, since each one catches something the others miss.
+
+## Why Sherlock's structure works for you specifically
+
+Sherlock sells "let strangers find bugs in your code" — a trust problem almost identical to yours ("let a stranger trade your capital"). Their page pattern: hero claim → **trust logos immediately** (before any explanation) → numbered process → benefits with proof, not adjectives → testimonials → FAQ → final CTA. That's not decoration — it's a deliberate skepticism-reduction sequence, and it maps almost perfectly onto your allocation-rail story.
+
+## As a designer
+
+**Visual language:** Dark, technical, restrained — not "crypto flashy." Sherlock uses a near-black base, one accent color used sparingly, lots of negative space, and monospace/technical type accents for numbers and data. This signals "serious infrastructure," not "meme coin." For Arcadia, keep your Solana green/purple but use it as accent only — restraint reads as more credible to investors than gradient-heavy hero sections.
+
+**Key device to steal:** the floating card graphics around the hero image (the small overlapping cards near the hero screenshot). For you, this is a natural fit — float 2-3 small mock "trader profile" or "score" cards near your hero visual instead of a generic illustration. It shows the actual product, not a metaphor for it.
+
+**Numbered process section** — Sherlock's "Scope → Senior Review → Global Push → Judging → Fix Review" is a direct template for your "Stake → Trade → Score → Allocate → Monitor" flow (Section 3 of the whitepaper). Use the same numbered-step layout.
+
+## As a GTM person
+
+Sherlock's page is built for **two audiences reading the same page differently** — protocol teams (buyers) and researchers (supply side). You have the identical structure: **investors** (buyers) and **traders** (supply side). Almost every section should acknowledge this split explicitly, the way Sherlock's nav splits "Solutions" from researcher-facing leaderboards.
+
+Notice what Sherlock does NOT do: no jargon-dense technical explanation up front, no defensive "but is it safe" tone. It states confidently, then proves. Your page should not open by explaining slashing mechanics — it should open with the outcome ("proven trading skill, backed by real capital, finally investable"), then let the how-it-works section carry the mechanism.
+
+**Trust logos are load-bearing.** Sherlock puts Aave, Ethereum, Optimism logos directly under the hero before any pitch content. You don't have this yet — this is your traction gap showing up on the landing page too. Until you have real integrations/pilots, don't fake a logo row. Use it instead for **venue integrations** (Drift, Jupiter logos) — legitimate, and signals real infrastructure rather than social proof you don't have.
+
+## As a developer
+
+Sherlock's actual build is straightforward: sticky nav, hero with layered image/floating elements (likely absolute-positioned divs or SVG, not heavy animation), scroll-triggered fade-ins on sections, a horizontal-scroll or stepper for the process section, and a fairly plain FAQ accordion at the bottom. Nothing here requires WebGL or heavy JS — it's disciplined typography and spacing doing the work, which also means it'll load fast and work well on mobile, both of which matter for an investor opening your link on their phone.
+
+For your build: this is very achievable as a single HTML file with vanilla JS/CSS or a React setup, no exotic dependencies needed.
+
+## As a user landing on the page cold
+
+Walking through Sherlock's page as a first-time visitor, the sequence answers questions in this order: *what is this → who already trusts it → how does it actually work → why is this better than the alternative → what do respected people say about it → common objections answered → do it now.* That ordering is deliberate — it's a trust ramp, not a feature list.
+
+For Arcadia, a cold visitor's actual question sequence is different from an investor's or trader's polished pitch — it's more skeptical, faster to bounce:
+1. "Wait, is this custodial? Can the trader run off with my money?" → needs answering in the first screen, not buried
+2. "How do I know the score isn't fake?" → needs a concrete example, not an adjective
+3. "Has anyone actually used this?" → your current honest answer is no, so the page needs to be built to not overclaim here (see below)
+
+## Proposed section-by-section architecture
+
+| # | Section | Content (pulled from whitepaper) |
+|---|---|---|
+| 1 | **Hero** | Headline: something like *"The allocation rail for proven on-chain trading talent"* / Subhead: one sentence on real capital, real trades, direct allocation / CTA: "Join the waitlist" or "Get early access" |
+| 2 | **Integration/venue logos** | Drift, Jupiter, Solana — real, not fake social proof |
+| 3 | **The problem** (two-sided) | Short version of Section 1 — traders invisible, investors flying blind |
+| 4 | **No-custody callout** | Standalone, visually distinct section — this is your strongest trust signal, give it its own moment, not buried in "how it works" |
+| 5 | **How it works** (numbered, Sherlock-style) | Stake → Declare limits → Trade → Score → Allocate → Monitor (Section 3) |
+| 6 | **The score, illustrated** | The concrete "72 score" example — this single example does more trust-building work than any paragraph of explanation |
+| 7 | **Why not just an analytics tool** | Direct comparison table (Section 10 of the whitepaper) — allocation rail vs. read-only scorers |
+| 8 | **FAQ** | Custody, slashing, fake-proofing, minimum capital, fees — anticipate the skeptical questions directly |
+| 9 | **Final CTA** | Two distinct CTAs: "I'm a trader" / "I'm an investor" — since Sherlock's audience split applies to you too |
+
+## One honest flag, as your advisor rather than just executing the brief
+
+Sherlock's page works because it's backed by years of real contests and named protocols. Your page, built today, would be making the same visual promises without the same evidence behind it yet. That's not a reason to not build it — it's a reason to be deliberate about section 8 (traction) and the CTA: right now your honest CTA is "join early access / waitlist," not "deposit now." Building the page now is actually a great move for exactly the traction-gathering goal from your pitch feedback — a real landing page with a working waitlist form *is* a traction signal you can point to next time.
+
+Want me to build this as an actual HTML page next, matching this structure and Sherlock's visual restraint?
