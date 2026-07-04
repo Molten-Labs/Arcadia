@@ -1,6 +1,7 @@
 modules = ["nodejs-20", "rust-1.89", "postgresql-16"]
 [agent]
 expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
 
 [workflows]
 runButton = "Project"
@@ -34,5 +35,17 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 6379
+externalPort = 3001
+
+[[ports]]
 localPort = 24837
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+ARCADIA_STORE = "memory"
+ARCADIA_DEMO_MODE = "true"
+NODE_ENV = "development"
+BACKEND_URL = ""
