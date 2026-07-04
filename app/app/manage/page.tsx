@@ -5,36 +5,34 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { StatCard } from "@/components/StatCard";
 import { formatUSD } from "@/lib/types";
 import { MOCK_TRADERS } from "@/lib/mock-data";
-import { ExternalLink, CheckCircle, Clock } from "lucide-react";
+import { useArcadiaVault } from "@/lib/use-arcadia-vault";
+import { ExternalLink, CheckCircle, Clock, Loader2 } from "lucide-react";
 
 const DEMO_TRADER = MOCK_TRADERS[0];
 
-function fakeTxHash(): string {
-  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  return Array.from({ length: 88 }, () => B58[Math.floor(Math.random() * 58)]).join("");
-}
-
 export default function ManagePage() {
-  const { connected } = useWallet();
+  const { connected, publicKey } = useWallet();
   const [selfFundAmount, setSelfFundAmount] = useState("");
-  const [txStatus, setTxStatus] = useState<null | { phase: "pending" | "done"; hash?: string }>(null);
   const [depositsOpen, setDepositsOpen] = useState(DEMO_TRADER.deposits_open);
 
-  const score = DEMO_TRADER.score;
-  const capacity = score * 1000;
-  const aum = DEMO_TRADER.aum;
-  const selfFunded = DEMO_TRADER.trader_self_funded;
+  const { deposit, txStatus, txSig, setTxStatus } = useArcadiaVault();
+
+  const score        = DEMO_TRADER.score;
+  const capacity     = score * 1000;
+  const aum          = DEMO_TRADER.aum;
+  const selfFunded   = DEMO_TRADER.trader_self_funded;
   const capacityLeft = capacity - aum;
 
-  const handleSelfFund = () => {
+  const isPending = txStatus !== null && !txSig && txStatus !== null && !txStatus?.startsWith("Deposit failed");
+  const isSuccess = !!txSig;
+  const isError   = txStatus?.startsWith("Deposit failed") ?? false;
+
+  const handleSelfFund = async () => {
     const amount = parseFloat(selfFundAmount);
     if (!amount || amount <= 0) return;
-    setTxStatus({ phase: "pending" });
-    setTimeout(() => {
-      const hash = fakeTxHash();
-      setTxStatus({ phase: "done", hash });
-      setSelfFundAmount("");
-    }, 1800);
+    setTxStatus(null);
+    const ok = await deposit(publicKey?.toBase58() ?? "", amount);
+    if (ok) setSelfFundAmount("");
   };
 
   if (!connected) {
@@ -58,7 +56,7 @@ export default function ManagePage() {
             className="text-[10px] px-3 py-1.5 rounded-lg font-mono"
             style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)", color: "var(--color-faint)" }}
           >
-            devnet simulation
+            Solana devnet
           </div>
         </div>
 
@@ -104,6 +102,7 @@ export default function ManagePage() {
                 value={selfFundAmount}
                 onChange={(e) => setSelfFundAmount(e.target.value)}
                 placeholder="0.00"
+                disabled={isPending}
                 className="w-full rounded-lg px-3 py-2 text-sm outline-none tnum"
                 style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)", color: "var(--color-ink)" }}
               />
@@ -116,37 +115,44 @@ export default function ManagePage() {
             ) : (
               <button
                 onClick={handleSelfFund}
-                disabled={txStatus?.phase === "pending" || !selfFundAmount}
-                className="w-full py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
+                disabled={isPending || !selfFundAmount}
+                className="w-full py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: "var(--color-mint)", color: "#ffffff" }}
               >
-                {txStatus?.phase === "pending" ? "Signing transaction…" : "Deposit (own)"}
+                {isPending && <Loader2 size={13} className="animate-spin" />}
+                {isPending ? "Signing transaction…" : "Deposit (own)"}
               </button>
             )}
 
-            {txStatus?.phase === "pending" && (
+            {isPending && (
               <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "var(--color-faint)" }}>
-                <Clock size={12} className="animate-spin" />
-                Awaiting devnet confirmation…
+                <Clock size={12} />
+                {txStatus}
               </div>
             )}
 
-            {txStatus?.phase === "done" && txStatus.hash && (
+            {isSuccess && txSig && (
               <div className="mt-3 rounded-lg p-3" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle size={13} style={{ color: "var(--color-green)" }} />
-                  <span className="text-xs font-bold" style={{ color: "var(--color-green)" }}>Self-fund confirmed (devnet)</span>
+                  <span className="text-xs font-bold" style={{ color: "var(--color-green)" }}>Self-fund confirmed</span>
                 </div>
                 <a
-                  href={`https://solscan.io/tx/${txStatus.hash}?cluster=devnet`}
+                  href={`https://solscan.io/tx/${txSig}?cluster=devnet`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
                   style={{ color: "var(--color-mint)" }}
                 >
-                  <span>{txStatus.hash.slice(0, 8)}…{txStatus.hash.slice(-6)}</span>
+                  <span>{txSig.slice(0, 8)}…{txSig.slice(-6)}</span>
                   <ExternalLink size={10} />
                 </a>
+              </div>
+            )}
+
+            {isError && txStatus && (
+              <div className="mt-3 rounded-lg p-3 text-xs" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444" }}>
+                {txStatus}
               </div>
             )}
           </div>

@@ -8,3 +8,4 @@
 - [SVG gradient ID collision fix](svg-gradient-ids.md) — TraderCard MiniSparkline uses sanitised handle (uid.replace(/[^a-z0-9]/gi, '_')) as gradient ID, not numeric seed hash.
 - [Landing page pattern](landing-pattern.md) — anti-AI-slop split hero: left=editorial headline+CTAs, right=live leaderboard panel; no centered beam animation; section-reveal IntersectionObserver on scroll sections.
 - [Arcadia MVP wiring](arcadia-mvp-wiring.md) — full-stack wiring: IDL hand-written at app/lib/arcadia-idl.ts; SDK at app/lib/arcadia-sdk.ts; all /api/v1/* routes proxy via app/lib/backend-proxy.ts; rustup 1.89.0 needed (nix cargo=1.86 is too old); run ./build-backend.sh then restart workflow.
+- [Deposit flow wiring](deposit-flow.md) — DepositModal.tsx wired into /t/[handle]; use-arcadia-vault.ts uses @coral-xyz/anchor + correct program ID; Helius RPC in providers.tsx; real txs when on-chain, clean sim fallback otherwise.

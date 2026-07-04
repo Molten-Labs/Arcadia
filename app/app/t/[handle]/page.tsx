@@ -23,6 +23,7 @@ import {
   BarChart3, Share2, CheckCircle, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { ShareCardModal } from "@/components/ShareCardModal";
+import { DepositModal } from "@/components/DepositModal";
 
 /* ── Watchlist hook ── */
 function useWatchlist() {
@@ -244,6 +245,7 @@ export default function TraderProfilePage() {
   const { watchlist, toggle } = useWatchlist();
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [showShare, setShowShare] = useState(false);
+  const [showDeposit, setShowDeposit] = useState(false);
 
   const { data: trader, isLoading, error, refetch } = useQuery<TraderProfile>({
     queryKey: ["trader", handle],
@@ -729,19 +731,24 @@ export default function TraderProfilePage() {
                 <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", marginBottom: "1rem" }}>
                   {formatUSD(trader.aum, 0)} of {formatUSD(trader.capacity.total, 0)} · {capacityPct}%
                 </p>
-                <Link href={`/vault/${trader.profile}`} style={{
-                  display: "block", textAlign: "center",
-                  padding: "10px", borderRadius: 8,
-                  background: "var(--color-mint)", color: "#ffffff",
-                  fontWeight: 700, fontSize: "0.8125rem", letterSpacing: "-0.01em",
-                  textDecoration: "none", transition: "background 0.15s",
-                  boxShadow: "0 0 20px rgba(79,158,255,0.2)",
-                }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-mint-bright)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-mint)")}
+                <button
+                  onClick={() => setShowDeposit(true)}
+                  disabled={!trader.deposits_open}
+                  style={{
+                    display: "block", width: "100%", textAlign: "center",
+                    padding: "10px", borderRadius: 8,
+                    background: trader.deposits_open ? "var(--color-mint)" : "var(--color-panel-2)",
+                    color: trader.deposits_open ? "#ffffff" : "var(--color-faint)",
+                    fontWeight: 700, fontSize: "0.8125rem", letterSpacing: "-0.01em",
+                    border: "none", cursor: trader.deposits_open ? "pointer" : "not-allowed",
+                    transition: "background 0.15s",
+                    boxShadow: trader.deposits_open ? "0 0 20px rgba(79,158,255,0.2)" : "none",
+                  }}
+                  onMouseEnter={(e) => { if (trader.deposits_open) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-mint-bright)"; }}
+                  onMouseLeave={(e) => { if (trader.deposits_open) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-mint)"; }}
                 >
-                  Fund Vault
-                </Link>
+                  {trader.deposits_open ? "Fund Vault" : "Deposits Closed"}
+                </button>
               </div>
             </CollapsibleCard>
 
@@ -771,6 +778,10 @@ export default function TraderProfilePage() {
           </div>
         </div>
       </div>
+
+      {showDeposit && (
+        <DepositModal trader={trader} onClose={() => setShowDeposit(false)} />
+      )}
 
       {showShare && (
         <ShareCardModal
