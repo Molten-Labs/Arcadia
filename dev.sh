@@ -11,4 +11,4 @@ if [ ! -f "app/node_modules/.bin/next" ]; then
 fi
 
 echo "[dev] Starting Next.js dev server on port 5000..."
-cd app && PORT=5000 node_modules/.bin/next dev --port 5000 --hostname 0.0.0.0
+cd app && PORT=5000 node_modules/.bin/next dev --port 5000 --host 0.0.0.0
