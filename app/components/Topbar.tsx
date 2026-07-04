@@ -164,23 +164,7 @@ export function Topbar() {
           Devnet
         </span>
 
-        {/* Role chip */}
-        {mounted && connected && role && (
-          <span
-            className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold"
-            style={{
-              background: role === "trader" ? "rgba(79,158,255,0.08)" : "rgba(240,180,41,0.08)",
-              border: `1px solid ${role === "trader" ? "rgba(79,158,255,0.18)" : "rgba(240,180,41,0.18)"}`,
-              color: role === "trader" ? "var(--color-mint)" : "var(--color-gold)",
-            }}
-          >
-            {role === "trader"
-              ? <TrendingUp size={9} />
-              : <Crown size={9} />
-            }
-            {role === "trader" ? "Trader" : "Investor"}
-          </span>
-        )}
+
       </div>
 
       <div className="flex items-center gap-2">
