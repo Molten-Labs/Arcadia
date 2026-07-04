@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "solana": {
+      "source": "quicknode/solana-finance-skill",
+      "sourceType": "github",
+      "skillPath": "skills/solana/SKILL.md",
+      "computedHash": "e7b3c7e1538860c1cf88f1f733d26ed62b223469322022b4168d54c69818d38b"
+    }
+  }
+}
