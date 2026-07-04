@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port $PORT --host 0.0.0.0",
+    "dev": "next dev --port $PORT",
     "build": "next build",
-    "start": "next start --port $PORT --host 0.0.0.0",
+    "start": "next start --port $PORT",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
