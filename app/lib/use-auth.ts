@@ -27,11 +27,23 @@ function buildSiwsMessage(pubkey: string, nonce: string): string {
 }
 
 export function useAuth() {
-  const { publicKey, signMessage, connected, disconnect } = useWallet();
-  const [token,   setToken]   = useState<string | null>(null);
-  const [wallet,  setWallet]  = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
+  // wallet-adapter-react 0.15+ uses a Proxy as the default WalletContext value
+  // that console.errors on any property access outside a WalletProvider.
+  // Guard all property reads behind a `mounted` flag so they only fire on the
+  // client after WalletProvider has initialised its context.
+  const walletAdapter = useWallet();
+  const [mounted,  setMounted]  = useState(false);
+  const [token,    setToken]    = useState<string | null>(null);
+  const [wallet,   setWallet]   = useState<string | null>(null);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Only dereference wallet adapter properties after client mount
+  const publicKey   = mounted ? walletAdapter.publicKey   : null;
+  const signMessage = mounted ? walletAdapter.signMessage : undefined;
+  const disconnect  = mounted ? walletAdapter.disconnect  : async () => {};
 
   // Hydrate from localStorage on mount and whenever the connected wallet changes.
   // If the stored wallet doesn't match the currently-connected key, wipe the
@@ -45,7 +57,6 @@ export function useAuth() {
       setToken(storedToken);
       setWallet(storedWallet);
     } else {
-      // Wallet changed or no wallet — clear stale session
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(WALLET_KEY);
       setToken(null);

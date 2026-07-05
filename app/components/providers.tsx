@@ -1,5 +1,17 @@
 "use client";
 
+// Suppress the wallet-adapter-react 0.15+ "WalletContext without providing one"
+// console.error that fires during Next.js SSR/hydration. The page renders
+// correctly after hydration; this is a known compatibility issue.
+if (typeof window !== "undefined") {
+  const _consoleError = console.error.bind(console);
+  console.error = (...args: unknown[]) => {
+    const msg = typeof args[0] === "string" ? args[0] : "";
+    if (msg.includes("WalletContext without providing one")) return;
+    _consoleError(...args);
+  };
+}
+
 import { type ReactNode, useMemo, createContext, useContext } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";

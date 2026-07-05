@@ -1,0 +1,291 @@
+# Arcadia Landing Page — Final Content Pass
+Corrected version: same structure as the previous rewrite, with the fee model and risk disclosure gaps closed. Hand this to the coding agent as the single source of truth — it supersedes the prior two content passes.
+
+---
+
+## 1. FAQ_ITEMS (replace fully — 10 items, not 8)
+
+```js
+const FAQ_ITEMS = [
+  {
+    q: "What is Arcadia?",
+    a: "Arcadia is the allocation rail for on-chain trading talent. It turns real trading history into verified reputation, then lets investor capital flow to traders through smart-contract vaults instead of screenshots, trust games, or direct custody.",
+  },
+  {
+    q: "What problem does Arcadia solve?",
+    a: "Today, skilled traders struggle to prove they are genuinely good, and investors struggle to know who to trust. Arcadia connects both sides with a verified score, public track record, and vault-based allocation system.",
+  },
+  {
+    q: "What is the Arcadia Score?",
+    a: "The Arcadia Score is a 0–1000 reputation number built from real trading history. It rewards consistent, risk-aware performance — not loud claims, lucky screenshots, or one-off wins.",
+  },
+  {
+    q: "Why does the score matter?",
+    a: "The score is the trust layer. It helps investors compare traders more clearly, and it helps traders unlock more capital capacity as they prove themselves over time.",
+  },
+  {
+    q: "Can a trader fake their reputation?",
+    a: "Arcadia is based on on-chain trading activity, not uploaded screenshots. A trader cannot simply edit a P&L image or claim a fake win. Their reputation comes from the public record.",
+  },
+  {
+    q: "Can a trader run away with investor funds?",
+    a: "Investor capital goes into a smart-contract vault, not directly into the trader's wallet. The trader can trade under the protocol's rules, but they cannot simply withdraw investor capital.",
+  },
+  {
+    q: "Can I lose money as an investor?",
+    a: "Yes. Arcadia protects you from theft — the trader can never withdraw your principal. It does not protect you from trading losses. You hold vault shares alongside the trader, and if the vault loses money, your share loses value proportionally, the same as any fund. Verified skill lowers this risk over time; it doesn't remove it.",
+  },
+  {
+    q: "How does capital allocation work?",
+    a: "A trader builds reputation by trading. As their score improves, they can unlock more vault capacity. Investors can then deposit into that vault and share in the upside if the trader performs.",
+  },
+  {
+    q: "What if a trader's capacity falls below what's already invested?",
+    a: "If a trader's score or backing capital drops enough, new deposits pause automatically. If the gap is severe, the vault gives the trader a short window to add capital or recover performance. If that window passes unresolved, investor funds are returned in an orderly way — never a forced fire sale, and always disclosed upfront so it's never a surprise.",
+  },
+  {
+    q: "How does Arcadia make money?",
+    a: "Arcadia earns two ways: a share of profit when a vault performs, and a small ongoing management fee. The performance share means Arcadia earns meaningfully only when traders and investors do too. The management fee keeps the protocol funded through flat or down markets, not just good ones.",
+  },
+];
+```
+
+---
+
+## 2. HOW_STEPS (replace fully — unchanged from prior pass)
+
+```js
+const HOW_STEPS = [
+  {
+    n: "01",
+    title: "A trader connects their wallet",
+    body: "Arcadia reads the trader's public on-chain history and turns raw trading activity into a clear performance record.",
+  },
+  {
+    n: "02",
+    title: "Arcadia builds a reputation score",
+    body: "The score measures consistency, risk control, drawdown, and real performance — not screenshots or social hype.",
+  },
+  {
+    n: "03",
+    title: "The trader opens a vault",
+    body: "The trader starts with their own capital first, creating skin in the game before outside investors allocate.",
+  },
+  {
+    n: "04",
+    title: "Capital follows proven skill",
+    body: "As reputation improves, investors can deposit into the trader's vault. Higher trust can unlock more allocation capacity.",
+  },
+  {
+    n: "05",
+    title: "Profits are shared on-chain",
+    body: "When the vault generates new profit, the trader earns a performance share, investors participate in the upside, and Arcadia earns its performance and management fees.",
+  },
+];
+```
+*(Step 05 body line updated to mention both fee types, not just "a small cut.")*
+
+---
+
+## 3. SCORE_BARS (unchanged from prior pass)
+
+```js
+const SCORE_BARS = [
+  { label: "Risk-adjusted return", weight: 30, color: "#4f9eff", val: 91 },
+  { label: "Consistency", weight: 25, color: "#22c55e", val: 88 },
+  { label: "Drawdown control", weight: 25, color: "#f0b429", val: 72 },
+  { label: "Track record depth", weight: 20, color: "#818cf8", val: 84 },
+];
+```
+
+---
+
+## 4. Hero copy (unchanged from prior pass)
+
+**Status pill:** `Verified reputation · On-chain allocation`
+
+**Headline:**
+```
+The allocation rail<br />
+for <span style={{ color: "#4f9eff" }}>on-chain</span>{" "}
+trading talent.
+```
+
+**Paragraph:**
+> Arcadia turns real on-chain trading history into verified reputation, then lets investor capital flow to the traders who have earned it through smart-contract vaults. Proof replaces promises. Capital follows skill.
+
+**Buttons:** `Browse verified traders` / `Build your reputation`
+
+**Hero stat row:**
+```js
+[
+  { label: "Reputation", value: "0–1000 score" },
+  { label: "Allocation", value: "Vault-based" },
+  { label: "Proof", value: "On-chain history" },
+]
+```
+
+---
+
+## 5. Trust strip (unchanged)
+
+Keep: `Solana · Drift · Jupiter`
+Right side: `Verified reputation · Smart-contract allocation`
+
+---
+
+## 6. Problem section (unchanged from prior pass)
+
+Section label: `The Trust Gap`
+
+**Trader side**
+Headline: `Skilled traders<br /><span style={{ color: "#ef4444" }}>can't prove it.</span>`
+Paragraph: A trader can be genuinely talented and still have no trusted way to show it. Screenshots can be edited. Private dashboards do not travel. Without verified reputation, skill stays trapped inside one wallet.
+Bullets:
+```js
+[
+  "Real performance is hard to separate from lucky wins",
+  "Screenshots and P&L claims are easy to fake",
+  "Small traders struggle to earn access to larger capital",
+]
+```
+
+**Investor side**
+Headline: `Capital has<br /><span style={{ color: "#ef4444" }}>no trusted rail.</span>`
+Paragraph: Investors want exposure to skilled traders, but the internet is full of claims. Without a verified record and a safe allocation structure, backing a trader becomes guesswork.
+Bullets:
+```js
+[
+  "No simple way to verify claimed performance",
+  "No clear reputation layer for on-chain traders",
+  "No safe reason to send capital directly to a stranger",
+]
+```
+
+---
+
+## 7. Non-Custodial section — CORRECTED (adds the risk-scope line)
+
+Label: `The Allocation Rail`
+Headline: `Investors don't<br />send money to traders.`
+
+**Paragraph — corrected to add the risk-scope sentence:**
+> Investor capital goes into an on-chain vault, not into a trader's wallet. The trader can trade under protocol rules, but they cannot simply withdraw investor funds. This protects you from theft — it does not protect you from trading losses, which are shared proportionally like any fund. Arcadia turns custody risk into software; market risk still belongs to the trade.
+
+**Rows:**
+```js
+[
+  { label: "Investor capital held by", value: "Smart-contract vault", ok: true },
+  { label: "Trader access", value: "Trading permissions", ok: true },
+  { label: "Trader withdrawal", value: "Performance share only", ok: true },
+  { label: "Investor visibility", value: "Score, vault, and activity", ok: true },
+  { label: "Allocation logic", value: "Reputation-based capacity", ok: true },
+  { label: "Protected against", value: "Theft — not trading losses", ok: true },
+]
+```
+*(New sixth row added so the risk boundary is visible in the table itself, not just the paragraph.)*
+
+---
+
+## 8. How It Works headline (unchanged)
+
+`From verified skill to allocated capital.`
+
+---
+
+## 9. Score section — CORRECTED tier footnote
+
+Section label: `The Reputation Layer`
+Big score label: `Arcadia Score`
+Big score paragraph: The score is the trust layer: a simple 0–1000 reputation number built from real trading history. It helps capital find traders with consistency, discipline, and proof.
+Tier label: `Reputation tiers`
+
+**Tier footnote — corrected to state both fees plainly:**
+> Higher reputation unlocks more vault capacity and a stronger trader profit share. Arcadia also takes a small management fee, active in every market condition, so the protocol stays funded through flat or down periods, not only good ones.
+
+---
+
+## 10. Two Sides section (unchanged from prior pass)
+
+Section label: `Two Sides, One Allocation Rail`
+
+**Trader intro:** Turn your real trading history into a reputation investors can understand. Arcadia helps proven traders earn access to capital without relying on screenshots or social hype.
+
+Trader steps:
+```js
+[
+  { n: "1", title: "Connect your wallet", body: "Arcadia reads your public on-chain trading history and begins turning it into a reputation profile." },
+  { n: "2", title: "Fund your own vault", body: "Start with your own capital first, giving investors a clear signal that you have skin in the game." },
+  { n: "3", title: "Build your score", body: "Consistent, risk-aware performance improves your Arcadia Score and strengthens your public reputation." },
+  { n: "4", title: "Earn allocated capital", body: "As investors back your vault, you manage more capital and earn a share of the profit you generate." },
+]
+```
+Trader CTA: `Build your reputation`
+
+**Investor intro:** Back traders based on proof, not promises. Arcadia gives investors a clearer way to compare talent, allocate through vaults, and follow performance on-chain.
+
+Investor steps:
+```js
+[
+  { n: "1", title: "Browse verified traders", body: "Compare traders by score, record, tier, strategy, vault size, and recent performance." },
+  { n: "2", title: "Choose who to back", body: "Deposit into a trader's vault instead of sending funds directly to their wallet." },
+  { n: "3", title: "Track the record", body: "Follow vault activity, score changes, and performance from one clear dashboard." },
+  { n: "4", title: "Share in the upside", body: "When the trader generates new profit, investors participate through the vault, subject to normal trading risk." },
+]
+```
+*(Step 4 body line has "subject to normal trading risk" added, so the risk-scope point appears here too, not only in the FAQ.)*
+
+Investor CTA: `Browse verified traders`
+
+---
+
+## 11. Leaderboard section (unchanged)
+
+Label: `Verified Traders` · Link: `View leaderboard`
+Headers: `["#", "Trader", "Score", "Tier", "30d Return", "Vault Size", "Action"]`
+Action text: `View vault →`
+
+---
+
+## 12. FAQ section intro (unchanged)
+
+Headline: `Simple answers before you allocate.`
+Paragraph: Arcadia is built around one idea: proof should replace promises, and capital should follow verified skill.
+
+---
+
+## 13. Dual CTA footer (unchanged)
+
+**Trader:** Headline: `Turn your record<br />into allocated capital.` — Paragraph: Stop proving yourself with screenshots. Build a reputation from real on-chain trades and let capital find you when your record deserves it. — Button: `Build your reputation`
+
+**Investor:** Headline: `Back talent with<br />proof, not promises.` — Paragraph: See the score, read the record, and allocate through vaults designed to keep trust on-chain. — Button: `Browse verified traders`
+
+---
+
+## 14. Footer (unchanged)
+
+Brand: `Arcadia`
+Links: `Traders`, `Leaderboard`, `Vaults` (→ /traders), `Docs` (#)
+Final line: `Proof replaces promises · © 2026 Arcadia`
+
+---
+
+## 15. Hero card labels (unchanged)
+
+- Trader profile card: `Verified Reputation`
+- Vault card: `Allocation vault · @nova` / `reputation-based capacity`
+- Payout receipt: `Profit split · Solana` / `performance share above high-water mark`
+- Score breakdown mini: `Reputation inputs`
+
+---
+
+## Summary of what changed in this pass vs. the prior rewrite
+
+1. FAQ "How does Arcadia make money?" now states both fee types plainly instead of a vague "small cut."
+2. New FAQ entry: "Can I lose money as an investor?" — states the theft-vs-market-risk distinction explicitly.
+3. New FAQ entry: "What if a trader's capacity falls below what's already invested?" — surfaces the capacity-breach/margin-call mechanism before an investor discovers it the hard way.
+4. Non-custodial section paragraph and row table both now state the risk boundary, not just the custody guarantee.
+5. Tier footnote states the management fee exists and why, instead of omitting fee mechanics entirely.
+6. Investor step 4 and How-It-Works step 05 each pick up a short risk-scope clause so the point isn't confined to one section alone.
+
+Nothing else changed — nothing in the positioning, tone, or structure from the prior pass needed fixing.

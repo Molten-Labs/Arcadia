@@ -33,10 +33,15 @@ export function useRole() {
 const STORAGE_KEY = "arcadia_role";
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const { connected, publicKey } = useWallet();
+  // wallet-adapter-react 0.15+ Proxy throws on property access outside WalletProvider.
+  // Guard with `mounted` so we never dereference wallet properties during SSR/hydration.
+  const walletAdapter = useWallet();
   const [role, setRoleState] = useState<ArcadiaRole>(null);
   const [showRoleGate, setShowRoleGate] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const connected = mounted ? walletAdapter.connected : false;
+  const publicKey = mounted ? walletAdapter.publicKey : null;
 
   /* Hydrate from localStorage on mount */
   useEffect(() => {
