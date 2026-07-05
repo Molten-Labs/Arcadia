@@ -15,11 +15,6 @@
   --color-mint-bright: #74b5ff;
   --color-mint-mid:    #3d88ee;
 
-  --color-purple:        #4f9eff;
-  --color-purple-dim:    rgba(79,158,255,0.10);
-  --color-purple-bright: #74b5ff;
-  --color-purple-mid:    #3d88ee;
-
   --color-accent:     #ffffff;
   --color-accent-dim: rgba(255,255,255,0.06);
 
@@ -667,16 +662,6 @@ body {
   @keyframes float-a { from, to { transform: none; } }
   @keyframes float-b { from, to { transform: none; } }
   @keyframes float-c { from, to { transform: none; } }
-}
-
-/* ── Marquee animation ── */
-@keyframes lp-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-25%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [style*="lp-scroll"] { animation: none !important; }
 }
 
 /* ── Landing page responsive layout ─────────────────────────────────── */
