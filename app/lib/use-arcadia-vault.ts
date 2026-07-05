@@ -58,6 +58,24 @@ export interface VaultOnChainState {
   positionAddress: string;
 }
 
+/* ── Backend event push ────────────────────────────────────────────── */
+
+async function pushEvent(event: Record<string, unknown>): Promise<void> {
+  const token = typeof localStorage !== "undefined" ? localStorage.getItem("arcadia_jwt") : null;
+  try {
+    await fetch("/api/v1/events", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ events: [event] }),
+    });
+  } catch {
+    // best-effort: ignore failure
+  }
+}
+
 /* ── Simulation helpers ─────────────────────────────────────────────── */
 function simulatedSig(): string {
   const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -208,6 +226,13 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           .rpc();
         setTxSig(sig);
         setTxStatus(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`);
+        // Notify the backend indexer
+        pushEvent({
+          event_type: "ProfileInitialized",
+          profile: profAddr.toBase58(),
+          trader: publicKey.toBase58(),
+          ts: Math.floor(Date.now() / 1000),
+        });
         return true;
       } catch (err: unknown) {
         setTxStatus(`Initialize profile failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -255,6 +280,11 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         }).rpc();
         setTxSig(sig);
         setTxStatus(`Investor account created. Signature: ${sig.slice(0, 8)}…`);
+        pushEvent({
+          event_type: "InvestorInitialized",
+          investor: publicKey.toBase58(),
+          ts: Math.floor(Date.now() / 1000),
+        });
         return true;
       } catch (err: unknown) {
         setTxStatus(`Initialize investor failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -329,6 +359,16 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         setTxSig(sig);
         setTxStatus(`Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`);
+        pushEvent({
+          event_type: "Deposited",
+          profile: profilePDAAddr.toBase58(),
+          depositor: publicKey.toBase58(),
+          is_trader: false,
+          amount_usd: amountUsdc.toString(),
+          shares_minted: "0",
+          nav_per_share: "0",
+          ts: Math.floor(Date.now() / 1000),
+        });
         return true;
       } catch (err: unknown) {
         setTxStatus(`Deposit failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -427,6 +467,13 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         setTxSig(sig);
         setTxStatus(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`);
+        pushEvent({
+          event_type: "Withdrawn",
+          profile: profilePDAAddr.toBase58(),
+          owner: publicKey.toBase58(),
+          shares_burned: "0",
+          amount_usd: "0",
+        });
         return true;
       } catch (err: unknown) {
         setTxStatus(`Process withdraw failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -466,13 +513,15 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            profile:   params.profileAddress,
-            market:    params.market,
-            direction: params.direction === "long" ? 0 : 1,
-            size_usd:  params.sizeUsd,
-            leverage:  params.leverageX100 / 100,
-            entry_px:  params.entryPx,
-            exit_px:   params.exitPx,
+            profile:    params.profileAddress,
+            market:     params.market,
+            direction:  params.direction === "long" ? 0 : 1,
+            size_usd:   params.sizeUsd,
+            leverage:   params.leverageX100 / 100,
+            entry_px:   params.entryPx,
+            exit_px:    params.exitPx,
+            opened_at:  new Date(params.openedAt * 1000).toISOString(),
+            closed_at:  new Date(params.closedAt * 1000).toISOString(),
           }),
         });
 
@@ -498,7 +547,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           return true;
         }
 
-        setTxStatus("Trade simulation completed.");
+        setTxStatus("Trade recorded.");
         return true;
       } catch (err: unknown) {
         setTxStatus(`Record trade failed: ${err instanceof Error ? err.message : String(err)}`);

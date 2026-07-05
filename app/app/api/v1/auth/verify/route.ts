@@ -1,18 +1,14 @@
 /**
- * POST /api/v1/auth/verify — dev mock for SIWS verification.
+ * POST /api/v1/auth/verify — proxy to Rust backend or dev mock.
  *
- * Accepts the same shape as the Rust backend (pubkey, signature, nonce)
- * and returns a signed-looking token tied to the pubkey.
- * In production the request goes directly to the Rust API which does
- * real ed25519 + nonce verification.
- *
- * This mock does NOT cryptographically verify the signature — it is
- * intentionally a dev-only shortcut so the frontend can exercise the
- * full auth flow without running the Rust backend.
+ * With BACKEND_URL set, this proxies to the Rust API which does real
+ * ed25519 + nonce verification against Redis.
+ * Without BACKEND_URL, it returns a mock JWT-shaped token.
  */
 import { NextResponse } from "next/server";
-import { createHmac, randomBytes } from "crypto";
+import { createHmac } from "crypto";
 
+const BACKEND_URL = process.env.BACKEND_URL ?? "";
 const DEV_SECRET = process.env.SESSION_SECRET ?? "arcadia-dev-secret";
 
 export async function POST(req: Request) {
@@ -29,8 +25,22 @@ export async function POST(req: Request) {
     );
   }
 
+  // Proxy to Rust backend when configured
+  if (BACKEND_URL) {
+    try {
+      const upstream = await fetch(`${BACKEND_URL}/v1/auth/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await upstream.json();
+      return NextResponse.json(data, { status: upstream.status });
+    } catch {
+      // fall through to mock
+    }
+  }
+
   // Build a deterministic, pubkey-scoped mock JWT-shaped token.
-  // Format: <header>.<payload>.<sig>  (base64url encoded, not real JWT)
   const header  = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const now     = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(

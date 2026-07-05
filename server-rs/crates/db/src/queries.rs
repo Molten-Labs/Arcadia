@@ -157,6 +157,47 @@ pub async fn insert_trade(pool: &PgPool, t: &DbTrade) -> Result<()> {
 const FLOW_COLS: &str = "signature, event_index, slot, profile, owner, is_trader,
     kind, amount_usd, shares, nav_per_share, ts";
 
+pub async fn upsert_investor_account(
+    pool: &PgPool,
+    owner: &str,
+    initialized_at: chrono::DateTime<chrono::Utc>,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO investor_account (owner, position_count, total_deposited_usd, initialized_at, updated_at)
+         VALUES ($1, 0, 0, $2, now())
+         ON CONFLICT (owner) DO UPDATE SET updated_at = now()",
+    )
+    .bind(owner)
+    .bind(initialized_at)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn upsert_investor_position(
+    pool: &PgPool,
+    owner: &str,
+    profile: &str,
+    shares: Decimal,
+    cost_basis_usd: Decimal,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO investor_position (owner, profile, shares, cost_basis_usd, updated_at)
+         VALUES ($1, $2, $3, $4, now())
+         ON CONFLICT (owner, profile) DO UPDATE
+             SET shares = investor_position.shares + EXCLUDED.shares,
+                 cost_basis_usd = investor_position.cost_basis_usd + EXCLUDED.cost_basis_usd,
+                 updated_at = now()",
+    )
+    .bind(owner)
+    .bind(profile)
+    .bind(shares)
+    .bind(cost_basis_usd)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn insert_flow(pool: &PgPool, f: &DbFlow) -> Result<()> {
     sqlx::query(
         "INSERT INTO flow (

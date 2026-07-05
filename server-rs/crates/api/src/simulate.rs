@@ -64,6 +64,12 @@ pub struct SimTradeRes {
     pub was_liquidated: bool,
     pub opened_at:      DateTime<Utc>,
     pub closed_at:      DateTime<Utc>,
+    /// True when the chain crate is stubbed (no real on-chain tx).
+    pub simulated:      bool,
+    /// Base64-encoded transaction for the frontend to sign + send (present only
+    /// when --features solana is enabled and the chain crate built a real tx).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_base64:      Option<String>,
     /// Human-readable label for the frontend ("devnet simulation").
     pub label:          String,
 }
@@ -172,6 +178,8 @@ pub async fn handler(
         was_liquidated,
         opened_at,
         closed_at,
+        simulated:      !oracle_result.confirmed,
+        tx_base64:      None,
         label:          "devnet simulation".into(),
     })))
 }

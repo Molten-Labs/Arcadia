@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod error;
+pub mod events;
 pub mod routes;
 pub mod simulate;
 pub mod state;
@@ -34,7 +35,8 @@ pub fn build_router(state: AppState) -> Router {
     let protected = Router::new()
         .route("/v1/investors/:wallet/account",   get(routes::get_investor_account))
         .route("/v1/investors/:wallet/portfolio", get(routes::get_investor_portfolio))
-        .route("/v1/trades/simulate",             post(simulate::handler));
+        .route("/v1/trades/simulate",             post(simulate::handler))
+        .route("/v1/events",                      post(events::handler));
 
     Router::new()
         .merge(public)
