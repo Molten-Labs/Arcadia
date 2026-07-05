@@ -1,121 +1,218 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/utils";
 import type { TraderListItem } from "@/lib/types";
 import { formatUSD } from "@/lib/types";
-import { ChevronDown, ArrowRight, ArrowUpRight, TrendingUp, Users, Shield, Zap } from "lucide-react";
+import {
+  ArrowUpRight,
+  ArrowRight,
+  CaretDown,
+  TrendingUp,
+  Users,
+  ShieldCheck,
+  Lightning,
+} from "@phosphor-icons/react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRole } from "@/lib/role-context";
 
-/* ─── SCROLL REVEAL ─────────────────────────────────────────────────── */
-function useReveal(threshold = 0.12) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { el.classList.add("is-visible"); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return ref;
-}
+/* ─── DATA ─────────────────────────────────────────────────────────────── */
 
-/* ─── COUNTER ANIMATION ─────────────────────────────────────────────── */
-function useCounter(target: number, duration = 1400) {
-  const [value, setValue] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      obs.disconnect();
-      const start = performance.now();
-      const tick = (now: number) => {
-        const p = Math.min((now - start) / duration, 1);
-        const ease = 1 - Math.pow(1 - p, 3);
-        setValue(Math.round(ease * target));
-        if (p < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }, { threshold: 0.5 });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [target, duration]);
-  return { ref, value };
-}
-
-/* ─── FAQ DATA ───────────────────────────────────────────────────────── */
 const FAQ_ITEMS = [
   {
-    q: "Can the trader run off with my money?",
-    a: "No. Your USDC stays inside an on-chain Program Derived Address (PDA) — a smart-contract vault the trader can never withdraw from directly. Only profit above the high-water mark can be claimed by anyone, and only through the protocol's verified payout instruction.",
+    q: "What is Arcadia?",
+    a: "Arcadia is the allocation rail for on-chain trading talent. It turns real trading history into verified reputation, then lets investor capital flow to traders through smart-contract vaults instead of screenshots, trust games, or direct custody.",
   },
   {
-    q: "How do I know the score isn't made up?",
-    a: "Every trade is a TradeClosed event permanently written to Solana — a public, immutable ledger anyone can verify. The score is computed from those receipts by an open-source formula. Screenshots can be faked; on-chain events cannot. There is no override mechanism.",
+    q: "What problem does Arcadia solve?",
+    a: "Today, skilled traders struggle to prove they are genuinely good, and investors struggle to know who to trust. Arcadia connects both sides with a verified score, public track record, and vault-based allocation system.",
   },
   {
-    q: "What is the Arcadia Score, in plain English?",
-    a: "It's a 0–1000 number that measures how consistently and safely a trader makes money. Higher scores mean steadier returns with fewer blow-ups — not just big wins. It's closer to a risk-adjusted credit score than a raw profit leaderboard.",
+    q: "What is the Arcadia Score?",
+    a: "The Arcadia Score is a 0-1000 reputation number built from real trading history. It rewards consistent, risk-aware performance, not loud claims, lucky screenshots, or one-off wins.",
   },
   {
-    q: "How does profit-sharing work?",
-    a: "Profit above the high-water mark (the vault's all-time peak) is split: traders keep 20–35% depending on their tier, the platform takes 5%, and the rest stays with investors as appreciation in vault share value. Nothing is charged on flat or losing periods.",
+    q: "Why does the score matter?",
+    a: "The score is the trust layer. It helps investors compare traders more clearly, and it helps traders unlock more capital capacity as they prove themselves over time.",
   },
   {
-    q: "Do I need to be a trader to participate?",
-    a: "No. Investors only need a Solana wallet with USDC. Browse the marketplace, pick a trader whose score and strategy match your risk appetite, and deposit — the protocol handles everything else on-chain.",
+    q: "Can a trader fake their reputation?",
+    a: "Arcadia is based on on-chain trading activity, not uploaded screenshots. A trader cannot simply edit a P&L image or claim a fake win. Their reputation comes from the public record.",
   },
   {
-    q: "What is a high-water mark?",
-    a: "A high-water mark (HWM) means the trader can only claim profit when the vault reaches a new all-time high. If a vault drops 20% then recovers 20%, no payout is triggered until it surpasses the previous peak. This protects investors from paying fees twice on the same gains.",
+    q: "Can a trader run away with investor funds?",
+    a: "Investor capital goes into a smart-contract vault, not directly into the trader's wallet. The trader can trade under the protocol's rules, but they cannot simply withdraw investor capital.",
+  },
+  {
+    q: "Can I lose money as an investor?",
+    a: "Yes. Arcadia protects you from theft -- the trader can never withdraw your principal. It does not protect you from trading losses. You hold vault shares alongside the trader, and if the vault loses money, your share loses value proportionally, the same as any fund. Verified skill lowers this risk over time; it does not remove it.",
+  },
+  {
+    q: "How does capital allocation work?",
+    a: "A trader builds reputation by trading. As their score improves, they can unlock more vault capacity. Investors can then deposit into that vault and share in the upside if the trader performs.",
+  },
+  {
+    q: "What if a trader's capacity falls below what's already invested?",
+    a: "If a trader's score or backing capital drops enough, new deposits pause automatically. If the gap is severe, the vault gives the trader a short window to add capital or recover performance. If that window passes unresolved, investor funds are returned in an orderly way -- never a forced fire sale, and always disclosed upfront.",
+  },
+  {
+    q: "How does Arcadia make money?",
+    a: "Arcadia earns two ways: a share of profit when a vault performs, and a small ongoing management fee. The performance share means Arcadia earns meaningfully only when traders and investors do too. The management fee keeps the protocol funded through flat or down markets, not just good ones.",
   },
 ];
 
-/* ─── TIER DATA ─────────────────────────────────────────────────────── */
+const HOW_STEPS = [
+  {
+    n: "01",
+    title: "A trader connects their wallet",
+    body: "Arcadia reads the trader's public on-chain history and turns raw trading activity into a clear performance record.",
+  },
+  {
+    n: "02",
+    title: "Arcadia builds a reputation score",
+    body: "The score measures consistency, risk control, drawdown, and real performance -- not screenshots or social hype.",
+  },
+  {
+    n: "03",
+    title: "The trader opens a vault",
+    body: "The trader starts with their own capital first, creating skin in the game before outside investors allocate.",
+  },
+  {
+    n: "04",
+    title: "Capital follows proven skill",
+    body: "As reputation improves, investors can deposit into the trader's vault. Higher trust can unlock more allocation capacity.",
+  },
+  {
+    n: "05",
+    title: "Profits are shared on-chain",
+    body: "When the vault generates new profit, the trader earns a performance share, investors participate in the upside, and Arcadia earns its performance and management fees.",
+  },
+];
+
+const SCORE_BARS = [
+  { label: "Risk-adjusted return", weight: 30, color: "#4f9eff", val: 91 },
+  { label: "Consistency",          weight: 25, color: "#22c55e", val: 88 },
+  { label: "Drawdown control",     weight: 25, color: "#f0b429", val: 72 },
+  { label: "Track record depth",   weight: 20, color: "#818cf8", val: 84 },
+];
+
 const TIERS = [
-  { name: "Verified",    min: 0,    pct: 20, color: "#60a5fa" },
-  { name: "Established", min: 700,  pct: 25, color: "#818cf8" },
-  { name: "Advanced",    min: 800,  pct: 30, color: "#f59e0b" },
-  { name: "Elite",       min: 900,  pct: 35, color: "#a855f7" },
+  { name: "Verified",    min: 0,   pct: 20, color: "#60a5fa" },
+  { name: "Established", min: 700, pct: 25, color: "#818cf8" },
+  { name: "Advanced",    min: 800, pct: 30, color: "#f59e0b" },
+  { name: "Elite",       min: 900, pct: 35, color: "#a855f7" },
 ];
 
 const TIER_COLOR: Record<string, string> = {
   Elite: "#a855f7", Advanced: "#f59e0b", Established: "#818cf8", Verified: "#60a5fa",
 };
 
-const SCORE_BARS = [
-  { label: "Sortino Ratio",    weight: 30, color: "#4f9eff", val: 91 },
-  { label: "Sharpe Ratio",     weight: 25, color: "#818cf8", val: 84 },
-  { label: "Consistency",      weight: 25, color: "#22c55e", val: 88 },
-  { label: "Drawdown Control", weight: 20, color: "#f0b429", val: 72 },
+const TRADER_STEPS = [
+  { n: "1", title: "Connect your wallet",    body: "Arcadia reads your public on-chain trading history and begins turning it into a reputation profile." },
+  { n: "2", title: "Fund your own vault",    body: "Start with your own capital first, giving investors a clear signal that you have skin in the game." },
+  { n: "3", title: "Build your score",       body: "Consistent, risk-aware performance improves your Arcadia Score and strengthens your public reputation." },
+  { n: "4", title: "Earn allocated capital", body: "As investors back your vault, you manage more capital and earn a share of the profit you generate." },
 ];
 
-const HOW_STEPS = [
-  { n: "01", title: "Trade on Solana",       body: "Use Drift, Jupiter, or any supported venue. Every position you open and close is a permanent on-chain event." },
-  { n: "02", title: "Get scored instantly",  body: "Our indexer reads each TradeClosed event and updates your Arcadia Score — a 0–1000 risk-adjusted performance number — within seconds." },
-  { n: "03", title: "Earn a tier",           body: "Cross a score threshold and your tier upgrades automatically. Higher tier = higher profit split: from 20% (Verified) up to 35% (Elite)." },
-  { n: "04", title: "Open your vault",       body: "Your vault opens to investors proportional to your score. They deposit USDC. You trade with the combined capital — no extra effort required." },
-  { n: "05", title: "Get paid on-chain",     body: "When the vault beats its high-water mark, you request a payout. The split executes instantly on Solana, straight to your wallet in under 2 seconds." },
+const INVESTOR_STEPS = [
+  { n: "1", title: "Browse verified traders", body: "Compare traders by score, record, tier, strategy, vault size, and recent performance." },
+  { n: "2", title: "Choose who to back",      body: "Deposit into a trader's vault instead of sending funds directly to their wallet." },
+  { n: "3", title: "Track the record",        body: "Follow vault activity, score changes, and performance from one clear dashboard." },
+  { n: "4", title: "Share in the upside",     body: "When the trader generates new profit, investors participate through the vault, subject to normal trading risk." },
 ];
 
-/* ─── FLOATING HERO CARDS ───────────────────────────────────────────── */
+/* ─── MOTION HELPERS ────────────────────────────────────────────────────── */
+
+function FadeUp({
+  children,
+  delay = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.08 });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 24 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94], delay }}
+      style={style}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function useCounter(target: number, duration = 1400) {
+  const [value, setValue] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref as React.RefObject<Element>, { once: true });
+
+  useEffect(() => {
+    if (!inView) return;
+    let raf: number;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(ease * target));
+      if (p < 1) { raf = requestAnimationFrame(tick); }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, target, duration]);
+
+  return { ref, value };
+}
+
+/* ─── ANIMATED SCORE BAR ────────────────────────────────────────────────── */
+
+function AnimatedScoreBar({
+  label, weight, color, val, delay,
+}: {
+  label: string; weight: number; color: string; val: number; delay: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.5 });
+  return (
+    <div ref={ref}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#6a6a6a" }}>{label}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636" }}>{weight}% weight</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.875rem", fontWeight: 700, color: "#f0f0f0" }}>
+            {val}<span style={{ color: "#363636", fontWeight: 300, fontSize: "0.75rem" }}>/100</span>
+          </span>
+        </div>
+      </div>
+      <div style={{ height: 5, background: "#1c1c1c", borderRadius: 3, overflow: "hidden" }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={inView ? { width: `${val}%` } : {}}
+          transition={{ duration: 0.85, ease: "easeOut", delay: delay + 0.15 }}
+          style={{ height: "100%", background: color, borderRadius: 3, opacity: 0.85 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ─── HERO CARDS ────────────────────────────────────────────────────────── */
+
 function HeroCards() {
   return (
-    <div style={{
-      position: "relative",
-      width: "100%",
-      height: "100%",
-      minHeight: 460,
-    }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", minHeight: 460 }}>
       {/* Card 1: Trader profile */}
       <div style={{
         position: "absolute", top: "8%", left: "5%",
@@ -133,7 +230,7 @@ function HeroCards() {
           }}>NO</div>
           <div>
             <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: "#f0f0f0", margin: 0 }}>@nova</p>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#a855f7", margin: 0 }}>● Elite tier</p>
+            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#a855f7", margin: 0 }}>Elite tier</p>
           </div>
           <div style={{ marginLeft: "auto", fontFamily: "var(--font-mono)", fontSize: 9, color: "#22c55e" }}>+41.2%</div>
         </div>
@@ -141,13 +238,13 @@ function HeroCards() {
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "2rem", fontWeight: 800, color: "#f0f0f0", letterSpacing: "-0.04em", lineHeight: 1 }}>912</span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#363636" }}>/1000</span>
         </div>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase", color: "#363636", marginTop: 4, marginBottom: 0 }}>Arcadia Score</p>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase", color: "#363636", marginTop: 4, marginBottom: 0 }}>Verified Reputation</p>
         <div style={{ marginTop: 10, height: 4, borderRadius: 2, background: "#1c1c1c", overflow: "hidden" }}>
           <div style={{ width: "91.2%", height: "100%", background: "linear-gradient(90deg, #4f9eff, #a855f7)", borderRadius: 2 }} />
         </div>
       </div>
 
-      {/* Card 2: Vault / investor card */}
+      {/* Card 2: Vault */}
       <div style={{
         position: "absolute", top: "30%", right: "8%",
         background: "#0c0c0c", border: "1px solid #1c1c1c",
@@ -155,9 +252,9 @@ function HeroCards() {
         animation: "float-b 7s ease-in-out infinite",
         boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
       }}>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#363636", marginBottom: 8, marginTop: 0 }}>Vault · @nova</p>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#363636", marginBottom: 8, marginTop: 0 }}>Allocation vault · @nova</p>
         <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", fontWeight: 900, color: "#22c55e", letterSpacing: "-0.03em", margin: 0 }}>$387K</p>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#6a6a6a", marginTop: 4, marginBottom: 12 }}>of $912K capacity</p>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#6a6a6a", marginTop: 4, marginBottom: 12 }}>reputation-based capacity</p>
         <div style={{ height: 3, background: "#1c1c1c", borderRadius: 2, marginBottom: 10, overflow: "hidden" }}>
           <div style={{ width: "42%", height: "100%", background: "#22c55e", borderRadius: 2 }} />
         </div>
@@ -171,7 +268,7 @@ function HeroCards() {
         </div>
       </div>
 
-      {/* Card 3: Payout receipt */}
+      {/* Card 3: Payout */}
       <div style={{
         position: "absolute", bottom: "12%", left: "12%",
         background: "#0c0c0c", border: "1px solid #1c1c1c",
@@ -180,16 +277,16 @@ function HeroCards() {
         boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-          <Zap size={12} style={{ color: "#4f9eff" }} />
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase", color: "#363636" }}>Payout · Solana</span>
+          <Lightning size={12} style={{ color: "#4f9eff" }} />
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase", color: "#363636" }}>Profit split · Solana</span>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#22c55e", marginLeft: "auto" }}>1.8s</span>
         </div>
         <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", fontWeight: 900, color: "#f0f0f0", letterSpacing: "-0.03em", margin: 0 }}>+$6,810</p>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#6a6a6a", marginTop: 4, marginBottom: 8 }}>35% of profit above HWM</p>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636", margin: 0 }}>4PqRtLv9Xw…M3kN ↗</p>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#6a6a6a", marginTop: 4, marginBottom: 8 }}>performance share above high-water mark</p>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636", margin: 0 }}>4PqRtLv9Xw...M3kN</p>
       </div>
 
-      {/* Card 4: Score breakdown mini */}
+      {/* Card 4: Score breakdown */}
       <div style={{
         position: "absolute", top: "55%", left: "32%",
         background: "#0c0c0c", border: "1px solid #1c1c1c",
@@ -197,8 +294,8 @@ function HeroCards() {
         animation: "float-a 8s ease-in-out infinite 1s",
         boxShadow: "0 24px 64px rgba(0,0,0,0.8)",
       }}>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase", color: "#363636", margin: "0 0 8px" }}>Score components</p>
-        {[{ l: "Sortino", v: 91, c: "#4f9eff" }, { l: "Sharpe", v: 84, c: "#818cf8" }, { l: "Consistency", v: 88, c: "#22c55e" }].map(b => (
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase", color: "#363636", margin: "0 0 8px" }}>Reputation inputs</p>
+        {[{ l: "Risk-adj return", v: 91, c: "#4f9eff" }, { l: "Consistency", v: 88, c: "#22c55e" }, { l: "Drawdown ctrl", v: 72, c: "#f0b429" }].map(b => (
           <div key={b.l} style={{ marginBottom: 5 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, color: "#6a6a6a" }}>{b.l}</span>
@@ -214,7 +311,8 @@ function HeroCards() {
   );
 }
 
-/* ─── FAQ ACCORDION ─────────────────────────────────────────────────── */
+/* ─── FAQ ───────────────────────────────────────────────────────────────── */
+
 function FAQ() {
   const [active, setActive] = useState<number | null>(null);
   return (
@@ -222,38 +320,44 @@ function FAQ() {
       {FAQ_ITEMS.map((item, i) => {
         const isOpen = active === i;
         return (
-          <div key={i} onClick={() => setActive(isOpen ? null : i)} style={{
-            borderBottom: "1px solid #1c1c1c",
-            cursor: "pointer",
-          }}>
-            <div style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "1.375rem 0",
-              color: isOpen ? "#f0f0f0" : "#6a6a6a",
-              transition: "color 0.15s",
-              fontSize: "0.9375rem", fontWeight: 500,
-            }}>
+          <div key={i} style={{ borderBottom: "1px solid #1c1c1c" }}>
+            <button
+              onClick={() => setActive(isOpen ? null : i)}
+              style={{
+                width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "1.375rem 0", background: "none", border: "none", cursor: "pointer",
+                color: isOpen ? "#f0f0f0" : "#6a6a6a",
+                fontSize: "0.9375rem", fontWeight: 500, textAlign: "left",
+                fontFamily: "var(--font-sans)", transition: "color 0.15s",
+              }}
+            >
               <span>{item.q}</span>
-              <div style={{
-                width: 22, height: 22, borderRadius: "50%",
-                border: "1px solid #1c1c1c",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, marginLeft: 16,
-                transition: "border-color 0.15s",
-              }}>
-                <ChevronDown size={12} style={{ transition: "transform 0.2s", transform: isOpen ? "rotate(180deg)" : "none", color: isOpen ? "#4f9eff" : "#363636" }} />
-              </div>
-            </div>
-            {isOpen && (
-              <p style={{
-                paddingBottom: "1.375rem",
-                fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.75,
-                animation: "fade-in 0.18s ease",
-                margin: 0,
-              }}>
-                {item.a}
-              </p>
-            )}
+              <CaretDown
+                size={14}
+                style={{
+                  transition: "transform 0.2s",
+                  transform: isOpen ? "rotate(180deg)" : "none",
+                  color: isOpen ? "#4f9eff" : "#363636",
+                  flexShrink: 0, marginLeft: 16,
+                }}
+              />
+            </button>
+            <AnimatePresence initial={false}>
+              {isOpen && (
+                <motion.div
+                  key="answer"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: "easeInOut" }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <p style={{ paddingBottom: "1.375rem", fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.75, margin: 0 }}>
+                    {item.a}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}
@@ -261,21 +365,106 @@ function FAQ() {
   );
 }
 
-/* ─── PAGE ───────────────────────────────────────────────────────────── */
+/* ─── TWO SIDES TABBED ──────────────────────────────────────────────────── */
+
+function TwoSidesTabs() {
+  const [tab, setTab] = useState<"traders" | "investors">("traders");
+
+  const content = {
+    traders: {
+      intro: "Turn your real trading history into a reputation investors can understand. Arcadia helps proven traders earn access to capital without relying on screenshots or social hype.",
+      steps: TRADER_STEPS,
+      cta: { label: "Build your reputation", href: "/terminal" },
+    },
+    investors: {
+      intro: "Back traders based on proof, not promises. Arcadia gives investors a clearer way to compare talent, allocate through vaults, and follow performance on-chain.",
+      steps: INVESTOR_STEPS,
+      cta: { label: "Browse verified traders", href: "/traders" },
+    },
+  };
+
+  const active = content[tab];
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: "clamp(2.5rem, 5vw, 4rem)" }}>
+        {(["traders", "investors"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              padding: "9px 22px", borderRadius: 8,
+              border: `1px solid ${tab === t ? "#4f9eff" : "#1c1c1c"}`,
+              background: tab === t ? "rgba(79,158,255,0.1)" : "transparent",
+              color: tab === t ? "#4f9eff" : "#6a6a6a",
+              fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700,
+              letterSpacing: "0.04em", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+            }}
+          >
+            {t === "traders" ? "For Traders" : "For Investors"}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <div className="lp-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(3rem, 6vw, 6rem)", alignItems: "start" }}>
+            <div>
+              <p style={{ fontSize: "clamp(0.9375rem, 1.4vw, 1.125rem)", color: "#6a6a6a", lineHeight: 1.75, marginBottom: "2.5rem", maxWidth: "42ch" }}>
+                {active.intro}
+              </p>
+              <Link href={active.cta.href} style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "#4f9eff", color: "#ffffff",
+                fontWeight: 700, fontSize: "0.875rem",
+                padding: "11px 22px", borderRadius: 8,
+                textDecoration: "none", transition: "background 0.15s, transform 0.12s",
+                whiteSpace: "nowrap",
+              }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#74b5ff"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#4f9eff"; e.currentTarget.style.transform = "none"; }}
+              >
+                {active.cta.label} <ArrowRight size={14} />
+              </Link>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              {active.steps.map((s) => (
+                <div key={s.n} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                    border: "1px solid #1c1c1c",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: "#4f9eff",
+                    marginTop: 2,
+                  }}>{s.n}</div>
+                  <div>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#f0f0f0", margin: "0 0 4px", letterSpacing: "-0.01em" }}>{s.title}</p>
+                    <p style={{ fontSize: "0.8125rem", color: "#6a6a6a", margin: 0, lineHeight: 1.65 }}>{s.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─── PAGE ──────────────────────────────────────────────────────────────── */
+
 export default function LandingPage() {
   const router = useRouter();
   const { connected } = useWallet();
   const { role } = useRole();
-
-  const problemRef  = useReveal();
-  const stepsRef    = useReveal();
-  const scoreRef    = useReveal();
-  const flowRef     = useReveal();
-  const faqRef      = useReveal();
-
-  const score912   = useCounter(912);
-  const traders8   = useCounter(8);
-  const aum2m      = useCounter(2140000, 2000);
+  const score912 = useCounter(912);
 
   useEffect(() => {
     if (connected && role) {
@@ -288,8 +477,7 @@ export default function LandingPage() {
     queryFn: () => apiFetch("/traders"),
   });
 
-  const topTraders   = [...(traders ?? [])].sort((a, b) => b.score - a.score).slice(0, 6);
-  const totalAUM     = traders?.reduce((a, t) => a + t.aum, 0) ?? 0;
+  const topTraders = [...(traders ?? [])].sort((a, b) => b.score - a.score).slice(0, 6);
 
   return (
     <div style={{ background: "#000", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
@@ -297,17 +485,15 @@ export default function LandingPage() {
       {/* ═══ HERO ════════════════════════════════════════════════════════ */}
       <section className="lp-hero" style={{
         display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        minHeight: "calc(100vh - 3rem)",
+        gridTemplateColumns: "5fr 7fr",
+        minHeight: "calc(100dvh - 3rem)",
         borderBottom: "1px solid #1c1c1c",
       }}>
-        {/* Left */}
         <div className="lp-hero-left" style={{
-          padding: "clamp(4rem, 8vw, 7rem) clamp(2rem, 5vw, 5rem)",
+          padding: "clamp(4rem, 7vw, 6rem) clamp(2rem, 5vw, 5rem)",
           display: "flex", flexDirection: "column", justifyContent: "center",
           position: "relative", overflow: "hidden",
         }}>
-          {/* Subtle dot grid */}
           <div aria-hidden style={{
             position: "absolute", inset: 0, pointerEvents: "none",
             backgroundImage: "radial-gradient(circle, #1c1c1c 1px, transparent 1px)",
@@ -316,54 +502,75 @@ export default function LandingPage() {
             maskImage: "radial-gradient(ellipse at 10% 50%, black 0%, transparent 65%)",
           }} />
 
-          {/* Status pill */}
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "clamp(2rem, 5vw, 3.5rem)", position: "relative" }}>
+          {/* Status pill — eyebrow 1/3 */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.1 }}
+            style={{ marginBottom: "clamp(2rem, 4vw, 3rem)", position: "relative" }}
+          >
             <span style={{
-              width: 6, height: 6, borderRadius: "50%", background: "#22c55e",
-              animation: "glow-pulse 2s ease-in-out infinite",
-              boxShadow: "0 0 6px rgba(34,197,94,0.5)",
-            }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636" }}>
-              Solana · Devnet · Live
+              display: "inline-flex", alignItems: "center", gap: 8,
+              border: "1px solid #1c1c1c", borderRadius: 999,
+              padding: "5px 14px",
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px rgba(34,197,94,0.5)", animation: "glow-pulse 2s ease-in-out infinite", flexShrink: 0 }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6a6a6a" }}>
+                Verified reputation · On-chain allocation
+              </span>
             </span>
-          </div>
+          </motion.div>
 
           {/* Headline */}
-          <h1 style={{
-            fontWeight: 800,
-            fontSize: "clamp(2.5rem, 5.5vw, 5rem)",
-            lineHeight: 1.05, letterSpacing: "-0.045em",
-            color: "#f0f0f0", margin: 0, position: "relative",
-          }}>
-            Trading talent,<br />
-            <span style={{ color: "#4f9eff" }}>finally</span>{" "}
-            investable.
-          </h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+            style={{
+              fontWeight: 800,
+              fontSize: "clamp(2.75rem, 5.5vw, 6rem)",
+              lineHeight: 0.97, letterSpacing: "-0.05em",
+              color: "#f0f0f0", margin: 0, position: "relative",
+            }}
+          >
+            The allocation rail<br />
+            for{" "}<span style={{ color: "#4f9eff" }}>on-chain</span>{" "}
+            trading talent.
+          </motion.h1>
 
-          <p style={{
-            marginTop: "clamp(1.25rem, 3vw, 2rem)",
-            fontSize: "clamp(0.9375rem, 1.5vw, 1.0625rem)",
-            color: "#6a6a6a", maxWidth: "44ch", lineHeight: 1.7,
-            position: "relative",
-          }}>
-            Arcadia turns every on-chain trade into a permanent, tamper-proof reputation score.
-            Skilled traders earn capital. Investors back them — safely, transparently, on Solana.
-          </p>
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.35 }}
+            style={{
+              marginTop: "clamp(1.5rem, 3vw, 2rem)",
+              fontSize: "clamp(0.9375rem, 1.4vw, 1.0625rem)",
+              color: "#6a6a6a", maxWidth: "42ch", lineHeight: 1.7,
+              position: "relative",
+            }}
+          >
+            Arcadia turns real on-chain trading history into verified reputation. Investor capital flows to the traders who have earned it.
+          </motion.p>
 
           {/* CTAs */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "clamp(2rem, 4vw, 2.5rem)", flexWrap: "wrap", position: "relative" }}>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "clamp(2rem, 3.5vw, 2.5rem)", flexWrap: "wrap", position: "relative" }}
+          >
             <Link href="/traders" style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               background: "#4f9eff", color: "#ffffff",
               fontWeight: 700, fontSize: "0.875rem",
               padding: "11px 22px", borderRadius: 8,
-              textDecoration: "none", transition: "background 0.15s, transform 0.15s",
-              letterSpacing: "-0.01em",
+              textDecoration: "none", transition: "background 0.15s, transform 0.12s",
+              letterSpacing: "-0.01em", whiteSpace: "nowrap",
             }}
               onMouseEnter={(e) => { e.currentTarget.style.background = "#74b5ff"; e.currentTarget.style.transform = "translateY(-1px)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "#4f9eff"; e.currentTarget.style.transform = "none"; }}
             >
-              Browse vaults <ArrowUpRight size={14} />
+              Browse verified traders <ArrowUpRight size={14} />
             </Link>
             <Link href="/terminal" style={{
               display: "inline-flex", alignItems: "center", gap: 8,
@@ -372,27 +579,14 @@ export default function LandingPage() {
               fontWeight: 600, fontSize: "0.875rem",
               padding: "10px 20px", borderRadius: 8,
               textDecoration: "none", transition: "border-color 0.15s, color 0.15s",
+              whiteSpace: "nowrap",
             }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(79,158,255,0.35)"; e.currentTarget.style.color = "#f0f0f0"; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1c1c1c"; e.currentTarget.style.color = "#6a6a6a"; }}
             >
-              Start trading
+              Build your reputation
             </Link>
-          </div>
-
-          {/* Stat row */}
-          <div style={{ display: "flex", gap: "clamp(1.5rem, 3vw, 2.5rem)", marginTop: "clamp(3rem, 6vw, 5rem)", flexWrap: "wrap", position: "relative" }}>
-            {[
-              { label: "Total AUM",      value: isLoading ? "—" : formatUSD(totalAUM, 0)             },
-              { label: "Active traders", value: isLoading ? "—" : String(traders?.length ?? "—")     },
-              { label: "Avg payout",     value: "1.8s"                                               },
-            ].map((s) => (
-              <div key={s.label}>
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#363636", marginBottom: 4 }}>{s.label}</p>
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.02em" }}>{s.value}</p>
-              </div>
-            ))}
-          </div>
+          </motion.div>
         </div>
 
         {/* Right — floating cards */}
@@ -400,458 +594,346 @@ export default function LandingPage() {
           borderLeft: "1px solid #1c1c1c",
           padding: "4rem 3rem",
           display: "flex", alignItems: "center",
-          background: "radial-gradient(ellipse at 70% 40%, rgba(79,158,255,0.04) 0%, transparent 60%)",
+          background: "radial-gradient(ellipse at 65% 40%, rgba(79,158,255,0.04) 0%, transparent 60%)",
         }}>
           <HeroCards />
         </div>
       </section>
 
-      {/* ═══ TRUST STRIP ════════════════════════════════════════════════ */}
-      <div style={{
-        borderBottom: "1px solid #1c1c1c",
-        padding: "1.25rem clamp(2rem, 5vw, 5rem)",
-        display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap",
-      }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#2a2a2a", flexShrink: 0 }}>
-          Built on
-        </span>
-        {[
-          { name: "Solana", dot: "#a855f7"  },
-          { name: "Drift",  dot: "#4f9eff"  },
-          { name: "Jupiter",dot: "#22c55e"  },
-        ].map((p, i) => (
-          <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            {i > 0 && <span style={{ color: "#1c1c1c", fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>·</span>}
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: p.dot }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8125rem", fontWeight: 700, color: "#363636" }}>{p.name}</span>
-          </div>
-        ))}
-        <div className="lp-trust-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636", letterSpacing: "0.1em" }}>All trades verified on-chain</span>
-          <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", animation: "glow-pulse 2s ease-in-out infinite" }} />
+      {/* ═══ TRUST STRIP MARQUEE ════════════════════════════════════════ */}
+      <div style={{ borderBottom: "1px solid #1c1c1c", overflow: "hidden", position: "relative" }}>
+        <div style={{ display: "flex", width: "max-content", animation: "lp-scroll 22s linear infinite" }}>
+          {[...Array(4)].flatMap((_, rep) =>
+            ["Solana", "Drift", "Jupiter", "Verified reputation", "Smart-contract allocation", "Non-custodial vaults"].map((item, i) => (
+              <div key={`${rep}-${i}`} style={{
+                display: "flex", alignItems: "center", gap: "3rem",
+                padding: "1.125rem 1.5rem", flexShrink: 0,
+              }}>
+                <span style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: i < 3 ? "0.8125rem" : "0.75rem",
+                  fontWeight: i < 3 ? 700 : 400,
+                  color: i < 3 ? "#2a2a2a" : "#1e1e1e",
+                  whiteSpace: "nowrap",
+                  letterSpacing: i >= 3 ? "0.04em" : "0",
+                }}>
+                  {item}
+                </span>
+                <span style={{ width: 3, height: 3, borderRadius: "50%", background: "#1c1c1c", flexShrink: 0 }} />
+              </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* ═══ THE PROBLEM ════════════════════════════════════════════════ */}
-      <section
-        ref={problemRef}
-        className="section-reveal"
-        style={{ borderBottom: "1px solid #1c1c1c" }}
-      >
-        {/* Section label row */}
-        <div style={{ padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>The Problem</span>
-        </div>
-
-        <div className="lp-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-          {/* Trader problem */}
-          <div style={{
-            borderRight: "1px solid #1c1c1c",
-            padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)",
-          }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(79,158,255,0.08)", border: "1px solid rgba(79,158,255,0.18)",
-              borderRadius: 4, padding: "3px 10px", marginBottom: "2rem",
+      <FadeUp>
+        <section style={{
+          borderBottom: "1px solid #1c1c1c",
+          padding: "clamp(5rem, 8vw, 8rem) clamp(2rem, 5vw, 5rem)",
+        }}>
+          <div style={{ marginBottom: "clamp(3rem, 6vw, 5rem)" }}>
+            <h2 style={{
+              fontSize: "clamp(2.25rem, 4.5vw, 5rem)", fontWeight: 800,
+              letterSpacing: "-0.05em", lineHeight: 1.05, margin: 0,
             }}>
-              <TrendingUp size={10} style={{ color: "#4f9eff" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#4f9eff", fontWeight: 700 }}>For Traders</span>
-            </div>
-
-            <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f0f0f0", lineHeight: 1.15, margin: "0 0 1.25rem" }}>
-              Great traders are<br /><span style={{ color: "#ef4444" }}>invisible.</span>
+              <span style={{ color: "#f0f0f0" }}>Skilled traders</span>{" "}
+              <span style={{ color: "#ef4444" }}>can't prove it.</span>
+              <br />
+              <span style={{ color: "#f0f0f0" }}>Capital has</span>{" "}
+              <span style={{ color: "#ef4444" }}>no trusted rail.</span>
             </h2>
-
-            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "42ch", margin: "0 0 2rem" }}>
-              You've been profitable for two years but nobody knows. Every exchange shows your history in a private dashboard. Every claim you make requires a screenshot — and screenshots are trivially faked.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                "Track record lives in a private dashboard nobody can verify",
-                "Screenshots can be edited in 30 seconds",
-                "No way to turn performance into real investment capital",
-              ].map((txt) => (
-                <div key={txt} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#ef4444", flexShrink: 0, marginTop: 8 }} />
-                  <span style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.6 }}>{txt}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Investor problem */}
-          <div style={{
-            padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)",
-          }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(240,180,41,0.07)", border: "1px solid rgba(240,180,41,0.18)",
-              borderRadius: 4, padding: "3px 10px", marginBottom: "2rem",
-            }}>
-              <Users size={10} style={{ color: "#f0b429" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#f0b429", fontWeight: 700 }}>For Investors</span>
-            </div>
-
-            <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f0f0f0", lineHeight: 1.15, margin: "0 0 1.25rem" }}>
-              Investors are<br /><span style={{ color: "#ef4444" }}>flying blind.</span>
-            </h2>
-
-            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "42ch", margin: "0 0 2rem" }}>
-              You want exposure to skilled crypto traders. But every allocation relies on trust — trust in screenshots, trust in backtests, trust in a stranger's claim. One edited screenshot and your money is gone.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[
-                "No way to verify claimed performance is real",
-                "Funds sent to a wallet = the trader can disappear",
-                "No custody protection, no on-chain audit trail",
-              ].map((txt) => (
-                <div key={txt} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#ef4444", flexShrink: 0, marginTop: 8 }} />
-                  <span style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.6 }}>{txt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ NO CUSTODY CALLOUT ══════════════════════════════════════════ */}
-      <section className="lp-nocust" style={{
-        borderBottom: "1px solid #1c1c1c",
-        background: "#050505",
-        padding: "clamp(4rem, 8vw, 7rem) clamp(2rem, 5vw, 5rem)",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "4rem",
-        alignItems: "center",
-      }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.5rem" }}>
-            <Shield size={13} style={{ color: "#22c55e" }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>Non-Custodial</span>
-          </div>
-          <h2 style={{ fontSize: "clamp(2rem, 4.5vw, 3.5rem)", fontWeight: 800, letterSpacing: "-0.045em", color: "#f0f0f0", lineHeight: 1.1, margin: "0 0 1.25rem" }}>
-            Your funds never<br />leave the chain.
-          </h2>
-          <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "44ch", margin: 0 }}>
-            Investor USDC sits inside an on-chain vault — a smart-contract account that only the protocol can instruct.
-            The trader uses it to trade. They cannot withdraw it. Nobody can.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            { label: "Funds held by",       value: "Smart contract (PDA)",  ok: true  },
-            { label: "Trader can withdraw",  value: "Profit above HWM only", ok: true  },
-            { label: "Arcadia can withdraw", value: "Never",                 ok: true  },
-            { label: "Platform fee",         value: "5% of profit only",     ok: true  },
-            { label: "Losing periods",       value: "No fees charged",       ok: true  },
-          ].map((row) => (
-            <div key={row.label} style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "0.875rem 1.25rem",
-              background: "#0c0c0c", border: "1px solid #1c1c1c",
-              borderRadius: 8,
-            }}>
-              <span style={{ fontSize: "0.875rem", color: "#6a6a6a" }}>{row.label}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#f0f0f0" }}>{row.value}</span>
-                <span style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#22c55e" }}>✓</span>
+          <div className="lp-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(2.5rem, 5vw, 5rem)" }}>
+            {/* Trader side */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.25rem" }}>
+                <TrendingUp size={11} style={{ color: "#4f9eff" }} />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4f9eff", fontWeight: 700 }}>For Traders</span>
+              </div>
+              <p style={{ fontSize: "0.9375rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "44ch", marginBottom: "1.5rem" }}>
+                A trader can be genuinely talented and still have no trusted way to show it. Screenshots can be edited. Private dashboards do not travel. Without verified reputation, skill stays trapped inside one wallet.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  "Real performance is hard to separate from lucky wins",
+                  "Screenshots and P&L claims are easy to fake",
+                  "Small traders struggle to earn access to larger capital",
+                ].map((txt) => (
+                  <div key={txt} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#ef4444", flexShrink: 0, marginTop: 8 }} />
+                    <span style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.6 }}>{txt}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* ═══ HOW IT WORKS ════════════════════════════════════════════════ */}
-      <section
-        ref={stepsRef}
-        className="section-reveal"
-        style={{ borderBottom: "1px solid #1c1c1c" }}
-      >
-        <div style={{ padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>How It Works</span>
-        </div>
+            {/* Investor side */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.25rem" }}>
+                <Users size={11} style={{ color: "#4f9eff" }} />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#4f9eff", fontWeight: 700 }}>For Investors</span>
+              </div>
+              <p style={{ fontSize: "0.9375rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "44ch", marginBottom: "1.5rem" }}>
+                Investors want exposure to skilled traders, but the internet is full of claims. Without a verified record and a safe allocation structure, backing a trader becomes guesswork.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  "No simple way to verify claimed performance",
+                  "No clear reputation layer for on-chain traders",
+                  "No safe reason to send capital directly to a stranger",
+                ].map((txt) => (
+                  <div key={txt} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#ef4444", flexShrink: 0, marginTop: 8 }} />
+                    <span style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.6 }}>{txt}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </FadeUp>
 
-        <div style={{ padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)" }}>
-          <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2.25rem)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f0f0f0", marginBottom: "3rem", maxWidth: "30ch" }}>
-            Five steps from first trade to first payout.
-          </h2>
+      {/* ═══ NON-CUSTODIAL — THE ALLOCATION RAIL ═══════════════════════ */}
+      <FadeUp>
+        <section className="lp-nocust" style={{
+          borderBottom: "1px solid #1c1c1c",
+          background: "#050505",
+          padding: "clamp(5rem, 8vw, 8rem) clamp(2rem, 5vw, 5rem)",
+          display: "grid", gridTemplateColumns: "1fr 1fr",
+          gap: "clamp(3rem, 6vw, 6rem)", alignItems: "center",
+        }}>
+          <div>
+            {/* Eyebrow 2/3 */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1.5rem" }}>
+              <ShieldCheck size={12} style={{ color: "#22c55e" }} />
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636" }}>The Allocation Rail</span>
+            </div>
+            <h2 style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", fontWeight: 800, letterSpacing: "-0.05em", color: "#f0f0f0", lineHeight: 1.05, margin: "0 0 1.25rem" }}>
+              Investors don't<br />send money to traders.
+            </h2>
+            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "44ch", margin: 0 }}>
+              Investor capital goes into an on-chain vault, not into a trader's wallet. The trader can trade under protocol rules, but they cannot simply withdraw investor funds. This protects you from theft -- it does not protect you from trading losses, which are shared proportionally like any fund. Arcadia turns custody risk into software; market risk still belongs to the trade.
+            </p>
+          </div>
 
-          <div className="lp-steps" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1.5rem" }}>
-            {HOW_STEPS.map((step, i) => (
-              <div key={step.n} style={{
-                position: "relative",
-                animation: `fade-in 0.4s ease ${i * 100}ms both`,
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              { label: "Investor capital held by", value: "Smart-contract vault" },
+              { label: "Trader access",            value: "Trading permissions" },
+              { label: "Trader withdrawal",        value: "Performance share only" },
+              { label: "Investor visibility",      value: "Score, vault, and activity" },
+              { label: "Allocation logic",         value: "Reputation-based capacity" },
+              { label: "Protected against",        value: "Theft -- not trading losses" },
+            ].map((row) => (
+              <div key={row.label} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "0.875rem 1.25rem",
+                background: "#0c0c0c", border: "1px solid #1c1c1c", borderRadius: 8,
               }}>
-                {/* Connector line */}
-                {i < HOW_STEPS.length - 1 && (
-                  <div className="lp-step-connector" style={{
-                    position: "absolute", top: "1.5rem", left: "calc(100% + 0.5rem)",
-                    width: "calc(1.5rem - 1px)", height: 1,
-                    background: "linear-gradient(90deg, #1c1c1c, transparent)",
-                    zIndex: 1,
-                  }} />
-                )}
-                <div style={{
-                  fontFamily: "var(--font-mono)", fontSize: "0.6875rem", fontWeight: 900,
-                  color: "#4f9eff", letterSpacing: "0.05em",
-                  marginBottom: "1rem",
-                }}>
-                  {step.n}
-                </div>
-                <h3 style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.02em", marginBottom: "0.75rem", lineHeight: 1.3 }}>
-                  {step.title}
-                </h3>
-                <p style={{ fontSize: "0.8125rem", color: "#6a6a6a", lineHeight: 1.65 }}>
-                  {step.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ THE SCORE ═══════════════════════════════════════════════════ */}
-      <section
-        ref={scoreRef}
-        className="section-reveal"
-        style={{ borderBottom: "1px solid #1c1c1c" }}
-      >
-        <div style={{ padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>The Score</span>
-        </div>
-
-        <div className="lp-3col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
-          {/* Big number */}
-          <div style={{
-            padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 5rem)",
-            borderRight: "1px solid #1c1c1c",
-            display: "flex", flexDirection: "column", justifyContent: "center",
-          }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636", marginBottom: "1.25rem" }}>
-              Example score
-            </p>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span ref={score912.ref} suppressHydrationWarning style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: "clamp(4rem, 7vw, 6rem)", lineHeight: 1, letterSpacing: "-0.05em", color: "#f0f0f0" }}>
-                {score912.value}
-              </span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", color: "#363636", fontWeight: 300 }}>/1000</span>
-            </div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.25)",
-              borderRadius: 4, padding: "3px 10px", marginTop: "1rem", alignSelf: "flex-start",
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#a855f7" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#a855f7", fontWeight: 700 }}>Elite Tier</span>
-            </div>
-            <p style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.7, maxWidth: "34ch", marginTop: "1.25rem" }}>
-              A risk-adjusted 0–1000 number anchored on immutable Solana trade receipts.
-              No curator. No appeals. No override.
-            </p>
-          </div>
-
-          {/* Score bars */}
-          <div className="lp-score-mid" style={{
-            padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4rem)",
-            borderRight: "1px solid #1c1c1c",
-            display: "flex", flexDirection: "column", justifyContent: "center",
-            gap: "2rem",
-          }}>
-            {SCORE_BARS.map((b, i) => (
-              <div key={b.label}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: 2, background: b.color, flexShrink: 0 }} />
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#6a6a6a" }}>{b.label}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636" }}>{b.weight}% weight</span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.875rem", fontWeight: 700, color: "#f0f0f0" }}>
-                      {b.val}<span style={{ color: "#363636", fontWeight: 300, fontSize: "0.75rem" }}>/100</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="progress-track">
-                  <div
-                    className="score-bar"
-                    style={{
-                      height: "100%",
-                      width: `${b.val}%`,
-                      background: b.color,
-                      borderRadius: 3,
-                      opacity: 0.8,
-                      "--delay": `${i * 120}ms`,
-                    } as React.CSSProperties}
-                  />
+                <span style={{ fontSize: "0.875rem", color: "#6a6a6a" }}>{row.label}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "#f0f0f0" }}>{row.value}</span>
+                  <span style={{
+                    width: 18, height: 18, borderRadius: "50%",
+                    background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 10, color: "#22c55e", flexShrink: 0,
+                  }}>&#x2713;</span>
                 </div>
               </div>
             ))}
           </div>
+        </section>
+      </FadeUp>
 
-          {/* Tier table */}
-          <div style={{
-            padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4rem)",
-            display: "flex", flexDirection: "column", justifyContent: "center",
+      {/* ═══ HOW IT WORKS — VERTICAL TIMELINE ══════════════════════════ */}
+      <FadeUp>
+        <section style={{ borderBottom: "1px solid #1c1c1c", padding: "clamp(5rem, 8vw, 8rem) clamp(2rem, 5vw, 5rem)" }}>
+          <h2 style={{
+            fontSize: "clamp(1.75rem, 3vw, 2.5rem)", fontWeight: 800,
+            letterSpacing: "-0.045em", color: "#f0f0f0",
+            marginBottom: "clamp(3rem, 6vw, 5rem)", maxWidth: "28ch",
           }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636", marginBottom: "1.25rem" }}>
-              Profit split · by tier
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {TIERS.map((t) => (
-                <div key={t.name} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "0.875rem 1rem",
-                  background: "#0c0c0c", border: "1px solid #1c1c1c",
-                  borderRadius: 8,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: t.color, flexShrink: 0 }} />
+            From verified skill to allocated capital.
+          </h2>
+
+          <div className="lp-timeline" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "clamp(2rem, 5vw, 5rem)", alignItems: "start" }}>
+            {/* Left: vertical timeline steps */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {HOW_STEPS.map((step, i) => (
+                <FadeUp key={step.n} delay={i * 0.07}>
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "60px 1fr", gap: "1.5rem",
+                    paddingBottom: i < HOW_STEPS.length - 1 ? "2.5rem" : 0,
+                    position: "relative",
+                  }}>
+                    <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+                        border: "1px solid #1c1c1c", background: "#080808",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontFamily: "var(--font-mono)", fontSize: "0.6875rem", fontWeight: 900,
+                        color: "#4f9eff", letterSpacing: "0.05em",
+                      }}>
+                        {step.n}
+                      </div>
+                      {i < HOW_STEPS.length - 1 && (
+                        <div style={{
+                          position: "absolute", top: 40, left: "50%", transform: "translateX(-50%)",
+                          width: 1, height: "calc(100% - 40px + 2.5rem)",
+                          background: "linear-gradient(to bottom, #1c1c1c 60%, transparent)",
+                        }} />
+                      )}
+                    </div>
                     <div>
-                      <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.8125rem", fontWeight: 700, color: "#f0f0f0", margin: 0, lineHeight: 1.3 }}>{t.name}</p>
-                      <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636", margin: 0 }}>{t.min === 0 ? "All scores" : `Score ≥ ${t.min}`}</p>
+                      <h3 style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.02em", marginBottom: "0.5rem", lineHeight: 1.3 }}>
+                        {step.title}
+                      </h3>
+                      <p style={{ fontSize: "0.8125rem", color: "#6a6a6a", lineHeight: 1.65, margin: 0 }}>
+                        {step.body}
+                      </p>
                     </div>
                   </div>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.125rem", fontWeight: 900, color: t.color, letterSpacing: "-0.03em", margin: 0 }}>
-                    {t.pct}%
-                  </p>
-                </div>
+                </FadeUp>
               ))}
             </div>
-            <p style={{ marginTop: "0.875rem", fontSize: "0.75rem", color: "#363636", lineHeight: 1.5 }}>
-              Platform: 5%. HWM per share. No fees on flat periods.
-            </p>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══ FLOW: TRADERS vs INVESTORS ══════════════════════════════════ */}
-      <section
-        ref={flowRef}
-        className="section-reveal"
-        style={{ borderBottom: "1px solid #1c1c1c" }}
-      >
-        <div style={{ padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>Two Sides, One Protocol</span>
-        </div>
-
-        <div className="lp-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-          {/* Traders */}
-          <div style={{ borderRight: "1px solid #1c1c1c", padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "1.75rem" }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: "rgba(79,158,255,0.1)", border: "1px solid rgba(79,158,255,0.2)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <TrendingUp size={13} style={{ color: "#4f9eff" }} />
+            {/* Right: score growth card */}
+            <div style={{
+              background: "#0c0c0c", border: "1px solid #1c1c1c", borderRadius: 12,
+              padding: "clamp(1.75rem, 3.5vw, 2.5rem)",
+              position: "sticky", top: "5rem",
+            }}>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636", marginBottom: "1.5rem" }}>
+                Score builds as you trade
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                {[
+                  { label: "Week 1",  score: 340, w: "34%",   color: "#60a5fa" },
+                  { label: "Week 4",  score: 580, w: "58%",   color: "#818cf8" },
+                  { label: "Week 8",  score: 740, w: "74%",   color: "#f59e0b" },
+                  { label: "Week 12", score: 912, w: "91.2%", color: "#a855f7" },
+                ].map((pt) => (
+                  <div key={pt.label}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#363636" }}>{pt.label}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 700, color: pt.color }}>{pt.score}</span>
+                    </div>
+                    <div style={{ height: 4, background: "#1c1c1c", borderRadius: 2 }}>
+                      <div style={{ width: pt.w, height: "100%", background: pt.color, borderRadius: 2, opacity: 0.75 }} />
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#f0f0f0", margin: 0, letterSpacing: "-0.02em" }}>For Traders</h3>
-            </div>
-
-            <p style={{ fontSize: "0.9375rem", color: "#6a6a6a", lineHeight: 1.7, marginBottom: "2.5rem", maxWidth: "38ch" }}>
-              Turn two years of profitable trading into a verifiable reputation and access real investor capital — without giving up your edge.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {[
-                { n: "1", title: "Connect & fund",       body: "Connect your Solana wallet and fund your vault with USDC. No application, no approval required." },
-                { n: "2", title: "Trade as normal",       body: "Open and close positions on Drift or Jupiter. Every trade is logged permanently on-chain in real time." },
-                { n: "3", title: "Watch your score grow", body: "Your Arcadia Score updates automatically after each trade. Consistent wins push you up the tier ladder." },
-                { n: "4", title: "Earn your split",       body: "When the vault beats its high-water mark, request a payout. 20–35% of profit, straight to your wallet in under 2s." },
-              ].map((s, i) => (
-                <div key={s.n} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{
-                    width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-                    background: "rgba(79,158,255,0.1)", border: "1px solid rgba(79,158,255,0.2)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: "#4f9eff",
-                    marginTop: 2,
-                  }}>
-                    {s.n}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#f0f0f0", margin: "0 0 3px", letterSpacing: "-0.01em" }}>{s.title}</p>
-                    <p style={{ fontSize: "0.8125rem", color: "#6a6a6a", margin: 0, lineHeight: 1.6 }}>{s.body}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Link href="/terminal" style={{
-              display: "inline-flex", alignItems: "center", gap: 8, marginTop: "2.5rem",
-              background: "#4f9eff", color: "#ffffff",
-              fontWeight: 700, fontSize: "0.875rem",
-              padding: "11px 22px", borderRadius: 8,
-              textDecoration: "none", transition: "background 0.15s",
-            }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#74b5ff")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#4f9eff")}
-            >
-              Start trading <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          {/* Investors */}
-          <div style={{ padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: "1.75rem" }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: "rgba(240,180,41,0.08)", border: "1px solid rgba(240,180,41,0.2)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <Users size={13} style={{ color: "#f0b429" }} />
+              <div style={{ marginTop: "1.75rem", paddingTop: "1.25rem", borderTop: "1px solid #1c1c1c", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#a855f7", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#a855f7", fontWeight: 700 }}>Elite tier unlocked</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#363636", marginLeft: "auto" }}>35% profit share</span>
               </div>
-              <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#f0f0f0", margin: 0, letterSpacing: "-0.02em" }}>For Investors</h3>
+            </div>
+          </div>
+        </section>
+      </FadeUp>
+
+      {/* ═══ THE SCORE ══════════════════════════════════════════════════ */}
+      <FadeUp>
+        <section style={{ borderBottom: "1px solid #1c1c1c" }}>
+          {/* Eyebrow 3/3 */}
+          <div style={{ padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c" }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>The Reputation Layer</span>
+          </div>
+
+          <div className="lp-3col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+            {/* Big number */}
+            <div style={{
+              padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 5rem)",
+              borderRight: "1px solid #1c1c1c",
+              display: "flex", flexDirection: "column", justifyContent: "center",
+            }}>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636", marginBottom: "1.25rem" }}>
+                Arcadia Score
+              </p>
+              <div ref={score912.ref} style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span suppressHydrationWarning style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: "clamp(4rem, 7vw, 6rem)", lineHeight: 1, letterSpacing: "-0.05em", color: "#f0f0f0" }}>
+                  {score912.value}
+                </span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", color: "#363636", fontWeight: 300 }}>/1000</span>
+              </div>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.25)",
+                borderRadius: 4, padding: "3px 10px", marginTop: "1rem", alignSelf: "flex-start",
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#a855f7", flexShrink: 0 }} />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#a855f7", fontWeight: 700 }}>Elite Tier</span>
+              </div>
+              <p style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.7, maxWidth: "34ch", marginTop: "1.25rem" }}>
+                The score is the trust layer: a 0-1000 reputation number built from real trading history. It helps capital find traders with consistency, discipline, and proof.
+              </p>
             </div>
 
-            <p style={{ fontSize: "0.9375rem", color: "#6a6a6a", lineHeight: 1.7, marginBottom: "2.5rem", maxWidth: "38ch" }}>
-              Allocate to verified, on-chain-proven traders. Monitor every position in real time, with custody-safe on-chain infrastructure.
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {[
-                { n: "1", title: "Browse the marketplace",  body: "Filter traders by score, tier, strategy, AUM capacity, and 30-day return. Every stat is verified on-chain." },
-                { n: "2", title: "Deposit into a vault",    body: "Choose a trader with open capacity. Deposit USDC — it goes straight into their smart-contract vault, not their wallet." },
-                { n: "3", title: "Monitor in real time",    body: "Watch positions, NAV, and equity curve from your portfolio dashboard. Every trade is visible and public." },
-                { n: "4", title: "Earn with the trader",   body: "When the vault hits a new high, your share value increases. No action needed — returns accrue automatically." },
-              ].map((s, i) => (
-                <div key={s.n} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                  <div style={{
-                    width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-                    background: "rgba(240,180,41,0.08)", border: "1px solid rgba(240,180,41,0.2)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, color: "#f0b429",
-                    marginTop: 2,
-                  }}>
-                    {s.n}
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 700, color: "#f0f0f0", margin: "0 0 3px", letterSpacing: "-0.01em" }}>{s.title}</p>
-                    <p style={{ fontSize: "0.8125rem", color: "#6a6a6a", margin: 0, lineHeight: 1.6 }}>{s.body}</p>
-                  </div>
-                </div>
+            {/* Score bars */}
+            <div className="lp-score-mid" style={{
+              padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4rem)",
+              borderRight: "1px solid #1c1c1c",
+              display: "flex", flexDirection: "column", justifyContent: "center", gap: "2rem",
+            }}>
+              {SCORE_BARS.map((b, i) => (
+                <AnimatedScoreBar key={b.label} {...b} delay={i * 0.1} />
               ))}
             </div>
 
-            <Link href="/traders" style={{
-              display: "inline-flex", alignItems: "center", gap: 8, marginTop: "2.5rem",
-              background: "#f0b429", color: "#0a0800",
-              fontWeight: 700, fontSize: "0.875rem",
-              padding: "11px 22px", borderRadius: 8,
-              textDecoration: "none", transition: "background 0.15s",
-            }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f5c842")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#f0b429")}
-            >
-              Browse traders <ArrowRight size={14} />
-            </Link>
+            {/* Tier table */}
+            <div style={{
+              padding: "clamp(2.5rem, 5vw, 4rem) clamp(2rem, 5vw, 4rem)",
+              display: "flex", flexDirection: "column", justifyContent: "center",
+            }}>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636", marginBottom: "1.25rem" }}>
+                Reputation tiers
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {TIERS.map((t) => (
+                  <div key={t.name} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "0.875rem 1rem",
+                    background: "#0c0c0c", border: "1px solid #1c1c1c", borderRadius: 8,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: t.color, flexShrink: 0 }} />
+                      <div>
+                        <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.8125rem", fontWeight: 700, color: "#f0f0f0", margin: 0, lineHeight: 1.3 }}>{t.name}</p>
+                        <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, color: "#363636", margin: 0 }}>{t.min === 0 ? "All scores" : `Score >= ${t.min}`}</p>
+                      </div>
+                    </div>
+                    <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.125rem", fontWeight: 900, color: t.color, letterSpacing: "-0.03em", margin: 0 }}>
+                      {t.pct}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p style={{ marginTop: "1rem", fontSize: "0.75rem", color: "#363636", lineHeight: 1.6 }}>
+                Higher reputation unlocks more vault capacity. Arcadia also takes a small management fee, active in every market condition, so the protocol stays funded through flat or down periods.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </FadeUp>
+
+      {/* ═══ TWO SIDES — TABBED ══════════════════════════════════════════ */}
+      <FadeUp>
+        <section style={{ borderBottom: "1px solid #1c1c1c", padding: "clamp(5rem, 8vw, 8rem) clamp(2rem, 5vw, 5rem)" }}>
+          <h2 style={{
+            fontSize: "clamp(1.75rem, 3vw, 2.5rem)", fontWeight: 800,
+            letterSpacing: "-0.045em", color: "#f0f0f0",
+            marginBottom: "clamp(2.5rem, 5vw, 4rem)", maxWidth: "28ch",
+          }}>
+            Two sides, one allocation rail.
+          </h2>
+          <TwoSidesTabs />
+        </section>
+      </FadeUp>
 
       {/* ═══ LIVE LEADERBOARD ════════════════════════════════════════════ */}
       <section style={{ borderBottom: "1px solid #1c1c1c" }}>
@@ -859,12 +941,12 @@ export default function LandingPage() {
           padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>Live Traders</span>
+          <span style={{ fontSize: "0.9375rem", fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.01em" }}>Verified Traders</span>
           <Link href="/leaderboard" style={{
             fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.15em", textTransform: "uppercase",
             color: "#4f9eff", textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
           }}>
-            Leaderboard <ArrowRight size={9} />
+            View leaderboard <ArrowRight size={9} />
           </Link>
         </div>
 
@@ -872,10 +954,9 @@ export default function LandingPage() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #1c1c1c" }}>
-                {["#", "Trader", "Score", "Tier", "30d Return", "AUM", "Action"].map((h) => (
+                {["#", "Trader", "Score", "Tier", "30d Return", "Vault Size", "Action"].map((h) => (
                   <th key={h} style={{
-                    padding: "0.625rem clamp(1.25rem, 3vw, 2.5rem)",
-                    textAlign: "left",
+                    padding: "0.625rem clamp(1.25rem, 3vw, 2.5rem)", textAlign: "left",
                     fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase",
                     color: "#363636", fontWeight: 600,
                   }}>{h}</th>
@@ -894,7 +975,13 @@ export default function LandingPage() {
                   </tr>
                 ))
                 : topTraders.map((t, idx) => (
-                  <tr key={t.handle} style={{ borderBottom: "1px solid #1c1c1c", transition: "background 0.1s" }}
+                  <motion.tr
+                    key={t.handle}
+                    initial={{ opacity: 0, y: 6 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: idx * 0.04 }}
+                    style={{ borderBottom: "1px solid #1c1c1c", transition: "background 0.1s" } as React.CSSProperties}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#050505")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                   >
@@ -917,7 +1004,7 @@ export default function LandingPage() {
                     </td>
                     <td style={{ padding: "0.875rem clamp(1.25rem, 3vw, 2.5rem)" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: TIER_COLOR[t.tier] ?? "#6a6a6a" }} />
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: TIER_COLOR[t.tier] ?? "#6a6a6a", flexShrink: 0 }} />
                         <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: TIER_COLOR[t.tier] ?? "#6a6a6a" }}>{t.tier}</span>
                       </span>
                     </td>
@@ -940,10 +1027,10 @@ export default function LandingPage() {
                         onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(79,158,255,0.08)")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
-                        Invest →
+                        View vault
                       </Link>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               }
             </tbody>
@@ -951,55 +1038,43 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══ FAQ ══════════════════════════════════════════════════════════ */}
-      <section
-        ref={faqRef}
-        className="section-reveal"
-        style={{ borderBottom: "1px solid #1c1c1c" }}
-      >
-        <div style={{ padding: "0.875rem clamp(2rem, 5vw, 5rem)", borderBottom: "1px solid #1c1c1c" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#363636" }}>FAQ</span>
-        </div>
-
-        <div className="lp-faq-grid" style={{
-          display: "grid", gridTemplateColumns: "1fr 2fr",
-          padding: "clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 5rem)",
-          gap: "5rem", alignItems: "start",
-        }}>
-          <div className="lp-faq-sidebar">
-            <h2 style={{ fontSize: "clamp(1.5rem, 2.5vw, 2rem)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f0f0f0", margin: "0 0 1rem", lineHeight: 1.2 }}>
-              Common questions, honest answers.
-            </h2>
-            <p style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.7 }}>
-              No jargon. If the answer requires a whitepaper, we haven't simplified it enough.
-            </p>
+      {/* ═══ FAQ ════════════════════════════════════════════════════════ */}
+      <FadeUp>
+        <section style={{ borderBottom: "1px solid #1c1c1c" }}>
+          <div className="lp-faq-grid" style={{
+            display: "grid", gridTemplateColumns: "1fr 2fr",
+            padding: "clamp(4rem, 7vw, 7rem) clamp(2rem, 5vw, 5rem)",
+            gap: "5rem", alignItems: "start",
+          }}>
+            <div className="lp-faq-sidebar">
+              <h2 style={{ fontSize: "clamp(1.5rem, 2.5vw, 2rem)", fontWeight: 800, letterSpacing: "-0.04em", color: "#f0f0f0", margin: "0 0 1rem", lineHeight: 1.2 }}>
+                Simple answers before you allocate.
+              </h2>
+              <p style={{ fontSize: "0.875rem", color: "#6a6a6a", lineHeight: 1.7 }}>
+                Arcadia is built around one idea: proof should replace promises, and capital should follow verified skill.
+              </p>
+            </div>
+            <div className="lp-faq-content"><FAQ /></div>
           </div>
-          <div className="lp-faq-content"><FAQ /></div>
-        </div>
-      </section>
+        </section>
+      </FadeUp>
 
-      {/* ═══ DUAL CTA FOOTER ═════════════════════════════════════════════ */}
+      {/* ═══ DUAL CTA FOOTER ════════════════════════════════════════════ */}
       <section className="lp-dual-cta" style={{
         display: "grid", gridTemplateColumns: "1fr 1fr",
         borderBottom: "1px solid #1c1c1c",
       }}>
-        {/* Trader CTA */}
         <div style={{
           borderRight: "1px solid #1c1c1c",
           padding: "clamp(4rem, 8vw, 7rem) clamp(2rem, 5vw, 5rem)",
           display: "flex", flexDirection: "column", justifyContent: "space-between",
-          background: "radial-gradient(ellipse at 20% 50%, rgba(79,158,255,0.04) 0%, transparent 60%)",
         }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "1.5rem" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#4f9eff" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636" }}>Traders</span>
-            </div>
-            <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)", fontWeight: 800, letterSpacing: "-0.045em", color: "#f0f0f0", lineHeight: 1.15, margin: "0 0 1.25rem" }}>
-              Your track record<br />belongs on-chain.
+            <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)", fontWeight: 800, letterSpacing: "-0.05em", color: "#f0f0f0", lineHeight: 1.1, margin: "0 0 1.25rem" }}>
+              Turn your record<br />into allocated capital.
             </h2>
-            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.7, maxWidth: "38ch" }}>
-              Stop proving yourself with screenshots. Build a permanent reputation on Solana — one trade at a time.
+            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "38ch" }}>
+              Stop proving yourself with screenshots. Build a reputation from real on-chain trades and let capital find you when your record deserves it.
             </p>
           </div>
           <Link href="/terminal" style={{
@@ -1007,82 +1082,73 @@ export default function LandingPage() {
             background: "#4f9eff", color: "#ffffff",
             fontWeight: 700, fontSize: "0.9375rem",
             padding: "13px 28px", borderRadius: 8,
-            textDecoration: "none", transition: "background 0.15s",
+            textDecoration: "none", transition: "background 0.15s, transform 0.12s",
+            whiteSpace: "nowrap",
           }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#74b5ff")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#4f9eff")}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#74b5ff"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#4f9eff"; e.currentTarget.style.transform = "none"; }}
           >
-            Open terminal <ArrowRight size={15} />
+            Build your reputation <ArrowRight size={15} />
           </Link>
         </div>
 
-        {/* Investor CTA */}
         <div style={{
           padding: "clamp(4rem, 8vw, 7rem) clamp(2rem, 5vw, 5rem)",
           display: "flex", flexDirection: "column", justifyContent: "space-between",
-          background: "radial-gradient(ellipse at 80% 50%, rgba(240,180,41,0.03) 0%, transparent 60%)",
         }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "1.5rem" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#f0b429" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.22em", textTransform: "uppercase", color: "#363636" }}>Investors</span>
-            </div>
-            <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)", fontWeight: 800, letterSpacing: "-0.045em", color: "#f0f0f0", lineHeight: 1.15, margin: "0 0 1.25rem" }}>
-              Back traders you<br />can verify.
+            <h2 style={{ fontSize: "clamp(1.75rem, 3.5vw, 2.75rem)", fontWeight: 800, letterSpacing: "-0.05em", color: "#f0f0f0", lineHeight: 1.1, margin: "0 0 1.25rem" }}>
+              Back talent with<br />proof, not promises.
             </h2>
-            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.7, maxWidth: "38ch" }}>
-              Browse scores, not stories. Every stat is on-chain. Every position is visible. Your capital stays in a smart contract vault.
+            <p style={{ fontSize: "1rem", color: "#6a6a6a", lineHeight: 1.75, maxWidth: "38ch" }}>
+              See the score, read the record, and allocate through vaults designed to keep trust on-chain.
             </p>
           </div>
           <Link href="/traders" style={{
             display: "inline-flex", alignItems: "center", gap: 8, marginTop: "3rem", alignSelf: "flex-start",
-            background: "#f0b429", color: "#0a0800",
+            background: "#4f9eff", color: "#ffffff",
             fontWeight: 700, fontSize: "0.9375rem",
             padding: "13px 28px", borderRadius: 8,
-            textDecoration: "none", transition: "background 0.15s",
+            textDecoration: "none", transition: "background 0.15s, transform 0.12s",
+            whiteSpace: "nowrap",
           }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#f5c842")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#f0b429")}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#74b5ff"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#4f9eff"; e.currentTarget.style.transform = "none"; }}
           >
-            Browse vaults <ArrowRight size={15} />
+            Browse verified traders <ArrowRight size={15} />
           </Link>
         </div>
       </section>
 
-      {/* ═══ FOOTER ══════════════════════════════════════════════════════ */}
+      {/* ═══ FOOTER ═════════════════════════════════════════════════════ */}
       <footer style={{
-        padding: "1.5rem clamp(2rem, 5vw, 5rem)",
-        display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
+        padding: "2rem clamp(2rem, 5vw, 5rem)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: "1.5rem",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: 6, background: "#4f9eff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 6, fontWeight: 900, color: "#fff", letterSpacing: "0.04em" }}>ARC</span>
-          </div>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: "#363636" }}>Arcadia Protocol</span>
-        </div>
-        <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8125rem", fontWeight: 700, color: "#f0f0f0", letterSpacing: "-0.02em" }}>Arcadia</span>
+        <nav style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
           {[
-            { label: "Traders",     href: "/traders"   },
-            { label: "Leaderboard", href: "/leaderboard"},
-            { label: "Terminal",    href: "/terminal"  },
-            { label: "Docs",        href: "#"          },
-          ].map((l) => (
-            <Link key={l.label} href={l.href} style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "#363636", textDecoration: "none", transition: "color 0.1s" }}
+            { label: "Traders",     href: "/traders" },
+            { label: "Leaderboard", href: "/leaderboard" },
+            { label: "Vaults",      href: "/traders" },
+            { label: "Docs",        href: "#" },
+          ].map((link) => (
+            <Link key={link.label} href={link.href} style={{
+              fontFamily: "var(--font-mono)", fontSize: "0.75rem", color: "#363636",
+              textDecoration: "none", transition: "color 0.15s",
+            }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#f0f0f0")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#363636")}
             >
-              {l.label}
+              {link.label}
             </Link>
           ))}
-        </div>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "#2a2a2a" }}>
-          Solana Devnet · © 2026 Arcadia
+        </nav>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#363636", letterSpacing: "0.08em" }}>
+          Proof replaces promises · &#169; 2026 Arcadia
         </span>
       </footer>
-
     </div>
   );
 }

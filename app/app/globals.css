@@ -669,14 +669,26 @@ body {
   @keyframes float-c { from, to { transform: none; } }
 }
 
+/* ── Marquee animation ── */
+@keyframes lp-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-25%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="lp-scroll"] { animation: none !important; }
+}
+
 /* ── Landing page responsive layout ─────────────────────────────────── */
 /* Tablet: 2-column grids stay, 5-column steps collapse to 2 */
 @media (max-width: 900px) {
-  .lp-hero      { grid-template-columns: 1fr !important; min-height: auto !important; }
-  .lp-hero-cards { display: none !important; }
-  .lp-steps     { grid-template-columns: repeat(2, 1fr) !important; }
-  .lp-3col      { grid-template-columns: 1fr !important; }
-  .lp-score-mid { border-right: none !important; border-bottom: 1px solid var(--color-line) !important; }
+  .lp-hero        { grid-template-columns: 1fr !important; min-height: auto !important; }
+  .lp-hero-cards  { display: none !important; }
+  .lp-steps       { grid-template-columns: repeat(2, 1fr) !important; }
+  .lp-3col        { grid-template-columns: 1fr !important; }
+  .lp-score-mid   { border-right: none !important; border-bottom: 1px solid var(--color-line) !important; }
+  .lp-timeline    { grid-template-columns: 1fr !important; }
+  .lp-timeline > *:last-child { display: none !important; }
 }
 
 /* Mobile: everything stacks to 1 column */
