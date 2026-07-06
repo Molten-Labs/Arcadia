@@ -58,18 +58,27 @@ interface Props {
   height?: number;
   fullHeight?: boolean;
   positions?: PositionMarker[];
+  externalCandles?: { time: number; open: number; high: number; low: number; close: number }[];
 }
 
-export function TvChart({ market, currentPrice, height = 360, fullHeight = false, positions = [] }: Props) {
+export function TvChart({ market, currentPrice, height = 360, fullHeight = false, positions = [], externalCandles }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const priceLinesRef = useRef<Map<string, IPriceLine>>(new Map());
 
-  const candles = useMemo(
-    () => generateCandles(market, SEED_PRICES[market] ?? 100),
-    [market],
-  );
+  const candles = useMemo(() => {
+    if (externalCandles && externalCandles.length > 0) {
+      return externalCandles.map((c) => ({
+        time: c.time as Time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+    }
+    return generateCandles(market, SEED_PRICES[market] ?? 100);
+  }, [market, externalCandles]);
 
   useEffect(() => {
     if (!containerRef.current) return;

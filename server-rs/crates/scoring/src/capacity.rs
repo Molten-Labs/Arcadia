@@ -9,7 +9,6 @@
 /// The returned `cap_u64` is the onchain value: capacity in USDC minor units
 /// (× 1,000,000) for the set_capacity instruction handler.
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
 const BASE_USD: f64   = 2_500.0;

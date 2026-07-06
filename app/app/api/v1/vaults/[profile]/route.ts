@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getVaultByProfile } from "@/lib/mock-data";
 import { proxyToBackend } from "@/lib/backend-proxy";
+import { transformVaultInfo } from "@/lib/backend-transform";
 
 export async function GET(
   _req: Request,
@@ -8,7 +9,13 @@ export async function GET(
 ) {
   const { profile } = await params;
   const result = await proxyToBackend(`/v1/vaults/${profile}`);
-  if (result) return NextResponse.json(result.data, { status: result.status });
+  if (result?.ok) {
+    const transformed = transformVaultInfo(
+      result.data,
+      getVaultByProfile(profile) ?? undefined,
+    );
+    return NextResponse.json(transformed);
+  }
 
   const vault = getVaultByProfile(profile);
   if (!vault) {

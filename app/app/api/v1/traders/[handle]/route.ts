@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTraderByHandle } from "@/lib/mock-data";
 import { proxyToBackend } from "@/lib/backend-proxy";
+import { transformTraderProfile } from "@/lib/backend-transform";
 
 export async function GET(
   _req: Request,
@@ -8,7 +9,14 @@ export async function GET(
 ) {
   const { handle } = await params;
   const result = await proxyToBackend(`/v1/traders/${handle}`);
-  if (result) return NextResponse.json(result.data, { status: result.status });
+  if (result?.ok) {
+    const transformed = transformTraderProfile(
+      result.data,
+      handle,
+      getTraderByHandle(handle) ?? undefined,
+    );
+    return NextResponse.json(transformed);
+  }
 
   const trader = getTraderByHandle(handle);
   if (!trader) {

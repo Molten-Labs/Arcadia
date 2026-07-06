@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
-import { apiFetch } from "@/lib/utils";
 import { formatUSD } from "@/lib/types";
-import type { PriceData, OpenPosition } from "@/lib/types";
+import type { OpenPosition } from "@/lib/types";
+import { usePhoenix } from "@/lib/phoenix-context";
+import type { PhoenixTrade } from "@/lib/phoenix-types";
 import {
   ChevronDown, TrendingUp, TrendingDown, X, Minus, Plus,
   Crosshair, BarChart2, Maximize2, BookOpen,
@@ -23,70 +23,131 @@ type BookTab = "book" | "trades";
 type BottomTab = "positions" | "orders" | "history" | "funding";
 
 /* ─────────────────────────────────────────────────────────────────
-   Order book helpers
+   Flow sparkline (SVG)
 ───────────────────────────────────────────────────────────────── */
 
-function genOrderBook(mid: number) {
-  const step = mid < 10 ? 0.001 : mid < 100 ? 0.01 : mid < 1000 ? 0.1 : 1;
-  const asks = Array.from({ length: 14 }, (_, i) => {
-    const price = mid + (i + 0.5) * step * 5 + Math.random() * step;
-    const size  = 0.05 + Math.random() * 8;
-    return { price, size, total: 0 };
-  }).reverse();
-
-  let sumA = 0;
-  for (const a of [...asks].reverse()) { sumA += a.size; a.total = sumA; }
-
-  const bids = Array.from({ length: 14 }, (_, i) => {
-    const price = mid - (i + 0.5) * step * 5 - Math.random() * step;
-    const size  = 0.05 + Math.random() * 8;
-    return { price, size, total: 0 };
-  });
-
-  let sumB = 0;
-  for (const b of bids) { sumB += b.size; b.total = sumB; }
-
-  const maxTotal = Math.max(sumA, sumB);
-  return { asks, bids, maxTotal };
+function FlowSparkline({ flow }: { flow: number[] }) {
+  if (!flow.length) return <div className="flex-1" style={{ height: 20 }} />;
+  const W = 200, H = 20;
+  const min = Math.min(0, ...flow);
+  const max = Math.max(0, ...flow);
+  const span = Math.max(max - min, 1e-9);
+  const x = (i: number) => (flow.length === 1 ? W / 2 : (i / (flow.length - 1)) * W);
+  const y = (v: number) => H - 1 - ((v - min) / span) * (H - 2);
+  const path = flow.map((v, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(v).toFixed(2)}`).join(" ");
+  const last = flow[flow.length - 1];
+  const stroke = last >= 0 ? "var(--color-green)" : "var(--color-red)";
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="flex-1" style={{ height: 20, minWidth: 60 }} preserveAspectRatio="none">
+      <path d={path} fill="none" stroke={stroke} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
 }
 
-function genTrade(mid: number, isBtc: boolean) {
-  const side = Math.random() > 0.5 ? "buy" : "sell";
-  const step = isBtc ? 1 : 0.01;
-  const noise = (Math.random() - 0.5) * step * 6;
-  return {
-    side,
-    price: mid + noise,
-    size: parseFloat((0.01 + Math.random() * 3.5).toFixed(3)),
-    time: new Date(),
-  };
+function TradeFlowStrip({ trades: tradeList }: { trades: PhoenixTrade[] }) {
+  const analytics = useMemo(() => {
+    let buyNotional = 0, sellNotional = 0;
+    for (const t of tradeList) {
+      if (t.side === "b") buyNotional += t.notional;
+      else sellNotional += t.notional;
+    }
+    const total = buyNotional + sellNotional;
+    const buyPct = total > 0 ? (buyNotional / total) * 100 : 50;
+    const chrono = [...tradeList].sort((a, b) => a.time - b.time);
+    const flow: number[] = [];
+    let running = 0;
+    for (const t of chrono) {
+      running += t.side === "b" ? t.notional : -t.notional;
+      flow.push(running);
+    }
+    return { buyPct, sellPct: 100 - buyPct, flow, net: running };
+  }, [tradeList]);
+
+  if (!tradeList.length) return null;
+
+  const dominant = analytics.buyPct >= analytics.sellPct ? "BUY" : "SELL";
+  const dominantPct = Math.max(analytics.buyPct, analytics.sellPct);
+  return (
+    <div style={{ borderBottom: "1px solid var(--color-line)" }} className="px-3 py-2 flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Flow · window</span>
+        <span className="text-[10px] tnum font-semibold" style={{ color: dominant === "BUY" ? "var(--color-green)" : "var(--color-red)" }}>
+          {dominantPct.toFixed(0)}% {dominant}
+        </span>
+      </div>
+      <div className="h-1.5 flex overflow-hidden rounded" style={{ background: "var(--color-panel-2)" }}>
+        <div style={{ width: `${analytics.buyPct}%`, background: "rgba(34,197,94,0.7)" }} />
+        <div style={{ width: `${analytics.sellPct}%`, background: "rgba(239,68,68,0.7)" }} />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "var(--color-faint)" }}>Net</span>
+        <FlowSparkline flow={analytics.flow} />
+        <span className="text-[10px] tnum font-semibold flex-shrink-0" style={{ color: analytics.net >= 0 ? "var(--color-green)" : "var(--color-red)" }}>
+          {analytics.net >= 0 ? "+" : ""}{formatUSD(analytics.net, 0)}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────────
    OrderBook + Trades panel
 ───────────────────────────────────────────────────────────────── */
 
-function OrderBookPanel({ midPrice, isBtc }: { midPrice: number; isBtc: boolean }) {
+function OrderBookPanel({ symbol, market }: { symbol: string; market: string }) {
+  const { orderbook, trades: phoenixTrades, marketStats } = usePhoenix();
   const [tab, setTab]   = useState<BookTab>("book");
-  const [book, setBook] = useState(() => genOrderBook(midPrice));
-  const [trades, setTrades] = useState<ReturnType<typeof genTrade>[]>(() =>
-    Array.from({ length: 28 }, () => genTrade(midPrice, isBtc))
-  );
 
-  useEffect(() => {
-    const t = setInterval(() => setBook(genOrderBook(midPrice)), 1200);
-    return () => clearInterval(t);
-  }, [midPrice]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setTrades((prev) => [genTrade(midPrice, isBtc), ...prev.slice(0, 39)]);
-    }, 600);
-    return () => clearInterval(t);
-  }, [midPrice, isBtc]);
-
-  const spread = book.asks[book.asks.length - 1].price - book.bids[0].price;
+  const book = orderbook[symbol];
+  const tradeList = phoenixTrades[symbol] ?? [];
+  const stats = marketStats[symbol];
+  const midPrice = stats?.markPx ?? 0;
+  const isBtc = market === "BTC-PERP";
   const dp = isBtc ? 1 : 3;
+
+  const WALL_THRESH = 3;
+  const DEPTH_BPS = [10, 25, 50] as const;
+
+  const askLevels = book?.asks ?? [];
+  const bidLevels = book?.bids ?? [];
+  const askSizes = askLevels.slice(-14).map(l => l.size);
+  const bidSizes = bidLevels.slice(0, 14).map(l => l.size);
+  const askMed = askSizes.length ? [...askSizes].sort((a, b) => a - b)[Math.floor(askSizes.length / 2)] : 0;
+  const bidMed = bidSizes.length ? [...bidSizes].sort((a, b) => a - b)[Math.floor(bidSizes.length / 2)] : 0;
+
+  const asks = askLevels.slice(-14).map((a, _i, arr) => {
+    const total = arr.slice(0, _i + 1).reduce((s, x) => s + x.size, 0);
+    return { ...a, total, isWall: askMed > 0 && a.size > askMed * WALL_THRESH };
+  }).reverse();
+  const bids = bidLevels.slice(0, 14).map((b, _i, arr) => {
+    const total = arr.slice(0, _i + 1).reduce((s, x) => s + x.size, 0);
+    return { ...b, total, isWall: bidMed > 0 && b.size > bidMed * WALL_THRESH };
+  });
+  const allLevels = [...asks, ...bids];
+  const maxTotal = allLevels.length > 0 ? Math.max(...allLevels.map((x) => x.total)) : 1;
+
+  const spread = asks.length > 0 && bids.length > 0
+    ? asks[asks.length - 1].price - bids[0].price
+    : 0;
+
+  const bookMid = book?.mid ?? midPrice;
+  const depthWithin = (bps: number, side: "ask" | "bid") => {
+    if (bookMid <= 0) return 0;
+    const limit = side === "ask" ? bookMid * (1 + bps / 10000) : bookMid * (1 - bps / 10000);
+    let total = 0;
+    for (const lvl of (side === "ask" ? askLevels : bidLevels)) {
+      if (side === "ask" && lvl.price > limit) break;
+      if (side === "bid" && lvl.price < limit) break;
+      total += lvl.size;
+    }
+    return total;
+  };
+  const depthRows = DEPTH_BPS.map((bps) => ({ bps, ask: depthWithin(bps, "ask"), bid: depthWithin(bps, "bid") }));
+  const topAskSz = asks.reduce((s, r) => s + r.size, 0);
+  const topBidSz = bids.reduce((s, r) => s + r.size, 0);
+  const tSize = topAskSz + topBidSz;
+  const bidPct = tSize > 0 ? (topBidSz / tSize) * 100 : 50;
+  const askPct = 100 - bidPct;
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ borderLeft: "1px solid var(--color-line)" }}>
@@ -117,7 +178,23 @@ function OrderBookPanel({ midPrice, isBtc }: { midPrice: number; isBtc: boolean 
 
       {tab === "book" ? (
         <>
-          {/* Column headers */}
+          {/* Depth bands */}
+          <div
+            className="grid px-2 py-1.5 flex-shrink-0 text-[9px] font-medium gap-x-2 items-center"
+            style={{ gridTemplateColumns: "auto 1fr 1fr 1fr", borderBottom: "1px solid var(--color-line)", color: "var(--color-faint)" }}
+          >
+            <span className="text-[9px] font-bold uppercase tracking-widest self-start pt-0.5">Depth</span>
+            {depthRows.map((r) => (
+              <span key={`h-${r.bps}`} className="text-right tnum text-[9px]" style={{ color: "var(--color-faint)" }}>±{r.bps} bps</span>
+            ))}
+            {depthRows.map((r) => (
+              <span key={`a-${r.bps}`} className="text-right tnum text-[10px]" style={{ color: "var(--color-red)" }}>{r.ask.toFixed(2)}</span>
+            ))}
+            {depthRows.map((r) => (
+              <span key={`b-${r.bps}`} className="text-right tnum text-[10px]" style={{ color: "var(--color-green)" }}>{r.bid.toFixed(2)}</span>
+            ))}
+          </div>
+
           <div
             className="grid px-2 py-1 flex-shrink-0 text-[9px] font-medium"
             style={{ gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid var(--color-line)", color: "var(--color-faint)" }}
@@ -125,10 +202,9 @@ function OrderBookPanel({ midPrice, isBtc }: { midPrice: number; isBtc: boolean 
             <span>Price (USD)</span><span className="text-right">Size</span><span className="text-right">Total</span>
           </div>
 
-          {/* Asks */}
           <div className="overflow-hidden" style={{ flex: "1 1 0" }}>
             <div className="flex flex-col-reverse h-full">
-              {book.asks.map((a, i) => (
+              {asks.map((a, i) => (
                 <div
                   key={i}
                   className="relative grid px-2 hover:bg-[var(--color-panel-2)] cursor-pointer"
@@ -136,17 +212,19 @@ function OrderBookPanel({ midPrice, isBtc }: { midPrice: number; isBtc: boolean 
                 >
                   <div
                     className="absolute right-0 top-0 bottom-0"
-                    style={{ width: `${(a.total / book.maxTotal) * 100}%`, background: "rgba(239,68,68,0.09)" }}
+                    style={{ width: `${(a.total / maxTotal) * 100}%`, background: "rgba(239,68,68,0.09)" }}
                   />
+                  {a.isWall && (
+                    <div className="absolute left-0 top-1 bottom-0 w-0.5" style={{ background: "var(--color-red)" }} />
+                  )}
                   <span className="text-[10px] tnum relative z-10 leading-[19px]" style={{ color: "var(--color-red)" }}>{a.price.toFixed(dp)}</span>
-                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-muted)" }}>{a.size.toFixed(2)}</span>
-                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-faint)" }}>{a.total.toFixed(2)}</span>
+                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-muted)" }}>{a.size.toFixed(3)}</span>
+                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-faint)" }}>{a.total.toFixed(3)}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Spread */}
           <div
             className="flex items-center justify-between px-2 py-1.5 flex-shrink-0"
             style={{ background: "var(--color-panel-2)", borderTop: "1px solid var(--color-line)", borderBottom: "1px solid var(--color-line)" }}
@@ -159,10 +237,9 @@ function OrderBookPanel({ midPrice, isBtc }: { midPrice: number; isBtc: boolean 
             </span>
           </div>
 
-          {/* Bids */}
           <div className="overflow-hidden" style={{ flex: "1 1 0" }}>
             <div className="flex flex-col h-full">
-              {book.bids.map((b, i) => (
+              {bids.map((b, i) => (
                 <div
                   key={i}
                   className="relative grid px-2 hover:bg-[var(--color-panel-2)] cursor-pointer"
@@ -170,41 +247,62 @@ function OrderBookPanel({ midPrice, isBtc }: { midPrice: number; isBtc: boolean 
                 >
                   <div
                     className="absolute right-0 top-0 bottom-0"
-                    style={{ width: `${(b.total / book.maxTotal) * 100}%`, background: "rgba(79,158,255,0.09)" }}
+                    style={{ width: `${(b.total / maxTotal) * 100}%`, background: "rgba(79,158,255,0.09)" }}
                   />
+                  {b.isWall && (
+                    <div className="absolute left-0 top-1 bottom-0 w-0.5" style={{ background: "var(--color-mint)" }} />
+                  )}
                   <span className="text-[10px] tnum relative z-10 leading-[19px]" style={{ color: "var(--color-green)" }}>{b.price.toFixed(dp)}</span>
-                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-muted)" }}>{b.size.toFixed(2)}</span>
-                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-faint)" }}>{b.total.toFixed(2)}</span>
+                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-muted)" }}>{b.size.toFixed(3)}</span>
+                  <span className="text-[10px] tnum relative z-10 text-right leading-[19px]" style={{ color: "var(--color-faint)" }}>{b.total.toFixed(3)}</span>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Imbalance bar */}
+          <div className="flex items-center gap-2 px-2 py-1 flex-shrink-0" style={{ borderTop: "1px solid var(--color-line)" }}>
+            <span className="text-[8px] font-bold uppercase tracking-widest flex-shrink-0" style={{ color: "var(--color-faint)" }}>Imb.</span>
+            <div className="flex-1 h-1.5 flex overflow-hidden rounded" style={{ background: "var(--color-panel-2)" }}>
+              <div style={{ width: `${bidPct}%`, background: "rgba(79,158,255,0.7)" }} />
+              <div style={{ width: `${askPct}%`, background: "rgba(239,68,68,0.7)" }} />
+            </div>
+            <span className="text-[9px] tnum font-semibold flex-shrink-0" style={{ color: bidPct >= askPct ? "var(--color-green)" : "var(--color-red)" }}>
+              {Math.max(bidPct, askPct).toFixed(0)}% {bidPct >= askPct ? "BID" : "ASK"}
+            </span>
+          </div>
         </>
       ) : (
         <>
-          {/* Recent trades column headers */}
           <div
             className="grid px-2 py-1 flex-shrink-0 text-[9px] font-medium"
             style={{ gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid var(--color-line)", color: "var(--color-faint)" }}
           >
             <span>Price (USD)</span><span className="text-right">Size</span><span className="text-right">Time</span>
           </div>
+          <TradeFlowStrip trades={tradeList} />
           <div className="flex-1 overflow-hidden flex flex-col">
-            {trades.slice(0, 30).map((t, i) => (
-              <div
-                key={i}
-                className="grid px-2"
-                style={{ gridTemplateColumns: "1fr 1fr 1fr", height: 19 }}
-              >
-                <span className="text-[10px] tnum leading-[19px] font-medium" style={{ color: t.side === "buy" ? "var(--color-green)" : "var(--color-red)" }}>
-                  {t.price.toFixed(dp)}
-                </span>
-                <span className="text-[10px] tnum text-right leading-[19px]" style={{ color: "var(--color-muted)" }}>{t.size.toFixed(3)}</span>
-                <span className="text-[10px] tnum text-right leading-[19px]" style={{ color: "var(--color-faint)" }}>
-                  {t.time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-                </span>
+            {tradeList.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
+                <span className="text-[9px]" style={{ color: "var(--color-faint)" }}>Waiting for trades…</span>
               </div>
-            ))}
+            ) : (
+              tradeList.slice(0, 30).map((t) => (
+                <div
+                  key={t.tradeSequenceNumber}
+                  className="grid px-2"
+                  style={{ gridTemplateColumns: "1fr 1fr 1fr", height: 19 }}
+                >
+                  <span className="text-[10px] tnum leading-[19px] font-medium" style={{ color: t.side === "b" ? "var(--color-green)" : "var(--color-red)" }}>
+                    {t.price.toFixed(dp)}
+                  </span>
+                  <span className="text-[10px] tnum text-right leading-[19px]" style={{ color: "var(--color-muted)" }}>{t.size.toFixed(3)}</span>
+                  <span className="text-[10px] tnum text-right leading-[19px]" style={{ color: "var(--color-faint)" }}>
+                    {new Date(t.time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </>
       )}
@@ -543,11 +641,12 @@ const EXTRA_TICKERS = [
 
 type TickerTab = "top" | "gainers" | "losers";
 
-function TickerBar({ prices }: { prices?: PriceData[] }) {
+function TickerBar({ marketStats }: { marketStats: Record<string, { markPx: number; prevDayPx: number }> }) {
   const [tab, setTab] = useState<TickerTab>("top");
-  const apiItems = (prices ?? []).map((p) => ({
-    sym: p.market.replace("-PERP", ""), price: p.price, chg: p.change_pct_24h,
-  }));
+  const apiItems = Object.entries(marketStats).map(([sym, s]) => {
+    const chg = s.prevDayPx ? ((s.markPx - s.prevDayPx) / s.prevDayPx) * 100 : 0;
+    return { sym, price: s.markPx, chg };
+  });
   const all = [...apiItems, ...EXTRA_TICKERS];
   const displayed =
     tab === "gainers" ? [...all].sort((a, b) => b.chg - a.chg).slice(0, 10) :
@@ -601,7 +700,7 @@ function TickerBar({ prices }: { prices?: PriceData[] }) {
 
       <div className="flex items-center gap-2 px-3 h-full flex-shrink-0" style={{ borderLeft: "1px solid var(--color-line)" }}>
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ background: "var(--color-green)" }} />
-        <span className="text-[9px] font-bold" style={{ color: "var(--color-green)" }}>LIVE · Devnet</span>
+        <span className="text-[9px] font-bold" style={{ color: "var(--color-green)" }}>Phoenix LIVE</span>
       </div>
     </div>
   );
@@ -618,6 +717,7 @@ const CHART_TOOLS = [Crosshair, BarChart2, TrendingUp, Circle, Square, Triangle,
 function TerminalContent() {
   const { connected } = useWallet();
   const searchParams = useSearchParams();
+  const phoenix = usePhoenix();
 
   const [market,     setMarket]     = useState("SOL-PERP");
   const [direction,  setDirection]  = useState<Direction>("long");
@@ -636,6 +736,24 @@ function TerminalContent() {
   const [depositAmt,    setDepositAmt]    = useState("1000");
   const [depositPhase,  setDepositPhase]  = useState<"idle"|"pending"|"done">("idle");
   const depositRef = useRef<HTMLDivElement>(null);
+
+  const symbol = market.replace("-PERP", "");
+  const marketStats = phoenix.marketStats[symbol];
+  const fundingRate = phoenix.fundingRate[symbol];
+  const currentPrice = marketStats?.markPx;
+  const oraclePrice = marketStats?.oraclePx;
+  const prevDayPx = marketStats?.prevDayPx;
+  const changePct = currentPrice && prevDayPx ? ((currentPrice - prevDayPx) / prevDayPx) * 100 : 0;
+  const dayNtlVlm = marketStats?.dayNtlVlm ?? 0;
+  const openInterest = marketStats?.openInterest ?? 0;
+
+  const phoenixInterval = interval.toLowerCase();
+  useEffect(() => {
+    phoenix.seedCandles(symbol, phoenixInterval);
+    phoenix.fetchMarketConfig(symbol);
+  }, [symbol, phoenixInterval, phoenix]);
+
+  const phoenixCandles = phoenix.candles[symbol] ?? [];
 
   /* auto-open deposit drawer when ?deposit=1 is in the URL */
   useEffect(() => {
@@ -668,24 +786,16 @@ function TerminalContent() {
     setTimeout(() => setDepositPhase("done"), 1400);
   }
 
-  const { data: prices } = useQuery<PriceData[]>({
-    queryKey: ["prices"],
-    queryFn: () => apiFetch("/prices"),
-    refetchInterval: 2000,
-  });
-
-  const current = prices?.find((p) => p.market === market);
   const coinName = market.replace("-PERP", "");
   const isBtc = market === "BTC-PERP";
   const dp = isBtc ? 1 : 3;
-
-  const oraclePrice = current ? current.price * (1 + (Math.random() - 0.5) * 0.0003) : undefined;
 
   useEffect(() => {
     const t = setInterval(() => {
       setPositions((prev) =>
         prev.map((pos) => {
-          const px = prices?.find((p) => p.market === pos.market)?.price ?? pos.entry_px;
+          const stats = phoenix.marketStats[pos.market.replace("-PERP", "")];
+          const px = stats?.markPx ?? pos.entry_px;
           const upnl = pos.direction === "long"
             ? pos.size_usd * pos.leverage * (px - pos.entry_px) / pos.entry_px
             : pos.size_usd * pos.leverage * (pos.entry_px - px) / pos.entry_px;
@@ -694,10 +804,10 @@ function TerminalContent() {
       );
     }, 2000);
     return () => clearInterval(t);
-  }, [prices]);
+  }, [phoenix.marketStats]);
 
   const openPosition = useCallback(() => {
-    if (!connected || !current) return;
+    if (!connected || !currentPrice) return;
     setSubmitting(true);
     setTimeout(() => {
       setPositions((prev) => [{
@@ -706,22 +816,25 @@ function TerminalContent() {
         direction,
         size_usd: parseFloat(sizeUSD) || 1000,
         leverage,
-        entry_px: current.price,
+        entry_px: currentPrice,
         opened_at: Math.floor(Date.now() / 1000),
         upnl: 0,
       }, ...prev]);
       setSubmitting(false);
     }, 700);
-  }, [connected, current, market, direction, sizeUSD, leverage]);
+  }, [connected, currentPrice, market, direction, sizeUSD, leverage]);
 
   const closePosition = (id: string) => {
     setClosingId(id);
     setTimeout(() => { setPositions((p) => p.filter((x) => x.id !== id)); setClosingId(null); }, 1000);
   };
 
-  /* 24h stats (mocked, realistic) */
-  const vol24  = market === "BTC-PERP" ? "$42.1B" : market === "SOL-PERP" ? "$3.2B" : market === "ETH-PERP" ? "$18.4B" : "$0.4B";
-  const oi24   = market === "BTC-PERP" ? "$12.8B" : market === "SOL-PERP" ? "$1.1B" : market === "ETH-PERP" ? "$8.7B"  : "$0.2B";
+  function fmtCompact(n: number): string {
+    if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+    if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+    return `$${n.toFixed(0)}`;
+  }
 
   return (
     <div
@@ -778,24 +891,24 @@ function TerminalContent() {
         </div>
 
         {/* Price */}
-        {current && (
+        {currentPrice && (
           <div className="flex items-center gap-2.5 px-4 flex-shrink-0" style={{ borderRight: "1px solid var(--color-line)" }}>
             <span
               className="text-[17px] font-black tnum"
-              style={{ color: current.change_pct_24h >= 0 ? "var(--color-green)" : "var(--color-red)" }}
+              style={{ color: changePct >= 0 ? "var(--color-green)" : "var(--color-red)" }}
             >
-              {isBtc ? current.price.toFixed(0) : current.price.toFixed(dp)}
+              {isBtc ? currentPrice.toFixed(0) : currentPrice.toFixed(dp)}
             </span>
             <div className="flex items-center gap-0.5">
-              {current.change_pct_24h >= 0
+              {changePct >= 0
                 ? <TrendingUp size={10} style={{ color: "var(--color-green)" }} />
                 : <TrendingDown size={10} style={{ color: "var(--color-red)" }} />
               }
               <span
                 className="text-[11px] font-bold tnum"
-                style={{ color: current.change_pct_24h >= 0 ? "var(--color-green)" : "var(--color-red)" }}
+                style={{ color: changePct >= 0 ? "var(--color-green)" : "var(--color-red)" }}
               >
-                {current.change_pct_24h >= 0 ? "+" : ""}{current.change_pct_24h.toFixed(2)}%
+                {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
               </span>
             </div>
           </div>
@@ -804,10 +917,11 @@ function TerminalContent() {
         {/* Market stats */}
         {[
           { label: "Oracle Price",   value: oraclePrice ? oraclePrice.toFixed(dp) : "—" },
-          { label: "24h Volume",     value: vol24 },
-          { label: "Open Interest",  value: oi24 },
-          { label: "Funding Rate",   value: "+0.0100%", color: "var(--color-green)" },
-          { label: "Next Funding",   value: "01:22:47" },
+          { label: "24h Volume",     value: dayNtlVlm > 0 ? fmtCompact(dayNtlVlm) : "—" },
+          { label: "Open Interest",  value: openInterest > 0 ? fmtCompact(openInterest) : "—" },
+          { label: "Spread (M/O)",   value: currentPrice && oraclePrice ? `${((currentPrice - oraclePrice) / oraclePrice * 10000).toFixed(2)} bps` : "—", color: currentPrice && oraclePrice ? (Math.abs((currentPrice - oraclePrice) / oraclePrice * 10000) > 5 ? "var(--color-gold)" : "var(--color-green)") : undefined },
+          { label: "Funding Rate",   value: fundingRate ? `${fundingRate.funding >= 0 ? "+" : ""}${(fundingRate.funding * 100).toFixed(4)}%` : "—", color: fundingRate && fundingRate.funding >= 0 ? "var(--color-green)" : fundingRate && fundingRate.funding < 0 ? "var(--color-red)" : undefined },
+          { label: "Connected",      value: phoenix.connected ? "LIVE" : "Reconnecting…", color: phoenix.connected ? "var(--color-green)" : "var(--color-gold)" },
         ].map(({ label, value, color }) => (
           <div key={label} className="flex flex-col justify-center px-4 h-full flex-shrink-0" style={{ borderRight: "1px solid var(--color-line)" }}>
             <span className="text-[9px] font-medium" style={{ color: "var(--color-faint)" }}>{label}</span>
@@ -1018,8 +1132,9 @@ function TerminalContent() {
         <div className="flex-1 min-w-0 overflow-hidden relative">
           <TvChart
             market={market}
-            currentPrice={current?.price}
+            currentPrice={currentPrice}
             fullHeight
+            externalCandles={phoenixCandles}
             positions={positions
               .filter((p) => p.market === market)
               .map((p) => ({ id: p.id, direction: p.direction, entry_px: p.entry_px, size_usd: p.size_usd, leverage: p.leverage }))}
@@ -1035,7 +1150,7 @@ function TerminalContent() {
 
         {/* Order book / Trades */}
         <div className="w-52 flex-shrink-0 overflow-hidden">
-          {current && <OrderBookPanel midPrice={current.price} isBtc={isBtc} />}
+          <OrderBookPanel symbol={symbol} market={market} />
         </div>
 
         {/* Order form */}
@@ -1045,7 +1160,7 @@ function TerminalContent() {
             orderType={orderType} setOrderType={setOrderType}
             sizeUSD={sizeUSD} setSizeUSD={setSizeUSD}
             leverage={leverage} setLeverage={setLeverage}
-            currentPrice={current?.price}
+            currentPrice={currentPrice}
             oraclePrice={oraclePrice}
             onSubmit={openPosition}
             submitting={submitting}
@@ -1084,9 +1199,9 @@ function TerminalContent() {
           <div className="ml-auto flex items-center gap-2 pr-3">
             <span
               className="text-[9px] px-2 py-0.5 rounded font-bold"
-              style={{ background: "rgba(240,180,41,0.12)", color: "var(--color-gold)", border: "1px solid rgba(240,180,41,0.2)" }}
+              style={{ background: "rgba(79,158,255,0.10)", color: "var(--color-mint)", border: "1px solid rgba(79,158,255,0.2)" }}
             >
-              Devnet simulation
+              Paper trading
             </span>
             {positions.length > 0 && bottomTab === "positions" && (
               <button
@@ -1119,7 +1234,8 @@ function TerminalContent() {
                 </thead>
                 <tbody>
                   {positions.map((pos) => {
-                    const markPx = prices?.find((p) => p.market === pos.market)?.price;
+                    const posPhoenix = phoenix.marketStats[pos.market.replace("-PERP", "")];
+                    const markPx = posPhoenix?.markPx;
                     const posLiq = pos.entry_px - (pos.entry_px / pos.leverage) * 0.88 * (pos.direction === "long" ? 1 : -1);
                     return (
                       <tr key={pos.id} className="hover:bg-[var(--color-panel-2)] transition-colors" style={{ borderBottom: "1px solid var(--color-line)" }}>
@@ -1158,7 +1274,8 @@ function TerminalContent() {
               </table>
             )
           )}
-          {bottomTab !== "positions" && (
+          {bottomTab === "funding" && <FundingTabPanel symbol={symbol} />}
+          {(bottomTab === "orders" || bottomTab === "history") && (
             <div className="flex flex-col items-center justify-center h-full gap-1.5">
               <Activity size={18} style={{ color: "var(--color-faint)", opacity: 0.5 }} />
               <p className="text-xs" style={{ color: "var(--color-faint)" }}>No {bottomTab} data</p>
@@ -1168,7 +1285,68 @@ function TerminalContent() {
       </div>
 
       {/* ── Live ticker bar ───────────────────────────────────────── */}
-      <TickerBar prices={prices} />
+      <TickerBar marketStats={phoenix.marketStats} />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Funding tab panel
+───────────────────────────────────────────────────────────────── */
+
+function FundingTabPanel({ symbol }: { symbol: string }) {
+  const { fundingRate } = usePhoenix();
+  const fr = fundingRate[symbol];
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (!fr) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-1.5">
+        <Activity size={18} style={{ color: "var(--color-faint)", opacity: 0.5 }} />
+        <p className="text-xs" style={{ color: "var(--color-faint)" }}>No funding data</p>
+      </div>
+    );
+  }
+
+  const nextFunding = fr.fundingTime ?? 0;
+  const diff = Math.max(0, nextFunding - now);
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+  const countdown = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  const apr = fr.funding * 24 * 365 * 100;
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--color-line)" }}>
+        <span className="text-[10px] font-medium" style={{ color: "var(--color-faint)" }}>Current Funding Rate</span>
+        <span className="text-xs font-bold tnum" style={{ color: fr.funding >= 0 ? "var(--color-green)" : "var(--color-red)" }}>
+          {(fr.funding * 100).toFixed(4)}%
+        </span>
+      </div>
+      <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--color-line)" }}>
+        <span className="text-[10px] font-medium" style={{ color: "var(--color-faint)" }}>Est. Annual APR</span>
+        <span className="text-xs font-bold tnum" style={{ color: apr >= 0 ? "var(--color-green)" : "var(--color-red)" }}>
+          {apr >= 0 ? "+" : ""}{apr.toFixed(2)}%
+        </span>
+      </div>
+      <div className="flex items-center justify-between pb-2" style={{ borderBottom: "1px solid var(--color-line)" }}>
+        <span className="text-[10px] font-medium" style={{ color: "var(--color-faint)" }}>Next Funding</span>
+        <span className="text-sm font-black tnum" style={{ color: "var(--color-ink)", fontVariantNumeric: "tabular-nums" }}>
+          {countdown}
+        </span>
+      </div>
+      <div className="rounded-lg p-2.5" style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)" }}>
+        <p className="text-[9px] leading-relaxed" style={{ color: "var(--color-faint)" }}>
+          Funding payments are exchanged between long and short positions every hour.
+          {fr.funding > 0 ? " Longs pay shorts." : fr.funding < 0 ? " Shorts pay longs." : " No payment due."}
+        </p>
+      </div>
     </div>
   );
 }

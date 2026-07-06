@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { proxyToBackend } from "@/lib/backend-proxy";
+import { transformPortfolio } from "@/lib/backend-transform";
 
 export async function GET(
   req: Request,
@@ -10,7 +11,10 @@ export async function GET(
   const result = await proxyToBackend(`/v1/investors/${wallet}/portfolio`, {
     authHeader,
   });
-  if (result) return NextResponse.json(result.data, { status: result.status });
+  if (result?.ok) {
+    const transformed = transformPortfolio(result.data as any[]);
+    return NextResponse.json(transformed);
+  }
 
   return NextResponse.json([
     {

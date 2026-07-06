@@ -6,7 +6,6 @@ use crate::twr::daily_returns;
 use arcadia_core::types::Trade;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
-use rust_decimal_macros::dec;
 use serde::{Deserialize, Serialize};
 
 const ANNUALISATION: f64 = 252.0_f64;
@@ -18,10 +17,18 @@ pub struct Metrics {
     pub sortino: f64,
     /// Annualised Calmar ratio (annualised return / max drawdown)
     pub calmar: f64,
+    /// Annualised Sharpe ratio (total std_dev denominator)
+    pub sharpe: f64,
     /// Maximum drawdown (0-1, positive = loss)
     pub max_dd: f64,
     /// Ulcer Index (RMS of percentage drawdowns)
     pub ulcer: f64,
+    /// Annualized volatility (std dev of returns × sqrt(252))
+    pub volatility: f64,
+    /// Daily mean return
+    pub mean_return: f64,
+    /// Annualized downside deviation
+    pub downside_deviation: f64,
     /// Liquidation rate (liq_trades / total_trades)
     pub liq_rate: f64,
     /// Fraction of profitable trades
@@ -39,8 +46,12 @@ impl Metrics {
         Self {
             sortino: 0.0,
             calmar: 0.0,
+            sharpe: 0.0,
             max_dd: 0.0,
             ulcer: 0.0,
+            volatility: 0.0,
+            mean_return: 0.0,
+            downside_deviation: 0.0,
             liq_rate: 0.0,
             pct_profitable: 0.0,
             avg_leverage: 0.0,
@@ -64,6 +75,12 @@ pub fn compute(
 
     let mean_ret = returns.iter().sum::<f64>() / n as f64;
     let ann_ret  = (1.0 + mean_ret).powf(ANNUALISATION) - 1.0;
+
+    // ── Total std dev & Sharpe ──────────────────────────────────────────────
+    let variance = returns.iter().map(|&r| (r - mean_ret).powi(2)).sum::<f64>() / n as f64;
+    let daily_std = variance.sqrt();
+    let ann_vol = daily_std * ANNUALISATION.sqrt();
+    let sharpe = if daily_std < 1e-10 { 0.0 } else { mean_ret / daily_std * ANNUALISATION.sqrt() };
 
     // ── Sortino ────────────────────────────────────────────────────────────
     let downside: Vec<f64> = returns
@@ -114,15 +131,19 @@ pub fn compute(
         / tc as f64;
 
     Metrics {
-        sortino:       clamp(sortino, -50.0, 50.0),
-        calmar:        clamp(calmar,  -50.0, 50.0),
-        max_dd:        max_dd.min(1.0),
-        ulcer:         ulcer.min(1.0),
-        liq_rate:      liq_count as f64 / tc as f64,
-        pct_profitable: profitable as f64 / tc as f64,
-        avg_leverage:  avg_lev,
-        trade_count:   tc,
-        days_active:   days,
+        sortino:           clamp(sortino, -50.0, 50.0),
+        calmar:            clamp(calmar,  -50.0, 50.0),
+        sharpe:            clamp(sharpe,  -50.0, 50.0),
+        max_dd:            max_dd.min(1.0),
+        ulcer:             ulcer.min(1.0),
+        volatility:        ann_vol.min(10.0),
+        mean_return:       mean_ret,
+        downside_deviation: downside_dev.min(10.0),
+        liq_rate:          liq_count as f64 / tc as f64,
+        pct_profitable:    profitable as f64 / tc as f64,
+        avg_leverage:      avg_lev,
+        trade_count:       tc,
+        days_active:       days,
     }
 }
 
@@ -133,7 +154,6 @@ fn clamp(v: f64, lo: f64, hi: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rust_decimal_macros::dec;
 
     #[test]
     fn zero_trades_gives_zero() {

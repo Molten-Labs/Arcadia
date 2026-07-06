@@ -209,11 +209,11 @@ export default function PortfolioPage() {
 
                         <div className="flex gap-2 mt-4 flex-wrap">
                           {trader?.deposits_open && (
-                            <Link href={`/vault/${pos.profile}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold" style={{ background: "var(--color-mint)", color: "#ffffff" }}>
+                            <Link href={`/vault/${pos.trader_handle}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-bold" style={{ background: "var(--color-mint)", color: "#ffffff" }}>
                               Deposit more <ArrowUpRight size={11} />
                             </Link>
                           )}
-                          <Link href={`/vault/${pos.profile}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium" style={{ border: "1px solid var(--color-line)", color: "var(--color-muted)" }}>
+                          <Link href={`/vault/${pos.trader_handle}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium" style={{ border: "1px solid var(--color-line)", color: "var(--color-muted)" }}>
                             Withdraw
                           </Link>
                           <Link href={`/t/${pos.trader_handle}`} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium" style={{ border: "1px solid var(--color-line)", color: "var(--color-muted)" }}>
