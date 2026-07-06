@@ -11,3 +11,5 @@
 - [Deposit flow wiring](deposit-flow.md) — DepositModal.tsx wired into /t/[handle]; use-arcadia-vault.ts uses @coral-xyz/anchor + correct program ID; Helius RPC in providers.tsx; real txs when on-chain, clean sim fallback otherwise.
 - [Wallet adapter pnpm dedup](wallet-adapter-dedup.md) — pnpm installs two copies of @solana/wallet-adapter-react with different TS peer-dep hashes; fix via webpack alias in next.config.ts pointing all imports to node_modules/@solana/wallet-adapter-react.
 - [Wallet adapter mount guard](wallet-adapter-mount-guard.md) — useWallet() 0.15+ getters (publicKey/wallet/wallets) log console.error outside WalletProvider; guard with mounted state before dereferencing those properties in hooks like useAuth and RoleProvider.
+- [apiFetch location](apifetch-utils.md) — apiFetch must be defined in @/lib/utils.ts; every page imports it from there; it reads JWT from localStorage and adds Authorization Bearer header.
+- [Icon library](icon-library.md) — @phosphor-icons/react is the project standard; lucide-react fully removed from landing page; use Lightning (not Zap), CaretDown (not ChevronDown).
