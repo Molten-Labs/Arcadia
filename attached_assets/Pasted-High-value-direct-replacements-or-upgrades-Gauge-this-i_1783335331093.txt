@@ -1,0 +1,13 @@
+High-value, direct replacements or upgrades
+
+Gauge → this is almost exactly what ScoreDial.tsx needs to be. A 0-1000 Arcadia Score with tier bands is a textbook gauge use case — worth checking if this looks better/more polished than your current custom implementation.
+Profit/Loss Line → purpose-built for what EquityChart.tsx/NavHistoryChart.tsx are doing (color-coded gains vs losses on a NAV curve). This is more specific than a generic composed chart and could replace your custom implementation with something that handles the up/down coloring logic for you instead of you maintaining it.
+Heatmap Chart → direct match for PnLHeatmap.tsx. Worth comparing against your current build.
+Candlestick Chart → tempting, but I'd skip this one for the terminal specifically. lightweight-charts is TradingView's own library, built for real-time order-book-driven price action — that's a better fit for a live trading terminal than a recharts-based candlestick component. Keep TvChart.tsx as is.
+
+Strong fits for content you don't have good components for yet
+
+Sankey Chart → this is the one I'd get most excited about. It maps almost exactly to the "where does investor-attributable profit go" visualization I hand-built as a custom stacked bar in the earlier profit simulator artifact. A real Sankey (investor gain → splits into investor/trader/Arcadia) would communicate the fee split far more intuitively than a bar, and it's a natural fit for both /payouts and the landing page's fee explanation.
+Radar Chart → good fit for comparing a trader's score components (risk-adjusted return, consistency, drawdown control, profit factor) across multiple axes at once — stronger than plain bars for the /reputation score breakdown, and especially useful if you ever let investors compare two traders side by side on the marketplace.
+Reference Area (utility) → directly useful once you implement Rule 7. A capacity chart with a shaded "breach zone" above the current capacity line is exactly how you'd visualize the margin-call state we designed — worth keeping in mind for when that gets built, not just for now.
+Composed Chart → good fit for /manage: NAV as an area, capacity as a reference line, investor deposits as bars, all on one chart instead of three separate stat cards.
