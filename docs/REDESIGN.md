@@ -46,6 +46,39 @@ components for public read-only pages where it helps first paint.
 ESLint clean, `tsc --noEmit` clean, `next build` passes, dev server runs, smoke-test every
 route, exercise the deposit flow. Fix findings. Commit per feature with Conventional Commits.
 
-## Status
-Living checklist maintained as phases land. Commits are local on this branch; no push/PR
-without owner approval.
+## Status (updated 2026-07-09)
+
+DONE
+- Phase 1 platform + hygiene. Next 16 (webpack bundler via --webpack), ESLint added, dead deps
+  removed (drizzle-orm, pg), qrcode declared, env secrets untracked + hardcoded RPC key removed,
+  outputFileTracingRoot set, 3 latent vault type errors fixed. `typecheck` + `build` green.
+  Commits: fix(web) secrets, chore(web) Next 16.
+- Phase 2 design-system foundation. next/font (Syne / Space Grotesk / Space Mono), acid `@theme`
+  tokens (additive; legacy tokens retuned or kept so all routes still build), shadcn primitives
+  hand-authored on Radix + acid-themed (button/card/badge/input/skeleton/table/tabs/accordion/
+  tooltip/dialog/dropdown-menu/select), acid primitives in app/components/acid/ (ChromeText,
+  AcidButton/ChromeButton, BlobCard, Marquee, Reveal, CountUp, ScoreDial, NoiseOverlay,
+  DriftBlobs) + usePrefersReducedMotion + README. `typecheck` + `build` green (29 routes).
+
+NEXT (resume order)
+1. FIX LINT FIRST: `pnpm lint` fails at config load. Cause: eslint.config.mjs uses the Next 15
+   FlatCompat pattern, which throws a circular-structure error against eslint-config-next 16
+   (native flat config). Replace FlatCompat with eslint-config-next 16's flat export, then
+   `pnpm lint` clean before writing more code.
+2. Architecture fixes (own pass): dedupe the deposit flow into one shared hook (use-arcadia-vault
+   + DepositModal duplicate it); make RPC failures surface as errors, never a fake "confirmed
+   (simulation)" success; scope the Phoenix WebSocket to the /terminal route (currently global in
+   providers); type the API transform + Anchor call boundary (drop `any`); real ed25519 signature
+   verification on /api/v1/auth/verify (currently mints a session for any pubkey when BACKEND_URL
+   unset).
+3. Page migration (frontend team, on top of the primitives): landing first (acid hero), then the
+   app shell (Sidebar/Topbar), then dashboard, terminal, traders, leaderboard, t/[handle], vault,
+   portfolio, settings. Consume components/acid/* + components/ui/*; server components for public
+   read-only pages where it helps first paint.
+4. Cleanup pass: remove now-unused legacy tokens/classes, framer-motion, @phosphor-icons,
+   @base-ui/react once no page imports them; rationalize the 3 chart libs.
+5. Full verify: lint + typecheck + build + run + smoke every route + exercise deposit. Then report.
+
+Working copy: ~/projects/arcadia, branch redesign/acid-graphic. Commits local only; no push/PR
+without owner approval. Visual reference comp: ~/Brain/Inbox/arcadia-redesign/arcadia-d-acid.html.
+Content/data spec: scratchpad arcadia-redesign-spec.md.

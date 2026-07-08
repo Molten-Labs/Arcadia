@@ -1,17 +1,36 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@solana/wallet-adapter-react-ui/styles.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* ── Base surfaces (acid graphic) ── */
   --color-bg:      #000000;
-  --color-panel:   #0c0c0c;
-  --color-panel-2: #141414;
+  --color-void:    #000000;
+  --color-onyx:    #0A0A0A;
+  --color-panel:   #0d0d14;
+  --color-panel-2: #14141c;
   --color-line:    #1c1c1c;
-  --color-ink:     #f0f0f0;
-  --color-muted:   #6a6a6a;
-  --color-faint:   #363636;
 
+  /* ── Acid signature + high-frequency accents ── */
+  --color-acid:     #CCFF00;
+  --color-chrome-1: #FFFFFF;
+  --color-chrome-2: #E0E0E0;
+  --color-chrome-3: #888888;
+  --color-pink:     #FF2EA6;
+  --color-cyan:     #00F0FF;
+
+  /* ── Text (readable on pure black) ── */
+  --color-ink:     #F4F4F8;
+  --color-muted:   #A0A0B4;
+  --color-faint:   #5C6470;
+
+  /* ── Status ── */
+  --color-success: #34E29B;
+  --color-danger:  #FF3B6B;
+
+  /* ── Legacy tokens kept so un-migrated pages keep building ── */
   --color-mint:        #4f9eff;
   --color-mint-dim:    rgba(79,158,255,0.10);
   --color-mint-bright: #74b5ff;
@@ -28,14 +47,36 @@
 
   --color-gold: #f0b429;
 
-  --color-tier-verified:    #60a5fa;
-  --color-tier-established: #818cf8;
-  --color-tier-advanced:    #f59e0b;
-  --color-tier-elite:       #a855f7;
+  /* ── Reputation tiers (retuned to the acid palette) ── */
+  --color-tier-verified:    #00F0FF;
+  --color-tier-established: #8B5CF6;
+  --color-tier-advanced:    #FFB020;
+  --color-tier-elite:       #FF2EA6;
 
-  --font-sans: "Geist", "Inter", "system-ui", sans-serif;
-  --font-body: "Geist", "Inter", "system-ui", sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", "Menlo", monospace;
+  /* ── shadcn semantic bridge → acid (so primitives theme out of the box) ── */
+  --color-background:            #000000;
+  --color-foreground:            #F4F4F8;
+  --color-card:                  #0d0d14;
+  --color-card-foreground:       #F4F4F8;
+  --color-popover:               #14141c;
+  --color-popover-foreground:    #F4F4F8;
+  --color-primary:               #CCFF00;
+  --color-primary-foreground:    #000000;
+  --color-secondary:             #14141c;
+  --color-secondary-foreground:  #F4F4F8;
+  --color-muted-foreground:      #A0A0B4;
+  --color-accent-foreground:     #F4F4F8;
+  --color-destructive:           #FF3B6B;
+  --color-destructive-foreground:#ffffff;
+  --color-border:                #1f1f27;
+  --color-input:                 #14141c;
+  --color-ring:                  #CCFF00;
+
+  /* ── Fonts (next/font sets --font-syne / --font-space-grotesk / --font-space-mono on <html>) ── */
+  --font-display: var(--font-syne), "Syne", sans-serif;
+  --font-sans:    var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-body:    var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-mono:    var(--font-space-mono), "Space Mono", ui-monospace, monospace;
   --radius: 0.5rem;
   --color-chart-scale-pattern-color:      var(----chart-scale-pattern-color);
   --color-chart-scale-05:      var(----chart-scale-05);
@@ -66,6 +107,35 @@
 }
 
 :root { color-scheme: dark; --chart-1:      oklch(0.32 0 none); --chart-2:      oklch(0.41 0 none); --chart-3:      oklch(0.54 0 none); --chart-4:      oklch(0.71 0 none); --chart-5:      oklch(0.89 0 none); --chart-background:      oklch(1 0 0); --chart-foreground:      oklch(0.145 0.004 285); --chart-foreground-muted:      oklch(0.55 0.014 260); --chart-line-primary:      var(--chart-1); --chart-line-secondary:      var(--chart-2); --chart-crosshair:      oklch(0.4 0.1828 274.34); --chart-grid:      oklch(0.9 0 0); --chart-brush-border:      var(--chart-grid); --chart-tooltip-background:      oklch(0.21 0.006 285 / 0.8); --chart-tooltip-foreground:      oklch(0.985 0 0); --chart-tooltip-muted:      oklch(0.65 0.01 260); --chart-marker-background:      oklch(0.97 0.005 260); --chart-marker-border:      oklch(0.85 0.01 260); --chart-marker-foreground:      oklch(0.3 0.01 260); --chart-label:      oklch(0.45 0.01 260); --chart-scale-01:      oklch(0.98 0.003 106); --chart-scale-02:      oklch(0.92 0.008 106); --chart-scale-03:      oklch(0.82 0.015 106); --chart-scale-04:      oklch(0.68 0.02 106); --chart-scale-05:      oklch(0.55 0.025 106); --chart-scale-pattern-color:      oklch(0.96 0.005 106); }
+
+/* ── Acid tokens mirrored as raw custom properties so var(--color-x) resolves
+   in inline styles / SVG (the @theme inline block above does not emit them to :root). ── */
+:root {
+  --color-void:    #000000;
+  --color-onyx:    #0A0A0A;
+  --color-panel:   #0d0d14;
+  --color-panel-2: #14141c;
+  --color-acid:     #CCFF00;
+  --color-chrome-1: #FFFFFF;
+  --color-chrome-2: #E0E0E0;
+  --color-chrome-3: #888888;
+  --color-pink:     #FF2EA6;
+  --color-cyan:     #00F0FF;
+  --color-ink:      #F4F4F8;
+  --color-muted:    #A0A0B4;
+  --color-faint:    #5C6470;
+  --color-success:  #34E29B;
+  --color-danger:   #FF3B6B;
+  --color-tier-verified:    #00F0FF;
+  --color-tier-established: #8B5CF6;
+  --color-tier-advanced:    #FFB020;
+  --color-tier-elite:       #FF2EA6;
+
+  /* composite helpers */
+  --acid-chrome-gradient: linear-gradient(180deg,#ffffff 0%,#e9e9e9 16%,#8a8a8a 44%,#f4f4f4 58%,#b9b9b9 76%,#ffffff 100%);
+  --acid-iris-gradient:   linear-gradient(135deg,#CCFF00 0%,#ffffff 35%,#00F0FF 60%,#FF2EA6 100%);
+  --acid-expo:            cubic-bezier(0.19, 1, 0.22, 1);
+}
 
 *,*::before,*::after {
   box-sizing: border-box;
@@ -763,4 +833,76 @@ body {
   --chart-scale-04:      oklch(0.58 0.06 270);
   --chart-scale-05:      oklch(0.68 0.07 270);
   --chart-scale-pattern-color:      oklch(0.145 0 0);
+}
+
+/* ============================================================
+   ACID GRAPHIC — signature utilities + motion
+   Continuous motion is disabled under prefers-reduced-motion.
+   JS-driven components additionally gate on window.matchMedia.
+   ============================================================ */
+
+/* ── Liquid-chrome gradient text ── */
+.acid-chrome {
+  background: var(--acid-chrome-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 26px rgba(255, 255, 255, 0.14));
+}
+
+/* ── Chromatic-aberration ghosts (element must carry data-text="…") ── */
+.acid-aberration { position: relative; isolation: isolate; }
+.acid-aberration::before,
+.acid-aberration::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  -webkit-text-fill-color: initial;
+  background: none;
+  z-index: -1;
+  pointer-events: none;
+}
+.acid-aberration::before { color: rgba(255, 46, 166, 0.55); transform: translateX(3px); }
+.acid-aberration::after  { color: rgba(0, 240, 255, 0.55);  transform: translateX(-3px); }
+
+/* ── Keyframes (transform / opacity for continuous motion; a few slow paints) ── */
+@keyframes acid-iris-shift   { 0% { background-position: 0% 50%; }   100% { background-position: 200% 50%; } }
+@keyframes acid-marquee      { from { transform: translateX(0); }     to { transform: translateX(-50%); } }
+@keyframes acid-marquee-rev  { from { transform: translateX(-50%); }  to { transform: translateX(0); } }
+@keyframes acid-drift-1 { 0%,100% { transform: translate(0,0) scale(1); }    50% { transform: translate(6vw,4vh) scale(1.12); } }
+@keyframes acid-drift-2 { 0%,100% { transform: translate(0,0) scale(1.05); } 50% { transform: translate(-5vw,6vh) scale(0.92); } }
+@keyframes acid-drift-3 { 0%,100% { transform: translate(0,0) scale(1); }    50% { transform: translate(4vw,-5vh) scale(1.1); } }
+@keyframes acid-pulse   { 0%,100% { opacity: 1; transform: scale(1); }       50% { opacity: 0.45; transform: scale(0.8); } }
+@keyframes acid-shimmer { 100% { transform: translateX(100%); } }
+@keyframes acid-glow    { 0%,100% { box-shadow: 0 0 22px rgba(204,255,0,0.35); } 50% { box-shadow: 0 0 40px rgba(204,255,0,0.6); } }
+@keyframes acid-breathe-organic {
+  0%,100% { border-radius: 42% 58% 63% 37% / 45% 42% 58% 55%; }
+  50%     { border-radius: 48% 52% 55% 45% / 52% 48% 52% 48%; }
+}
+@keyframes acid-breathe-soft {
+  0%,100% { border-radius: 38% 62% 58% 42% / 52% 40% 60% 48%; }
+  50%     { border-radius: 46% 54% 50% 50% / 46% 50% 50% 54%; }
+}
+@keyframes acid-breathe-blob {
+  0%,100% { border-radius: 60% 40% 55% 45% / 48% 62% 38% 52%; }
+  50%     { border-radius: 52% 48% 48% 52% / 54% 52% 48% 46%; }
+}
+@keyframes acid-accordion-down { from { height: 0; } to { height: var(--radix-accordion-content-height); } }
+@keyframes acid-accordion-up   { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
+
+/* Focus-visible ring parity for anything that opts in without utilities. */
+.acid-focus:focus-visible {
+  outline: 2px solid var(--color-acid);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acid-chrome { filter: none; }
+  .acid-aberration::before,
+  .acid-aberration::after { display: none; }
+  .acid-animate,
+  .acid-animate::before,
+  .acid-animate::after { animation: none !important; }
 }
