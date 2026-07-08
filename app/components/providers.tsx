@@ -33,8 +33,7 @@ const queryClient = new QueryClient({
 });
 
 const RPC_ENDPOINT =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ??
-  "https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548";
+  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
 
 /* ── Auth context ─────────────────────────────────────────────────── */
 

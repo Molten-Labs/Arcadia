@@ -16,8 +16,7 @@ import { IDL } from "./arcadia-idl";
 export const PROGRAM_ID = new PublicKey("gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C");
 
 export const HELIUS_RPC =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ??
-  "https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548";
+  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
 
 export function getConnection(): Connection {
   return new Connection(HELIUS_RPC, "confirmed");
