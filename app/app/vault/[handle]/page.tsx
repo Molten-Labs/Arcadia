@@ -11,7 +11,6 @@ import type { TraderProfile, VaultInfo } from "@/lib/types";
 import { TierBadge } from "@/components/TierBadge";
 import { DepositsStatusBadge } from "@/components/DepositsStatusBadge";
 import { CapacityBar } from "@/components/CapacityBar";
-import { StatCard } from "@/components/SkeletonCard";
 import { EmptyState } from "@/components/EmptyState";
 import { NavHistoryChart } from "@/components/NavHistoryChart";
 import { DepositModal } from "@/components/DepositModal";
@@ -100,7 +99,7 @@ export default function VaultPage() {
                   @{trader.handle}
                 </h1>
                 <TierBadge tier={trader.tier} />
-                <DepositsStatusBadge open={vault?.deposits_open ?? trader.deposits_open} />
+                <DepositsStatusBadge deposits_open={vault?.deposits_open ?? trader.deposits_open} />
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-mono text-[10px]" style={{ color: "var(--color-faint)" }}>
@@ -165,7 +164,7 @@ export default function VaultPage() {
 
       {/* ── Capacity bar ── */}
       <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--color-line)" }}>
-        <CapacityBar capacity={trader.capacity} />
+        <CapacityBar aum={trader.capacity.used} capacity_usd={trader.capacity.total} />
       </div>
 
       {/* ── Main grid ── */}
