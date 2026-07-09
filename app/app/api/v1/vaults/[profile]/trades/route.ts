@@ -10,7 +10,10 @@ export async function GET(
   const { profile } = await params;
   const result = await proxyToBackend(`/v1/vaults/${profile}/trades`);
   if (result?.ok) {
-    const transformed = transformVaultTrades(result.data as any[], profile);
+    const transformed = transformVaultTrades(
+      Array.isArray(result.data) ? result.data : [],
+      profile,
+    );
     return NextResponse.json(transformed);
   }
 

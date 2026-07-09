@@ -1,51 +1,47 @@
 "use client";
 
 /**
- * useArcadiaVault — React hook for Arcadia Protocol on-chain interactions.
+ * useArcadiaVault — the single React hook for Arcadia Protocol transactions.
  *
- * Wires real Anchor transactions when the program + profile exist on devnet.
- * Falls back to a clean, realistic devnet simulation otherwise.
+ * All vault flows (deposit, withdraw, profile/investor init, profit, trade
+ * recording) live here; transaction UIs consume `txState` and never build
+ * program calls themselves.
  *
- * Program ID: gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C
- * Seeds: platform=["platform"], profile=["profile", trader], investor=["investor", wallet], position=["position", investor, profile]
+ * Three outcomes, never conflated:
+ *  - live:      the program + profile exist on devnet → real Anchor tx.
+ *  - simulated: program not live → clearly-labelled simulation, no signature.
+ *  - error:     RPC unreachable or tx failed → error phase with the cause.
  */
 
 import { useCallback, useState } from "react";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
-import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { IDL } from "./arcadia-idl";
 import {
-  PROGRAM_ID,
-  findPlatformConfig,
-  findTraderProfile,
+  useAnchorWallet,
+  useConnection,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
+import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { SystemProgram } from "@solana/web3.js";
+import {
   findInvestorAccount,
   findInvestorPosition,
-  fetchTraderProfile,
+  findPlatformConfig,
+  findTraderProfile,
 } from "./arcadia-sdk";
+import {
+  getVaultChainStatus,
+  makeArcadiaProgram,
+  pushEvent,
+  IDLE_TX_STATE,
+  type VaultChainStatus,
+  type VaultTxState,
+} from "./vault-client";
 
-export const ARCADIA_PROGRAM_ID = PROGRAM_ID;
+export type { VaultTxPhase, VaultTxState } from "./vault-client";
 
-export const DEVNET_USDC_MINT = new PublicKey(
-  "DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz"
-);
+/* ── On-chain state snapshot (read-only panel data) ─────────────────── */
 
-/* ── PDA helpers (backward compat, re-export from sdk) ─────────────── */
-export function platformConfigPDA(): [PublicKey, number] {
-  return findPlatformConfig();
-}
-export function profilePDA(traderWallet: PublicKey): [PublicKey, number] {
-  return findTraderProfile(traderWallet);
-}
-export function investorAccountPDA(investor: PublicKey): [PublicKey, number] {
-  return findInvestorAccount(investor);
-}
-export function investorPositionPDA(investor: PublicKey, profile: PublicKey): [PublicKey, number] {
-  return findInvestorPosition(investor, profile);
-}
-
-/* ── On-chain state snapshot ────────────────────────────────────────── */
 export interface VaultOnChainState {
   programDeployed: boolean;
   platformInitialized: boolean;
@@ -58,101 +54,68 @@ export interface VaultOnChainState {
   positionAddress: string;
 }
 
-/* ── Backend event push ────────────────────────────────────────────── */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function pushEvent(event: Record<string, unknown>): Promise<void> {
-  const token = typeof localStorage !== "undefined" ? localStorage.getItem("arcadia_jwt") : null;
+function toTraderKey(walletOrProfile: string, fallback: PublicKey): PublicKey {
   try {
-    await fetch("/api/v1/events", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ events: [event] }),
-    });
+    return new PublicKey(walletOrProfile);
   } catch {
-    // best-effort: ignore failure
+    return fallback;
   }
 }
 
-/* ── Simulation helpers ─────────────────────────────────────────────── */
-function simulatedSig(): string {
-  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  const arr = new Uint8Array(64);
-  if (typeof crypto !== "undefined") crypto.getRandomValues(arr);
-  return Array.from(arr).map(b => B58[b % 58]).join("").slice(0, 88);
-}
-
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-/* ── Build Anchor program ───────────────────────────────────────────── */
-function makeProgram(
-  connection: ReturnType<typeof useConnection>["connection"],
-  publicKey: PublicKey,
-  signTransaction: Parameters<AnchorProvider["wallet"]["signTransaction"]>[0] extends never ? never : any,
-  signAllTransactions: any,
-) {
-  const provider = new AnchorProvider(
-    connection,
-    { publicKey, signTransaction, signAllTransactions } as any,
-    { commitment: "confirmed" },
-  );
-  return new Program(IDL as any, provider);
-}
-
-/* ── Check if program + profile are live on-chain ──────────────────── */
-async function checkLive(
-  connection: ReturnType<typeof useConnection>["connection"],
-  traderWallet: PublicKey,
-  depositorKey: PublicKey,
-): Promise<{
-  isLive: boolean;
-  investorExists: boolean;
-  baseMint: PublicKey;
-  vaultToken: PublicKey;
-}> {
-  const [platformPDA] = findPlatformConfig();
-  const [profilePDAAddr] = findTraderProfile(traderWallet);
-  const [investorPDAAddr] = findInvestorAccount(depositorKey);
-
-  let isLive = false;
-  let investorExists = false;
-  let baseMint = DEVNET_USDC_MINT;
-  let vaultToken = PublicKey.default;
-
-  try {
-    const [platInfo, profInfo, invInfo] = await connection.getMultipleAccountsInfo([
-      platformPDA, profilePDAAddr, investorPDAAddr,
-    ]);
-    investorExists = invInfo !== null;
-    isLive = platInfo !== null && profInfo !== null;
-    if (isLive && profInfo) {
-      const d = Buffer.from(profInfo.data);
-      baseMint = new PublicKey(d.slice(40, 72));
-      vaultToken = new PublicKey(d.slice(72, 104));
-    }
-  } catch {
-    /* treat as offline */
-  }
-
-  return { isLive, investorExists, baseMint, vaultToken };
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 /* ── Hook ───────────────────────────────────────────────────────────── */
+
 export function useArcadiaVault(traderProfilePubkey?: string) {
   const { connection } = useConnection();
-  const { publicKey, signTransaction, signAllTransactions, sendTransaction } = useWallet();
+  const anchorWallet = useAnchorWallet();
+  const { publicKey, sendTransaction } = useWallet();
 
-  const [txStatus, setTxStatus] = useState<string | null>(null);
-  const [txSig, setTxSig] = useState<string | null>(null);
+  const [txState, setTxState] = useState<VaultTxState>(IDLE_TX_STATE);
   const [onChainState, setOnChainState] = useState<VaultOnChainState | null>(null);
+  const [chainError, setChainError] = useState<string | null>(null);
   const [loadingChain, setLoadingChain] = useState(false);
 
-  /* ── Fetch on-chain state ─────────────────────────────────────── */
+  const resetTx = useCallback(() => setTxState(IDLE_TX_STATE), []);
+
+  const progress = useCallback(
+    (phase: VaultTxState["phase"], message: string, simulated = false) => {
+      setTxState({ phase, message, sig: null, simulated });
+    },
+    [],
+  );
+
+  const succeed = useCallback((message: string, sig: string | null, simulated: boolean) => {
+    setTxState({ phase: "success", message, sig, simulated });
+  }, []);
+
+  const fail = useCallback((message: string): false => {
+    setTxState({ phase: "error", message, sig: null, simulated: false });
+    return false;
+  }, []);
+
+  /** Chain status with RPC failures surfaced as an error phase (returns null). */
+  const statusOrFail = useCallback(
+    async (traderKey: PublicKey, depositor: PublicKey): Promise<VaultChainStatus | null> => {
+      try {
+        return await getVaultChainStatus(connection, traderKey, depositor);
+      } catch (err) {
+        fail(errorMessage(err));
+        return null;
+      }
+    },
+    [connection, fail],
+  );
+
+  /* ── Fetch on-chain state (read-only status panel) ────────────── */
   const fetchOnChainState = useCallback(async () => {
     if (!publicKey) return;
     setLoadingChain(true);
+    setChainError(null);
     try {
       const [platAddr] = findPlatformConfig();
       const [invAddr] = findInvestorAccount(publicKey);
@@ -164,7 +127,9 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         try {
           profileAddr = new PublicKey(traderProfilePubkey);
           [posAddr] = findInvestorPosition(publicKey, profileAddr);
-        } catch { /* invalid pubkey */ }
+        } catch {
+          /* invalid pubkey — leave profile/position unchecked */
+        }
       }
 
       const toCheck: PublicKey[] = [platAddr, invAddr];
@@ -174,18 +139,19 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
       const infos = await connection.getMultipleAccountsInfo(toCheck);
 
       setOnChainState({
-        programDeployed:     infos[0] !== null || infos[1] !== null,
+        programDeployed: infos[0] !== null || infos[1] !== null,
         platformInitialized: infos[0] !== null,
         investorInitialized: infos[1] !== null,
-        profileExists:       profileAddr ? (infos[2] !== null) : false,
-        positionExists:      posAddr ? (infos[toCheck.indexOf(posAddr)] !== null) : false,
-        platformAddress:     platAddr.toBase58(),
-        profileAddress:      profileAddr?.toBase58() ?? "",
-        investorAddress:     invAddr.toBase58(),
-        positionAddress:     posAddr?.toBase58() ?? "",
+        profileExists: profileAddr ? infos[2] !== null : false,
+        positionExists: posAddr ? infos[toCheck.indexOf(posAddr)] !== null : false,
+        platformAddress: platAddr.toBase58(),
+        profileAddress: profileAddr?.toBase58() ?? "",
+        investorAddress: invAddr.toBase58(),
+        positionAddress: posAddr?.toBase58() ?? "",
       });
     } catch (err) {
-      console.error("useArcadiaVault.fetchOnChainState:", err);
+      setOnChainState(null);
+      setChainError(errorMessage(err));
     } finally {
       setLoadingChain(false);
     }
@@ -193,40 +159,44 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
   /* ── Initialize Profile ───────────────────────────────────────── */
   const initializeProfile = useCallback(
-    async (handle: string, maxLeverage: number, _styleTags: string[]): Promise<boolean> => {
-      if (!publicKey || !signTransaction || !signAllTransactions) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus(`Creating trader profile "${handle}"…`);
-      setTxSig(null);
+    async (handle: string, maxLeverage: number): Promise<boolean> => {
+      if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
+      progress("checking", `Creating trader profile "${handle}"…`);
       try {
         const [profAddr] = findTraderProfile(publicKey);
-        const { isLive } = await checkLive(connection, publicKey, publicKey);
+        const status = await statusOrFail(publicKey, publicKey);
+        if (!status) return false;
 
-        if (!isLive) {
-          await sleep(1_400);
-          const sig = simulatedSig();
-          setTxSig(sig);
-          setTxStatus(`Profile "${handle}" created. PDA: ${profAddr.toBase58().slice(0, 8)}… (devnet simulation)`);
+        if (status.kind === "vault-live") {
+          succeed(`Profile "${handle}" already exists on-chain.`, null, false);
           return true;
         }
 
-        const program = makeProgram(connection, publicKey, signTransaction, signAllTransactions);
-        const [configPDA] = findPlatformConfig();
-        const sig = await (program.methods as any)
+        if (status.kind === "offline") {
+          progress("signing", "Confirm in wallet…", true);
+          await sleep(1_400);
+          succeed(
+            `Profile "${handle}" simulated — program not live on devnet. PDA: ${profAddr.toBase58().slice(0, 8)}…`,
+            null,
+            true,
+          );
+          return true;
+        }
+
+        const program = makeArcadiaProgram(connection, anchorWallet);
+        const [configPda] = findPlatformConfig();
+        progress("signing", "Confirm in wallet…");
+        const sig = await program.methods
           .initializeProfile(maxLeverage)
-          .accounts({
+          .accountsPartial({
             trader: publicKey,
-            config: configPDA,
+            config: configPda,
             profile: profAddr,
-            baseMint: DEVNET_USDC_MINT,
+            baseMint: status.platformBaseMint,
             systemProgram: SystemProgram.programId,
           })
           .rpc();
-        setTxSig(sig);
-        setTxStatus(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`);
-        // Notify the backend indexer
+        succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "ProfileInitialized",
           profile: profAddr.toBase58(),
@@ -234,134 +204,135 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           ts: Math.floor(Date.now() / 1000),
         });
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Initialize profile failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Initialize profile failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, signTransaction, signAllTransactions],
+    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
   );
 
-  /* ── Initialize Investor ──────────────────────────────────────── */
+  /* ── Initialize Investor (profile-independent) ────────────────── */
   const initializeInvestor = useCallback(
-    async (profileAddress: string): Promise<boolean> => {
-      if (!publicKey || !signTransaction || !signAllTransactions) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus("Setting up your investor account…");
-      setTxSig(null);
+    async (): Promise<boolean> => {
+      if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
+      progress("checking", "Setting up your investor account…");
       try {
-        let traderKey: PublicKey;
-        try { traderKey = new PublicKey(profileAddress); }
-        catch { traderKey = publicKey; }
-
         const [invAddr] = findInvestorAccount(publicKey);
-        const { isLive, investorExists } = await checkLive(connection, traderKey, publicKey);
+        const status = await statusOrFail(publicKey, publicKey);
+        if (!status) return false;
 
-        if (!isLive) {
+        if (status.investorExists) {
+          succeed("Investor account already initialized.", null, false);
+          return true;
+        }
+
+        if (status.kind === "offline") {
+          progress("signing", "Confirm in wallet…", true);
           await sleep(1_100);
-          const sig = simulatedSig();
-          setTxSig(sig);
-          setTxStatus(`Investor account initialized. PDA: ${invAddr.toBase58().slice(0, 8)}… (devnet simulation)`);
+          succeed(
+            `Investor account simulated — program not live on devnet. PDA: ${invAddr.toBase58().slice(0, 8)}…`,
+            null,
+            true,
+          );
           return true;
         }
 
-        if (investorExists) {
-          setTxStatus("Investor account already initialized.");
-          return true;
-        }
-
-        const program = makeProgram(connection, publicKey, signTransaction, signAllTransactions);
-        const sig = await (program.methods as any).initializeInvestor().accounts({
-          wallet: publicKey,
-          investorAccount: invAddr,
-          systemProgram: SystemProgram.programId,
-        }).rpc();
-        setTxSig(sig);
-        setTxStatus(`Investor account created. Signature: ${sig.slice(0, 8)}…`);
+        const program = makeArcadiaProgram(connection, anchorWallet);
+        progress("signing", "Confirm in wallet…");
+        const sig = await program.methods
+          .initializeInvestor()
+          .accountsPartial({
+            wallet: publicKey,
+            investorAccount: invAddr,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+        succeed(`Investor account created. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "InvestorInitialized",
           investor: publicKey.toBase58(),
           ts: Math.floor(Date.now() / 1000),
         });
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Initialize investor failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Initialize investor failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, signTransaction, signAllTransactions],
+    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Deposit ──────────────────────────────────────────────────── */
   const deposit = useCallback(
     async (traderWalletOrProfile: string, amountUsdc: number): Promise<boolean> => {
-      if (!publicKey || !signTransaction || !signAllTransactions) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus(`Checking on-chain state…`);
-      setTxSig(null);
+      if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
+      progress("checking", "Reading on-chain state…");
       try {
-        let traderKey: PublicKey;
-        try { traderKey = new PublicKey(traderWalletOrProfile); }
-        catch { traderKey = publicKey; }
+        const traderKey = toTraderKey(traderWalletOrProfile, publicKey);
+        const [profilePda] = findTraderProfile(traderKey);
+        const [investorPda] = findInvestorAccount(publicKey);
+        const [positionPda] = findInvestorPosition(publicKey, profilePda);
 
-        const [profilePDAAddr] = findTraderProfile(traderKey);
-        const [investorPDAAddr] = findInvestorAccount(publicKey);
-        const [positionPDAAddr] = findInvestorPosition(publicKey, profilePDAAddr);
+        const status = await statusOrFail(traderKey, publicKey);
+        if (!status) return false;
 
-        const { isLive, investorExists, baseMint, vaultToken } =
-          await checkLive(connection, traderKey, publicKey);
-
-        if (!isLive) {
-          if (!investorExists) {
-            setTxStatus("Initializing investor account…");
+        if (status.kind !== "vault-live") {
+          if (!status.investorExists) {
+            progress("init-investor", "Creating investor account…", true);
             await sleep(900);
           }
-          setTxStatus(`Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`);
+          progress("signing", `Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`, true);
           await sleep(1_400);
-          setTxStatus("Broadcasting to Solana devnet…");
+          progress("confirming", "Broadcasting to Solana devnet…", true);
           await sleep(700);
-          const sig = simulatedSig();
-          setTxSig(sig);
-          setTxStatus(`Deposit of $${amountUsdc.toFixed(2)} confirmed (devnet simulation). Signature: ${sig.slice(0, 8)}…`);
+          succeed(
+            `Deposit of $${amountUsdc.toFixed(2)} simulated — vault not live on devnet.`,
+            null,
+            true,
+          );
           return true;
         }
 
-        const program = makeProgram(connection, publicKey, signTransaction, signAllTransactions);
+        const program = makeArcadiaProgram(connection, anchorWallet);
 
-        if (!investorExists) {
-          setTxStatus("Initializing investor account…");
-          await (program.methods as any).initializeInvestor().accounts({
-            wallet: publicKey,
-            investorAccount: investorPDAAddr,
-            systemProgram: SystemProgram.programId,
-          }).rpc();
+        if (!status.investorExists) {
+          progress("init-investor", "Creating investor account on-chain…");
+          await program.methods
+            .initializeInvestor()
+            .accountsPartial({
+              wallet: publicKey,
+              investorAccount: investorPda,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc();
         }
 
-        setTxStatus(`Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`);
+        progress("signing", `Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`);
         const amountU64 = new BN(Math.floor(amountUsdc * 1_000_000));
-        const depositorToken = getAssociatedTokenAddressSync(baseMint, publicKey);
+        const depositorToken = getAssociatedTokenAddressSync(status.baseMint, publicKey);
 
-        const sig = await (program.methods as any).deposit(amountU64).accounts({
-          depositor: publicKey,
-          investorAccount: investorPDAAddr,
-          profile: profilePDAAddr,
-          position: positionPDAAddr,
-          baseMint,
-          vaultToken,
-          depositorToken,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-        }).rpc();
+        const sig = await program.methods
+          .deposit(amountU64)
+          .accountsPartial({
+            depositor: publicKey,
+            investorAccount: investorPda,
+            profile: profilePda,
+            position: positionPda,
+            baseMint: status.baseMint,
+            vaultToken: status.vaultToken,
+            depositorToken,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
 
-        setTxSig(sig);
-        setTxStatus(`Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`);
+        succeed(
+          `Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`,
+          sig,
+          false,
+        );
         pushEvent({
           event_type: "Deposited",
-          profile: profilePDAAddr.toBase58(),
+          profile: profilePda.toBase58(),
           depositor: publicKey.toBase58(),
           is_trader: false,
           amount_usd: amountUsdc.toString(),
@@ -370,117 +341,102 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           ts: Math.floor(Date.now() / 1000),
         });
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Deposit failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Deposit failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, signTransaction, signAllTransactions],
+    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Request Withdraw ─────────────────────────────────────────── */
   const requestWithdraw = useCallback(
     async (traderWalletOrProfile: string, shares: number): Promise<boolean> => {
-      if (!publicKey || !signTransaction || !signAllTransactions) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus(`Requesting withdrawal of ${shares.toFixed(4)} shares…`);
-      setTxSig(null);
+      if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
+      progress("checking", `Requesting withdrawal of ${shares.toFixed(4)} shares…`);
       try {
-        let traderKey: PublicKey;
-        try { traderKey = new PublicKey(traderWalletOrProfile); }
-        catch { traderKey = publicKey; }
+        const traderKey = toTraderKey(traderWalletOrProfile, publicKey);
+        const [profilePda] = findTraderProfile(traderKey);
+        const [positionPda] = findInvestorPosition(publicKey, profilePda);
+        const status = await statusOrFail(traderKey, publicKey);
+        if (!status) return false;
 
-        const [profilePDAAddr] = findTraderProfile(traderKey);
-        const [positionPDAAddr] = findInvestorPosition(publicKey, profilePDAAddr);
-        const { isLive } = await checkLive(connection, traderKey, publicKey);
-
-        if (!isLive) {
+        if (status.kind !== "vault-live") {
+          progress("signing", "Confirm in wallet…", true);
           await sleep(1_200);
-          const sig = simulatedSig();
-          setTxSig(sig);
-          setTxStatus(`Withdraw request recorded (devnet simulation). Signature: ${sig.slice(0, 8)}…`);
+          succeed("Withdraw request simulated — vault not live on devnet.", null, true);
           return true;
         }
 
-        const program = makeProgram(connection, publicKey, signTransaction, signAllTransactions);
+        const program = makeArcadiaProgram(connection, anchorWallet);
         const sharesU64 = new BN(Math.floor(shares * 1_000_000));
-        const { vaultToken } = await checkLive(connection, traderKey, publicKey);
-
-        const sig = await (program.methods as any).requestWithdraw(sharesU64).accounts({
-          owner: publicKey,
-          profile: profilePDAAddr,
-          vaultToken,
-          position: positionPDAAddr,
-        }).rpc();
-
-        setTxSig(sig);
-        setTxStatus(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`);
+        progress("signing", "Confirm in wallet…");
+        const sig = await program.methods
+          .requestWithdraw(sharesU64)
+          .accountsPartial({
+            owner: publicKey,
+            profile: profilePda,
+            vaultToken: status.vaultToken,
+            position: positionPda,
+          })
+          .rpc();
+        succeed(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`, sig, false);
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Withdraw request failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Withdraw request failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, signTransaction, signAllTransactions],
+    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Process Withdraw ─────────────────────────────────────────── */
   const processWithdraw = useCallback(
     async (traderWalletOrProfile: string): Promise<boolean> => {
-      if (!publicKey || !signTransaction || !signAllTransactions) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus("Processing queued withdrawal…");
-      setTxSig(null);
+      if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
+      progress("checking", "Processing queued withdrawal…");
       try {
-        let traderKey: PublicKey;
-        try { traderKey = new PublicKey(traderWalletOrProfile); }
-        catch { traderKey = publicKey; }
+        const traderKey = toTraderKey(traderWalletOrProfile, publicKey);
+        const status = await statusOrFail(traderKey, publicKey);
+        if (!status) return false;
 
-        const { isLive } = await checkLive(connection, traderKey, publicKey);
-        if (!isLive) {
+        if (status.kind !== "vault-live") {
+          progress("signing", "Confirm in wallet…", true);
           await sleep(1_200);
-          const sig = simulatedSig();
-          setTxSig(sig);
-          setTxStatus(`Withdrawal processed (devnet simulation). Signature: ${sig.slice(0, 8)}…`);
+          succeed("Withdrawal simulated — vault not live on devnet.", null, true);
           return true;
         }
 
-        const [profilePDAAddr] = findTraderProfile(traderKey);
-        const [positionPDAAddr] = findInvestorPosition(publicKey, profilePDAAddr);
-        const { baseMint, vaultToken } = await checkLive(connection, traderKey, publicKey);
-        const ownerToken = getAssociatedTokenAddressSync(baseMint, publicKey);
-        const program = makeProgram(connection, publicKey, signTransaction, signAllTransactions);
+        const [profilePda] = findTraderProfile(traderKey);
+        const [positionPda] = findInvestorPosition(publicKey, profilePda);
+        const ownerToken = getAssociatedTokenAddressSync(status.baseMint, publicKey);
+        const program = makeArcadiaProgram(connection, anchorWallet);
 
-        const sig = await (program.methods as any).processWithdraw().accounts({
-          owner: publicKey,
-          profile: profilePDAAddr,
-          position: positionPDAAddr,
-          baseMint,
-          vaultToken,
-          ownerToken,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        }).rpc();
-
-        setTxSig(sig);
-        setTxStatus(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`);
+        progress("signing", "Confirm in wallet…");
+        const sig = await program.methods
+          .processWithdraw()
+          .accountsPartial({
+            owner: publicKey,
+            profile: profilePda,
+            position: positionPda,
+            baseMint: status.baseMint,
+            vaultToken: status.vaultToken,
+            ownerToken,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+        succeed(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "Withdrawn",
-          profile: profilePDAAddr.toBase58(),
+          profile: profilePda.toBase58(),
           owner: publicKey.toBase58(),
           shares_burned: "0",
           amount_usd: "0",
         });
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Process withdraw failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Process withdraw failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, signTransaction, signAllTransactions],
+    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Record Trade (oracle co-sign via backend) ────────────────── */
@@ -498,14 +454,11 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
       openedAt: number;
       closedAt: number;
     }): Promise<boolean> => {
-      if (!publicKey) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus(`Recording trade: ${params.direction.toUpperCase()} ${params.market}…`);
-      setTxSig(null);
+      if (!publicKey) return fail("Connect your wallet first.");
+      progress("checking", `Recording trade: ${params.direction.toUpperCase()} ${params.market}…`);
       try {
-        const token = typeof localStorage !== "undefined" ? localStorage.getItem("arcadia_jwt") : null;
+        const token =
+          typeof localStorage !== "undefined" ? localStorage.getItem("arcadia_jwt") : null;
         const simRes = await fetch("/api/v1/trades/simulate", {
           method: "POST",
           headers: {
@@ -513,15 +466,15 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            profile:    params.profileAddress,
-            market:     params.market,
-            direction:  params.direction === "long" ? 0 : 1,
-            size_usd:   params.sizeUsd,
-            leverage:   params.leverageX100 / 100,
-            entry_px:   params.entryPx,
-            exit_px:    params.exitPx,
-            opened_at:  new Date(params.openedAt * 1000).toISOString(),
-            closed_at:  new Date(params.closedAt * 1000).toISOString(),
+            profile: params.profileAddress,
+            market: params.market,
+            direction: params.direction === "long" ? 0 : 1,
+            size_usd: params.sizeUsd,
+            leverage: params.leverageX100 / 100,
+            entry_px: params.entryPx,
+            exit_px: params.exitPx,
+            opened_at: new Date(params.openedAt * 1000).toISOString(),
+            closed_at: new Date(params.closedAt * 1000).toISOString(),
           }),
         });
 
@@ -530,100 +483,90 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           throw new Error(`Oracle co-sign failed: ${errText}`);
         }
 
-        const { tx_base64, simulated } = await simRes.json();
+        const { tx_base64, simulated } = (await simRes.json()) as {
+          tx_base64?: string;
+          simulated?: boolean;
+        };
 
         if (simulated) {
-          setTxStatus(`Trade recorded (devnet simulation): ${params.direction.toUpperCase()} ${params.market} $${params.sizeUsd} @ ${(params.leverageX100 / 100).toFixed(1)}×`);
+          succeed(
+            `Trade recorded (simulation): ${params.direction.toUpperCase()} ${params.market} $${params.sizeUsd} @ ${(params.leverageX100 / 100).toFixed(1)}×`,
+            null,
+            true,
+          );
           return true;
         }
 
         if (tx_base64) {
-          const { Transaction } = await import("@solana/web3.js");
+          progress("signing", "Confirm in wallet…");
           const tx = Transaction.from(Buffer.from(tx_base64, "base64"));
           const sig = await sendTransaction(tx, connection);
+          progress("confirming", "Confirming on Solana…");
           await connection.confirmTransaction(sig, "confirmed");
-          setTxSig(sig);
-          setTxStatus(`Trade recorded on-chain. Signature: ${sig.slice(0, 8)}…`);
+          succeed(`Trade recorded on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
           return true;
         }
 
-        setTxStatus("Trade recorded.");
+        succeed("Trade recorded.", null, false);
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Record trade failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Record trade failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, sendTransaction],
+    [connection, publicKey, sendTransaction, progress, succeed, fail],
   );
 
   /* ── Withdraw Profit (trader) ─────────────────────────────────── */
   const withdrawProfit = useCallback(
     async (amountUsdc: number): Promise<boolean> => {
-      if (!publicKey || !signTransaction || !signAllTransactions) {
-        setTxStatus("Connect your wallet first.");
-        return false;
-      }
-      setTxStatus(`Processing profit withdrawal of $${amountUsdc.toFixed(2)}…`);
-      setTxSig(null);
+      if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
+      progress("checking", `Processing profit withdrawal of $${amountUsdc.toFixed(2)}…`);
       try {
-        const { isLive } = await checkLive(connection, publicKey, publicKey);
-        if (!isLive) {
+        const status = await statusOrFail(publicKey, publicKey);
+        if (!status) return false;
+
+        if (status.kind !== "vault-live") {
+          progress("signing", "Confirm in wallet…", true);
           await sleep(1_200);
-          const sig = simulatedSig();
-          setTxSig(sig);
-          setTxStatus(`$${amountUsdc.toFixed(2)} profit withdrawn (devnet simulation). Signature: ${sig.slice(0, 8)}…`);
+          succeed(
+            `$${amountUsdc.toFixed(2)} profit withdrawal simulated — vault not live on devnet.`,
+            null,
+            true,
+          );
           return true;
         }
 
-        const [profilePDAAddr] = findTraderProfile(publicKey);
-        const { baseMint, vaultToken } = await checkLive(connection, publicKey, publicKey);
-        const traderToken = getAssociatedTokenAddressSync(baseMint, publicKey);
+        const [profilePda] = findTraderProfile(publicKey);
+        const traderToken = getAssociatedTokenAddressSync(status.baseMint, publicKey);
         const amountU64 = new BN(Math.floor(amountUsdc * 1_000_000));
-        const program = makeProgram(connection, publicKey, signTransaction, signAllTransactions);
+        const program = makeArcadiaProgram(connection, anchorWallet);
 
-        const sig = await (program.methods as any).traderWithdrawProfit(amountU64).accounts({
-          trader: publicKey,
-          profile: profilePDAAddr,
-          baseMint,
-          vaultToken,
-          traderToken,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        }).rpc();
-
-        setTxSig(sig);
-        setTxStatus(`$${amountUsdc.toFixed(2)} profit withdrawn. Signature: ${sig.slice(0, 8)}…`);
+        progress("signing", "Confirm in wallet…");
+        const sig = await program.methods
+          .traderWithdrawProfit(amountU64)
+          .accountsPartial({
+            trader: publicKey,
+            profile: profilePda,
+            baseMint: status.baseMint,
+            vaultToken: status.vaultToken,
+            traderToken,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+        succeed(`$${amountUsdc.toFixed(2)} profit withdrawn. Signature: ${sig.slice(0, 8)}…`, sig, false);
         return true;
-      } catch (err: unknown) {
-        setTxStatus(`Withdrawal failed: ${err instanceof Error ? err.message : String(err)}`);
-        return false;
+      } catch (err) {
+        return fail(`Withdrawal failed: ${errorMessage(err)}`);
       }
     },
-    [connection, publicKey, signTransaction, signAllTransactions],
-  );
-
-  /* ── Derive PDAs for a trader wallet (display helper) ─────────── */
-  const derivePDAsForTrader = useCallback(
-    (traderWallet: string): { profile: string; investor?: string; position?: string } | null => {
-      try {
-        const traderKey = new PublicKey(traderWallet);
-        const [profAddr] = findTraderProfile(traderKey);
-        if (publicKey) {
-          const [invAddr] = findInvestorAccount(publicKey);
-          const [posAddr] = findInvestorPosition(publicKey, profAddr);
-          return { profile: profAddr.toBase58(), investor: invAddr.toBase58(), position: posAddr.toBase58() };
-        }
-        return { profile: profAddr.toBase58() };
-      } catch {
-        return null;
-      }
-    },
-    [publicKey],
+    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
   );
 
   return {
-    programId:           ARCADIA_PROGRAM_ID.toBase58(),
+    txState,
+    resetTx,
     onChainState,
+    chainError,
     loadingChain,
     fetchOnChainState,
     initializeProfile,
@@ -633,11 +576,5 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     processWithdraw,
     recordTrade,
     withdrawProfit,
-    txStatus,
-    txSig,
-    setTxStatus,
-    derivePDAsForTrader,
-    platformPDA:   () => findPlatformConfig()[0].toBase58(),
-    profilePDAFor: (w: string) => { try { return findTraderProfile(new PublicKey(w))[0].toBase58(); } catch { return ""; } },
   };
 }

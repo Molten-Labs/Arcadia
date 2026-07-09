@@ -21,7 +21,6 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { useAuth } from "@/lib/use-auth";
 import { RoleProvider } from "@/lib/role-context";
 import { RoleGate } from "@/components/RoleGate";
-import { PhoenixProvider } from "@/lib/phoenix-context";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,8 +32,7 @@ const queryClient = new QueryClient({
 });
 
 const RPC_ENDPOINT =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ??
-  "https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548";
+  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
 
 /* ── Auth context ─────────────────────────────────────────────────── */
 
@@ -81,11 +79,9 @@ function SolanaProviders({ children }: { children: ReactNode }) {
         <WalletModalProvider>
           <AuthProvider>
             <RoleProvider>
-              <PhoenixProvider>
-                {/* Role selection gate — appears as full-screen overlay when needed */}
-                <RoleGate />
-                {children}
-              </PhoenixProvider>
+              {/* Role selection gate — appears as full-screen overlay when needed */}
+              <RoleGate />
+              {children}
             </RoleProvider>
           </AuthProvider>
         </WalletModalProvider>

@@ -2,10 +2,10 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
-  useEffect,
-  useCallback,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -30,51 +30,54 @@ export function useRole() {
   return useContext(RoleContext);
 }
 
+/* ── localStorage-backed role store ─────────────────────────────────── */
+
 const STORAGE_KEY = "arcadia_role";
+const ROLE_EVENT = "arcadia-role-change";
+
+function getRoleSnapshot(): ArcadiaRole {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored === "trader" || stored === "investor" ? stored : null;
+}
+
+function subscribeRole(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(ROLE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(ROLE_EVENT, onChange);
+  };
+}
+
+/* ── SSR-safe hydration flag ────────────────────────────────────────── */
+// wallet-adapter-react 0.15+ uses a Proxy default context that console.errors
+// on property access outside a WalletProvider; only dereference it client-side.
+const noopSubscribe = () => () => {};
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  // wallet-adapter-react 0.15+ Proxy throws on property access outside WalletProvider.
-  // Guard with `mounted` so we never dereference wallet properties during SSR/hydration.
   const walletAdapter = useWallet();
-  const [role, setRoleState] = useState<ArcadiaRole>(null);
-  const [showRoleGate, setShowRoleGate] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const role = useSyncExternalStore(subscribeRole, getRoleSnapshot, () => null);
 
-  const connected = mounted ? walletAdapter.connected : false;
-  const publicKey = mounted ? walletAdapter.publicKey : null;
+  // The gate is derived, not stored: first wallet connection with no role
+  // chosen shows it, until the user picks a role or dismisses it for this key.
+  const [dismissedForKey, setDismissedForKey] = useState<string | null>(null);
 
-  /* Hydrate from localStorage on mount */
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem(STORAGE_KEY) as ArcadiaRole;
-    if (stored === "trader" || stored === "investor") {
-      setRoleState(stored);
-    }
-  }, []);
+  const connected = hydrated ? walletAdapter.connected : false;
+  const publicKey = hydrated ? walletAdapter.publicKey : null;
+  const currentKey = publicKey?.toBase58() ?? null;
 
-  /* Show gate when wallet connects for first time with no role stored */
-  useEffect(() => {
-    if (!mounted) return;
-    if (connected && publicKey && !role) {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!stored) {
-        setShowRoleGate(true);
-      }
-    }
-    if (!connected) {
-      setShowRoleGate(false);
-    }
-  }, [connected, publicKey, role, mounted]);
+  const showRoleGate =
+    connected && currentKey !== null && role === null && dismissedForKey !== currentKey;
 
   const setRole = useCallback((r: "trader" | "investor") => {
     localStorage.setItem(STORAGE_KEY, r);
-    setRoleState(r);
-    setShowRoleGate(false);
+    window.dispatchEvent(new Event(ROLE_EVENT));
   }, []);
 
   const dismissRoleGate = useCallback(() => {
-    setShowRoleGate(false);
-  }, []);
+    setDismissedForKey(currentKey);
+  }, [currentKey]);
 
   return (
     <RoleContext.Provider value={{ role, setRole, showRoleGate, dismissRoleGate }}>

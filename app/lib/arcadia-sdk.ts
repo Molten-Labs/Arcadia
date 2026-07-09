@@ -10,14 +10,13 @@
  *   INVESTOR  = b"investor"
  *   POSITION  = b"position"
  */
-import { Connection, PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { IDL } from "./arcadia-idl";
 
 export const PROGRAM_ID = new PublicKey("gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C");
 
 export const HELIUS_RPC =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ??
-  "https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548";
+  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
 
 export function getConnection(): Connection {
   return new Connection(HELIUS_RPC, "confirmed");
@@ -57,6 +56,16 @@ export function findInvestorPosition(
 }
 
 // ── On-chain account reads ───────────────────────────────────────────────────
+
+export interface PlatformConfigData {
+  admin: PublicKey;
+  oracleAuthority: PublicKey;
+  treasuryToken: PublicKey;
+  baseMint: PublicKey;
+  perfFeeBps: number;
+  mgmtFeeBps: number;
+  bump: number;
+}
 
 export interface TraderProfileData {
   trader: PublicKey;
@@ -137,90 +146,100 @@ export async function fetchInvestorPosition(
 
 // ── Binary decoders (Anchor borsh layout, skip 8-byte discriminator) ─────────
 
-function readPubkey(buf: Buffer, offset: number): [PublicKey, number] {
-  const pk = new PublicKey(buf.subarray(offset, offset + 32));
-  return [pk, offset + 32];
+/** Sequential borsh reader; starts past the 8-byte account discriminator. */
+class AccountReader {
+  private o: number;
+  constructor(private readonly buf: Buffer, offset = 8) {
+    this.o = offset;
+  }
+  pubkey(): PublicKey {
+    const pk = new PublicKey(this.buf.subarray(this.o, this.o + 32));
+    this.o += 32;
+    return pk;
+  }
+  u8(): number {
+    return this.buf.readUInt8(this.o++);
+  }
+  u16(): number {
+    const v = this.buf.readUInt16LE(this.o);
+    this.o += 2;
+    return v;
+  }
+  u32(): number {
+    const v = this.buf.readUInt32LE(this.o);
+    this.o += 4;
+    return v;
+  }
+  u64(): bigint {
+    const lo = BigInt(this.buf.readUInt32LE(this.o));
+    const hi = BigInt(this.buf.readUInt32LE(this.o + 4));
+    this.o += 8;
+    return (hi << 32n) | lo;
+  }
+  i64(): bigint {
+    const lo = BigInt(this.buf.readUInt32LE(this.o));
+    const hi = BigInt(this.buf.readInt32LE(this.o + 4));
+    this.o += 8;
+    return (hi << 32n) | lo;
+  }
 }
 
-function readU8(buf: Buffer, offset: number): [number, number] {
-  return [buf.readUInt8(offset), offset + 1];
+export function decodePlatformConfig(data: Buffer): PlatformConfigData {
+  const r = new AccountReader(data);
+  return {
+    admin: r.pubkey(),
+    oracleAuthority: r.pubkey(),
+    treasuryToken: r.pubkey(),
+    baseMint: r.pubkey(),
+    perfFeeBps: r.u16(),
+    mgmtFeeBps: r.u16(),
+    bump: r.u8(),
+  };
 }
 
-function readU16(buf: Buffer, offset: number): [number, number] {
-  return [buf.readUInt16LE(offset), offset + 2];
+export function decodeTraderProfile(data: Buffer): TraderProfileData {
+  const r = new AccountReader(data);
+  return {
+    trader: r.pubkey(),
+    baseMint: r.pubkey(),
+    vaultToken: r.pubkey(),
+    totalShares: r.u64(),
+    traderShares: r.u64(),
+    hwmPerShare: r.u64(),
+    capacityCapUsd: r.u64(),
+    traderClaimable: r.u64(),
+    lastSettleTs: r.i64(),
+    createdAt: r.i64(),
+    status: r.u8(),
+    scoreTier: r.u8(),
+    maxLeverage: r.u8(),
+    bump: r.u8(),
+  };
 }
 
-function readU32(buf: Buffer, offset: number): [number, number] {
-  return [buf.readUInt32LE(offset), offset + 4];
+export function decodeInvestorAccount(data: Buffer): InvestorAccountData {
+  const r = new AccountReader(data);
+  return {
+    owner: r.pubkey(),
+    positionCount: r.u32(),
+    totalDepositedUsd: r.u64(),
+    createdAt: r.i64(),
+    bump: r.u8(),
+  };
 }
 
-function readU64(buf: Buffer, offset: number): [bigint, number] {
-  const lo = BigInt(buf.readUInt32LE(offset));
-  const hi = BigInt(buf.readUInt32LE(offset + 4));
-  return [(hi << 32n) | lo, offset + 8];
-}
-
-function readI64(buf: Buffer, offset: number): [bigint, number] {
-  const lo = BigInt(buf.readUInt32LE(offset));
-  const hi = BigInt(buf.readInt32LE(offset + 4));
-  return [(hi << 32n) | lo, offset + 8];
-}
-
-function decodeTraderProfile(data: Buffer): TraderProfileData {
-  let o = 8; // skip discriminator
-  let trader: PublicKey, baseMint: PublicKey, vaultToken: PublicKey;
-  [trader, o] = readPubkey(data, o);
-  [baseMint, o] = readPubkey(data, o);
-  [vaultToken, o] = readPubkey(data, o);
-  let totalShares: bigint, traderShares: bigint, hwmPerShare: bigint,
-      capacityCapUsd: bigint, traderClaimable: bigint;
-  let lastSettleTs: bigint, createdAt: bigint;
-  [totalShares, o] = readU64(data, o);
-  [traderShares, o] = readU64(data, o);
-  [hwmPerShare, o] = readU64(data, o);
-  [capacityCapUsd, o] = readU64(data, o);
-  [traderClaimable, o] = readU64(data, o);
-  [lastSettleTs, o] = readI64(data, o);
-  [createdAt, o] = readI64(data, o);
-  let status: number, scoreTier: number, maxLeverage: number, bump: number;
-  [status, o] = readU8(data, o);
-  [scoreTier, o] = readU8(data, o);
-  [maxLeverage, o] = readU8(data, o);
-  [bump] = readU8(data, o);
-  return { trader, baseMint, vaultToken, totalShares, traderShares, hwmPerShare,
-           capacityCapUsd, traderClaimable, lastSettleTs, createdAt,
-           status, scoreTier, maxLeverage, bump };
-}
-
-function decodeInvestorAccount(data: Buffer): InvestorAccountData {
-  let o = 8;
-  let owner: PublicKey;
-  let positionCount: number;
-  let totalDepositedUsd: bigint, createdAt: bigint, bump: number;
-  [owner, o] = readPubkey(data, o);
-  [positionCount, o] = readU32(data, o);
-  [totalDepositedUsd, o] = readU64(data, o);
-  [createdAt, o] = readI64(data, o);
-  [bump] = readU8(data, o);
-  return { owner, positionCount, totalDepositedUsd, createdAt, bump };
-}
-
-function decodeInvestorPosition(data: Buffer): InvestorPositionData {
-  let o = 8;
-  let owner: PublicKey, profile: PublicKey;
-  let shares: bigint, costBasisUsd: bigint, pendingWithdrawShares: bigint,
-      withdrawReadyTs: bigint, depositedAt: bigint;
-  let bump: number;
-  [owner, o] = readPubkey(data, o);
-  [profile, o] = readPubkey(data, o);
-  [shares, o] = readU64(data, o);
-  [costBasisUsd, o] = readU64(data, o);
-  [pendingWithdrawShares, o] = readU64(data, o);
-  [withdrawReadyTs, o] = readI64(data, o);
-  [depositedAt, o] = readI64(data, o);
-  [bump] = readU8(data, o);
-  return { owner, profile, shares, costBasisUsd, pendingWithdrawShares,
-           withdrawReadyTs, depositedAt, bump };
+export function decodeInvestorPosition(data: Buffer): InvestorPositionData {
+  const r = new AccountReader(data);
+  return {
+    owner: r.pubkey(),
+    profile: r.pubkey(),
+    shares: r.u64(),
+    costBasisUsd: r.u64(),
+    pendingWithdrawShares: r.u64(),
+    withdrawReadyTs: r.i64(),
+    depositedAt: r.i64(),
+    bump: r.u8(),
+  };
 }
 
 // ── Utility helpers ──────────────────────────────────────────────────────────

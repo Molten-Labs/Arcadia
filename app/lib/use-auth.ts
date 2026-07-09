@@ -5,64 +5,96 @@
  *
  * Flow:
  *  1. signIn() fetches a nonce from /api/v1/auth/challenge
- *  2. Builds the canonical SIWS message (matches Rust auth.rs siws_message)
+ *  2. Builds the canonical SIWS message (lib/siws, matches Rust auth.rs)
  *  3. Asks the wallet to sign the message bytes
- *  4. Encodes the signature as base58
- *  5. POSTs { pubkey, signature, nonce } to /api/v1/auth/verify
- *  6. Stores the returned token in localStorage
+ *  4. POSTs { pubkey, signature (base58), nonce } to /api/v1/auth/verify
+ *  5. Stores the returned token in localStorage
  *
- * apiFetch (utils.ts) reads the token and sends it as Authorization: Bearer.
+ * The stored session is exposed via useSyncExternalStore (single source of
+ * truth: localStorage), and only counts as authenticated while the stored
+ * wallet matches the currently connected key. apiFetch (utils.ts) reads the
+ * same token for Authorization: Bearer.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import bs58 from "bs58";
+import { buildSiwsMessage } from "./siws";
 
-const TOKEN_KEY  = "arcadia_jwt";
+const TOKEN_KEY = "arcadia_jwt";
 const WALLET_KEY = "arcadia_wallet";
+const AUTH_EVENT = "arcadia-auth-change";
 
-/** Canonical SIWS message — must match Rust `siws_message()` in auth.rs */
-function buildSiwsMessage(pubkey: string, nonce: string): string {
-  return `Arcadia wants you to sign in with your Solana account:\n${pubkey}\n\nNonce: ${nonce}`;
+interface StoredSession {
+  token: string;
+  wallet: string;
+}
+
+/* ── localStorage-backed session store ──────────────────────────────── */
+
+let cachedSession: StoredSession | null = null;
+
+function getSessionSnapshot(): StoredSession | null {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const wallet = localStorage.getItem(WALLET_KEY);
+  if (!token || !wallet) return (cachedSession = null);
+  if (!cachedSession || cachedSession.token !== token || cachedSession.wallet !== wallet) {
+    cachedSession = { token, wallet };
+  }
+  return cachedSession;
+}
+
+function subscribeSession(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(AUTH_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(AUTH_EVENT, onChange);
+  };
+}
+
+function writeSession(session: StoredSession | null) {
+  if (session) {
+    localStorage.setItem(TOKEN_KEY, session.token);
+    localStorage.setItem(WALLET_KEY, session.wallet);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(WALLET_KEY);
+  }
+  window.dispatchEvent(new Event(AUTH_EVENT));
+}
+
+/* ── SSR-safe hydration flag ────────────────────────────────────────── */
+// wallet-adapter-react 0.15+ uses a Proxy default context that console.errors
+// on property access outside a WalletProvider; only dereference it client-side.
+const noopSubscribe = () => () => {};
+function useHydrated(): boolean {
+  return useSyncExternalStore(noopSubscribe, () => true, () => false);
 }
 
 export function useAuth() {
-  // wallet-adapter-react 0.15+ uses a Proxy as the default WalletContext value
-  // that console.errors on any property access outside a WalletProvider.
-  // Guard all property reads behind a `mounted` flag so they only fire on the
-  // client after WalletProvider has initialised its context.
   const walletAdapter = useWallet();
-  const [mounted,  setMounted]  = useState(false);
-  const [token,    setToken]    = useState<string | null>(null);
-  const [wallet,   setWallet]   = useState<string | null>(null);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const hydrated = useHydrated();
+  const session = useSyncExternalStore(subscribeSession, getSessionSnapshot, () => null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { setMounted(true); }, []);
+  const publicKey = hydrated ? walletAdapter.publicKey : null;
+  const signMessage = hydrated ? walletAdapter.signMessage : undefined;
+  const disconnect = hydrated ? walletAdapter.disconnect : undefined;
 
-  // Only dereference wallet adapter properties after client mount
-  const publicKey   = mounted ? walletAdapter.publicKey   : null;
-  const signMessage = mounted ? walletAdapter.signMessage : undefined;
-  const disconnect  = mounted ? walletAdapter.disconnect  : async () => {};
+  const currentKey = publicKey?.toBase58() ?? null;
+  const sessionValid = session !== null && session.wallet === currentKey;
 
-  // Hydrate from localStorage on mount and whenever the connected wallet changes.
-  // If the stored wallet doesn't match the currently-connected key, wipe the
-  // stale session so protected requests don't leak credentials.
+  // A stored session for a *different* connected wallet is stale — wipe it so
+  // apiFetch (which reads localStorage directly) can't send its credentials.
+  // When no wallet is connected yet (autoConnect still resolving) the session
+  // is kept; it simply doesn't count as authenticated until the keys match.
   useEffect(() => {
-    const storedToken  = localStorage.getItem(TOKEN_KEY);
-    const storedWallet = localStorage.getItem(WALLET_KEY);
-    const currentKey   = publicKey?.toBase58() ?? null;
-
-    if (storedToken && storedWallet && storedWallet === currentKey) {
-      setToken(storedToken);
-      setWallet(storedWallet);
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(WALLET_KEY);
-      setToken(null);
-      setWallet(null);
+    if (session && currentKey && session.wallet !== currentKey) {
+      writeSession(null);
     }
-  }, [publicKey]);
+  }, [session, currentKey]);
 
   const signIn = useCallback(async () => {
     if (!publicKey || !signMessage) {
@@ -73,45 +105,33 @@ export function useAuth() {
     setError(null);
 
     try {
-      // 1. Fetch nonce
       const challengeRes = await fetch("/api/v1/auth/challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
       if (!challengeRes.ok) throw new Error("Failed to get auth challenge.");
-      const { nonce } = await challengeRes.json() as { nonce: string };
+      const { nonce } = (await challengeRes.json()) as { nonce: string };
 
-      // 2. Build canonical SIWS message
       const message = buildSiwsMessage(publicKey.toBase58(), nonce);
-
-      // 3. Sign
-      const encoded   = new TextEncoder().encode(message);
-      const sigBytes  = await signMessage(encoded);
-
-      // 4. Encode as base58 (matches Rust bs58::decode expectation)
+      const sigBytes = await signMessage(new TextEncoder().encode(message));
       const sigBase58 = bs58.encode(sigBytes);
 
-      // 5. Verify → receive token
       const verifyRes = await fetch("/api/v1/auth/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          pubkey:    publicKey.toBase58(),
+          pubkey: publicKey.toBase58(),
           signature: sigBase58,
           nonce,
         }),
       });
       if (!verifyRes.ok) {
-        const body = await verifyRes.json().catch(() => ({})) as { error?: string };
+        const body = (await verifyRes.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? "Signature verification failed.");
       }
-      const { token: jwt } = await verifyRes.json() as { token: string };
+      const { token } = (await verifyRes.json()) as { token: string };
 
-      // 6. Persist
-      localStorage.setItem(TOKEN_KEY,  jwt);
-      localStorage.setItem(WALLET_KEY, publicKey.toBase58());
-      setToken(jwt);
-      setWallet(publicKey.toBase58());
+      writeSession({ token, wallet: publicKey.toBase58() });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -120,17 +140,14 @@ export function useAuth() {
   }, [publicKey, signMessage]);
 
   const signOut = useCallback(async () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(WALLET_KEY);
-    setToken(null);
-    setWallet(null);
-    await disconnect();
+    writeSession(null);
+    await disconnect?.();
   }, [disconnect]);
 
   return {
-    token,
-    wallet,
-    isAuthenticated: !!token && !!wallet,
+    token: sessionValid ? session.token : null,
+    wallet: sessionValid ? session.wallet : null,
+    isAuthenticated: sessionValid,
     loading,
     error,
     signIn,

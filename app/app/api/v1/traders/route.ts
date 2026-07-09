@@ -10,7 +10,10 @@ const HANDLE_MAP = Object.fromEntries(
 export async function GET() {
   const result = await proxyToBackend("/v1/traders");
   if (result?.ok) {
-    const transformed = transformTraderList(result.data as any[], HANDLE_MAP);
+    const transformed = transformTraderList(
+      Array.isArray(result.data) ? result.data : [],
+      HANDLE_MAP,
+    );
     return NextResponse.json(transformed);
   }
   return NextResponse.json(MOCK_TRADERS_LIST);

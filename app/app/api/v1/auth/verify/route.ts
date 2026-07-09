@@ -1,18 +1,19 @@
 /**
- * POST /api/v1/auth/verify — proxy to Rust backend or dev mock.
+ * POST /api/v1/auth/verify — proxy to the Rust backend, or dev verification.
  *
- * With BACKEND_URL set, this proxies to the Rust API which does real
- * ed25519 + nonce verification against Redis.
- * Without BACKEND_URL, it returns a mock JWT-shaped token.
+ * With BACKEND_URL set this proxies upstream (real ed25519 + Redis nonce);
+ * an upstream outage is a 502, never a silent mock fallback. Without
+ * BACKEND_URL the dev path still verifies for real: HMAC-signed nonce
+ * (unexpired, unused) + ed25519 signature over the canonical SIWS message.
+ * A session token is only ever minted for a pubkey that proved key ownership.
  */
 import { NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { consumeNonce, mintDevToken, verifySiwsSignature } from "@/lib/server/dev-auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
-const DEV_SECRET = process.env.SESSION_SECRET ?? "arcadia-dev-secret";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({})) as {
+  const body = (await req.json().catch(() => ({}))) as {
     pubkey?: string;
     signature?: string;
     nonce?: string;
@@ -25,7 +26,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // Proxy to Rust backend when configured
   if (BACKEND_URL) {
     try {
       const upstream = await fetch(`${BACKEND_URL}/v1/auth/verify`, {
@@ -36,21 +36,19 @@ export async function POST(req: Request) {
       const data = await upstream.json();
       return NextResponse.json(data, { status: upstream.status });
     } catch {
-      // fall through to mock
+      return NextResponse.json({ error: "Auth backend unreachable" }, { status: 502 });
     }
   }
 
-  // Build a deterministic, pubkey-scoped mock JWT-shaped token.
-  const header  = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const now     = Math.floor(Date.now() / 1000);
-  const payload = Buffer.from(
-    JSON.stringify({ sub: body.pubkey, iat: now, exp: now + 86400 }),
-  ).toString("base64url");
-  const sig = createHmac("sha256", DEV_SECRET)
-    .update(`${header}.${payload}`)
-    .digest("base64url");
+  const nonceCheck = consumeNonce(body.nonce);
+  if (!nonceCheck.ok) {
+    return NextResponse.json({ error: nonceCheck.reason }, { status: 401 });
+  }
 
-  const token = `${header}.${payload}.${sig}`;
+  if (!verifySiwsSignature(body.pubkey, body.signature, body.nonce)) {
+    return NextResponse.json({ error: "Signature verification failed" }, { status: 401 });
+  }
 
-  return NextResponse.json({ token, wallet: body.pubkey, expires_at: now + 86400 });
+  const { token, expires_at } = mintDevToken(body.pubkey);
+  return NextResponse.json({ token, wallet: body.pubkey, expires_at });
 }

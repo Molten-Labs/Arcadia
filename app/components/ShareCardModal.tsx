@@ -2,6 +2,9 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { X, Download, Link2, Check } from "lucide-react";
+
+import { AcidButton } from "@/components/acid";
+import { cn } from "@/lib/utils";
 import { ShareCard } from "./ShareCard";
 import type { ShareCardData } from "./ShareCard";
 
@@ -24,7 +27,7 @@ export function ShareCardModal({ data, profileUrl, onClose }: ShareCardModalProp
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  /* ── tilt handlers ── */
+  /* tilt handlers */
   const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const el   = tiltEl.current;
     const card = el?.querySelector<HTMLElement>(".t-tilt-card");
@@ -50,7 +53,7 @@ export function ShareCardModal({ data, profileUrl, onClose }: ShareCardModalProp
     setTimeout(() => card?.classList.remove("is-tilting"), 80);
   }, []);
 
-  /* ── download ── */
+  /* download */
   const handleDownload = useCallback(async () => {
     if (!cardEl.current || downloading) return;
     setDownloading(true);
@@ -74,73 +77,42 @@ export function ShareCardModal({ data, profileUrl, onClose }: ShareCardModalProp
     }
   }, [data.handle, downloading]);
 
-  /* ── copy link ── */
+  /* copy link */
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(profileUrl).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   }, [profileUrl]);
 
-  /* ── button base style ── */
-  const btn = (accent?: string): React.CSSProperties => ({
-    display:        "inline-flex",
-    alignItems:     "center",
-    gap:            7,
-    padding:        "10px 20px",
-    borderRadius:   10,
-    border:         `1px solid ${accent ? `${accent}44` : "rgba(255,255,255,0.12)"}`,
-    background:     accent ? `${accent}18` : "rgba(255,255,255,0.05)",
-    color:          accent ?? "rgba(255,255,255,0.7)",
-    fontSize:       13,
-    fontWeight:     700,
-    cursor:         "pointer",
-    transition:     "opacity 0.15s",
-    fontFamily:     '"Inter", system-ui, sans-serif',
-    letterSpacing:  "-0.01em",
-  });
-
   return (
     <div
       onClick={onClose}
-      style={{
-        position:        "fixed",
-        inset:           0,
-        zIndex:          9000,
-        background:      "rgba(0,0,0,0.82)",
-        backdropFilter:  "blur(14px)",
-        display:         "flex",
-        flexDirection:   "column",
-        alignItems:      "center",
-        justifyContent:  "center",
-        gap:             28,
-        padding:         24,
-      }}
+      className="fixed inset-0 z-[9000] flex flex-col items-center justify-center gap-7 bg-void/85 p-6 backdrop-blur-xl"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Share @${data.handle} Arcadia Score`}
+        className="flex flex-col items-center gap-6"
       >
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 840 }}>
+        <div className="flex w-full max-w-[840px] items-center justify-between">
           <div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#f0f0f0", margin: 0, letterSpacing: "-0.01em" }}>
+            <p className="m-0 font-display text-base font-bold tracking-tight text-ink">
               Share your Arcadia Score
             </p>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", margin: "2px 0 0" }}>
-              Hover to preview the tilt · Download as PNG
+            <p className="mt-1 font-mono text-[0.5625rem] tracking-[0.2em] text-faint uppercase">
+              Hover to preview the tilt / Download as PNG
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: "rgba(255,255,255,0.5)",
-            }}
+            aria-label="Close"
+            className="flex size-8 items-center justify-center rounded-lg border border-line bg-panel-2 text-muted transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
           >
-            <X size={14} />
+            <X className="size-3.5" />
           </button>
         </div>
 
@@ -155,8 +127,8 @@ export function ShareCardModal({ data, profileUrl, onClose }: ShareCardModalProp
           <div
             className="t-tilt-card"
             style={{
-              borderRadius:  16,
-              boxShadow:     "0 48px 96px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.07)",
+              borderRadius: 16,
+              boxShadow: "0 48px 96px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.07)",
             }}
           >
             <div ref={cardEl} style={{ borderRadius: 16, overflow: "hidden" }}>
@@ -167,19 +139,20 @@ export function ShareCardModal({ data, profileUrl, onClose }: ShareCardModalProp
         </div>
 
         {/* Actions */}
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            style={{ ...btn("#4f9eff"), opacity: downloading ? 0.6 : 1 }}
+        <div className="flex items-center gap-2.5">
+          <AcidButton size="sm" onClick={handleDownload} disabled={downloading}>
+            <Download />
+            {downloading ? "Saving..." : "Download PNG"}
+          </AcidButton>
+          <AcidButton
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            className={cn(copied && "border-success/40 text-success hover:border-success hover:shadow-[0_0_20px_color-mix(in_srgb,var(--color-success)_35%,transparent)]")}
           >
-            <Download size={14} />
-            {downloading ? "Saving…" : "Download PNG"}
-          </button>
-          <button onClick={handleCopy} style={btn(copied ? "#22c55e" : undefined)}>
-            {copied ? <Check size={14} /> : <Link2 size={14} />}
-            {copied ? "Link copied!" : "Copy Link"}
-          </button>
+            {copied ? <Check /> : <Link2 />}
+            {copied ? "Link copied" : "Copy Link"}
+          </AcidButton>
         </div>
       </div>
     </div>

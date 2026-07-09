@@ -224,18 +224,6 @@ export function formatNum(n: number, decimals = 2): string {
   }).format(n);
 }
 
-export function pnlClass(n: number): string {
-  if (n > 0) return "pnl-pos";
-  if (n < 0) return "pnl-neg";
-  return "pnl-zero";
-}
-
-export function pnlArrow(n: number): string {
-  if (n > 0) return "▲";
-  if (n < 0) return "▼";
-  return "–";
-}
-
 export function shortAddr(addr: string): string {
   if (!addr || addr.length < 8) return addr;
   return `${addr.slice(0, 4)}…${addr.slice(-4)}`;
