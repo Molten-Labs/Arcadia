@@ -9,6 +9,7 @@ import { useRole } from "@/lib/role-context";
 import { cn } from "@/lib/utils";
 
 import { RoleBadge } from "./RoleBadge";
+import { WalletButton } from "./WalletButton";
 import { useHydrated } from "./use-hydrated";
 import {
   BOTTOM_LINKS,
@@ -60,10 +61,10 @@ function NavItem({ href, icon: Icon, label, active, dimmed }: NavLink & { active
 }
 
 /**
- * Desktop navigation rail (>= md). Rendered only when a wallet is connected;
- * guests browse the public routes chrome-free on desktop and via the mobile bar.
- * Nav content is role-aware (trader / investor), split into primary + secondary
- * (dimmed) groups, with the active route marked by an acid accent + aria-current.
+ * Desktop navigation rail (>= md). Always present on desktop: guests get the
+ * public routes (Traders / Leaderboard) plus a connect CTA; connected users get
+ * role-aware nav (trader / investor) split into primary + secondary (dimmed)
+ * groups, with the active route marked by an acid accent + aria-current.
  */
 export function Sidebar() {
   const pathname = usePathname();
@@ -74,8 +75,6 @@ export function Sidebar() {
   const connected = hydrated && wallet.connected;
   const role = hydrated ? rawRole : null;
   const publicKey = hydrated ? wallet.publicKey : null;
-
-  if (!connected) return null;
 
   const navLinks = getNavLinks(role, connected);
   const primaryLinks = navLinks.filter((l) => l.primary);
@@ -125,27 +124,38 @@ export function Sidebar() {
       <div className="mx-4 my-2 border-t border-line" />
 
       <div className="flex flex-col gap-1 px-2.5">
-        {role && <RoleBadge role={role} className="mx-1 self-start" />}
-        {BOTTOM_LINKS.map((l) => (
-          <NavItem key={l.href} {...l} active={isActivePath(pathname, l.href)} />
-        ))}
-        <div className="mt-1 flex items-center gap-3 px-3 py-2">
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold",
-              "border-acid/30 bg-acid/10 text-acid",
-            )}
-            aria-hidden
-          >
-            {initial}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-mono text-[11px] text-ink">{shortKey}</p>
-            <p className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
-              Devnet
+        {connected ? (
+          <>
+            {role && <RoleBadge role={role} className="mx-1 self-start" />}
+            {BOTTOM_LINKS.map((l) => (
+              <NavItem key={l.href} {...l} active={isActivePath(pathname, l.href)} />
+            ))}
+            <div className="mt-1 flex items-center gap-3 px-3 py-2">
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] font-bold",
+                  "border-acid/30 bg-acid/10 text-acid",
+                )}
+                aria-hidden
+              >
+                {initial}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate font-mono text-[11px] text-ink">{shortKey}</p>
+                <p className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
+                  Devnet
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-2.5 px-1 pt-1">
+            <p className="px-2 font-mono text-[10px] leading-relaxed tracking-[0.04em] text-faint">
+              Connect a wallet to unlock your dashboard, vault, and payouts.
             </p>
+            <WalletButton />
           </div>
-        </div>
+        )}
       </div>
     </aside>
   );
