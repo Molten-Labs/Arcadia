@@ -340,6 +340,10 @@ export function TerminalOrderForm({
                   : `${isLong ? "▲ Long" : "▼ Short"} ${market.replace("-PERP", "")}`}
             </TextSwap>
           </button>
+
+          <p className="text-center font-mono text-[0.58rem] tracking-[0.12em] text-faint uppercase">
+            Simulated fills · no real capital
+          </p>
         </div>
       </div>
 

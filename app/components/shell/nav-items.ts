@@ -2,7 +2,6 @@ import {
   BarChart2,
   Briefcase,
   DollarSign,
-  FlaskConical,
   Home,
   LayoutDashboard,
   Settings,
@@ -37,7 +36,6 @@ const TRADER_NAV: NavLink[] = [
   { href: "/payouts", icon: DollarSign, label: "Payouts", primary: true },
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", primary: true },
   { href: "/manage", icon: BarChart2, label: "Manage Vault", primary: true },
-  { href: "/trade", icon: FlaskConical, label: "Paper Trade", primary: false },
   { href: "/traders", icon: Users, label: "Traders", primary: false },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard", primary: false },
 ];
@@ -111,7 +109,6 @@ const ROUTE_LABELS: Record<string, string> = {
   "/returns": "Returns",
   "/settings": "Settings",
   "/manage": "Vault Management",
-  "/trade": "Trade",
   "/vault": "Vault",
   "/t/": "Trader Profile",
 };
