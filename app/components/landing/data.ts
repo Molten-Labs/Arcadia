@@ -20,14 +20,14 @@ export const NAV_LINKS = [
   { label: "Docs", href: LINKS.docs },
 ] as const;
 
-/** Trust-strip marquee tokens. */
+/** Trust-strip marquee tokens. `icon` keys map to marks in TrustStrip. */
 export const TRUST_ITEMS = [
-  "Solana",
-  "Drift",
-  "Jupiter",
-  "Verified reputation",
-  "Smart-contract allocation",
-  "Non-custodial vaults",
+  { label: "Solana", icon: "solana" },
+  { label: "Drift", icon: "drift" },
+  { label: "Jupiter", icon: "jupiter" },
+  { label: "Verified reputation", icon: "verified" },
+  { label: "Smart-contract allocation", icon: "contract" },
+  { label: "Non-custodial vaults", icon: "vault" },
 ] as const;
 
 /** Diagonal acid band phrases. */
