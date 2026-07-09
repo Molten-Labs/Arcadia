@@ -8,7 +8,11 @@ import { Container } from "./bits";
 import { ORB_GRADIENT } from "./LogoMark";
 import { LINKS, SLASH_PHRASES } from "./data";
 
-const HUGE = "font-display text-[clamp(4.2rem,16vw,12rem)] leading-[0.82] font-extrabold tracking-[-0.05em] uppercase";
+// "PROVE" is one unbreakable word ~5.7x the font-size wide; its min-content
+// sets the copy column's width at every breakpoint. Sized so it always fits
+// the column (16vw starved the card column to 8px slivers at 1440px, and a
+// 4.2rem floor clipped the whole copy column on phones).
+const HUGE = "font-display text-[clamp(3.4rem,14.5vw,6.5rem)] lg:text-[clamp(5.5rem,8.75vw,10rem)] leading-[0.82] font-extrabold tracking-[-0.05em] uppercase";
 
 const acidGlow =
   "0 0 34px color-mix(in srgb, var(--color-acid) 60%, transparent), 0 0 70px color-mix(in srgb, var(--color-acid) 30%, transparent)";
@@ -43,11 +47,12 @@ export function HeroSection() {
   return (
     <section aria-label="Hero" className="relative overflow-hidden pt-[clamp(3rem,8vh,6rem)] pb-6">
       <Container className="xl:pl-[92px]">
-        <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+        {/* minmax floor: the card column can never be starved below readable width */}
+        <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_minmax(360px,0.85fr)] lg:gap-14">
           {/* Copy column */}
           <div>
             <Reveal>
-              <span className="inline-flex items-center gap-2.5 rounded-full border border-acid/20 bg-acid/[0.04] px-3.5 py-2 font-mono text-[clamp(0.62rem,1.3vw,0.75rem)] tracking-[0.18em] text-acid uppercase">
+              <span className="inline-flex flex-wrap items-center gap-2.5 rounded-full border border-acid/20 bg-acid/[0.04] px-3.5 py-2 font-mono text-[clamp(0.62rem,1.3vw,0.75rem)] tracking-[0.18em] text-acid uppercase">
                 <span
                   className="acid-animate h-2 w-2 rounded-full bg-acid"
                   style={{ boxShadow: "0 0 10px var(--color-acid)", animation: "acid-pulse 2s infinite" }}
@@ -117,7 +122,7 @@ export function HeroSection() {
               {/* Trader */}
               <BlobCard radius="organic" className="lg:-rotate-1" innerClassName="p-5">
                 <p className="mb-2 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">Trader</p>
-                <div className="mb-3.5 flex items-center justify-between gap-2">
+                <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3">
                     <Avatar letter="N" />
                     <div className="flex flex-col gap-0.5">
@@ -127,7 +132,7 @@ export function HeroSection() {
                   </div>
                   <Badge variant="elite">Elite</Badge>
                 </div>
-                <div className="mb-3 flex items-baseline gap-2.5">
+                <div className="mb-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                   <span className="font-mono text-3xl font-bold tracking-[-0.02em] text-ink tabular-nums">912</span>
                   <span className="font-mono text-sm text-faint">/1000</span>
                   <span className="ml-auto font-mono text-[1.05rem] font-bold text-success tabular-nums">+41.2%</span>
@@ -142,7 +147,7 @@ export function HeroSection() {
               {/* Vault */}
               <BlobCard radius="soft" className="lg:rotate-1" innerClassName="p-5">
                 <p className="mb-3 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">Allocation vault / @nova</p>
-                <div className="flex items-center justify-between gap-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
                   <span className="font-mono text-2xl font-bold text-ink tabular-nums">$387K</span>
                   <span className="rounded-full border border-acid/20 px-2.5 py-1 font-mono text-[0.64rem] tracking-[0.08em] whitespace-nowrap text-acid uppercase">
                     Open / $525K left
