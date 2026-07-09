@@ -494,6 +494,70 @@ body {
   border-radius: 4px;
 }
 
+/* ── Interaction vocabulary (shared hover feel for cards/tiles/rows) ──
+   .acid-int   lift + acid edge + glow on hover/focus-within. For cards and
+               tiles that link somewhere or contain actions.
+   .acid-sheen diagonal light sweep across the surface on hover. Showcase
+               cards only (hero tiles, CTA panels) - pair with .acid-int.
+   .acid-bar   progress-fill sheen that runs once when the enclosing
+               Tailwind .group is hovered. Put it on the bar FILL element.
+   All three are hover-capability and reduced-motion gated here, so
+   consumers do not need their own guards. */
+.acid-int {
+  transition:
+    transform 0.35s var(--acid-expo),
+    border-color 0.35s var(--acid-expo),
+    box-shadow 0.35s var(--acid-expo);
+}
+@media (hover: hover) {
+  .acid-int:hover,
+  .acid-int:focus-within {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--color-acid) 40%, transparent);
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.45),
+      0 0 24px color-mix(in srgb, var(--color-acid) 12%, transparent);
+  }
+}
+
+.acid-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.acid-sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.055) 50%, transparent 58%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  /* Transition only on hover-in so the sweep exits instantly, never reverses. */
+  .acid-sheen:hover::before {
+    transition: transform 0.9s var(--acid-expo);
+    transform: translateX(130%);
+  }
+}
+
+.acid-bar {
+  position: relative;
+  overflow: hidden;
+}
+.acid-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-100%);
+}
+@media (hover: hover) {
+  .group:hover .acid-bar::after {
+    animation: acid-shimmer 0.9s var(--acid-expo) both;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .acid-chrome { filter: none; }
   .acid-aberration::before,
@@ -501,4 +565,9 @@ body {
   .acid-animate,
   .acid-animate::before,
   .acid-animate::after { animation: none !important; }
+  .acid-int { transition: none !important; }
+  .acid-int:hover,
+  .acid-int:focus-within { transform: none; }
+  .acid-sheen::before { display: none; }
+  .acid-bar::after { animation: none !important; }
 }

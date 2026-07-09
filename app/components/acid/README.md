@@ -151,3 +151,26 @@ component. Sits at `z-0`; wrap page content in `relative z-10`.
 <DriftBlobs />
 <main className="relative z-10">…</main>
 ```
+
+## Interaction vocabulary (CSS utilities in globals.css)
+
+Shared hover language so every surface across the app feels the same. All
+three are hover-capability gated (`@media (hover: hover)`) and reduced-motion
+safe centrally - consumers need no extra guards.
+
+| class | what it does | where to use |
+|-------|--------------|--------------|
+| `acid-int` | lift 3px + acid border tint + glow on hover/focus-within | cards/tiles that link somewhere or hold actions |
+| `acid-sheen` | one diagonal light sweep across the surface on hover | showcase cards only (hero tiles, CTA panels); pair with `acid-int` |
+| `acid-bar` | light sweep across a progress FILL when the enclosing Tailwind `group` is hovered | the fill span inside bars, in a `group` card |
+
+```tsx
+<article className="group acid-int rounded-xl border border-line bg-panel ...">
+  ...
+  <span className="acid-bar block h-full bg-acid" style={{ width: "42%" }} />
+</article>
+```
+
+Rows in tables/lists: keep it lighter than `acid-int` - `transition-colors
+hover:bg-white/[0.03]` plus sharpening key text to `text-ink`. Dense work
+surfaces (the terminal) get border highlights only, no lifts.
