@@ -417,7 +417,7 @@ export default function TraderProfilePage() {
                       key={tag}
                       className="rounded-full border border-line bg-panel-2 px-2.5 py-0.5 font-mono text-[10px] text-faint"
                     >
-                      #{tag}
+                      {tag.startsWith("#") ? tag : `#${tag}`}
                     </span>
                   ))}
                 </div>
