@@ -330,4 +330,16 @@ export const IDL = {
   ],
 } as const;
 
-export type ArcadiaIdl = typeof IDL;
+type DeepMutable<T> = T extends object
+  ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
+  : T;
+
+/**
+ * Mutable literal type of the IDL, shaped like an `anchor build` generated
+ * type. Lets `Program<ArcadiaIdl>` fully type `.methods` / `.accounts` /
+ * account decoding without `as any` at the call sites.
+ */
+export type ArcadiaIdl = DeepMutable<typeof IDL>;
+
+/** The IDL value cast to its mutable type, for `new Program(ARCADIA_IDL, …)`. */
+export const ARCADIA_IDL = IDL as ArcadiaIdl;

@@ -15,7 +15,7 @@ export default function ManagePage() {
   const [selfFundAmount, setSelfFundAmount] = useState("");
   const [depositsOpen, setDepositsOpen] = useState(DEMO_TRADER.deposits_open);
 
-  const { deposit, txStatus, txSig, setTxStatus } = useArcadiaVault();
+  const { deposit, txState, resetTx } = useArcadiaVault();
 
   const score        = DEMO_TRADER.score;
   const capacity     = score * 1000;
@@ -23,14 +23,14 @@ export default function ManagePage() {
   const selfFunded   = DEMO_TRADER.trader_self_funded;
   const capacityLeft = capacity - aum;
 
-  const isPending = txStatus !== null && !txSig && txStatus !== null && !txStatus?.startsWith("Deposit failed");
-  const isSuccess = !!txSig;
-  const isError   = txStatus?.startsWith("Deposit failed") ?? false;
+  const isPending = ["checking", "init-investor", "signing", "confirming"].includes(txState.phase);
+  const isSuccess = txState.phase === "success";
+  const isError   = txState.phase === "error";
 
   const handleSelfFund = async () => {
     const amount = parseFloat(selfFundAmount);
     if (!amount || amount <= 0) return;
-    setTxStatus(null);
+    resetTx();
     const ok = await deposit(publicKey?.toBase58() ?? "", amount);
     if (ok) setSelfFundAmount("");
   };
@@ -127,32 +127,36 @@ export default function ManagePage() {
             {isPending && (
               <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "var(--color-faint)" }}>
                 <Clock size={12} />
-                {txStatus}
+                {txState.message}
               </div>
             )}
 
-            {isSuccess && txSig && (
+            {isSuccess && (
               <div className="mt-3 rounded-lg p-3" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle size={13} style={{ color: "var(--color-green)" }} />
-                  <span className="text-xs font-bold" style={{ color: "var(--color-green)" }}>Self-fund confirmed</span>
+                  <span className="text-xs font-bold" style={{ color: "var(--color-green)" }}>
+                    {txState.simulated ? "Self-fund simulated (vault not live on devnet)" : "Self-fund confirmed"}
+                  </span>
                 </div>
-                <a
-                  href={`https://solscan.io/tx/${txSig}?cluster=devnet`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
-                  style={{ color: "var(--color-mint)" }}
-                >
-                  <span>{txSig.slice(0, 8)}…{txSig.slice(-6)}</span>
-                  <ExternalLink size={10} />
-                </a>
+                {txState.sig && (
+                  <a
+                    href={`https://solscan.io/tx/${txState.sig}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
+                    style={{ color: "var(--color-mint)" }}
+                  >
+                    <span>{txState.sig.slice(0, 8)}…{txState.sig.slice(-6)}</span>
+                    <ExternalLink size={10} />
+                  </a>
+                )}
               </div>
             )}
 
-            {isError && txStatus && (
+            {isError && (
               <div className="mt-3 rounded-lg p-3 text-xs" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444" }}>
-                {txStatus}
+                {txState.message}
               </div>
             )}
           </div>

@@ -1,45 +1,16 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
-import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { X, ExternalLink, CheckCircle, AlertCircle, Zap, Loader2 } from "lucide-react";
-import { IDL } from "@/lib/arcadia-idl";
-import {
-  PROGRAM_ID,
-  findPlatformConfig,
-  findTraderProfile,
-  findInvestorAccount,
-  findInvestorPosition,
-} from "@/lib/arcadia-sdk";
+import { useArcadiaVault, type VaultTxPhase } from "@/lib/use-arcadia-vault";
 import type { TraderProfile } from "@/lib/types";
 import { formatUSD, tierColor } from "@/lib/types";
 import { TierBadge } from "./TierBadge";
 
-const DEMO_USDC_MINT = new PublicKey("DLkVtDD4zfFJzWgGRLqjzqkBhaBs5sVNzDeBCQ2hPgMz");
 const PRESETS = [100, 500, 1_000, 5_000, 10_000];
 
-type TxStep = "idle" | "checking" | "init-investor" | "signing" | "confirming" | "success" | "error";
-
-interface StepState {
-  step: TxStep;
-  message: string;
-  sig?: string;
-  isSimulation?: boolean;
-}
-
-const STEP_ORDER: TxStep[] = ["checking", "init-investor", "signing", "confirming", "success"];
-
-function fakeSig(): string {
-  const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  const arr = new Uint8Array(64);
-  if (typeof crypto !== "undefined") crypto.getRandomValues(arr);
-  return Array.from(arr).map(b => B58[b % 58]).join("").slice(0, 88);
-}
-
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+const STEP_ORDER: VaultTxPhase[] = ["checking", "init-investor", "signing", "confirming", "success"];
 
 interface DepositModalProps {
   trader: TraderProfile;
@@ -47,126 +18,36 @@ interface DepositModalProps {
 }
 
 export function DepositModal({ trader, onClose }: DepositModalProps) {
-  const { publicKey, signTransaction, signAllTransactions } = useWallet();
-  const { connection } = useConnection();
+  const { publicKey } = useWallet();
+  const { deposit, txState, resetTx } = useArcadiaVault();
   const [amount, setAmount] = useState("");
-  const [state, setState] = useState<StepState>({ step: "idle", message: "" });
 
-  const isConnected = !!publicKey && !!signTransaction && !!signAllTransactions;
+  const isConnected = !!publicKey;
   const parsedAmount = parseFloat(amount) || 0;
   const isValid = parsedAmount >= 1;
-  const isActive = state.step !== "idle";
-  const isDone = state.step === "success";
-  const isError = state.step === "error";
+
+  const { phase } = txState;
+  const isActive = phase !== "idle";
+  const isDone = phase === "success";
+  const isError = phase === "error";
   const inProgress = isActive && !isDone && !isError;
-  const currentStepIdx = STEP_ORDER.indexOf(state.step);
+  const currentStepIdx = STEP_ORDER.indexOf(phase);
 
   const capacityLeft = trader.capacity.total - trader.capacity.used;
   const tc = tierColor(trader.tier);
 
-  const handleDeposit = useCallback(async () => {
-    if (!publicKey || !signTransaction || !signAllTransactions) return;
-    if (parsedAmount < 1) return;
+  const handleDeposit = () => {
+    if (!isConnected || !isValid) return;
+    void deposit(trader.wallet, parsedAmount);
+  };
 
-    try {
-      setState({ step: "checking", message: "Reading on-chain state…" });
-
-      let traderKey: PublicKey;
-      try { traderKey = new PublicKey(trader.wallet); }
-      catch { traderKey = PublicKey.default; }
-
-      const [profilePDA] = findTraderProfile(traderKey);
-      const [investorPDA] = findInvestorAccount(publicKey);
-      const [positionPDA] = findInvestorPosition(publicKey, profilePDA);
-      const [platformPDA] = findPlatformConfig();
-
-      let isLive = false;
-      let investorExists = false;
-      let baseMint = DEMO_USDC_MINT;
-      let vaultToken: PublicKey = PublicKey.default;
-
-      try {
-        const [platInfo, profInfo, invInfo] = await connection.getMultipleAccountsInfo([
-          platformPDA, profilePDA, investorPDA,
-        ]);
-        investorExists = invInfo !== null;
-        isLive = platInfo !== null && profInfo !== null;
-        if (isLive && profInfo) {
-          const data = Buffer.from(profInfo.data);
-          baseMint = new PublicKey(data.slice(40, 72));
-          vaultToken = new PublicKey(data.slice(72, 104));
-        }
-      } catch {
-        isLive = false;
-      }
-
-      if (!isLive) {
-        await sleep(600);
-        if (!investorExists) {
-          setState({ step: "init-investor", message: "Creating investor account on-chain…" });
-          await sleep(1_100);
-        }
-        setState({ step: "signing", message: "Confirm deposit in wallet…" });
-        await sleep(1_400);
-        setState({ step: "confirming", message: "Broadcasting to Solana devnet…" });
-        await sleep(900);
-        setState({
-          step: "success",
-          message: "Deposit confirmed",
-          sig: fakeSig(),
-          isSimulation: true,
-        });
-        return;
-      }
-
-      const anchorWallet = {
-        publicKey,
-        signTransaction: signTransaction as Parameters<AnchorProvider["wallet"]["signTransaction"]>[0] extends never ? never : typeof signTransaction,
-        signAllTransactions: signAllTransactions as any,
-      };
-      const provider = new AnchorProvider(connection, anchorWallet as any, { commitment: "confirmed" });
-      const program = new Program(IDL as any, provider);
-
-      if (!investorExists) {
-        setState({ step: "init-investor", message: "Creating investor account on-chain…" });
-        await (program.methods as any).initializeInvestor().accounts({
-          wallet: publicKey,
-          investorAccount: investorPDA,
-          systemProgram: SystemProgram.programId,
-        }).rpc();
-        await sleep(400);
-      }
-
-      setState({ step: "signing", message: "Confirm deposit in wallet…" });
-      const amountU64 = new BN(Math.floor(parsedAmount * 1_000_000));
-      const depositorToken = getAssociatedTokenAddressSync(baseMint, publicKey);
-
-      const sig = await (program.methods as any).deposit(amountU64).accounts({
-        depositor: publicKey,
-        investorAccount: investorPDA,
-        profile: profilePDA,
-        position: positionPDA,
-        baseMint,
-        vaultToken,
-        depositorToken,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-      }).rpc();
-
-      setState({ step: "success", message: "Deposit confirmed on-chain", sig, isSimulation: false });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setState({ step: "error", message: msg });
-    }
-  }, [publicKey, signTransaction, signAllTransactions, connection, trader, parsedAmount]);
-
-  const STEPS: { key: TxStep; label: string }[] = [
+  const STEPS: { key: VaultTxPhase; label: string }[] = [
     { key: "init-investor", label: "Init investor account" },
     { key: "signing",       label: "Sign transaction"      },
     { key: "confirming",    label: "Confirming on Solana"  },
     { key: "success",       label: "Deposit confirmed"     },
   ];
-  const relevantSteps = state.step === "init-investor" || currentStepIdx >= STEP_ORDER.indexOf("init-investor")
+  const relevantSteps = phase === "init-investor" || currentStepIdx >= STEP_ORDER.indexOf("init-investor")
     ? STEPS
     : STEPS.filter(s => s.key !== "init-investor");
 
@@ -336,7 +217,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
               {relevantSteps.map((s, idx) => {
                 const sIdx = STEP_ORDER.indexOf(s.key);
                 const done = sIdx < currentStepIdx;
-                const current = s.key === state.step;
+                const current = s.key === phase;
                 const pending = !done && !current;
                 return (
                   <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 12, opacity: pending ? 0.28 : 1, transition: "opacity 0.3s" }}>
@@ -358,7 +239,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                       </p>
                       {current && (
                         <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#404040", margin: 0, marginTop: 1 }}>
-                          {state.message}
+                          {txState.message}
                         </p>
                       )}
                     </div>
@@ -380,15 +261,21 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 <CheckCircle size={22} style={{ color: "#22c55e" }} />
               </div>
               <p style={{ fontWeight: 800, fontSize: "1rem", color: "#f0f0f0", marginBottom: 5 }}>
-                {formatUSD(parsedAmount, 0)} USDC deposited
+                {formatUSD(parsedAmount, 0)} USDC {txState.simulated ? "deposit simulated" : "deposited"}
               </p>
               <p style={{ fontSize: "0.8125rem", color: "#5a5a5a", marginBottom: "1.25rem", lineHeight: 1.5 }}>
-                Your position in @{trader.handle}'s vault is live
-                {state.isSimulation && <><br /><span style={{ color: "#383838", fontSize: "0.75rem" }}>(devnet simulation)</span></>}
+                {txState.simulated ? (
+                  <>
+                    Simulated flow — the vault program is not live on devnet, so no
+                    on-chain transaction was sent.
+                  </>
+                ) : (
+                  <>Your position in @{trader.handle}&apos;s vault is live</>
+                )}
               </p>
-              {state.sig && (
+              {txState.sig && (
                 <a
-                  href={`https://solscan.io/tx/${state.sig}?cluster=devnet`}
+                  href={`https://solscan.io/tx/${txState.sig}?cluster=devnet`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -400,7 +287,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                   }}
                 >
                   <Zap size={10} />
-                  {state.sig.slice(0, 8)}…{state.sig.slice(-4)}
+                  {txState.sig.slice(0, 8)}…{txState.sig.slice(-4)}
                   <ExternalLink size={9} />
                 </a>
               )}
@@ -431,10 +318,10 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
               </div>
               <p style={{ fontWeight: 700, fontSize: "0.875rem", color: "#ef4444", marginBottom: 8 }}>Transaction failed</p>
               <p style={{ fontSize: "0.75rem", color: "#555", marginBottom: "1.25rem", wordBreak: "break-word", lineHeight: 1.6 }}>
-                {state.message}
+                {txState.message}
               </p>
               <button
-                onClick={() => setState({ step: "idle", message: "" })}
+                onClick={resetTx}
                 style={{
                   display: "block", width: "100%", padding: "12px",
                   background: "transparent", border: "1px solid #1e1e1e",
