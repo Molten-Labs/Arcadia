@@ -48,7 +48,7 @@ import { Avatar } from "@/components/pages/discovery/Avatar";
 import { acidTier, TierChip } from "@/components/pages/discovery/TierChip";
 import { StatusPill } from "@/components/pages/discovery/StatusPill";
 import { AllocationBar } from "@/components/pages/discovery/AllocationBar";
-import { MetricBars } from "@/components/pages/discovery/MetricBars";
+import { RiskRadar } from "@/components/pages/discovery/RiskRadar";
 import { SideBadge, SolscanAccountLink, SolscanTxLink } from "@/components/pages/discovery/trade-cells";
 import { useWatchlist } from "@/components/pages/discovery/use-watchlist";
 
@@ -643,8 +643,8 @@ export default function TraderProfilePage() {
             {/* Risk profile */}
             <Panel className="acid-int p-5">
               <MonoLabel>Risk Profile</MonoLabel>
-              <div className="mt-4">
-                <MetricBars items={riskItems} />
+              <div className="mt-2">
+                <RiskRadar items={riskItems} />
               </div>
             </Panel>
           </div>

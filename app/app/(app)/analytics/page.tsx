@@ -7,12 +7,12 @@ import { EquityChart } from "@/components/EquityChart";
 import { PnLHeatmap } from "@/components/PnLHeatmap";
 import {
   EnvChip,
-  MetricBars,
   MicroLabel,
   PageHeader,
   Panel,
   StatTile,
 } from "@/components/pages/trader/trader-ui";
+import { RiskRadar } from "@/components/pages/discovery/RiskRadar";
 import {
   Table,
   TableBody,
@@ -76,8 +76,8 @@ export default function AnalyticsPage() {
           </Panel>
 
           <Panel className="group acid-int p-5">
-            <MicroLabel className="mb-4">Risk Metrics</MicroLabel>
-            <MetricBars
+            <MicroLabel className="mb-2">Risk Metrics</MicroLabel>
+            <RiskRadar
               items={[
                 {
                   label: "Sortino",
@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
                   value: Math.abs(DEMO.metrics.max_dd),
                   max: 30,
                   display: `-${Math.abs(DEMO.metrics.max_dd).toFixed(1)}%`,
-                  tone: "danger",
+                  invert: true,
                 },
               ]}
             />
