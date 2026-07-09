@@ -12,7 +12,8 @@ import { LINKS, NAV_LINKS } from "./data";
 export function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-gradient-to-b from-void/90 to-void/50 backdrop-blur-[14px]">
-      <div className="mx-auto flex h-[70px] w-full max-w-[1180px] items-center gap-5 px-5 sm:px-8 xl:pl-[92px]">
+      {/* Matches the hero's wide container so brand/nav align with the copy column. */}
+      <div className="mx-auto flex h-[70px] w-full max-w-[1660px] items-center gap-5 px-5 sm:px-8 xl:pl-[92px] 2xl:pl-[110px]">
         <Link
           href={LINKS.home}
           aria-label="Arcadia home"
