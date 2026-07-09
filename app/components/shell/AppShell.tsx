@@ -6,7 +6,7 @@
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden md:pl-60">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden md:pl-14">
       <div className="flex flex-1 flex-col overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
         {children}
       </div>

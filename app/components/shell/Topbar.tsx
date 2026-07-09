@@ -34,16 +34,6 @@ export function Topbar() {
           {label}
         </h1>
 
-        <span className="hidden items-center gap-1.5 rounded-full border border-acid/20 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-acid sm:inline-flex">
-          <span
-            aria-hidden
-            className="acid-animate size-1.5 rounded-full bg-acid"
-            style={{ boxShadow: "0 0 8px var(--color-acid)", animation: "acid-pulse 2s infinite" }}
-          />
-          Devnet
-        </span>
-
-        {connected && role && <RoleBadge role={role} className="hidden sm:inline-flex" />}
       </div>
 
       <div className="flex items-center gap-2">
