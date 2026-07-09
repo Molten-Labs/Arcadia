@@ -1,61 +1,57 @@
 import Link from "next/link";
-import { Home } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
+import { AcidButton } from "@/components/acid";
+
+/**
+ * 404 (Acid Graphic). Server component: static, no data. Chrome-outline 404
+ * with an acid kicker chip; single CTA back to the landing.
+ */
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
-
-      {/* Atmospheric glow */}
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-void">
+      {/* Atmospheric acid glow */}
       <div
+        aria-hidden
         className="pointer-events-none fixed inset-0"
         style={{
-          background: "radial-gradient(ellipse at 50% 40%, rgba(79,158,255,0.06) 0%, transparent 60%)",
+          background:
+            "radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--color-acid) 7%, transparent) 0%, transparent 60%)",
         }}
       />
 
-      <div className="text-center relative z-10 px-6">
-        {/* Big 404 number */}
+      <div className="relative z-10 px-6 text-center">
         <p
-          className="font-black leading-none mb-6 select-none"
+          aria-hidden
+          className="mb-6 font-display font-extrabold leading-none tracking-[-0.06em] text-transparent select-none"
           style={{
             fontSize: "clamp(5rem, 20vw, 12rem)",
-            color: "var(--color-line)",
-            letterSpacing: "-0.06em",
+            WebkitTextStroke: "2px var(--color-line)",
           }}
         >
           404
         </p>
 
-        {/* Error badge */}
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6"
-          style={{
-            background: "var(--color-mint-dim)",
-            border: "1px solid rgba(79,158,255,0.25)",
-            color: "var(--color-mint)",
-          }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-mint)" }} />
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-acid/25 bg-acid/[0.05] px-3.5 py-1.5 font-mono text-[0.64rem] font-bold tracking-[0.18em] text-acid uppercase">
+          <span
+            aria-hidden
+            className="h-1.5 w-1.5 rounded-full bg-acid"
+            style={{ boxShadow: "0 0 8px var(--color-acid)" }}
+          />
           Page not found
         </div>
 
-        <p className="text-base mb-8 max-w-sm mx-auto" style={{ color: "var(--color-muted)" }}>
-          This route doesn&apos;t exist. You may have followed a broken link or mistyped the address.
+        <p className="mx-auto mb-8 max-w-sm text-base leading-relaxed text-muted">
+          This route doesn&apos;t exist. You may have followed a broken link or
+          mistyped the address.
         </p>
 
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 font-bold rounded-lg transition-all hover:bg-[var(--color-mint-bright)]"
-          style={{
-            background: "var(--color-mint)",
-            color: "#ffffff",
-            padding: "0.75rem 1.5rem",
-            fontSize: "0.875rem",
-          }}
-        >
-          <Home size={15} />
-          Go home
-        </Link>
+        <AcidButton asChild variant="acid">
+          <Link href="/">
+            <ArrowLeft aria-hidden />
+            Back to Arcadia
+          </Link>
+        </AcidButton>
       </div>
     </div>
   );

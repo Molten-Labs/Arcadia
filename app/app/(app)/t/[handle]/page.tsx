@@ -254,7 +254,7 @@ function DrawdownTimeline({ trader }: { trader: TraderProfile }) {
               <span
                 aria-hidden
                 className="inline-block h-0.5 w-3 rounded-full"
-                style={{ background: "var(--color-gold)" }}
+                style={{ background: "var(--color-cyan)" }}
               />
               BTC HODL
             </span>
