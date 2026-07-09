@@ -16,7 +16,6 @@ const eslintConfig = [
       "app/api/v1/**",
       "app/(app)/trade/page.tsx",
       "components/*.tsx",
-      "components/charts/**",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",

@@ -7,7 +7,6 @@ import { HeroSection } from "@/components/landing/HeroSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
-import { LandingRedirect } from "@/components/landing/LandingRedirect";
 import { LiveLeaderboard } from "@/components/landing/LiveLeaderboard";
 import { ProblemSection } from "@/components/landing/ProblemSection";
 import { TheScore } from "@/components/landing/TheScore";
@@ -16,8 +15,8 @@ import { TwoSides } from "@/components/landing/TwoSides";
 
 /**
  * Arcadia landing (Acid Graphic). Server component: static marketing sections
- * render on the server for first paint; the only client islands are the wallet
- * redirect, the live leaderboard query, and the tab/accordion interactions.
+ * render on the server for first paint; the only client islands are the live
+ * leaderboard query and the tab/accordion interactions.
  * Aggressive skin (chrome, blobs, marquees, big numbers), readable core.
  */
 export default function LandingPage() {
@@ -25,7 +24,6 @@ export default function LandingPage() {
     <>
       <NoiseOverlay />
       <DriftBlobs />
-      <LandingRedirect />
 
       <div className="relative z-10">
         <LandingNav />
