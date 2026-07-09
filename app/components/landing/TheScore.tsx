@@ -84,11 +84,11 @@ export function TheScore() {
               <div
                 key={tier.key}
                 role="row"
-                className={`grid grid-cols-[16px_1fr_auto] items-center gap-4 px-[clamp(1rem,2.4vw,1.6rem)] py-4 transition-colors hover:bg-acid/[0.04] sm:grid-cols-[16px_1fr_1fr_auto] ${i > 0 ? "border-t border-white/[0.07]" : ""}`}
+                className={`group grid grid-cols-[16px_1fr_auto] items-center gap-4 px-[clamp(1rem,2.4vw,1.6rem)] py-4 transition-colors hover:bg-acid/[0.04] sm:grid-cols-[16px_1fr_1fr_auto] ${i > 0 ? "border-t border-white/[0.07]" : ""}`}
               >
-                <span aria-hidden className={`h-3 w-3 rounded-full ${TIER_DOT[tier.key]}`} />
+                <span aria-hidden className={`h-3 w-3 rounded-full transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-125 motion-reduce:transition-none motion-reduce:group-hover:transform-none ${TIER_DOT[tier.key]}`} />
                 <span role="cell" className="text-[1.02rem] font-semibold text-ink">{tier.name}</span>
-                <span role="cell" className="hidden font-mono text-[0.86rem] text-muted sm:block">{tier.criteria}</span>
+                <span role="cell" className="hidden font-mono text-[0.86rem] text-muted transition-colors duration-300 group-hover:text-ink sm:block motion-reduce:transition-none">{tier.criteria}</span>
                 <span role="cell" className="text-right font-mono text-base font-bold text-acid tabular-nums">{tier.share}</span>
               </div>
             ))}

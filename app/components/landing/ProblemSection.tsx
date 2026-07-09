@@ -29,9 +29,9 @@ export function ProblemSection() {
             const accentClass = panel.accent === "acid" ? "text-acid" : "text-cyan";
             return (
               <Reveal key={panel.tag} delay={i * 80}>
-                <div className="group h-full rounded-[22px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[clamp(1.5rem,3vw,2.4rem)] transition-[transform,border-color,box-shadow] duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-1.5 hover:border-acid/20 hover:shadow-[0_0_34px_color-mix(in_srgb,var(--color-acid)_12%,transparent)]">
+                <div className="group acid-int h-full rounded-[22px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[clamp(1.5rem,3vw,2.4rem)]">
                   <span className={`mb-4 inline-flex items-center gap-2.5 font-mono text-[0.7rem] tracking-[0.2em] uppercase ${accentClass}`}>
-                    <Icon aria-hidden className="size-4" />
+                    <Icon aria-hidden className="size-4 transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:transform-none" />
                     {panel.tag}
                   </span>
                   <h3 className="mb-3.5 origin-left font-display text-[clamp(1.35rem,2.4vw,1.9rem)] font-extrabold tracking-[-0.02em] text-ink uppercase" style={{ transform: "scaleX(1.04)" }}>

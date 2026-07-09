@@ -238,8 +238,8 @@ export default function LeaderboardPage() {
                   {rest.slice(3).map((entry, i) => {
                     const m = rowMetrics(entry);
                     return (
-                      <TableRow key={entry.handle}>
-                        <TableCell className="text-lg font-bold text-muted tabular-nums">
+                      <TableRow key={entry.handle} className="group">
+                        <TableCell className="text-lg font-bold text-muted tabular-nums transition-colors group-hover:text-acid motion-reduce:transition-none">
                           {i + 4}
                         </TableCell>
                         <TableCell>

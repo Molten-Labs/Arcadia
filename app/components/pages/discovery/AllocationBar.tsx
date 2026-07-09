@@ -19,7 +19,7 @@ export function AllocationBar({
     <div className={className}>
       <div className="h-1.5 overflow-hidden rounded-full bg-line">
         <div
-          className="h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          className="acid-bar h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
           style={{
             width: `${pct}%`,
             background: full

@@ -38,9 +38,13 @@ export function LandingFooter() {
                 <Link
                   key={link.label}
                   href={link.href}
-                  className="font-mono text-[0.82rem] tracking-[0.1em] text-muted uppercase transition-colors hover:text-acid"
+                  className="group relative py-1 font-mono text-[0.82rem] tracking-[0.1em] text-muted uppercase transition-colors hover:text-ink focus-visible:text-ink motion-reduce:transition-none"
                 >
                   {link.label}
+                  <span
+                    aria-hidden
+                    className="absolute bottom-0 left-0 h-0.5 w-0 bg-acid transition-[width] duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:w-full group-focus-visible:w-full motion-reduce:transition-none"
+                  />
                 </Link>
               ))}
             </nav>

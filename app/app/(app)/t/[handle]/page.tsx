@@ -192,12 +192,14 @@ function DrawdownTimeline({ trader }: { trader: TraderProfile }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatTile label="Max Drawdown" valueClassName="text-danger">
+        <StatTile label="Max Drawdown" valueClassName="text-danger" className="acid-int">
           {trader.metrics.max_dd.toFixed(1)}%
         </StatTile>
-        <StatTile label="Calmar Ratio">{calmar}</StatTile>
-        <StatTile label="Volatility 30d">{trader.metrics.vol_30d.toFixed(1)}%</StatTile>
-        <StatTile label="Avg Win Duration">
+        <StatTile label="Calmar Ratio" className="acid-int">{calmar}</StatTile>
+        <StatTile label="Volatility 30d" className="acid-int">
+          {trader.metrics.vol_30d.toFixed(1)}%
+        </StatTile>
+        <StatTile label="Avg Win Duration" className="acid-int">
           {trader.metrics.avg_trade_duration_hours.toFixed(1)}h
         </StatTile>
       </div>
@@ -262,10 +264,10 @@ function DrawdownTimeline({ trader }: { trader: TraderProfile }) {
         </div>
         <EquityChart data={trader.equity_curve} benchmarkData={btcCurve} height={180} />
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <StatTile label="Trader 90d" valueClassName="text-success">
+          <StatTile label="Trader 90d" valueClassName="text-success" className="acid-int">
             +{trader.metrics.return_90d.toFixed(1)}%
           </StatTile>
-          <StatTile label="BTC HODL 90d" valueClassName="text-cyan">
+          <StatTile label="BTC HODL 90d" valueClassName="text-cyan" className="acid-int">
             +38.4%
           </StatTile>
         </div>
@@ -426,7 +428,7 @@ export default function TraderProfilePage() {
                   <button
                     type="button"
                     onClick={() => setShowShare(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-transparent px-3.5 py-2 font-mono text-xs font-semibold text-muted transition-colors hover:border-acid/35 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-transparent px-3.5 py-2 font-mono text-xs font-semibold text-muted transition hover:border-acid/35 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.97] motion-reduce:transition-none"
                   >
                     <Share2 className="size-3.5" aria-hidden /> Share
                   </button>
@@ -435,7 +437,7 @@ export default function TraderProfilePage() {
                     onClick={() => toggle(trader.handle)}
                     aria-pressed={isWatched}
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 font-mono text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
+                      "inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 font-mono text-xs font-semibold transition focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.97] motion-reduce:transition-none",
                       isWatched
                         ? "border-acid/40 bg-acid/10 text-acid"
                         : "border-line text-muted hover:text-ink",
@@ -601,7 +603,7 @@ export default function TraderProfilePage() {
           {/* RIGHT: sidebar */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-4">
             {/* Vault status */}
-            <Panel className="p-5">
+            <Panel className="acid-int p-5">
               <MonoLabel>Vault Status</MonoLabel>
               <div className="mt-3 flex items-center justify-between gap-3">
                 <StatusPill
@@ -632,14 +634,14 @@ export default function TraderProfilePage() {
             {/* Quick stats */}
             <div className="grid grid-cols-2 gap-3">
               {quickStats.map((s) => (
-                <StatTile key={s.label} label={s.label}>
+                <StatTile key={s.label} label={s.label} className="acid-int">
                   {s.value}
                 </StatTile>
               ))}
             </div>
 
             {/* Risk profile */}
-            <Panel className="p-5">
+            <Panel className="acid-int p-5">
               <MonoLabel>Risk Profile</MonoLabel>
               <div className="mt-4">
                 <MetricBars items={riskItems} />

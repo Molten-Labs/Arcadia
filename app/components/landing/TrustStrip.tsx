@@ -11,7 +11,7 @@ export function TrustStrip() {
       <Marquee speed={32} className="py-6">
         {TRUST_ITEMS.map((item) => (
           <Fragment key={item}>
-            <span className="px-8 font-mono text-[clamp(0.85rem,1.6vw,1.05rem)] tracking-[0.1em] text-muted uppercase">
+            <span className="px-8 font-mono text-[clamp(0.85rem,1.6vw,1.05rem)] tracking-[0.1em] text-muted uppercase transition-colors duration-300 hover:text-ink motion-reduce:transition-none">
               {item}
             </span>
             <Sparkle aria-hidden className="size-3 fill-current text-pink" />

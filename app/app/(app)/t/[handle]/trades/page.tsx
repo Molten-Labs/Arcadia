@@ -193,7 +193,7 @@ export default function TradeHistoryPage() {
         {/* stats strip */}
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           {stats.map((s) => (
-            <StatTile key={s.label} label={s.label} valueClassName={s.tone}>
+            <StatTile key={s.label} label={s.label} valueClassName={s.tone} className="acid-int">
               {s.value}
             </StatTile>
           ))}

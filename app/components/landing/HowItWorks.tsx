@@ -23,10 +23,10 @@ export function HowItWorks() {
         <div className="mt-[clamp(2.5rem,6vw,4rem)] grid gap-[clamp(1.1rem,2.6vw,1.9rem)] md:grid-cols-2">
           {HOW_STEPS.map((step, i) => (
             <Reveal key={step.n} delay={(i % 2) * 80} className={step.wide ? "md:col-span-2" : undefined}>
-              <div className="group relative h-full overflow-hidden rounded-[20px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[clamp(1.4rem,2.6vw,1.9rem)] transition-[transform,border-color] duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-1.5 hover:border-acid/20">
+              <div className="group acid-int relative h-full overflow-hidden rounded-[20px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[clamp(1.4rem,2.6vw,1.9rem)]">
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -top-8 right-0 font-display text-[8rem] leading-none font-extrabold select-none"
+                  className="pointer-events-none absolute -top-8 right-0 font-display text-[8rem] leading-none font-extrabold opacity-70 transition-opacity duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] select-none group-hover:opacity-100 motion-reduce:transition-none"
                   style={ghostStroke}
                 >
                   {step.n}

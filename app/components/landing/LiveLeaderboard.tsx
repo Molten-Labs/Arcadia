@@ -100,8 +100,8 @@ export function LiveLeaderboard() {
                       const key = tierKey(trader.tier);
                       const positive = trader.return_30d >= 0;
                       return (
-                        <TableRow key={trader.handle}>
-                          <TableCell className="text-faint tabular-nums">
+                        <TableRow key={trader.handle} className="group">
+                          <TableCell className="text-faint tabular-nums transition-colors group-hover:text-acid motion-reduce:transition-none">
                             {String(idx + 1).padStart(2, "0")}
                           </TableCell>
                           <TableCell>

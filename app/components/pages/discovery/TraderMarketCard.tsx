@@ -25,14 +25,18 @@ export function TraderMarketCard({
   const seed = trader.handle.charCodeAt(0) + (trader.handle.charCodeAt(1) || 0);
 
   return (
-    <article className="group relative flex flex-col rounded-xl border border-line bg-panel transition-[border-color,box-shadow] duration-300 hover:border-acid/30 hover:shadow-[0_0_28px_rgba(204,255,0,0.08)] motion-reduce:transition-none">
+    <article className="group acid-int relative flex flex-col rounded-xl border border-line bg-panel">
       {action ? <div className="absolute top-3 right-3 z-10">{action}</div> : null}
 
       <div className="flex flex-col gap-4 p-5">
         {/* header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <Avatar handle={trader.handle} size={40} />
+            <Avatar
+              handle={trader.handle}
+              size={40}
+              className="transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:-rotate-6 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
+            />
             <div className="min-w-0">
               <div className="mb-0.5 flex items-center gap-1.5">
                 <span className="truncate text-sm font-bold text-ink">@{trader.handle}</span>
@@ -43,7 +47,7 @@ export function TraderMarketCard({
           </div>
           <div className="shrink-0 text-right">
             <MonoLabel>Score</MonoLabel>
-            <p className="font-mono text-2xl font-bold tracking-[-0.03em] text-ink tabular-nums">
+            <p className="font-mono text-2xl font-bold tracking-[-0.03em] text-ink tabular-nums transition-colors duration-300 group-hover:text-acid motion-reduce:transition-none">
               {trader.score}
             </p>
           </div>
@@ -58,7 +62,7 @@ export function TraderMarketCard({
           {trader.style_tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-md border border-line bg-panel-2 px-1.5 py-0.5 font-mono text-[10px] text-faint"
+              className="rounded-md border border-line bg-panel-2 px-1.5 py-0.5 font-mono text-[10px] text-faint transition-colors duration-300 group-hover:text-muted motion-reduce:transition-none"
             >
               {tag}
             </span>
@@ -88,7 +92,7 @@ export function TraderMarketCard({
               </p>
             </div>
           </div>
-          <div className="ml-2 shrink-0">
+          <div className="ml-2 shrink-0 opacity-90 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:transition-none">
             <Sparkline seed={seed} positive={positive} uid={trader.handle} />
           </div>
         </div>

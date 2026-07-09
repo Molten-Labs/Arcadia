@@ -26,9 +26,9 @@ function Flow({ side }: { side: "traders" | "investors" }) {
         {data.steps.map((step) => (
           <div
             key={step.n}
-            className="rounded-[18px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[1.375rem] transition-[transform,border-color] duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-1.5 hover:border-acid/20"
+            className="group acid-int rounded-[18px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[1.375rem]"
           >
-            <span className={`mb-3.5 grid h-[34px] w-[34px] place-items-center rounded-[10px] font-mono font-bold ${chipClass}`}>
+            <span className={`mb-3.5 grid h-[34px] w-[34px] place-items-center rounded-[10px] font-mono font-bold transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:transform-none ${chipClass}`}>
               {step.n}
             </span>
             <h4 className="mb-2 text-[1.02rem] leading-[1.3] font-bold text-ink">{step.title}</h4>
