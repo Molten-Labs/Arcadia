@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { AlertCircle, CheckCircle, ExternalLink, Loader2, X, Zap } from "lucide-react";
 
 import { useArcadiaVault, type VaultTxPhase } from "@/lib/use-arcadia-vault";
@@ -21,6 +22,7 @@ interface DepositModalProps {
 
 export function DepositModal({ trader, onClose }: DepositModalProps) {
   const { publicKey } = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   const { deposit, txState, resetTx } = useArcadiaVault();
   const [amount, setAmount] = useState("");
 
@@ -49,6 +51,16 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
   const handleDeposit = () => {
     if (!isConnected || !isValid) return;
     void deposit(trader.wallet, parsedAmount);
+  };
+
+  // Primary CTA: connect the wallet when disconnected (opens the wallet-adapter
+  // modal, which layers above this dialog), otherwise submit the deposit.
+  const handlePrimary = () => {
+    if (!isConnected) {
+      setWalletModalVisible(true);
+      return;
+    }
+    handleDeposit();
   };
 
   const STEPS: { key: VaultTxPhase; label: string }[] = [
@@ -168,11 +180,11 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
 
               <button
                 type="button"
-                onClick={handleDeposit}
-                disabled={!isConnected || !isValid}
+                onClick={handlePrimary}
+                disabled={isConnected && !isValid}
                 className={cn(
                   "w-full rounded-lg py-3 text-[0.9375rem] font-extrabold tracking-tight transition-all focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] motion-reduce:transform-none",
-                  isConnected && isValid
+                  !isConnected || isValid
                     ? "bg-acid text-void shadow-[0_0_28px_rgba(204,255,0,0.28)] hover:bg-acid/90"
                     : "cursor-not-allowed bg-panel-2 text-faint",
                 )}
