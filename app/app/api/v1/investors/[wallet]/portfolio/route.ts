@@ -12,7 +12,9 @@ export async function GET(
     authHeader,
   });
   if (result?.ok) {
-    const transformed = transformPortfolio(result.data as any[]);
+    const transformed = transformPortfolio(
+      Array.isArray(result.data) ? result.data : [],
+    );
     return NextResponse.json(transformed);
   }
 
