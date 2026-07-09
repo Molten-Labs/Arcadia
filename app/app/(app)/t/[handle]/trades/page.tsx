@@ -4,13 +4,33 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/utils";
-import { pnlClass, formatUSD } from "@/lib/types";
-import type { TraderProfile } from "@/lib/types";
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Download } from "lucide-react";
+
+import { apiFetch, cn } from "@/lib/utils";
+import { formatUSD, type TraderProfile } from "@/lib/types";
 import { ErrorState } from "@/components/ErrorState";
-import { ArrowLeft, ExternalLink, Download } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageContainer, Panel, StatTile, signTone } from "@/components/pages/discovery/bits";
+import { SideBadge, SolscanTxLink } from "@/components/pages/discovery/trade-cells";
 
 type SortKey = "closed_at" | "pnl" | "size";
+
+function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  if (!active) return <ArrowUpDown className="size-3 text-faint" aria-hidden />;
+  return dir === "desc" ? (
+    <ArrowDown className="size-3 text-acid" aria-hidden />
+  ) : (
+    <ArrowUp className="size-3 text-acid" aria-hidden />
+  );
+}
 
 export default function TradeHistoryPage() {
   const params = useParams();
@@ -27,15 +47,19 @@ export default function TradeHistoryPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
-        <div className="animate-pulse h-8 w-48 rounded" style={{ background: "var(--color-panel-2)" }} />
+      <div className="min-h-full bg-void">
+        <PageContainer>
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="mt-6 h-24 w-full" />
+          <Skeleton className="mt-6 h-96 w-full" />
+        </PageContainer>
       </div>
     );
   }
 
   if (error || !trader) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+      <div className="flex min-h-full items-center justify-center bg-void">
         <ErrorState message="Trader not found" onRetry={() => refetch()} />
       </div>
     );
@@ -59,22 +83,38 @@ export default function TradeHistoryPage() {
 
   const toggleSort = (key: SortKey) => {
     if (sort === key) setDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSort(key); setDir("desc"); }
-  };
-
-  const sortIcon = (key: SortKey) => {
-    if (sort !== key) return <span style={{ color: "var(--color-faint)" }}>⇅</span>;
-    return <span style={{ color: "var(--color-accent)" }}>{dir === "desc" ? "↓" : "↑"}</span>;
+    else {
+      setSort(key);
+      setDir("desc");
+    }
   };
 
   const handleExport = () => {
     const rows = [
-      ["ID", "Market", "Side", "Size (USD)", "Leverage", "Entry", "Exit", "PnL (USD)", "Fees (USD)", "Opened", "Closed", "Signature"],
+      [
+        "ID",
+        "Market",
+        "Side",
+        "Size (USD)",
+        "Leverage",
+        "Entry",
+        "Exit",
+        "PnL (USD)",
+        "Fees (USD)",
+        "Opened",
+        "Closed",
+        "Signature",
+      ],
       ...sorted.map((t) => [
-        t.id, t.market, t.direction,
-        t.size_usd.toFixed(2), t.leverage.toString(),
-        t.entry_px.toFixed(4), t.exit_px.toFixed(4),
-        t.realized_pnl.toFixed(2), t.fees_usd.toFixed(2),
+        t.id,
+        t.market,
+        t.direction,
+        t.size_usd.toFixed(2),
+        t.leverage.toString(),
+        t.entry_px.toFixed(4),
+        t.exit_px.toFixed(4),
+        t.realized_pnl.toFixed(2),
+        t.fees_usd.toFixed(2),
         new Date(t.opened_at * 1000).toISOString(),
         new Date(t.closed_at * 1000).toISOString(),
         t.sig ?? "",
@@ -88,74 +128,94 @@ export default function TradeHistoryPage() {
     a.click();
   };
 
-  return (
-    <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-[1400px] mx-auto px-6 py-10">
+  const stats: { label: string; value: string; tone?: string }[] = [
+    { label: "Showing", value: sorted.length.toString() },
+    {
+      label: "Total P&L",
+      value: `${totalPnl >= 0 ? "+" : ""}${formatUSD(totalPnl, 0)}`,
+      tone: signTone(totalPnl),
+    },
+    { label: "Win Rate", value: `${winRate.toFixed(1)}%`, tone: signTone(winRate - 50) },
+    { label: "Winners", value: `${wins}/${sorted.length}` },
+  ];
 
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-3 mb-8">
+  return (
+    <div className="min-h-full bg-void">
+      <PageContainer>
+        {/* breadcrumb */}
+        <div className="mb-8 flex items-center gap-3">
           <Link
             href={`/t/${handle}`}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[var(--color-panel-2)]"
-            style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)", color: "var(--color-faint)" }}
+            aria-label="Back to profile"
+            className="grid size-8 place-items-center rounded-lg border border-line bg-panel text-faint transition-colors hover:bg-panel-2 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft className="size-3.5" aria-hidden />
           </Link>
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>
-            <Link href="/traders" className="hover:text-[var(--color-mint)] transition-colors">Marketplace</Link>
-            <span style={{ color: "var(--color-line)" }}>/</span>
-            <Link href={`/t/${handle}`} className="hover:text-[var(--color-mint)] transition-colors">@{handle}</Link>
-            <span style={{ color: "var(--color-line)" }}>/</span>
-            <span style={{ color: "var(--color-ink)" }}>Trade History</span>
-          </div>
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-2 font-mono text-[11px] font-bold tracking-[0.14em] text-faint uppercase"
+          >
+            <Link href="/traders" className="transition-colors hover:text-acid">
+              Marketplace
+            </Link>
+            <span aria-hidden className="text-line">
+              /
+            </span>
+            <Link href={`/t/${handle}`} className="transition-colors hover:text-acid">
+              @{handle}
+            </Link>
+            <span aria-hidden className="text-line">
+              /
+            </span>
+            <span className="text-ink">Trade History</span>
+          </nav>
         </div>
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight" style={{ color: "var(--color-ink)" }}>
-              @{trader.handle} — Full Trade History
+            <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink">
+              {`@${trader.handle} // Full Trade History`}
             </h1>
-            <p className="text-sm mt-1" style={{ color: "var(--color-faint)" }}>
-              {trader.trade_count.toLocaleString()} total trades · All closed positions
+            <p className="mt-1 font-mono text-sm text-faint tabular-nums">
+              {`${trader.trade_count.toLocaleString("en-US")} total trades // all closed positions`}
             </p>
           </div>
           <button
+            type="button"
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all"
-            style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)", color: "var(--color-faint)" }}
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2 font-mono text-xs font-bold tracking-[0.08em] text-faint uppercase transition-colors hover:border-acid/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
           >
-            <Download size={13} />
+            <Download className="size-3.5" aria-hidden />
             Export CSV
           </button>
         </div>
 
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: "Showing", value: sorted.length.toString() },
-            { label: "Total P&L", value: `${totalPnl >= 0 ? "+" : ""}${formatUSD(totalPnl, 0)}`, color: totalPnl >= 0 ? "var(--color-green)" : "var(--color-red)" },
-            { label: "Win Rate", value: `${winRate.toFixed(1)}%`, color: winRate > 50 ? "var(--color-green)" : "var(--color-red)" },
-            { label: "Winners", value: `${wins}/${sorted.length}` },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl p-4" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--color-faint)" }}>{s.label}</p>
-              <p className="text-xl font-black tnum" style={{ color: (s as { color?: string }).color ?? "var(--color-ink)" }}>{s.value}</p>
-            </div>
+        {/* stats strip */}
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          {stats.map((s) => (
+            <StatTile key={s.label} label={s.label} valueClassName={s.tone}>
+              {s.value}
+            </StatTile>
           ))}
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <div className="flex gap-1 p-1 rounded-lg" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
+        {/* market filter */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div
+            role="group"
+            aria-label="Filter by market"
+            className="flex flex-wrap gap-1 rounded-lg border border-line bg-panel p-1"
+          >
             {markets.map((m) => (
               <button
                 key={m}
+                type="button"
                 onClick={() => setMarketFilter(m)}
-                className="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all"
-                style={{
-                  background: marketFilter === m ? "var(--color-accent)" : "transparent",
-                  color: marketFilter === m ? "var(--color-bg)" : "var(--color-faint)",
-                }}
+                aria-pressed={marketFilter === m}
+                className={cn(
+                  "rounded-md px-3 py-1.5 font-mono text-[10px] font-bold tracking-[0.14em] uppercase transition-colors focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
+                  marketFilter === m ? "bg-acid text-void" : "text-faint hover:text-ink",
+                )}
               >
                 {m === "all" ? "All" : m.replace("-PERP", "")}
               </button>
@@ -163,112 +223,89 @@ export default function TradeHistoryPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--color-line)" }}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr style={{ background: "var(--color-panel-2)", borderBottom: "1px solid var(--color-line)" }}>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Market</th>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Side</th>
-                  <th
-                    className="py-3 px-4 text-left font-bold uppercase tracking-widest cursor-pointer select-none"
-                    style={{ color: "var(--color-faint)" }}
+        {/* table */}
+        <Panel className="overflow-hidden">
+          <Table className="min-w-[860px] text-xs">
+            <TableHeader>
+              <TableRow className="bg-panel-2 hover:bg-transparent">
+                <TableHead>Market</TableHead>
+                <TableHead>Side</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
                     onClick={() => toggleSort("size")}
+                    className="inline-flex items-center gap-1 uppercase focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
                   >
-                    Size {sortIcon("size")}
-                  </th>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Lev</th>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Entry</th>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Exit</th>
-                  <th
-                    className="py-3 px-4 text-left font-bold uppercase tracking-widest cursor-pointer select-none"
-                    style={{ color: "var(--color-faint)" }}
+                    Size <SortIcon active={sort === "size"} dir={dir} />
+                  </button>
+                </TableHead>
+                <TableHead>Lev</TableHead>
+                <TableHead>Entry</TableHead>
+                <TableHead>Exit</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
                     onClick={() => toggleSort("pnl")}
+                    className="inline-flex items-center gap-1 uppercase focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
                   >
-                    PnL {sortIcon("pnl")}
-                  </th>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Fees</th>
-                  <th
-                    className="py-3 px-4 text-left font-bold uppercase tracking-widest cursor-pointer select-none"
-                    style={{ color: "var(--color-faint)" }}
+                    PnL <SortIcon active={sort === "pnl"} dir={dir} />
+                  </button>
+                </TableHead>
+                <TableHead>Fees</TableHead>
+                <TableHead>
+                  <button
+                    type="button"
                     onClick={() => toggleSort("closed_at")}
+                    className="inline-flex items-center gap-1 uppercase focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
                   >
-                    Closed {sortIcon("closed_at")}
-                  </th>
-                  <th className="py-3 px-4 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Verify</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="hover:bg-[var(--color-panel-2)] transition-colors"
-                    style={{ background: "var(--color-panel)", borderBottom: "1px solid var(--color-line)" }}
-                  >
-                    <td className="py-2.5 px-4 font-bold font-mono" style={{ color: "var(--color-ink)" }}>{t.market}</td>
-                    <td className="py-2.5 px-4">
-                      <span
-                        className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded"
-                        style={{
-                          background: t.direction === "long" ? "var(--color-green-dim)" : "var(--color-red-dim)",
-                          color: t.direction === "long" ? "var(--color-green)" : "var(--color-red)",
-                        }}
-                      >
-                        {t.direction}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 tnum">{formatUSD(t.size_usd, 0)}</td>
-                    <td className="py-2.5 px-4 tnum font-bold" style={{ color: "var(--color-ink)" }}>{t.leverage}x</td>
-                    <td className="py-2.5 px-4 tnum" style={{ color: "var(--color-muted)" }}>
-                      {t.entry_px < 10 ? t.entry_px.toFixed(4) : t.entry_px.toFixed(2)}
-                    </td>
-                    <td className="py-2.5 px-4 tnum" style={{ color: "var(--color-muted)" }}>
-                      {t.exit_px < 10 ? t.exit_px.toFixed(4) : t.exit_px.toFixed(2)}
-                    </td>
-                    <td className={`py-2.5 px-4 tnum font-bold ${pnlClass(t.realized_pnl)}`}>
-                      {t.realized_pnl >= 0 ? "+" : ""}{formatUSD(t.realized_pnl, 0)}
-                    </td>
-                    <td className="py-2.5 px-4 tnum" style={{ color: "var(--color-faint)" }}>
-                      {formatUSD(t.fees_usd, 2)}
-                    </td>
-                    <td className="py-2.5 px-4 tnum font-mono text-[10px]" style={{ color: "var(--color-faint)" }}>
-                      {new Date(t.closed_at * 1000).toLocaleDateString()}
-                    </td>
-                    <td className="py-2.5 px-4">
-                      {t.sig ? (
-                        <a
-                          href={`https://solscan.io/tx/${t.sig}?cluster=devnet`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
-                          style={{ color: "var(--color-mint)" }}
-                          title={`View on Solscan: ${t.sig}`}
-                        >
-                          <span>{t.sig.slice(0, 4)}…</span>
-                          <ExternalLink size={9} />
-                        </a>
-                      ) : (
-                        <span style={{ color: "var(--color-faint)" }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    Closed <SortIcon active={sort === "closed_at"} dir={dir} />
+                  </button>
+                </TableHead>
+                <TableHead>Verify</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-bold text-ink">{t.market}</TableCell>
+                  <TableCell>
+                    <SideBadge direction={t.direction} />
+                  </TableCell>
+                  <TableCell className="text-muted tabular-nums">{formatUSD(t.size_usd, 0)}</TableCell>
+                  <TableCell className="font-bold text-ink tabular-nums">{t.leverage}x</TableCell>
+                  <TableCell className="text-muted tabular-nums">
+                    {t.entry_px < 10 ? t.entry_px.toFixed(4) : t.entry_px.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-muted tabular-nums">
+                    {t.exit_px < 10 ? t.exit_px.toFixed(4) : t.exit_px.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={`font-bold tabular-nums ${signTone(t.realized_pnl)}`}>
+                    {t.realized_pnl >= 0 ? "+" : ""}
+                    {formatUSD(t.realized_pnl, 0)}
+                  </TableCell>
+                  <TableCell className="text-faint tabular-nums">{formatUSD(t.fees_usd, 2)}</TableCell>
+                  <TableCell className="text-[10px] text-faint tabular-nums">
+                    {new Date(t.closed_at * 1000).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <SolscanTxLink sig={t.sig} chars={4} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-          {sorted.length === 0 && (
+          {sorted.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-sm" style={{ color: "var(--color-faint)" }}>No trades match the current filter.</p>
+              <p className="text-sm text-faint">No trades match the current filter.</p>
             </div>
-          )}
-        </div>
+          ) : null}
+        </Panel>
 
-        <p className="text-[10px] mt-4 text-center" style={{ color: "var(--color-faint)" }}>
-          All transactions verifiable on Solana devnet · Click "Verify" column links to view on Solscan
+        <p className="mt-4 text-center font-mono text-[10px] text-faint">
+          All transactions verifiable on Solana devnet via the on-chain column.
         </p>
-      </div>
+      </PageContainer>
     </div>
   );
 }

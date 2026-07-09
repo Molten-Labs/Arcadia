@@ -2,156 +2,184 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ScoreDial } from "@/components/ScoreDial";
-import { TierBadge } from "@/components/TierBadge";
-import { DepositsStatusBadge } from "@/components/DepositsStatusBadge";
-import { CapacityBar } from "@/components/CapacityBar";
-import { RiskBars } from "@/components/RiskBars";
+import {
+  ArrowUpRight,
+  BarChart3,
+  Bookmark,
+  BookmarkCheck,
+  CheckCircle,
+  Share2,
+  TrendingDown,
+} from "lucide-react";
+
+import { apiFetch, cn } from "@/lib/utils";
+import { formatUSD, type TradeRecord, type TraderProfile } from "@/lib/types";
+import { useRole } from "@/lib/role-context";
+import { MOCK_DAILY_PNL, MOCK_SCORE_HISTORY, MOCK_TRADERS } from "@/lib/mock-data";
 import { EquityChart } from "@/components/EquityChart";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { PnLHeatmap } from "@/components/PnLHeatmap";
 import { ErrorState } from "@/components/ErrorState";
-import { apiFetch } from "@/lib/utils";
-import { formatUSD, pnlClass, pnlArrow, shortAddr } from "@/lib/types";
-import type { TraderProfile } from "@/lib/types";
-import { useRole } from "@/lib/role-context";
-import { MOCK_SCORE_HISTORY, MOCK_DAILY_PNL, MOCK_TRADERS } from "@/lib/mock-data";
-import {
-  Bookmark, BookmarkCheck, ExternalLink, TrendingDown,
-  BarChart3, Share2, CheckCircle, ChevronDown, ChevronUp,
-} from "lucide-react";
-import { ShareCardModal } from "@/components/ShareCardModal";
 import { DepositModal } from "@/components/DepositModal";
+import { ShareCardModal } from "@/components/ShareCardModal";
+import { AcidButton, ChromeText, CountUp, Reveal, ScoreDial } from "@/components/acid";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  HeaderAura,
+  Kicker,
+  MonoLabel,
+  PageContainer,
+  Panel,
+  StatTile,
+  signTone,
+} from "@/components/pages/discovery/bits";
+import { Avatar } from "@/components/pages/discovery/Avatar";
+import { acidTier, TierChip } from "@/components/pages/discovery/TierChip";
+import { StatusPill } from "@/components/pages/discovery/StatusPill";
+import { AllocationBar } from "@/components/pages/discovery/AllocationBar";
+import { MetricBars } from "@/components/pages/discovery/MetricBars";
+import { SideBadge, SolscanAccountLink, SolscanTxLink } from "@/components/pages/discovery/trade-cells";
+import { useWatchlist } from "@/components/pages/discovery/use-watchlist";
 
-/* ── Watchlist hook ── */
-function useWatchlist() {
-  const [watchlist, setWatchlist] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const s = localStorage.getItem("arcadia_watchlist");
-      if (s) setWatchlist(JSON.parse(s));
-    } catch {}
-  }, []);
-  const toggle = (handle: string) => {
-    setWatchlist((prev) => {
-      const next = prev.includes(handle)
-        ? prev.filter((h) => h !== handle)
-        : [...prev, handle];
-      localStorage.setItem("arcadia_watchlist", JSON.stringify(next));
-      return next;
-    });
-  };
-  return { watchlist, toggle };
-}
-
-/* ── Sliding tabs ── */
-type ProfileTab = "overview" | "trades" | "dd" | "score" | "heatmap";
-const TABS: { id: ProfileTab; label: string }[] = [
-  { id: "overview",  label: "Overview"      },
-  { id: "trades",    label: "Trades"        },
-  { id: "dd",        label: "Due Diligence" },
-  { id: "score",     label: "Score History" },
-  { id: "heatmap",   label: "P&L Heatmap"  },
-];
-
-function SlidingTabs({ active, onChange }: { active: ProfileTab; onChange: (t: ProfileTab) => void }) {
-  const pillRef = useRef<HTMLSpanElement>(null);
-  const barRef  = useRef<HTMLDivElement>(null);
-
-  const snap = useCallback((animate: boolean) => {
-    const bar  = barRef.current;
-    const pill = pillRef.current;
-    if (!bar || !pill) return;
-    const btn = bar.querySelector<HTMLButtonElement>(`[data-tab="${active}"]`);
-    if (!btn) return;
-    if (!animate) {
-      const old = pill.style.transition;
-      pill.style.transition = "none";
-      pill.style.transform  = `translateX(${btn.offsetLeft}px)`;
-      pill.style.width      = `${btn.offsetWidth}px`;
-      pill.getBoundingClientRect();
-      pill.style.transition = old;
-    } else {
-      pill.style.transform = `translateX(${btn.offsetLeft}px)`;
-      pill.style.width     = `${btn.offsetWidth}px`;
-    }
-  }, [active]);
-
-  useEffect(() => { snap(true); });
-  useEffect(() => { snap(false); }, []);
-
-  return (
-    <div ref={barRef} className="t-tabs" style={{ "--tabs-bar-bg": "var(--color-panel)" } as React.CSSProperties}>
-      <span ref={pillRef} className="t-tabs-pill" />
-      {TABS.map((t) => (
-        <button
-          key={t.id}
-          data-tab={t.id}
-          role="tab"
-          aria-selected={active === t.id}
-          className="t-tab"
-          onClick={() => onChange(t.id)}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/* ── Collapsible panel using t-panel-slide ── */
-function CollapsibleCard({ title, icon, children, defaultOpen = true }: {
-  title: string; icon?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean;
+/* -- Panel header used across profile sections -- */
+function PanelHead({
+  label,
+  sub,
+  right,
+}: {
+  label: string;
+  sub?: string;
+  right?: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="card" style={{ overflow: "hidden" }}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          width: "100%", padding: "1rem 1.25rem",
-          background: "transparent", border: "none", cursor: "pointer",
-          borderBottom: open ? "1px solid var(--color-line)" : "none",
-          transition: "border-color 0.3s",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {icon}
-          <span style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--color-ink)" }}>
-            {title}
-          </span>
-        </div>
-        {open ? <ChevronUp size={14} style={{ color: "var(--color-faint)" }} /> : <ChevronDown size={14} style={{ color: "var(--color-faint)" }} />}
-      </button>
-      <div
-        className="t-panel-slide"
-        data-open={open ? "true" : "false"}
-        style={{ "--panel-translate-y": "24px" } as React.CSSProperties}
-      >
-        <div style={{ padding: "1.25rem" }}>
-          {children}
-        </div>
+    <div className="flex items-center justify-between gap-3 border-b border-line bg-panel-2 px-5 py-3.5">
+      <div>
+        <MonoLabel>{label}</MonoLabel>
+        {sub ? <p className="mt-0.5 text-xs text-muted">{sub}</p> : null}
       </div>
+      {right}
     </div>
   );
 }
 
-/* ── Drawdown analysis ── */
+/* -- Overview: eight most recent trades -- */
+function RecentTradesTable({ trades }: { trades: TradeRecord[] }) {
+  return (
+    <Table className="min-w-[640px] text-xs">
+      <TableHeader>
+        <TableRow className="bg-void hover:bg-transparent">
+          <TableHead>Market</TableHead>
+          <TableHead>Side</TableHead>
+          <TableHead>Size</TableHead>
+          <TableHead>Leverage</TableHead>
+          <TableHead>PnL</TableHead>
+          <TableHead>Closed</TableHead>
+          <TableHead>On-chain</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {trades.map((t) => (
+          <TableRow key={t.id}>
+            <TableCell className="font-bold text-ink">{t.market.replace("-PERP", "")}</TableCell>
+            <TableCell>
+              <SideBadge direction={t.direction} />
+            </TableCell>
+            <TableCell className="text-muted tabular-nums">{formatUSD(t.size_usd, 0)}</TableCell>
+            <TableCell className="font-bold text-ink tabular-nums">{t.leverage}x</TableCell>
+            <TableCell className={`font-bold tabular-nums ${signTone(t.realized_pnl)}`}>
+              {t.realized_pnl >= 0 ? "+" : ""}
+              {formatUSD(t.realized_pnl, 0)}
+            </TableCell>
+            <TableCell className="text-[11px] text-faint tabular-nums">
+              {new Date(t.closed_at * 1000).toLocaleDateString()}
+            </TableCell>
+            <TableCell>
+              <SolscanTxLink sig={t.sig} chars={6} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+/* -- Trades tab: full trade list -- */
+function AllTradesTable({ trades }: { trades: TradeRecord[] }) {
+  return (
+    <Table className="min-w-[720px] text-xs">
+      <TableHeader>
+        <TableRow className="bg-void hover:bg-transparent">
+          <TableHead>Market</TableHead>
+          <TableHead>Side</TableHead>
+          <TableHead>Size</TableHead>
+          <TableHead>Leverage</TableHead>
+          <TableHead>PnL</TableHead>
+          <TableHead>Duration</TableHead>
+          <TableHead>Closed</TableHead>
+          <TableHead>Sig</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {trades.map((t) => (
+          <TableRow key={t.id}>
+            <TableCell className="font-bold text-ink">{t.market.replace("-PERP", "")}</TableCell>
+            <TableCell>
+              <SideBadge direction={t.direction} />
+            </TableCell>
+            <TableCell className="text-muted tabular-nums">{formatUSD(t.size_usd, 0)}</TableCell>
+            <TableCell className="font-bold tabular-nums">{t.leverage}x</TableCell>
+            <TableCell className={`font-bold tabular-nums ${signTone(t.realized_pnl)}`}>
+              {t.realized_pnl >= 0 ? "+" : ""}
+              {formatUSD(t.realized_pnl, 0)}
+            </TableCell>
+            <TableCell className="text-[11px] text-faint tabular-nums">
+              {((t.closed_at - t.opened_at) / 3600).toFixed(1)}h
+            </TableCell>
+            <TableCell className="text-[11px] text-faint tabular-nums">
+              {new Date(t.closed_at * 1000).toLocaleDateString()}
+            </TableCell>
+            <TableCell>
+              <SolscanTxLink sig={t.sig} chars={5} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+/* -- Due diligence: drawdown analysis + benchmark -- */
 function DrawdownTimeline({ trader }: { trader: TraderProfile }) {
   const curve = trader.equity_curve;
   let peak = curve[0]?.value ?? 1;
   const periods: { start: number; end: number; depth: number }[] = [];
-  let inDD = false; let start = 0; let depth = 0;
+  let inDD = false;
+  let start = 0;
+  let depth = 0;
   for (const pt of curve) {
     if (pt.value > peak) peak = pt.value;
     const dd = peak > 0 ? ((pt.value - peak) / peak) * 100 : 0;
-    if (dd < -2 && !inDD) { inDD = true; start = pt.ts; depth = dd; }
-    else if (inDD) {
+    if (dd < -2 && !inDD) {
+      inDD = true;
+      start = pt.ts;
+      depth = dd;
+    } else if (inDD) {
       if (dd < depth) depth = dd;
-      if (dd >= -0.5) { periods.push({ start, end: pt.ts, depth }); inDD = false; }
+      if (dd >= -0.5) {
+        periods.push({ start, end: pt.ts, depth });
+        inDD = false;
+      }
     }
   }
   const btcCurve = trader.equity_curve.map((pt, i) => ({
@@ -159,91 +187,100 @@ function DrawdownTimeline({ trader }: { trader: TraderProfile }) {
     value: 1.0 + (i / trader.equity_curve.length) * 0.38 + Math.sin(i * 0.4) * 0.06,
   }));
 
+  const calmar = (trader.metrics.return_90d / Math.abs(trader.metrics.max_dd)).toFixed(2);
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: "Max Drawdown",       value: `${trader.metrics.max_dd.toFixed(1)}%`,            color: "var(--color-red)"  },
-          { label: "Calmar Ratio",       value: (trader.metrics.return_90d / Math.abs(trader.metrics.max_dd)).toFixed(2), color: "var(--color-ink)"  },
-          { label: "Volatility 30d",     value: `${trader.metrics.vol_30d.toFixed(1)}%`,            color: "var(--color-ink)"  },
-          { label: "Avg Win Duration",   value: `${trader.metrics.avg_trade_duration_hours.toFixed(1)}h`, color: "var(--color-ink)" },
-        ].map((s) => (
-          <div key={s.label} className="card" style={{ padding: "1rem" }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 6 }}>{s.label}</p>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", fontWeight: 800, color: s.color, letterSpacing: "-0.03em" }}>{s.value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatTile label="Max Drawdown" valueClassName="text-danger">
+          {trader.metrics.max_dd.toFixed(1)}%
+        </StatTile>
+        <StatTile label="Calmar Ratio">{calmar}</StatTile>
+        <StatTile label="Volatility 30d">{trader.metrics.vol_30d.toFixed(1)}%</StatTile>
+        <StatTile label="Avg Win Duration">
+          {trader.metrics.avg_trade_duration_hours.toFixed(1)}h
+        </StatTile>
       </div>
 
-      {periods.length > 0 && (
-        <div className="card" style={{ padding: "1.25rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
-            <TrendingDown size={13} style={{ color: "var(--color-red)" }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)" }}>Drawdown Periods</span>
+      {periods.length > 0 ? (
+        <Panel className="p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <TrendingDown className="size-3.5 text-danger" aria-hidden />
+            <MonoLabel>Drawdown Periods</MonoLabel>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {periods.slice(0, 5).map((p, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", width: 60, flexShrink: 0 }}>
-                  {new Date(p.start * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          <div className="flex flex-col gap-2">
+            {periods.slice(0, 5).map((p) => (
+              <div key={`${p.start}-${p.end}`} className="flex items-center gap-3">
+                <span className="w-14 shrink-0 font-mono text-[10px] text-faint tabular-nums">
+                  {new Date(p.start * 1000).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </span>
-                <span style={{ color: "var(--color-faint)", fontSize: 9 }}>→</span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", width: 60, flexShrink: 0 }}>
-                  {new Date(p.end * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                <ArrowUpRight className="size-3 rotate-45 text-faint" aria-hidden />
+                <span className="w-14 shrink-0 font-mono text-[10px] text-faint tabular-nums">
+                  {new Date(p.end * 1000).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
                 </span>
-                <div style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--color-panel-2)", overflow: "hidden" }}>
-                  <div style={{ width: `${Math.min(100, Math.abs(p.depth) * 5)}%`, height: "100%", background: "var(--color-red)", borderRadius: 2 }} />
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-panel-2">
+                  <div
+                    className="h-full rounded-full bg-danger"
+                    style={{ width: `${Math.min(100, Math.abs(p.depth) * 5)}%` }}
+                  />
                 </div>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: "var(--color-red)", width: 44, textAlign: "right" }}>
+                <span className="w-12 text-right font-mono text-xs font-bold text-danger tabular-nums">
                   {p.depth.toFixed(1)}%
                 </span>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        </Panel>
+      ) : null}
 
-      <div className="card" style={{ padding: "1.25rem" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <BarChart3 size={13} style={{ color: "var(--color-mint)" }} />
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)" }}>vs BTC Benchmark</span>
+      <Panel className="p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="size-3.5 text-acid" aria-hidden />
+            <MonoLabel>vs BTC Benchmark</MonoLabel>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 10 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--color-faint)" }}>
-              <span style={{ width: 12, height: 2, background: "var(--color-ink)", display: "inline-block", borderRadius: 1 }} />
-              @{trader.handle}
+          <div className="flex items-center gap-4 text-[10px]">
+            <span className="flex items-center gap-1.5 text-faint">
+              <span aria-hidden className="inline-block h-0.5 w-3 rounded-full bg-ink" />@
+              {trader.handle}
             </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--color-faint)" }}>
-              <span style={{ width: 12, height: 2, background: "var(--color-gold)", display: "inline-block", borderRadius: 1, opacity: 0.6 }} />
+            <span className="flex items-center gap-1.5 text-faint">
+              <span
+                aria-hidden
+                className="inline-block h-0.5 w-3 rounded-full"
+                style={{ background: "var(--color-gold)" }}
+              />
               BTC HODL
             </span>
           </div>
         </div>
         <EquityChart data={trader.equity_curve} benchmarkData={btcCurve} height={180} />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: "0.75rem" }}>
-          <div className="card" style={{ padding: "0.75rem" }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--color-faint)", marginBottom: 4 }}>Trader 90d</p>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 800, color: "var(--color-green)" }}>+{trader.metrics.return_90d.toFixed(1)}%</p>
-          </div>
-          <div className="card" style={{ padding: "0.75rem" }}>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--color-faint)", marginBottom: 4 }}>BTC HODL 90d</p>
-            <p style={{ fontFamily: "var(--font-mono)", fontSize: "1rem", fontWeight: 800, color: "var(--color-gold)" }}>+38.4%</p>
-          </div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <StatTile label="Trader 90d" valueClassName="text-success">
+            +{trader.metrics.return_90d.toFixed(1)}%
+          </StatTile>
+          <StatTile label="BTC HODL 90d" valueClassName="text-cyan">
+            +38.4%
+          </StatTile>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }
 
-/* ── Page ── */
+/* -- Page -- */
 export default function TraderProfilePage() {
   const params = useParams();
   const handle = params?.handle as string;
   const { role } = useRole();
   const isInvestor = role === "investor";
   const { watchlist, toggle } = useWatchlist();
-  const [tab, setTab] = useState<ProfileTab>("overview");
   const [showShare, setShowShare] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
 
@@ -263,537 +300,368 @@ export default function TraderProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-        <div style={{ height: 180, background: "linear-gradient(135deg, #0c0820 0%, #080c18 50%, #000 100%)", animation: "pulse 2s ease-in-out infinite" }} />
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "1.5rem 2rem" }}>
-          <div style={{ display: "flex", gap: "1.5rem" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ height: 48, width: 240, borderRadius: 8, background: "var(--color-panel)", marginBottom: 16 }} />
-              <div style={{ height: 320, borderRadius: 12, background: "var(--color-panel)" }} />
+      <div className="min-h-full bg-void">
+        <PageContainer>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-64" />
+              <Skeleton className="h-4 w-80" />
             </div>
-            <div style={{ width: 320, display: "flex", flexDirection: "column", gap: 12 }}>
-              {[100, 160, 80, 120].map((h, i) => (
-                <div key={i} style={{ height: h, borderRadius: 12, background: "var(--color-panel)" }} />
-              ))}
-            </div>
+            <Skeleton className="size-44 rounded-full" />
           </div>
-        </div>
+          <Skeleton className="mt-8 h-20 w-full" />
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+            <Skeleton className="h-96 w-full" />
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </PageContainer>
       </div>
     );
   }
 
   if (error || !trader) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--color-bg)" }}>
+      <div className="flex min-h-full items-center justify-center bg-void">
         <ErrorState message="Trader not found" onRetry={() => refetch()} />
       </div>
     );
   }
 
   const riskItems = [
-    { label: "Sortino",  value: trader.metrics.sortino,             max: 5,   fmt: (v: number) => v.toFixed(2)       },
-    { label: "Sharpe",   value: trader.metrics.sharpe,              max: 4,   fmt: (v: number) => v.toFixed(2)       },
-    { label: "Win Rate", value: trader.metrics.win_rate,            max: 100, fmt: (v: number) => `${v.toFixed(1)}%` },
-    { label: "Max DD",   value: Math.abs(trader.metrics.max_dd),    max: 30,  fmt: (v: number) => `-${v.toFixed(1)}%`, invert: true },
+    { label: "Sortino", value: trader.metrics.sortino, max: 5, fmt: (v: number) => v.toFixed(2) },
+    { label: "Sharpe", value: trader.metrics.sharpe, max: 4, fmt: (v: number) => v.toFixed(2) },
+    { label: "Win Rate", value: trader.metrics.win_rate, max: 100, fmt: (v: number) => `${v.toFixed(1)}%` },
+    {
+      label: "Max DD",
+      value: Math.abs(trader.metrics.max_dd),
+      max: 30,
+      fmt: (v: number) => `-${v.toFixed(1)}%`,
+      invert: true,
+    },
   ];
 
-  const isWatched      = watchlist.includes(trader.handle);
-  const scoreHistory   = MOCK_SCORE_HISTORY[trader.handle];
-  const dailyPnl       = MOCK_DAILY_PNL[trader.handle];
-  const capacityPct    = Math.round((trader.aum / trader.capacity.total) * 100);
+  const isWatched = watchlist.includes(trader.handle);
+  const scoreHistory = MOCK_SCORE_HISTORY[trader.handle];
+  const dailyPnl = MOCK_DAILY_PNL[trader.handle];
+  const capacityPct = Math.round((trader.aum / trader.capacity.total) * 100);
 
-  const TIER_COLOR: Record<string, string> = {
-    Elite: "var(--color-tier-elite)", Advanced: "var(--color-tier-advanced)",
-    Established: "var(--color-tier-established)", Verified: "var(--color-tier-verified)",
-  };
+  const returns = [
+    { label: "7d Return", value: trader.metrics.return_7d },
+    { label: "30d Return", value: trader.metrics.return_30d },
+    { label: "90d Return", value: trader.metrics.return_90d },
+    { label: "All-time", value: trader.metrics.return_all },
+  ];
+
+  const quickStats = [
+    { label: "Investors", value: trader.investors_count.toString() },
+    { label: "Active Days", value: trader.days_active.toString() },
+    { label: "Total Trades", value: trader.trade_count.toString() },
+    { label: "Max Leverage", value: `${trader.max_leverage}x` },
+  ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+    <div className="relative min-h-full bg-void">
+      {/* -- HERO -- */}
+      <div className="relative overflow-hidden border-b border-line">
+        <HeaderAura />
+        <PageContainer>
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-6 flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] text-faint uppercase"
+          >
+            <Link href="/traders" className="transition-colors hover:text-acid">
+              Marketplace
+            </Link>
+            <span aria-hidden>/</span>
+            <span className="text-muted">@{trader.handle}</span>
+          </nav>
 
-      {/* ─── BANNER HEADER ──────────────────────────────────────── */}
-      <div style={{
-        position: "relative",
-        background: "linear-gradient(135deg, #0b0620 0%, #070c1c 45%, #000000 100%)",
-        borderBottom: "1px solid var(--color-line)",
-        overflow: "hidden",
-      }}>
-        {/* Glow accents */}
-        <div aria-hidden style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          background: "radial-gradient(ellipse at 15% 60%, rgba(79,158,255,0.11) 0%, transparent 55%)",
-        }} />
-        <div aria-hidden style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          background: "radial-gradient(ellipse at 85% 20%, rgba(79,158,255,0.05) 0%, transparent 50%)",
-        }} />
-
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "2rem clamp(1.5rem, 4vw, 3rem)", position: "relative" }}>
-          {/* Rank badge — top right */}
-          {rank !== null && (
-            <div style={{
-              position: "absolute", top: "1.5rem", right: "clamp(1.5rem, 4vw, 3rem)",
-              background: "rgba(0,0,0,0.6)", border: "1px solid var(--color-line)",
-              borderRadius: 8, padding: "5px 12px", textAlign: "center",
-              backdropFilter: "blur(8px)",
-            }}>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-faint)", lineHeight: 1.5 }}>Rank</p>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.125rem", fontWeight: 900, color: "var(--color-ink)", letterSpacing: "-0.03em", lineHeight: 1.2 }}>#{rank}</p>
-            </div>
-          )}
-
-          {/* Avatar + identity */}
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "1.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-            {/* Avatar */}
-            <div style={{
-              width: 76, height: 76, borderRadius: "50%",
-              background: "var(--color-panel-2)",
-              border: "3px solid rgba(255,255,255,0.12)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "1.5rem", fontWeight: 900, color: "var(--color-mint)",
-              letterSpacing: "-0.03em", flexShrink: 0,
-              boxShadow: "0 0 0 1px rgba(79,158,255,0.15), 0 8px 32px rgba(0,0,0,0.5)",
-            }}>
-              {trader.handle.slice(0, 2).toUpperCase()}
-            </div>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-                <h1 style={{ fontWeight: 800, fontSize: "clamp(1.25rem, 2.5vw, 1.75rem)", color: "var(--color-ink)", letterSpacing: "-0.04em", margin: 0 }}>
-                  @{trader.handle}
-                </h1>
-                <CheckCircle size={15} style={{ color: "var(--color-mint)", flexShrink: 0 }} />
-                <a
-                  href={`https://solscan.io/account/${trader.wallet}?cluster=devnet`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--color-faint)", display: "flex", alignItems: "center", gap: 4, transition: "opacity 0.15s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                >
-                  {shortAddr(trader.wallet)} <ExternalLink size={9} />
-                </a>
-              </div>
-              {trader.bio && (
-                <p style={{ fontSize: "0.875rem", color: "var(--color-muted)", margin: 0, lineHeight: 1.5, maxWidth: "60ch" }}>
-                  {trader.bio}
-                </p>
-              )}
-            </div>
-
-            {/* Action buttons */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              <button
-                onClick={() => setShowShare(true)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "7px 14px", borderRadius: 8,
-                  background: "transparent", border: "1px solid var(--color-line)",
-                  color: "var(--color-muted)", fontSize: "0.75rem", fontWeight: 600,
-                  cursor: "pointer", transition: "border-color 0.15s, color 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(79,158,255,0.35)"; e.currentTarget.style.color = "var(--color-ink)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-line)"; e.currentTarget.style.color = "var(--color-muted)"; }}
-              >
-                <Share2 size={12} /> Share
-              </button>
-              <button
-                onClick={() => toggle(trader.handle)}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  padding: "7px 14px", borderRadius: 8,
-                  background: isWatched ? "rgba(79,158,255,0.1)" : "transparent",
-                  border: `1px solid ${isWatched ? "rgba(79,158,255,0.3)" : "var(--color-line)"}`,
-                  color: isWatched ? "var(--color-mint)" : "var(--color-muted)",
-                  fontSize: "0.75rem", fontWeight: 600,
-                  cursor: "pointer", transition: "all 0.15s",
-                }}
-              >
-                {isWatched ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
-                {isWatched ? "Watching" : "Watch"}
-              </button>
-            </div>
-          </div>
-
-          {/* Badges row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <TierBadge tier={trader.tier} />
-            <DepositsStatusBadge
-              deposits_open={trader.deposits_open}
-              capacityLeft={trader.deposits_open ? trader.capacity.total - trader.capacity.used : undefined}
-            />
-            {trader.style_tags.map((tag) => (
-              <span key={tag} style={{
-                fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 700,
-                padding: "3px 10px", borderRadius: 999,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                color: "var(--color-faint)",
-              }}>
-                #{tag}
-              </span>
-            ))}
-            {/* Leaderboard breadcrumb */}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
-              <Link href="/traders" style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--color-faint)", textDecoration: "none", transition: "color 0.15s" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-mint)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--color-faint)")}
-              >
-                Marketplace
-              </Link>
-              <span style={{ color: "var(--color-faint)", fontSize: 9 }}>/</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--color-muted)" }}>@{trader.handle}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── RETURN STATS STRIP ─────────────────────────────────── */}
-      <div style={{ borderBottom: "1px solid var(--color-line)" }}>
-        <div style={{
-          maxWidth: 1280, margin: "0 auto",
-          padding: "0 clamp(1.5rem, 4vw, 3rem)",
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          overflow: "auto",
-        }}>
-          {[
-            { label: "7d Return",  value: trader.metrics.return_7d  },
-            { label: "30d Return", value: trader.metrics.return_30d },
-            { label: "90d Return", value: trader.metrics.return_90d },
-            { label: "All-time",   value: trader.metrics.return_all },
-          ].map((s, i) => (
-            <div key={s.label} style={{
-              padding: "1rem 0",
-              borderRight: i < 3 ? "1px solid var(--color-line)" : "none",
-              paddingRight: i < 3 ? "1.5rem" : 0,
-              paddingLeft: i > 0 ? "1.5rem" : 0,
-              position: "relative", overflow: "hidden",
-            }}>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 4 }}>
-                {s.label}
-              </p>
-              <p className={`tnum ${pnlClass(s.value)}`} style={{ fontFamily: "var(--font-mono)", fontSize: "1.25rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
-                {pnlArrow(s.value)}{Math.abs(s.value).toFixed(1)}%
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ─── MAIN CONTENT ───────────────────────────────────────── */}
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "1.5rem clamp(1.5rem, 4vw, 3rem)" }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 300px",
-          gap: "1.5rem",
-          alignItems: "start",
-        }}>
-
-          {/* ── LEFT: Charts + Tabs ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", minWidth: 0 }}>
-            {/* Sliding tab nav */}
-            <div>
-              <SlidingTabs active={tab} onChange={setTab} />
-            </div>
-
-            {/* ── Overview: equity curve + recent trades ── */}
-            {tab === "overview" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem", animation: "fade-in 0.2s ease" }}>
-                <div className="card" style={{ overflow: "hidden" }}>
-                  <div style={{
-                    padding: "1rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between",
-                    borderBottom: "1px solid var(--color-line)", background: "var(--color-panel-2)",
-                  }}>
-                    <div>
-                      <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 2 }}>
-                        Equity Curve
-                      </p>
-                      <p style={{ fontSize: "0.75rem", color: "var(--color-muted)" }}>90-day performance history</p>
+          <Reveal>
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              {/* identity */}
+              <div className="min-w-0">
+                <Kicker>Verified Trader</Kicker>
+                <div className="mt-4 flex items-center gap-3">
+                  <Avatar handle={trader.handle} size={56} className="rounded-2xl" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <ChromeText
+                        as="h1"
+                        className="font-display text-[clamp(1.9rem,5vw,3rem)] leading-none font-extrabold tracking-[-0.03em] uppercase"
+                      >
+                        @{trader.handle}
+                      </ChromeText>
+                      <CheckCircle className="size-4 shrink-0 text-acid" aria-hidden />
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-green)", animation: "glow-pulse 2s ease-in-out infinite" }} />
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)" }}>Live</span>
-                    </div>
+                    <SolscanAccountLink wallet={trader.wallet} className="mt-1" />
                   </div>
-                  <div style={{ padding: "1.25rem 1.25rem 0.5rem" }}>
+                </div>
+
+                {trader.bio ? (
+                  <p className="mt-4 max-w-[60ch] text-sm leading-relaxed text-muted">{trader.bio}</p>
+                ) : null}
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <TierChip tier={trader.tier} />
+                  <StatusPill
+                    deposits_open={trader.deposits_open}
+                    capacityLeft={
+                      trader.deposits_open
+                        ? trader.capacity.total - trader.capacity.used
+                        : undefined
+                    }
+                  />
+                  {trader.style_tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-line bg-panel-2 px-2.5 py-0.5 font-mono text-[10px] text-faint"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowShare(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-transparent px-3.5 py-2 font-mono text-xs font-semibold text-muted transition-colors hover:border-acid/35 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+                  >
+                    <Share2 className="size-3.5" aria-hidden /> Share
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggle(trader.handle)}
+                    aria-pressed={isWatched}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 font-mono text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
+                      isWatched
+                        ? "border-acid/40 bg-acid/10 text-acid"
+                        : "border-line text-muted hover:text-ink",
+                    )}
+                  >
+                    {isWatched ? (
+                      <BookmarkCheck className="size-3.5" aria-hidden />
+                    ) : (
+                      <Bookmark className="size-3.5" aria-hidden />
+                    )}
+                    {isWatched ? "Watching" : "Watch"}
+                  </button>
+                </div>
+              </div>
+
+              {/* score dial hero */}
+              <div className="flex shrink-0 items-center gap-6">
+                {rank !== null ? (
+                  <div className="text-right">
+                    <MonoLabel>Rank</MonoLabel>
+                    <p className="font-mono text-3xl font-bold text-ink tabular-nums">#{rank}</p>
+                  </div>
+                ) : null}
+                <ScoreDial value={trader.score} tier={acidTier(trader.tier)} size={180} />
+              </div>
+            </div>
+          </Reveal>
+        </PageContainer>
+      </div>
+
+      {/* -- RETURN STRIP -- */}
+      <div className="border-b border-line bg-onyx">
+        <PageContainer className="py-0">
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            {returns.map((s, i) => (
+              <div
+                key={s.label}
+                className={cn(
+                  "py-5",
+                  i > 0 ? "md:border-l md:border-line md:pl-6" : "",
+                  i < 3 ? "md:pr-6" : "",
+                )}
+              >
+                <MonoLabel>{s.label}</MonoLabel>
+                <p className={cn("mt-1 font-mono text-2xl font-bold tabular-nums", signTone(s.value))}>
+                  <CountUp
+                    value={s.value}
+                    decimals={1}
+                    prefix={s.value >= 0 ? "+" : ""}
+                    suffix="%"
+                  />
+                </p>
+              </div>
+            ))}
+          </div>
+        </PageContainer>
+      </div>
+
+      {/* -- MAIN -- */}
+      <PageContainer>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
+          {/* LEFT: tabs */}
+          <div className="min-w-0">
+            <Tabs defaultValue="overview">
+              <div className="overflow-x-auto pb-1">
+                <TabsList className="w-max">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="trades">Trades</TabsTrigger>
+                  <TabsTrigger value="dd">Due Diligence</TabsTrigger>
+                  <TabsTrigger value="score">Score History</TabsTrigger>
+                  <TabsTrigger value="heatmap">P&amp;L Heatmap</TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Overview */}
+              <TabsContent value="overview" className="flex flex-col gap-6">
+                <Panel className="overflow-hidden">
+                  <PanelHead
+                    label="Equity Curve"
+                    sub="90-day performance history"
+                    right={
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          aria-hidden
+                          className="acid-animate size-1.5 rounded-full bg-success"
+                          style={{ animation: "acid-pulse 2s infinite" }}
+                        />
+                        <span className="font-mono text-[10px] tracking-[0.14em] text-faint uppercase">
+                          Live
+                        </span>
+                      </span>
+                    }
+                  />
+                  <div className="px-4 pt-4 pb-2">
                     <EquityChart data={trader.equity_curve} height={280} />
                   </div>
-                </div>
+                </Panel>
 
-                {!isInvestor && (
-                  <div className="card" style={{ overflow: "hidden" }}>
-                    <div style={{
-                      padding: "1rem 1.25rem", display: "flex", alignItems: "center", justifyContent: "space-between",
-                      borderBottom: "1px solid var(--color-line)", background: "var(--color-panel-2)",
-                    }}>
-                      <div>
-                        <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 2 }}>
-                          Recent Trades
-                        </p>
-                        <p style={{ fontSize: "0.75rem", color: "var(--color-muted)" }}>On-chain verifiable execution history</p>
-                      </div>
-                      <Link href={`/t/${trader.handle}/trades`} style={{
-                        fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase",
-                        color: "var(--color-mint)", textDecoration: "none", transition: "opacity 0.15s",
-                      }}
-                        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
-                        onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                      >
-                        All {trader.trade_count} →
-                      </Link>
-                    </div>
-                    <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
-                        <thead>
-                          <tr style={{ background: "var(--color-bg)", borderBottom: "1px solid var(--color-line)" }}>
-                            {["Market", "Side", "Size", "Leverage", "PnL", "Closed", "On-chain"].map((h) => (
-                              <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", fontWeight: 600 }}>
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {trader.trades.slice(0, 8).map((t) => (
-                            <tr key={t.id} style={{ borderBottom: "1px solid var(--color-line)", transition: "background 0.12s" }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-panel-2)")}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                            >
-                              <td style={{ padding: "10px 16px", fontWeight: 700, color: "var(--color-ink)" }}>{t.market.replace("-PERP", "")}</td>
-                              <td style={{ padding: "10px 16px" }}>
-                                <span style={{
-                                  fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase",
-                                  padding: "3px 8px", borderRadius: 4,
-                                  background: t.direction === "long" ? "var(--color-green-dim)" : "var(--color-red-dim)",
-                                  color: t.direction === "long" ? "var(--color-green)" : "var(--color-red)",
-                                }}>
-                                  {t.direction}
-                                </span>
-                              </td>
-                              <td className="tnum" style={{ padding: "10px 16px", fontFamily: "var(--font-mono)", color: "var(--color-muted)" }}>{formatUSD(t.size_usd, 0)}</td>
-                              <td className="tnum" style={{ padding: "10px 16px", fontFamily: "var(--font-mono)", color: "var(--color-ink)", fontWeight: 700 }}>{t.leverage}x</td>
-                              <td className={`tnum ${pnlClass(t.realized_pnl)}`} style={{ padding: "10px 16px", fontFamily: "var(--font-mono)", fontWeight: 800, fontSize: "0.875rem" }}>
-                                {t.realized_pnl >= 0 ? "+" : ""}{formatUSD(t.realized_pnl, 0)}
-                              </td>
-                              <td className="tnum" style={{ padding: "10px 16px", fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "var(--color-faint)" }}>
-                                {new Date(t.closed_at * 1000).toLocaleDateString()}
-                              </td>
-                              <td style={{ padding: "10px 16px" }}>
-                                {t.sig ? (
-                                  <a href={`https://solscan.io/tx/${t.sig}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
-                                    style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-mint)", display: "flex", alignItems: "center", gap: 4, transition: "opacity 0.15s" }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
-                                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                                  >
-                                    {t.sig.slice(0, 6)}… <ExternalLink size={9} />
-                                  </a>
-                                ) : <span style={{ color: "var(--color-faint)" }}>—</span>}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Trades tab ── */}
-            {tab === "trades" && (
-              <div className="card" style={{ overflow: "hidden", animation: "fade-in 0.2s ease" }}>
-                <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--color-line)", background: "var(--color-panel-2)" }}>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)" }}>
-                    All Trades · {trader.trade_count} records
-                  </p>
-                </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
-                    <thead>
-                      <tr style={{ background: "var(--color-bg)", borderBottom: "1px solid var(--color-line)" }}>
-                        {["Market", "Side", "Size", "Leverage", "PnL", "Duration", "Closed", "Sig"].map((h) => (
-                          <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", fontWeight: 600 }}>
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {trader.trades.map((t) => (
-                        <tr key={t.id} style={{ borderBottom: "1px solid var(--color-line)", transition: "background 0.12s" }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-panel-2)")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                {!isInvestor ? (
+                  <Panel className="overflow-hidden">
+                    <PanelHead
+                      label="Recent Trades"
+                      sub="On-chain verifiable execution history"
+                      right={
+                        <Link
+                          href={`/t/${trader.handle}/trades`}
+                          className="inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.15em] text-acid uppercase transition-opacity hover:opacity-70"
                         >
-                          <td style={{ padding: "9px 16px", fontWeight: 700, color: "var(--color-ink)" }}>{t.market.replace("-PERP", "")}</td>
-                          <td style={{ padding: "9px 16px" }}>
-                            <span style={{
-                              fontFamily: "var(--font-mono)", fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
-                              padding: "2px 7px", borderRadius: 4,
-                              background: t.direction === "long" ? "var(--color-green-dim)" : "var(--color-red-dim)",
-                              color: t.direction === "long" ? "var(--color-green)" : "var(--color-red)",
-                            }}>
-                              {t.direction}
-                            </span>
-                          </td>
-                          <td className="tnum" style={{ padding: "9px 16px", fontFamily: "var(--font-mono)", color: "var(--color-muted)" }}>{formatUSD(t.size_usd, 0)}</td>
-                          <td className="tnum" style={{ padding: "9px 16px", fontFamily: "var(--font-mono)", fontWeight: 700 }}>{t.leverage}x</td>
-                          <td className={`tnum ${pnlClass(t.realized_pnl)}`} style={{ padding: "9px 16px", fontFamily: "var(--font-mono)", fontWeight: 800 }}>
-                            {t.realized_pnl >= 0 ? "+" : ""}{formatUSD(t.realized_pnl, 0)}
-                          </td>
-                          <td style={{ padding: "9px 16px", fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "var(--color-faint)" }}>
-                            {`${(((t.closed_at - t.opened_at) / 3600)).toFixed(1)}h`}
-                          </td>
-                          <td className="tnum" style={{ padding: "9px 16px", fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "var(--color-faint)" }}>
-                            {new Date(t.closed_at * 1000).toLocaleDateString()}
-                          </td>
-                          <td style={{ padding: "9px 16px" }}>
-                            {t.sig ? (
-                              <a href={`https://solscan.io/tx/${t.sig}?cluster=devnet`} target="_blank" rel="noopener noreferrer"
-                                style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-mint)", display: "flex", alignItems: "center", gap: 3 }}>
-                                {t.sig.slice(0, 5)}… <ExternalLink size={9} />
-                              </a>
-                            ) : <span style={{ color: "var(--color-faint)", fontFamily: "var(--font-mono)", fontSize: 9 }}>—</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+                          All {trader.trade_count} <ArrowUpRight className="size-3" aria-hidden />
+                        </Link>
+                      }
+                    />
+                    <RecentTradesTable trades={trader.trades.slice(0, 8)} />
+                  </Panel>
+                ) : null}
+              </TabsContent>
 
-            {/* ── Due Diligence ── */}
-            {tab === "dd" && <div style={{ animation: "fade-in 0.2s ease" }}><DrawdownTimeline trader={trader} /></div>}
+              {/* Trades */}
+              <TabsContent value="trades">
+                <Panel className="overflow-hidden">
+                  <PanelHead label={`All Trades // ${trader.trade_count} records`} />
+                  <AllTradesTable trades={trader.trades} />
+                </Panel>
+              </TabsContent>
 
-            {/* ── Score History ── */}
-            {tab === "score" && (
-              <div className="card" style={{ padding: "1.25rem", animation: "fade-in 0.2s ease" }}>
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "1.25rem" }}>
-                  Score History — {scoreHistory?.length ?? 0} days
-                </p>
-                {scoreHistory
-                  ? <ScoreHistoryChart data={scoreHistory} height={280} />
-                  : <p style={{ fontSize: "0.875rem", textAlign: "center", padding: "4rem 0", color: "var(--color-faint)" }}>No score history available</p>
-                }
-              </div>
-            )}
+              {/* Due Diligence */}
+              <TabsContent value="dd">
+                <DrawdownTimeline trader={trader} />
+              </TabsContent>
 
-            {/* ── P&L Heatmap ── */}
-            {tab === "heatmap" && (
-              <div className="card" style={{ padding: "1.25rem", animation: "fade-in 0.2s ease" }}>
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "1.25rem" }}>
-                  Daily P&L Heatmap
-                </p>
-                {dailyPnl
-                  ? <PnLHeatmap data={dailyPnl} />
-                  : <p style={{ fontSize: "0.875rem", textAlign: "center", padding: "4rem 0", color: "var(--color-faint)" }}>No trade data available</p>
-                }
-              </div>
-            )}
+              {/* Score History */}
+              <TabsContent value="score">
+                <Panel className="p-5">
+                  <MonoLabel>{`Score History // ${scoreHistory?.length ?? 0} days`}</MonoLabel>
+                  <div className="mt-5">
+                    {scoreHistory ? (
+                      <ScoreHistoryChart data={scoreHistory} height={280} />
+                    ) : (
+                      <p className="py-16 text-center text-sm text-faint">
+                        No score history available
+                      </p>
+                    )}
+                  </div>
+                </Panel>
+              </TabsContent>
+
+              {/* P&L Heatmap */}
+              <TabsContent value="heatmap">
+                <Panel className="p-5">
+                  <MonoLabel>Daily P&amp;L Heatmap</MonoLabel>
+                  <div className="mt-5">
+                    {dailyPnl ? (
+                      <PnLHeatmap data={dailyPnl} />
+                    ) : (
+                      <p className="py-16 text-center text-sm text-faint">No trade data available</p>
+                    )}
+                  </div>
+                </Panel>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* ── RIGHT SIDEBAR ── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem", position: "sticky", top: 60 }}>
-            {/* Score card */}
-            <div className="card" style={{ padding: "1.25rem" }}>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: "0.875rem" }}>
-                Arcadia Score
+          {/* RIGHT: sidebar */}
+          <div className="flex flex-col gap-4 lg:sticky lg:top-4">
+            {/* Vault status */}
+            <Panel className="p-5">
+              <MonoLabel>Vault Status</MonoLabel>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <StatusPill
+                  deposits_open={trader.deposits_open}
+                  capacityLeft={
+                    trader.deposits_open ? trader.capacity.total - trader.capacity.used : undefined
+                  }
+                />
+                <span className="font-mono text-sm font-bold text-ink tabular-nums">
+                  {formatUSD(trader.aum, 0)}
+                </span>
+              </div>
+              <AllocationBar aum={trader.aum} total={trader.capacity.total} className="mt-3" />
+              <p className="mt-2 font-mono text-[10px] text-faint tabular-nums">
+                {`${formatUSD(trader.aum, 0)} of ${formatUSD(trader.capacity.total, 0)} // ${capacityPct}%`}
               </p>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
-                  <p style={{ fontFamily: "var(--font-mono)", fontWeight: 900, fontSize: "3rem", letterSpacing: "-0.05em", color: "var(--color-ink)", lineHeight: 1 }}>
-                    {trader.score}
-                  </p>
-                  <div style={{ marginTop: 6 }}>
-                    <TierBadge tier={trader.tier} />
-                  </div>
-                </div>
-                <div style={{ opacity: 0.85 }}>
-                  <ScoreDial score={trader.score} tier={trader.tier} size={72} />
-                </div>
-              </div>
-            </div>
-
-            {/* Vault */}
-            <CollapsibleCard title="Vault Status" defaultOpen>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem" }}>
-                  <DepositsStatusBadge
-                    deposits_open={trader.deposits_open}
-                    capacityLeft={trader.deposits_open ? trader.capacity.total - trader.capacity.used : undefined}
-                  />
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700, color: "var(--color-ink)" }}>
-                    {formatUSD(trader.aum, 0)}
-                  </span>
-                </div>
-                <div style={{ marginBottom: 4 }}>
-                  <CapacityBar aum={trader.aum} capacity_usd={trader.capacity.total} />
-                </div>
-                <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--color-faint)", marginBottom: "1rem" }}>
-                  {formatUSD(trader.aum, 0)} of {formatUSD(trader.capacity.total, 0)} · {capacityPct}%
-                </p>
-                <button
-                  onClick={() => setShowDeposit(true)}
-                  disabled={!trader.deposits_open}
-                  style={{
-                    display: "block", width: "100%", textAlign: "center",
-                    padding: "10px", borderRadius: 8,
-                    background: trader.deposits_open ? "var(--color-mint)" : "var(--color-panel-2)",
-                    color: trader.deposits_open ? "#ffffff" : "var(--color-faint)",
-                    fontWeight: 700, fontSize: "0.8125rem", letterSpacing: "-0.01em",
-                    border: "none", cursor: trader.deposits_open ? "pointer" : "not-allowed",
-                    transition: "background 0.15s",
-                    boxShadow: trader.deposits_open ? "0 0 20px rgba(79,158,255,0.2)" : "none",
-                  }}
-                  onMouseEnter={(e) => { if (trader.deposits_open) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-mint-bright)"; }}
-                  onMouseLeave={(e) => { if (trader.deposits_open) (e.currentTarget as HTMLButtonElement).style.background = "var(--color-mint)"; }}
-                >
-                  {trader.deposits_open ? "Fund Vault" : "Deposits Closed"}
-                </button>
-              </div>
-            </CollapsibleCard>
+              <AcidButton
+                variant={trader.deposits_open ? "acid" : "ghost"}
+                size="sm"
+                className="mt-4 w-full"
+                onClick={() => setShowDeposit(true)}
+                disabled={!trader.deposits_open}
+              >
+                {trader.deposits_open ? "Fund Vault" : "Deposits Closed"}
+              </AcidButton>
+            </Panel>
 
             {/* Quick stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {[
-                { label: "Investors",      value: trader.investors_count.toString()  },
-                { label: "Active Days",    value: trader.days_active.toString()      },
-                { label: "Total Trades",   value: trader.trade_count.toString()      },
-                { label: "Max Leverage",   value: `${trader.max_leverage}x`         },
-              ].map((s) => (
-                <div key={s.label} className="card" style={{ padding: "0.875rem", textAlign: "center" }}>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--color-faint)", marginBottom: 4 }}>
-                    {s.label}
-                  </p>
-                  <p style={{ fontFamily: "var(--font-mono)", fontSize: "1.125rem", fontWeight: 800, color: "var(--color-ink)", letterSpacing: "-0.03em" }}>
-                    {s.value}
-                  </p>
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              {quickStats.map((s) => (
+                <StatTile key={s.label} label={s.label}>
+                  {s.value}
+                </StatTile>
               ))}
             </div>
 
-            {/* Risk profile — collapsible */}
-            <CollapsibleCard title="Risk Profile" defaultOpen>
-              <RiskBars items={riskItems} />
-            </CollapsibleCard>
+            {/* Risk profile */}
+            <Panel className="p-5">
+              <MonoLabel>Risk Profile</MonoLabel>
+              <div className="mt-4">
+                <MetricBars items={riskItems} />
+              </div>
+            </Panel>
           </div>
         </div>
-      </div>
+      </PageContainer>
 
-      {showDeposit && (
-        <DepositModal trader={trader} onClose={() => setShowDeposit(false)} />
-      )}
+      {showDeposit ? <DepositModal trader={trader} onClose={() => setShowDeposit(false)} /> : null}
 
-      {showShare && (
+      {showShare ? (
         <ShareCardModal
           data={{
-            handle:     trader.handle,
-            score:      trader.score,
-            tier:       trader.tier,
+            handle: trader.handle,
+            score: trader.score,
+            tier: trader.tier,
             return_30d: trader.metrics.return_30d,
-            sortino:    trader.metrics.sortino,
-            max_dd:     trader.metrics.max_dd,
-            win_rate:   trader.metrics.win_rate,
-            wallet:     trader.wallet,
+            sortino: trader.metrics.sortino,
+            max_dd: trader.metrics.max_dd,
+            win_rate: trader.metrics.win_rate,
+            wallet: trader.wallet,
           }}
           profileUrl={
             typeof window !== "undefined"
@@ -802,7 +670,7 @@ export default function TraderProfilePage() {
           }
           onClose={() => setShowShare(false)}
         />
-      )}
+      ) : null}
     </div>
   );
 }

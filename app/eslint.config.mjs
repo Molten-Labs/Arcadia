@@ -15,13 +15,10 @@ const eslintConfig = [
     files: [
       "app/api/v1/**",
       "app/(app)/analytics/page.tsx",
-      "app/(app)/leaderboard/page.tsx",
       "app/(app)/payouts/page.tsx",
       "app/(app)/reputation/page.tsx",
-      "app/(app)/t/**",
       "app/(app)/terminal/page.tsx",
       "app/(app)/trade/page.tsx",
-      "app/(app)/traders/page.tsx",
       "components/*.tsx",
       "components/charts/**",
     ],
