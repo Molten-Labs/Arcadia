@@ -123,12 +123,12 @@ export function Notifications({ role, connected }: { role: ArcadiaRole; connecte
         aria-expanded={open}
         aria-haspopup="menu"
         className={cn(
-          "relative flex size-11 items-center justify-center rounded-lg transition-colors",
+          "group relative flex size-11 items-center justify-center rounded-lg transition-colors",
           "outline-none focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
           open ? "bg-panel-2 text-acid" : "text-muted hover:bg-white/5 hover:text-ink",
         )}
       >
-        <Bell className="size-4" aria-hidden />
+        <Bell className="size-4 origin-top transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:-rotate-[9deg] group-focus-visible:-rotate-[9deg] motion-reduce:transition-none motion-reduce:transform-none" aria-hidden />
         <span className="t-badge" data-open={unread > 0 ? "true" : "false"}>
           <span className="t-badge-dot">{unread > 9 ? "9+" : unread}</span>
         </span>
@@ -178,7 +178,7 @@ export function Notifications({ role, connected }: { role: ArcadiaRole; connecte
               <div
                 key={n.id}
                 className={cn(
-                  "group flex items-start gap-3 border-b border-line px-4 py-3 transition-colors",
+                  "group flex items-start gap-3 border-b border-line px-4 py-3 transition-colors hover:bg-white/[0.03] motion-reduce:transition-none",
                   !n.read && "bg-acid/[0.03]",
                 )}
               >

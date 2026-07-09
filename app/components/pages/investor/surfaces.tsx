@@ -40,8 +40,10 @@ export function StatTile({
   className?: string;
 }) {
   return (
-    <Panel className={cn("p-5", className)}>
-      <PanelLabel className="mb-2">{label}</PanelLabel>
+    <Panel className={cn("group acid-int p-5", className)}>
+      <PanelLabel className="mb-2 transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:text-muted motion-reduce:transition-none">
+        {label}
+      </PanelLabel>
       <p
         className={cn(
           "font-mono text-2xl font-bold tracking-tight tabular-nums",

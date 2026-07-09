@@ -126,8 +126,10 @@ export function StatTile({
   className?: string;
 }) {
   return (
-    <Panel className={cn("p-4", className)}>
-      <MicroLabel className="mb-2">{label}</MicroLabel>
+    <Panel className={cn("group acid-int p-4", className)}>
+      <MicroLabel className="mb-2 transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:text-muted motion-reduce:transition-none">
+        {label}
+      </MicroLabel>
       <p
         className={cn(
           "font-mono text-2xl font-bold tracking-tight tabular-nums",
@@ -197,7 +199,7 @@ export function MetricBars({ items }: { items: MetricBarItem[] }) {
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-panel-2">
               <div
-                className={cn("h-full rounded-full", METRIC_FILL[tone])}
+                className={cn("acid-bar h-full rounded-full", METRIC_FILL[tone])}
                 style={{ width: `${pct}%` }}
               />
             </div>

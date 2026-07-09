@@ -60,7 +60,7 @@ export function TerminalOrderForm({
   const isLong = direction === "long";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden border-l border-line">
+    <div className="flex h-full flex-col overflow-hidden border-l border-line transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:border-white/15 motion-reduce:transition-none">
       {/* Long / Short tabs */}
       <div className="grid shrink-0 grid-cols-2 border-b border-line">
         {(["long", "short"] as Direction[]).map((d) => {
@@ -95,7 +95,7 @@ export function TerminalOrderForm({
                 key={t}
                 type="button"
                 onClick={() => setOrderType(t)}
-                className="flex-1 py-1.5 text-[10px] font-semibold transition-colors"
+                className="flex-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none"
                 style={{
                   background: orderType === t ? "var(--color-panel-2)" : "transparent",
                   color: orderType === t ? "var(--color-ink)" : "var(--color-faint)",
@@ -154,7 +154,7 @@ export function TerminalOrderForm({
                     setSizeUSD(((MARGIN_AVAIL * p) / 100).toFixed(0));
                     setFocusPct(p);
                   }}
-                  className="flex-1 rounded border py-1 text-[9px] font-bold transition-colors"
+                  className="flex-1 rounded border py-1 text-[9px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
                   style={{
                     background:
                       focusPct === p
@@ -181,7 +181,7 @@ export function TerminalOrderForm({
                 <button
                   type="button"
                   onClick={() => setLeverage(Math.max(1, leverage - 1))}
-                  className="flex size-5 items-center justify-center rounded border border-line text-muted transition-colors hover:bg-panel-2"
+                  className="flex size-5 items-center justify-center rounded border border-line text-muted transition-colors hover:bg-panel-2 active:scale-90 motion-reduce:transform-none"
                   aria-label="Decrease leverage"
                 >
                   <Minus size={8} />
@@ -192,7 +192,7 @@ export function TerminalOrderForm({
                 <button
                   type="button"
                   onClick={() => setLeverage(Math.min(50, leverage + 1))}
-                  className="flex size-5 items-center justify-center rounded border border-line text-muted transition-colors hover:bg-panel-2"
+                  className="flex size-5 items-center justify-center rounded border border-line text-muted transition-colors hover:bg-panel-2 active:scale-90 motion-reduce:transform-none"
                   aria-label="Increase leverage"
                 >
                   <Plus size={8} />
@@ -323,7 +323,7 @@ export function TerminalOrderForm({
             type="button"
             onClick={onSubmit}
             disabled={!connected || submitting || !sizeUSD || parseFloat(sizeUSD) <= 0}
-            className="w-full rounded-lg py-3 text-sm font-black tracking-wide transition-all disabled:opacity-40"
+            className="w-full rounded-lg py-3 text-sm font-black tracking-wide transition-all active:scale-[0.98] disabled:opacity-40 motion-reduce:transform-none"
             style={{
               background: isLong ? "var(--color-success)" : "var(--color-danger)",
               color: isLong ? "var(--color-void)" : "var(--color-chrome-1)",
@@ -364,7 +364,7 @@ export function TerminalOrderForm({
         <button
           type="button"
           onClick={openDeposit}
-          className="mt-2 flex w-full items-center justify-center gap-1 rounded border border-acid/30 bg-acid/[0.06] py-1.5 text-center text-[10px] font-bold text-acid transition-colors hover:bg-acid/[0.12]"
+          className="mt-2 flex w-full items-center justify-center gap-1 rounded border border-acid/30 bg-acid/[0.06] py-1.5 text-center text-[10px] font-bold text-acid transition-colors hover:bg-acid/[0.12] active:scale-[0.98] motion-reduce:transform-none"
         >
           <Zap size={10} />
           Deposit USDC

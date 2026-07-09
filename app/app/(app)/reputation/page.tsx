@@ -92,7 +92,7 @@ export default function ReputationPage() {
         {/* Score hero + capacity */}
         <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3">
           <Panel
-            className="flex flex-col items-center justify-center gap-3 p-6"
+            className="group acid-int flex flex-col items-center justify-center gap-3 p-6"
             style={{
               backgroundImage:
                 "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(204,255,0,0.08) 0%, transparent 70%)",
@@ -123,7 +123,7 @@ export default function ReputationPage() {
         </div>
 
         {/* Milestone strip */}
-        <Panel className="mb-6 flex items-center gap-1 overflow-x-auto p-4">
+        <Panel className="group acid-int mb-6 flex items-center gap-1 overflow-x-auto p-4">
           {MILESTONES.map((m, i) => (
             <div key={m.score} className="flex shrink-0 items-center gap-1">
               <div
@@ -170,7 +170,7 @@ export default function ReputationPage() {
           <TabsContent value="overview">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {/* Score breakdown */}
-              <Panel className="p-5">
+              <Panel className="group acid-int p-5">
                 <MicroLabel className="mb-4">Score Breakdown</MicroLabel>
                 <div className="space-y-4">
                   {SCORE_WEIGHTS.map((s) => {
@@ -190,7 +190,7 @@ export default function ReputationPage() {
                         </div>
                         <div className="h-1.5 overflow-hidden rounded-full bg-panel-2">
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-acid to-cyan"
+                            className="acid-bar h-full rounded-full bg-gradient-to-r from-acid to-cyan"
                             style={{ width: `${s.value}%` }}
                           />
                         </div>
@@ -208,7 +208,7 @@ export default function ReputationPage() {
               </Panel>
 
               {/* Tier progression */}
-              <Panel className="p-5">
+              <Panel className="group acid-int p-5">
                 <MicroLabel className="mb-4">Tier Progression</MicroLabel>
                 <div className="space-y-2">
                   {TIERS.map((t) => {
@@ -217,8 +217,8 @@ export default function ReputationPage() {
                     return (
                       <div
                         key={t.tier}
-                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
-                          active ? accent.ring : "border-transparent bg-panel-2"
+                        className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] motion-reduce:transition-none ${
+                          active ? accent.ring : "border-transparent bg-panel-2 hover:border-white/15"
                         }`}
                       >
                         {active && (
@@ -252,7 +252,7 @@ export default function ReputationPage() {
           </TabsContent>
 
           <TabsContent value="history">
-            <Panel className="p-5">
+            <Panel className="group acid-int p-5">
               <div className="mb-5 flex items-center gap-2">
                 <TrendingUp size={14} className="text-acid" />
                 <MicroLabel>Score History — 180 days</MicroLabel>
@@ -266,7 +266,7 @@ export default function ReputationPage() {
           </TabsContent>
 
           <TabsContent value="heatmap">
-            <Panel className="p-5">
+            <Panel className="group acid-int p-5">
               <MicroLabel className="mb-5">Daily P&amp;L Heatmap</MicroLabel>
               <PnLHeatmap data={MOCK_DAILY_PNL["nova"] ?? []} />
             </Panel>

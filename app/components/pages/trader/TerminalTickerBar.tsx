@@ -54,7 +54,7 @@ export function TerminalTickerBar({
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className="h-full border-r border-line px-2.5 text-[9px] font-bold whitespace-nowrap transition-colors"
+            className="h-full border-r border-line px-2.5 text-[9px] font-bold whitespace-nowrap transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
             style={{
               color: tab === t ? "var(--color-ink)" : "var(--color-faint)",
               background: tab === t ? "var(--color-panel-2)" : "transparent",

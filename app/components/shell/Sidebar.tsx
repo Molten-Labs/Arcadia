@@ -35,14 +35,20 @@ function NavItem({ href, icon: Icon, label, active, dimmed }: NavLink & { active
             : "text-muted hover:bg-white/[0.04] hover:text-ink",
       )}
     >
-      {active && (
-        <span
-          aria-hidden
-          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-acid"
-        />
-      )}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 origin-center rounded-full bg-acid transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] motion-reduce:transition-none",
+          active
+            ? "scale-y-100"
+            : "scale-y-0 group-hover:scale-y-100 group-focus-visible:scale-y-100",
+        )}
+      />
       <Icon
-        className={cn("size-4 shrink-0", active ? "text-acid" : "text-current")}
+        className={cn(
+          "size-4 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5 motion-reduce:translate-x-0 motion-reduce:transition-none",
+          active ? "text-acid" : "text-current",
+        )}
         strokeWidth={active ? 2.2 : 1.8}
         aria-hidden
       />

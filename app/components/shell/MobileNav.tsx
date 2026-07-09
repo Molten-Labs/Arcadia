@@ -21,7 +21,14 @@ function MobileNavItem({ href, icon: Icon, label, active }: NavLink & { active: 
         active ? "text-acid" : "text-faint hover:text-muted",
       )}
     >
-      <Icon className="size-5" strokeWidth={active ? 2.2 : 1.6} aria-hidden />
+      <Icon
+        className={cn(
+          "size-5 transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] motion-reduce:transition-none motion-reduce:transform-none",
+          active ? "scale-110" : "scale-100",
+        )}
+        strokeWidth={active ? 2.2 : 1.6}
+        aria-hidden
+      />
       <span className="font-mono text-[9px] uppercase tracking-[0.1em]">{label}</span>
     </Link>
   );

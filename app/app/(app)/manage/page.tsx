@@ -69,7 +69,7 @@ export default function ManagePage() {
         </PageHeader>
 
         {/* Capacity formula callout */}
-        <Panel className="mb-6 flex flex-wrap items-center gap-4 border-acid/20 p-4">
+        <Panel className="group acid-int mb-6 flex flex-wrap items-center gap-4 border-acid/20 p-4">
           <div className="font-mono text-2xl font-bold tabular-nums text-acid">{score}</div>
           <div className="text-lg font-bold text-faint">×</div>
           <div>
@@ -175,7 +175,7 @@ export default function ManagePage() {
           </Panel>
 
           {/* Vault status */}
-          <Panel className="p-5">
+          <Panel className="group acid-int p-5">
             <MicroLabel className="mb-4">Vault Controls</MicroLabel>
             <div className="mb-6 space-y-0 text-xs">
               <DataRow label="Status">Active</DataRow>

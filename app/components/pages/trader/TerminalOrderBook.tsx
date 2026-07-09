@@ -171,7 +171,7 @@ export function TerminalOrderBook({ symbol, market }: { symbol: string; market: 
   const askPct = 100 - bidPct;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden border-l border-line">
+    <div className="flex h-full flex-col overflow-hidden border-l border-line transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:border-white/15 motion-reduce:transition-none">
       {/* Tabs */}
       <div className="flex shrink-0 border-b border-line">
         {(["book", "trades"] as BookTab[]).map((t) => (
@@ -179,7 +179,7 @@ export function TerminalOrderBook({ symbol, market }: { symbol: string; market: 
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className="flex-1 py-2 text-[11px] font-semibold capitalize transition-colors"
+            className="flex-1 py-2 text-[11px] font-semibold capitalize transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none"
             style={{
               color: tab === t ? "var(--color-ink)" : "var(--color-faint)",
               borderBottom: tab === t ? "2px solid var(--color-acid)" : "2px solid transparent",
@@ -376,7 +376,7 @@ export function TerminalOrderBook({ symbol, market }: { symbol: string; market: 
               tradeList.slice(0, 30).map((t) => (
                 <div
                   key={t.tradeSequenceNumber}
-                  className="grid px-2"
+                  className="grid px-2 transition-colors hover:bg-panel-2 motion-reduce:transition-none"
                   style={{ gridTemplateColumns: "1fr 1fr 1fr", height: 19 }}
                 >
                   <span

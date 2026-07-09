@@ -54,7 +54,7 @@ export function PaperTradeMarketBar({
                   type="button"
                   onClick={() => setMarket(p.market)}
                   aria-pressed={active}
-                  className="min-w-[150px] flex-1 border-r border-white/10 px-4 py-3 text-left transition-colors last:border-r-0 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-acid/40 focus-visible:outline-none"
+                  className="min-w-[150px] flex-1 border-r border-white/10 px-4 py-3 text-left transition-colors last:border-r-0 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-acid/40 focus-visible:outline-none active:bg-white/[0.07] motion-reduce:transition-none"
                   style={active ? { background: "var(--color-panel-2)" } : undefined}
                 >
                   <p className="mb-0.5 flex items-center gap-1.5 font-mono text-[0.62rem] tracking-[0.14em] text-muted uppercase">

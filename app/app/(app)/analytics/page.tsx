@@ -70,12 +70,12 @@ export default function AnalyticsPage() {
 
         {/* Equity + risk */}
         <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Panel className="p-5 lg:col-span-2">
+          <Panel className="group acid-int p-5 lg:col-span-2">
             <MicroLabel className="mb-4">Equity Curve — 90 days</MicroLabel>
             <EquityChart data={DEMO.equity_curve} height={200} />
           </Panel>
 
-          <Panel className="p-5">
+          <Panel className="group acid-int p-5">
             <MicroLabel className="mb-4">Risk Metrics</MicroLabel>
             <MetricBars
               items={[
@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
                 </TableHeader>
                 <TableBody>
                   {DEMO.trades.map((t) => (
-                    <TableRow key={t.id}>
+                    <TableRow key={t.id} className="group">
                       <TableCell className="font-bold text-ink">{t.market}</TableCell>
                       <TableCell
                         className={`text-[0.65rem] font-black tracking-wider uppercase ${
@@ -171,10 +171,10 @@ export default function AnalyticsPage() {
                       </TableCell>
                       <TableCell className="tabular-nums">{formatUSD(t.size_usd, 0)}</TableCell>
                       <TableCell className="tabular-nums">{t.leverage}x</TableCell>
-                      <TableCell className="tabular-nums text-muted">
+                      <TableCell className="tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
                         {t.entry_px < 10 ? t.entry_px.toFixed(4) : t.entry_px.toFixed(2)}
                       </TableCell>
-                      <TableCell className="tabular-nums text-muted">
+                      <TableCell className="tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
                         {t.exit_px < 10 ? t.exit_px.toFixed(4) : t.exit_px.toFixed(2)}
                       </TableCell>
                       <TableCell className={`font-bold tabular-nums ${pnlTone(t.realized_pnl)}`}>
@@ -208,7 +208,7 @@ export default function AnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="heatmap">
-            <Panel className="p-5">
+            <Panel className="group acid-int p-5">
               <MicroLabel className="mb-5">Daily P&amp;L Heatmap</MicroLabel>
               <PnLHeatmap data={MOCK_DAILY_PNL["nova"] ?? []} />
             </Panel>

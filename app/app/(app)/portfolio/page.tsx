@@ -121,7 +121,7 @@ export default function PortfolioPage() {
               const trader = MOCK_TRADERS.find((t) => t.handle === pos.trader_handle);
               const nav = (1.0 + (trader?.metrics.return_all ?? 0) / 100).toFixed(6);
               return (
-                <Panel key={pos.profile} className="overflow-hidden p-5 transition-colors hover:border-acid/30">
+                <Panel key={pos.profile} className="group acid-int overflow-hidden p-5">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
                       <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -227,16 +227,16 @@ export default function PortfolioPage() {
                         </TableRow>
                       ))
                     : data.map((pos) => (
-                        <TableRow key={pos.profile}>
+                        <TableRow key={pos.profile} className="group">
                           <TableCell>
                             <Link href={`/t/${pos.trader_handle}`} className="font-semibold text-ink hover:text-acid">
                               @{pos.trader_handle}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted">
+                          <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
                             {pos.shares.toLocaleString()}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted">
+                          <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
                             {formatUSD(pos.cost_basis_usd, 0)}
                           </TableCell>
                           <TableCell className="text-right font-semibold tabular-nums text-ink">
@@ -302,8 +302,8 @@ export default function PortfolioPage() {
               </TableHeader>
               <TableBody>
                 {TX_HISTORY.map((row, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-sans text-muted">{row.type}</TableCell>
+                  <TableRow key={i} className="group">
+                    <TableCell className="font-sans text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">{row.type}</TableCell>
                     <TableCell>
                       <Link href={`/t/${row.trader.replace("@", "")}`} className="text-acid hover:underline">
                         {row.trader}

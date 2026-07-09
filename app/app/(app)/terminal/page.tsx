@@ -318,7 +318,7 @@ function TerminalContent() {
           <button
             type="button"
             onClick={() => (depositOpen ? closeDeposit() : openDeposit())}
-            className="flex h-7 items-center gap-1 rounded bg-acid px-3 text-[10px] font-black text-void transition-all hover:opacity-90"
+            className="flex h-7 items-center gap-1 rounded bg-acid px-3 text-[10px] font-black text-void transition-all hover:opacity-90 active:scale-95 motion-reduce:transform-none"
             style={
               depositOpen
                 ? { boxShadow: "0 0 0 2px color-mix(in srgb, var(--color-acid) 35%, transparent)" }
@@ -412,7 +412,7 @@ function TerminalContent() {
                           key={p}
                           type="button"
                           onClick={() => setDepositAmt(p)}
-                          className="flex-1 rounded border py-1 text-[10px] font-bold transition-all"
+                          className="flex-1 rounded border py-1 text-[10px] font-bold transition-all active:scale-95 motion-reduce:transform-none"
                           style={{
                             background: active
                               ? "color-mix(in srgb, var(--color-acid) 12%, transparent)"
@@ -447,7 +447,7 @@ function TerminalContent() {
                     type="button"
                     onClick={confirmDeposit}
                     disabled={depositPhase === "pending" || !depositAmt || Number(depositAmt) <= 0}
-                    className="w-full rounded-lg bg-acid py-2.5 text-xs font-black tracking-wide text-void transition-all disabled:opacity-50"
+                    className="w-full rounded-lg bg-acid py-2.5 text-xs font-black tracking-wide text-void transition-all active:scale-[0.98] disabled:opacity-50 motion-reduce:transform-none"
                     style={
                       depositPhase === "pending"
                         ? { background: "color-mix(in srgb, var(--color-acid) 45%, transparent)" }
@@ -476,7 +476,7 @@ function TerminalContent() {
               key={iv}
               type="button"
               onClick={() => setInterval_(iv)}
-              className="h-6 rounded px-2 text-[10px] font-bold transition-colors"
+              className="h-6 rounded px-2 text-[10px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
               style={{
                 background: active ? "var(--color-panel-2)" : "transparent",
                 color: active ? "var(--color-ink)" : "var(--color-faint)",
@@ -618,7 +618,7 @@ function TerminalContent() {
               <button
                 type="button"
                 onClick={() => setPositions([])}
-                className="rounded border border-line px-2 py-0.5 text-[10px] font-semibold text-danger transition-colors hover:opacity-80"
+                className="rounded border border-line px-2 py-0.5 text-[10px] font-semibold text-danger transition-colors hover:opacity-80 active:scale-95 motion-reduce:transform-none"
               >
                 Close All
               </button>
@@ -704,7 +704,7 @@ function TerminalContent() {
                             type="button"
                             onClick={() => closePosition(pos.id)}
                             disabled={closingId === pos.id}
-                            className="flex items-center gap-1 rounded border border-line px-2 py-1 text-[10px] font-semibold transition-colors hover:bg-panel"
+                            className="flex items-center gap-1 rounded border border-line px-2 py-1 text-[10px] font-semibold transition-colors hover:bg-panel active:scale-95 motion-reduce:transform-none"
                             style={{
                               color:
                                 closingId === pos.id ? "var(--color-faint)" : "var(--color-danger)",

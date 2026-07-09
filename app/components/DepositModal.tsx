@@ -78,7 +78,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={`Fund @${trader.handle} vault`}
-        className="w-full max-w-[440px] overflow-hidden rounded-2xl border border-line bg-panel shadow-[0_40px_120px_rgba(0,0,0,0.9)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150"
+        className="acid-sheen w-full max-w-[440px] overflow-hidden rounded-2xl border border-line bg-panel shadow-[0_40px_120px_rgba(0,0,0,0.9)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-line bg-panel-2 px-5 py-4">
@@ -148,10 +148,10 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                       type="button"
                       onClick={() => setAmount(String(p))}
                       className={cn(
-                        "rounded-md border px-3 py-1.5 font-mono text-[0.625rem] font-bold transition-colors",
+                        "rounded-md border px-3 py-1.5 font-mono text-[0.625rem] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none",
                         selected
                           ? "border-acid/40 bg-acid/12 text-acid"
-                          : "border-line bg-white/[0.03] text-muted hover:text-ink",
+                          : "border-line bg-white/[0.03] text-muted hover:border-acid/25 hover:text-ink",
                       )}
                     >
                       ${p >= 1000 ? `${p / 1000}k` : p}
@@ -171,7 +171,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 onClick={handleDeposit}
                 disabled={!isConnected || !isValid}
                 className={cn(
-                  "w-full rounded-lg py-3 text-[0.9375rem] font-extrabold tracking-tight transition-all focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
+                  "w-full rounded-lg py-3 text-[0.9375rem] font-extrabold tracking-tight transition-all focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] motion-reduce:transform-none",
                   isConnected && isValid
                     ? "bg-acid text-void shadow-[0_0_28px_rgba(204,255,0,0.28)] hover:bg-acid/90"
                     : "cursor-not-allowed bg-panel-2 text-faint",
@@ -260,7 +260,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="block w-full rounded-lg border border-success/25 bg-success/[0.08] py-3 text-sm font-bold text-success transition-colors hover:bg-success/15 focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+                className="block w-full rounded-lg border border-success/25 bg-success/[0.08] py-3 text-sm font-bold text-success transition-colors hover:bg-success/15 focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] motion-reduce:transform-none"
               >
                 Done — View Portfolio
               </button>
@@ -280,7 +280,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
               <button
                 type="button"
                 onClick={resetTx}
-                className="block w-full rounded-lg border border-line bg-transparent py-3 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+                className="block w-full rounded-lg border border-line bg-transparent py-3 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] motion-reduce:transform-none"
               >
                 Try again
               </button>

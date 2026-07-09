@@ -114,9 +114,9 @@ function ToggleSwitch({
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: ElementType; children: React.ReactNode }) {
   return (
-    <Panel className="overflow-hidden">
+    <Panel className="group acid-int overflow-hidden">
       <div className="flex items-center gap-2 border-b border-line bg-panel-2 px-5 py-3.5">
-        <Icon className="size-3.5 text-acid" />
+        <Icon className="size-3.5 text-acid transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 motion-reduce:transition-none motion-reduce:transform-none" />
         <PanelLabel>{title}</PanelLabel>
       </div>
       <div className="divide-y divide-line px-5">{children}</div>
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => switchRole("trader")}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-bold transition-colors",
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-bold transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none",
                   role === "trader"
                     ? "border-acid/40 bg-acid/10 text-acid"
                     : "border-line bg-panel-2 text-faint hover:text-ink",
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => switchRole("investor")}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-bold transition-colors",
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-bold transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none",
                   role === "investor"
                     ? "border-tier-established/40 bg-tier-established/10 text-tier-established"
                     : "border-line bg-panel-2 text-faint hover:text-ink",

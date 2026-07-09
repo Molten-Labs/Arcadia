@@ -67,7 +67,7 @@ export function PaperTradeOrderForm({
   const invalidSize = size <= 0;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-panel p-4">
+    <div className="group acid-int rounded-2xl border border-white/10 bg-panel p-4">
       <MicroLabel className="mb-3">Order ticket</MicroLabel>
 
       <div className="space-y-3">
@@ -148,7 +148,7 @@ export function PaperTradeOrderForm({
                   key={p}
                   type="button"
                   onClick={() => setSizeUSD(p)}
-                  className="flex-1 rounded border py-1 font-mono text-[0.62rem] font-bold tabular-nums transition-colors focus-visible:outline-none"
+                  className="flex-1 rounded border py-1 font-mono text-[0.62rem] font-bold tabular-nums transition-colors focus-visible:outline-none active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
                   style={{
                     background: active
                       ? "color-mix(in srgb, var(--color-acid) 12%, transparent)"
@@ -179,7 +179,7 @@ export function PaperTradeOrderForm({
               <button
                 type="button"
                 onClick={() => setLeverage(Math.max(1, leverage - 1))}
-                className="flex size-5 items-center justify-center rounded border border-white/10 text-muted transition-colors hover:bg-panel-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid/40"
+                className="flex size-5 items-center justify-center rounded border border-white/10 text-muted transition-colors hover:bg-panel-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid/40 active:scale-90 motion-reduce:transition-none motion-reduce:transform-none"
                 aria-label="Decrease leverage"
               >
                 <Minus size={9} />
@@ -190,7 +190,7 @@ export function PaperTradeOrderForm({
               <button
                 type="button"
                 onClick={() => setLeverage(Math.min(MAX_LEV, leverage + 1))}
-                className="flex size-5 items-center justify-center rounded border border-white/10 text-muted transition-colors hover:bg-panel-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid/40"
+                className="flex size-5 items-center justify-center rounded border border-white/10 text-muted transition-colors hover:bg-panel-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid/40 active:scale-90 motion-reduce:transition-none motion-reduce:transform-none"
                 aria-label="Increase leverage"
               >
                 <Plus size={9} />
@@ -247,7 +247,7 @@ export function PaperTradeOrderForm({
           type="button"
           onClick={onSubmit}
           disabled={!connected || submitting || invalidSize}
-          className="w-full rounded-lg py-3 text-sm font-black tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void disabled:opacity-40"
+          className="w-full rounded-lg py-3 text-sm font-black tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] disabled:opacity-40 motion-reduce:transform-none"
           style={{
             background: isLong ? "var(--color-success)" : "var(--color-danger)",
             color: isLong ? "var(--color-void)" : "var(--color-chrome-1)",

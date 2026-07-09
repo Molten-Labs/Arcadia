@@ -69,20 +69,20 @@ export function PaperTradePositions({
               const mark = prices?.find((p) => p.market === pos.market)?.price;
               const closing = closingId === pos.id;
               return (
-                <TableRow key={pos.id}>
+                <TableRow key={pos.id} className="group">
                   <TableCell className="font-semibold text-ink">{pos.market}</TableCell>
                   <TableCell>
                     <Badge variant={isLong ? "success" : "danger"}>
                       {isLong ? "▲ Long" : "▼ Short"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted">
+                  <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
                     {formatUSD(pos.size_usd, 0)}
                   </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums text-acid">
                     {pos.leverage}x
                   </TableCell>
-                  <TableCell className="text-right tabular-nums text-muted">
+                  <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
                     {fmtPx(pos.market, pos.entry_px)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-ink">

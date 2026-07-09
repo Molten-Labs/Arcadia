@@ -150,10 +150,15 @@ export default function VaultPage() {
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-px bg-line md:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className="flex flex-col gap-1.5 bg-void p-5">
+            <div
+              key={s.label}
+              className="group flex flex-col gap-1.5 bg-void p-5 transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:bg-white/[0.02] motion-reduce:transition-none"
+            >
               <div className="flex items-center gap-1.5">
-                <s.icon className="size-2.5 text-faint" />
-                <PanelLabel>{s.label}</PanelLabel>
+                <s.icon className="size-2.5 text-faint transition-colors duration-300 group-hover:text-muted motion-reduce:transition-none" />
+                <PanelLabel className="transition-colors duration-300 group-hover:text-muted motion-reduce:transition-none">
+                  {s.label}
+                </PanelLabel>
               </div>
               <span className={`font-mono text-lg font-bold tracking-tight tabular-nums ${s.accent}`}>{s.value}</span>
             </div>
@@ -212,7 +217,7 @@ export default function VaultPage() {
                   </TableHeader>
                   <TableBody>
                     {trader.trades.slice(0, 8).map((t) => (
-                      <TableRow key={t.id}>
+                      <TableRow key={t.id} className="group">
                         <TableCell className="font-semibold text-ink">{t.market}</TableCell>
                         <TableCell>
                           <span
@@ -225,9 +230,9 @@ export default function VaultPage() {
                             {t.direction}
                           </span>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted">{formatUSD(t.size_usd, 0)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted">{t.entry_px.toFixed(2)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted">{t.exit_px.toFixed(2)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">{formatUSD(t.size_usd, 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">{t.entry_px.toFixed(2)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">{t.exit_px.toFixed(2)}</TableCell>
                         <TableCell
                           className={`text-right font-semibold tabular-nums ${
                             t.realized_pnl >= 0 ? "text-success" : "text-danger"
@@ -329,10 +334,10 @@ export default function VaultPage() {
 
             <Link
               href={`/t/${handle}`}
-              className="flex items-center justify-between rounded-lg border border-line px-4 py-3 text-xs font-semibold text-ink transition-colors hover:border-acid/30 hover:bg-panel-2"
+              className="group acid-int flex items-center justify-between rounded-lg border border-line px-4 py-3 text-xs font-semibold text-ink"
             >
               <span>View full trader profile</span>
-              <ArrowUpRight className="size-3 text-faint" />
+              <ArrowUpRight className="size-3 text-faint transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:transform-none" />
             </Link>
           </div>
         </div>

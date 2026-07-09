@@ -121,7 +121,7 @@ function StatBar({ label, value, pctWidth, color, foot }: {
       <PanelLabel className="mb-1.5">{label}</PanelLabel>
       <p className="mb-1.5 text-sm font-black text-ink tabular-nums">{value}</p>
       <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-line">
-        <div className="h-full rounded-full" style={{ width: pctWidth, background: color }} />
+        <div className="acid-bar h-full rounded-full" style={{ width: pctWidth, background: color }} />
       </div>
       <div className="flex justify-between text-[0.625rem] font-medium text-faint">{foot}</div>
     </div>
@@ -132,7 +132,7 @@ function RightPanel() {
   return (
     <div className="flex w-full flex-col gap-4 xl:w-64 xl:shrink-0">
       {/* Risk & Rules */}
-      <Panel className="p-5">
+      <Panel className="group acid-int p-5">
         <div className="mb-4 flex items-center justify-between">
           <PanelLabel>Risk &amp; Rules</PanelLabel>
           <span className="font-mono text-[0.5625rem] font-medium text-faint">Reset 21:42:08</span>
@@ -176,7 +176,7 @@ function RightPanel() {
       </Panel>
 
       {/* Statistics */}
-      <Panel className="p-5">
+      <Panel className="group acid-int p-5">
         <div className="mb-4 flex items-center justify-between">
           <PanelLabel>Statistics</PanelLabel>
           <div className="flex gap-1">
@@ -210,7 +210,7 @@ function RightPanel() {
       </Panel>
 
       {/* Streak */}
-      <Panel className="p-5">
+      <Panel className="group acid-int p-5">
         <div className="mb-4 flex items-center justify-between">
           <PanelLabel>Streak</PanelLabel>
           <span className="rounded bg-danger/12 px-2 py-0.5 text-xs font-black text-danger">2L</span>
@@ -250,7 +250,7 @@ function PositionsTable() {
         {POSITIONS.map((p) => {
           const isShort = p.dir === "Short";
           return (
-            <TableRow key={p.coin}>
+            <TableRow key={p.coin} className="group">
               <TableCell>
                 <div className="flex items-center gap-3">
                   <div className="flex size-8 items-center justify-center rounded-lg border border-line bg-panel-2 font-black text-ink">
@@ -265,7 +265,7 @@ function PositionsTable() {
                 </div>
               </TableCell>
               <TableCell className="text-right font-bold tabular-nums">{p.size.toLocaleString()}</TableCell>
-              <TableCell className="text-right tabular-nums text-muted">{p.entry}</TableCell>
+              <TableCell className="text-right tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">{p.entry}</TableCell>
               <TableCell className="text-right tabular-nums text-ink">{p.mark}</TableCell>
               <TableCell className={`text-right font-bold tabular-nums ${p.rpnl.startsWith("-") ? "text-danger" : "text-success"}`}>
                 {p.rpnl}

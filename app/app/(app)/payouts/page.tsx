@@ -146,7 +146,7 @@ export default function PayoutsPage() {
 
         {/* Top stat cards */}
         <div className="mb-2.5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <Panel className="p-[1.125rem]">
+          <Panel className="group acid-int p-[1.125rem]">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Server size={13} className="text-cyan" />
@@ -169,7 +169,7 @@ export default function PayoutsPage() {
             </div>
           </Panel>
 
-          <Panel className="p-[1.125rem]">
+          <Panel className="group acid-int p-[1.125rem]">
             <div className="mb-3 flex items-center gap-1.5">
               <DollarSign size={13} className="text-success" />
               <span className="text-xs font-semibold text-ink">Total Payouts Issued</span>
@@ -185,7 +185,7 @@ export default function PayoutsPage() {
             </div>
           </Panel>
 
-          <Panel className="p-[1.125rem]">
+          <Panel className="group acid-int p-[1.125rem]">
             <div className="mb-3 flex items-center gap-1.5">
               <Clock size={13} className="text-tier-advanced" />
               <span className="text-xs font-semibold text-ink">Avg. Payout Time</span>
@@ -206,7 +206,7 @@ export default function PayoutsPage() {
 
         {/* Big stats row */}
         <div className="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
-          <Panel className="p-4">
+          <Panel className="group acid-int p-4">
             <MicroLabel className="mb-2">Sub-Account Profit</MicroLabel>
             <p className="font-mono text-2xl font-black tracking-tight tabular-nums text-success">
               +{formatUSD(SUB_ACCOUNT_PROFIT)}
@@ -218,7 +218,7 @@ export default function PayoutsPage() {
             value={formatUSD(MAX_WITHDRAWABLE)}
             sub="Ready for instant payout · Above HWM"
           />
-          <Panel className="p-5">
+          <Panel className="group acid-int p-5">
             <MicroLabel className="mb-3.5">On-chain State Updates</MicroLabel>
             <div className="flex flex-col gap-1.5">
               {ON_CHAIN_STEPS.map((step, i) => (
@@ -255,7 +255,7 @@ export default function PayoutsPage() {
         </div>
 
         {/* Tier row */}
-        <Panel className="mb-5 flex flex-wrap items-center gap-6 px-5 py-3.5">
+        <Panel className="group acid-int mb-5 flex flex-wrap items-center gap-6 px-5 py-3.5">
           {[
             { label: "Your tier", value: `${DEMO.tier} · Score ${DEMO.score}`, tone: "text-ink" },
             { label: "Trader split", value: `${traderSplit}% of profit above HWM`, tone: "text-acid" },
@@ -322,7 +322,7 @@ export default function PayoutsPage() {
                       setPct(p);
                     }}
                     className={cn(
-                      "flex-1 rounded-md border py-1.5 font-mono text-[0.6rem] font-bold transition-colors",
+                      "flex-1 rounded-md border py-1.5 font-mono text-[0.6rem] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none",
                       pct === p
                         ? "border-acid/40 bg-acid/15 text-acid"
                         : "border-white/10 bg-panel-2 text-faint hover:text-muted",
@@ -443,7 +443,7 @@ export default function PayoutsPage() {
                 </TableHeader>
                 <TableBody>
                   {RECENT_PAYOUTS.map((r) => (
-                    <TableRow key={r.hash}>
+                    <TableRow key={r.hash} className="group">
                       <TableCell className="text-[0.7rem] text-faint">{r.date}</TableCell>
                       <TableCell className="text-[0.7rem] font-bold text-muted">E1</TableCell>
                       <TableCell>
@@ -458,7 +458,7 @@ export default function PayoutsPage() {
                           {r.status === "Paid" ? "✓ Paid" : r.status}
                         </span>
                       </TableCell>
-                      <TableCell className="text-[0.6rem] text-muted">{r.hash}</TableCell>
+                      <TableCell className="text-[0.6rem] text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">{r.hash}</TableCell>
                       <TableCell className="text-right font-bold text-success">
                         +{formatUSD(r.amount, 0)}
                       </TableCell>
