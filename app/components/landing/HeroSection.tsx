@@ -47,9 +47,9 @@ export function HeroSection() {
   return (
     <section aria-label="Hero" className="relative overflow-hidden pt-[clamp(3rem,8vh,6rem)] pb-6">
       {/* Hero breaks out of the reading-width container: on wide screens it
-          stretches toward full width so the copy hugs the left rail and the
-          card cluster fills the right side. */}
-      <Container className="max-w-[1660px] xl:pl-[92px] 2xl:pl-[110px]">
+          stretches toward full width so the copy sits hard left and the card
+          cluster fills the right side. */}
+      <Container className="max-w-[1660px]">
         {/* minmax floor: the card column can never be starved below readable width */}
         <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_minmax(360px,0.85fr)] lg:gap-14">
           {/* Copy column */}

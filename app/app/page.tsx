@@ -7,7 +7,6 @@ import { HeroSection } from "@/components/landing/HeroSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
-import { LandingRail } from "@/components/landing/LandingRail";
 import { LandingRedirect } from "@/components/landing/LandingRedirect";
 import { LiveLeaderboard } from "@/components/landing/LiveLeaderboard";
 import { ProblemSection } from "@/components/landing/ProblemSection";
@@ -27,7 +26,6 @@ export default function LandingPage() {
       <NoiseOverlay />
       <DriftBlobs />
       <LandingRedirect />
-      <LandingRail />
 
       <div className="relative z-10">
         <LandingNav />
