@@ -79,7 +79,21 @@ DONE (today, after the morning entries below)
   correct disconnected state. Dev-auth probed earlier: 5/5 signature/nonce
   cases correct.
 
+DONE (2026-07-09 late, post-build polish with Allen reviewing live)
+- /terminal crash fixed: Phoenix REST seed sends ms, WS sends seconds; candles
+  normalized to unix seconds at both ingest points + TvChart sorts/dedupes
+  before setData (commit 7f6c2e3).
+- Hero layout: 16vw "PROVE" min-content starved the card column to 8px slivers
+  and clipped the copy column on phones; per-breakpoint clamp + minmax(360px,)
+  card column + flex-wrap on tight rows (9fd12ea).
+- Hero + landing nav widened to a 1660px container (b19e277, 8d78ca7);
+  decorative left rail removed with its offset padding (3031515).
+
 REMAINING (next session / owner decisions)
+- LandingRedirect still auto-bounces connected-wallet users from / into the
+  app, so Allen (and anyone connected) can never see the landing. Recommend
+  deleting the redirect (Launch App button already covers app entry) —
+  awaiting Allen's call.
 - Chart stack still legacy: components/charts/** (visx, 21 files), inline
   recharts (4 files), lightweight-charts TvChart. They work and were recolored
   via props where possible, but EquityChart/ScoreHistoryChart/PnLHeatmap have
