@@ -80,5 +80,37 @@ NEXT (resume order)
 5. Full verify: lint + typecheck + build + run + smoke every route + exercise deposit. Then report.
 
 Working copy: ~/projects/arcadia, branch redesign/acid-graphic. Commits local only; no push/PR
-without owner approval. Visual reference comp: ~/Brain/Inbox/arcadia-redesign/arcadia-d-acid.html.
-Content/data spec: scratchpad arcadia-redesign-spec.md.
+without owner approval. Visual reference comp: ~/Brain/Inbox/arcadia-redesign/arcadia-d-acid.html
+(canonical content + tone for the landing; other pages extrapolate the same system).
+
+## Phase 3 page-build brief (contract for every page rebuild)
+
+Principle: aggressive skin, readable core. Chrome/distortion/acid chaos lives in display
+type (Syne via `font-display`), heroes, section dividers, marquees, and big numbers. Body
+copy, tables, financial figures, and trust content stay clean (Space Grotesk body,
+Space Mono `font-mono` for data, `tabular-nums`).
+
+Materials
+- Tokens: app/globals.css `@theme` block (+ `:root` mirror for inline/SVG use). Use
+  token classes (`bg-void`, `text-ink`, `text-acid`, `border-line`, `bg-panel`,
+  `text-muted`, `text-faint`, `text-success`, `text-danger`, tier tokens) — never raw hex.
+- Acid primitives: components/acid (ChromeText, AcidButton/ChromeButton, BlobCard,
+  Marquee, Reveal, CountUp, ScoreDial, NoiseOverlay, DriftBlobs) — README in that folder.
+- shadcn primitives: components/ui (button, card, badge, input, table, tabs, accordion,
+  tooltip, dialog, dropdown-menu, select, skeleton) — already acid-themed via the
+  semantic bridge tokens.
+- Vault txs: lib/use-arcadia-vault (structured txState) — never build Anchor calls in pages.
+
+Rules
+1. Preserve each page's data flow (apiFetch/backend-transform/mock fallbacks) and its
+   routes/links; rebuild the presentation.
+2. Server components for public read-only content where possible; "use client" only
+   where interactivity/hooks demand it.
+3. Reduced-motion: all JS motion via the acid primitives (already gated) or
+   usePrefersReducedMotion; CSS animation behind the globals.css media guards.
+4. No new dependencies. No framer-motion / @phosphor-icons / @base-ui imports in
+   rebuilt pages (lucide-react for icons, motion via acid primitives/CSS).
+5. After rebuilding a file: remove it from the legacy-override list in
+   eslint.config.mjs, then `pnpm exec eslint <file>` must be clean, and
+   `pnpm typecheck` + `pnpm build` must pass.
+6. Keyboard/a11y: focus-visible states, aria labels on icon buttons, semantic headings.
