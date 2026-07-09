@@ -1,14 +1,24 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
-import { ChevronRight, Zap } from "lucide-react";
-import Link from "next/link";
-import { formatUSD } from "@/lib/types";
+import { ChevronRight } from "lucide-react";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ConnectGate, PageHeader, PageShell } from "@/components/pages/investor/chrome";
+import { Panel, PanelLabel } from "@/components/pages/investor/surfaces";
 
 /* ── Mock data ──────────────────────────────────────────────────── */
 const ACCOUNT = {
@@ -23,7 +33,9 @@ const ACCOUNT = {
 };
 
 function genEquity(days: number) {
-  let eq = 9500; let hwm = 9500; let mdd = 0;
+  let eq = 9500;
+  let hwm = 9500;
+  let mdd = 0;
   const data = [];
   for (let i = 0; i < days; i++) {
     eq = eq + (Math.random() - 0.46) * 120;
@@ -55,426 +67,414 @@ function genPnl(days: number) {
 const PNL_DATA = genPnl(30);
 
 const POSITIONS = [
-  { coin: "$LINK", color: "#2563eb", dir: "Short", size: 15352, entry: "303.30 USD", mark: "23.19 USD", rpnl: "+$3.69", upnl: "-$93.69", opened: "2h 14m" },
-  { coin: "$TRON", color: "#ef4444", dir: "Long",  size: 15352, entry: "443.50 USD", mark: "4.28 USD",  rpnl: "+$2.45", upnl: "+$22.45", opened: "2h 14m" },
-  { coin: "$HYPE", color: "#f59e0b", dir: "Short", size: 18352, entry: "502.00 USD", mark: "58.99 USD", rpnl: "-$1.69", upnl: "-$13.69", opened: "2h 14m" },
+  { coin: "$LINK", dir: "Short", size: 15352, entry: "303.30 USD", mark: "23.19 USD", rpnl: "+$3.69", upnl: "-$93.69", opened: "2h 14m" },
+  { coin: "$TRON", dir: "Long", size: 15352, entry: "443.50 USD", mark: "4.28 USD", rpnl: "+$2.45", upnl: "+$22.45", opened: "2h 14m" },
+  { coin: "$HYPE", dir: "Short", size: 18352, entry: "502.00 USD", mark: "58.99 USD", rpnl: "-$1.69", upnl: "-$13.69", opened: "2h 14m" },
 ];
 
 const MARCH_DAYS = [
-  { d: 1,  pnl: 61.94,   trades: 12 }, { d: 2,  pnl: 61.22,   trades: 6 },
-  { d: 3,  pnl: 12.76,   trades: 5  }, { d: 4,  pnl: 41.11,   trades: 7 },
-  { d: 5,  pnl: -99.39,  trades: 12 }, { d: 6,  pnl: -212.00, trades: 12 },
-  { d: 7,  pnl: 190.75,  trades: 20 }, { d: 8,  pnl: 215.88,  trades: 25 },
-  { d: 9,  pnl: 95.41,   trades: 35 }, { d: 10, pnl: null,    trades: 0  },
-  { d: 11, pnl: null,    trades: 0  }, { d: 12, pnl: 220.69,  trades: 25 },
-  { d: 13, pnl: -23.45,  trades: 3  }, { d: 14, pnl: null,    trades: 0  },
-  { d: 15, pnl: null,    trades: 0  }, { d: 16, pnl: 100.55,  trades: 25 },
-  { d: 17, pnl: -141.41, trades: 35 }, { d: 18, pnl: 23.56,   trades: 7  },
-  { d: 19, pnl: null,    trades: 0  }, { d: 20, pnl: 10.45,   trades: 4  },
-  { d: 21, pnl: null,    trades: 0  }, { d: 22, pnl: null,    trades: 0  },
-  { d: 23, pnl: null,    trades: 0  }, { d: 24, pnl: null,    trades: 0  },
-  { d: 25, pnl: null,    trades: 0  }, { d: 26, pnl: null,    trades: 0  },
-  { d: 27, pnl: null,    trades: 0  }, { d: 28, pnl: null,    trades: 0  },
-  { d: 29, pnl: null,    trades: 0  }, { d: 30, pnl: null,    trades: 0  },
-  { d: 31, pnl: null,    trades: 0  },
+  { d: 1, pnl: 61.94, trades: 12 }, { d: 2, pnl: 61.22, trades: 6 },
+  { d: 3, pnl: 12.76, trades: 5 }, { d: 4, pnl: 41.11, trades: 7 },
+  { d: 5, pnl: -99.39, trades: 12 }, { d: 6, pnl: -212.0, trades: 12 },
+  { d: 7, pnl: 190.75, trades: 20 }, { d: 8, pnl: 215.88, trades: 25 },
+  { d: 9, pnl: 95.41, trades: 35 }, { d: 10, pnl: null, trades: 0 },
+  { d: 11, pnl: null, trades: 0 }, { d: 12, pnl: 220.69, trades: 25 },
+  { d: 13, pnl: -23.45, trades: 3 }, { d: 14, pnl: null, trades: 0 },
+  { d: 15, pnl: null, trades: 0 }, { d: 16, pnl: 100.55, trades: 25 },
+  { d: 17, pnl: -141.41, trades: 35 }, { d: 18, pnl: 23.56, trades: 7 },
+  { d: 19, pnl: null, trades: 0 }, { d: 20, pnl: 10.45, trades: 4 },
+  { d: 21, pnl: null, trades: 0 }, { d: 22, pnl: null, trades: 0 },
+  { d: 23, pnl: null, trades: 0 }, { d: 24, pnl: null, trades: 0 },
+  { d: 25, pnl: null, trades: 0 }, { d: 26, pnl: null, trades: 0 },
+  { d: 27, pnl: null, trades: 0 }, { d: 28, pnl: null, trades: 0 },
+  { d: 29, pnl: null, trades: 0 }, { d: 30, pnl: null, trades: 0 },
+  { d: 31, pnl: null, trades: 0 },
 ];
 
-const STREAK = ["L","L","W","W","W","L","W","W","W","L","L"];
+const STREAK = ["L", "L", "W", "W", "W", "L", "W", "W", "W", "L", "L"];
+
+const CHART_TOOLTIP = {
+  contentStyle: {
+    background: "var(--color-panel-2)",
+    border: "1px solid var(--color-line)",
+    borderRadius: 8,
+    fontSize: 12,
+    fontFamily: "var(--font-mono)",
+    fontWeight: 700,
+  },
+  itemStyle: { color: "var(--color-acid)" },
+  labelStyle: { color: "var(--color-muted)", marginBottom: 4 },
+} as const;
+
+const AXIS_TICK = { fontSize: 10, fill: "var(--color-faint)", fontFamily: "var(--font-mono)" } as const;
 
 /* ── Sub-components ─────────────────────────────────────────────── */
+function StatBar({ label, value, pctWidth, color, foot }: {
+  label: string;
+  value: string;
+  pctWidth: string;
+  color: string;
+  foot: React.ReactNode;
+}) {
+  return (
+    <div className="mb-5">
+      <PanelLabel className="mb-1.5">{label}</PanelLabel>
+      <p className="mb-1.5 text-sm font-black text-ink tabular-nums">{value}</p>
+      <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-line">
+        <div className="h-full rounded-full" style={{ width: pctWidth, background: color }} />
+      </div>
+      <div className="flex justify-between text-[0.625rem] font-medium text-faint">{foot}</div>
+    </div>
+  );
+}
+
 function RightPanel() {
   return (
-    <div className="w-64 flex-shrink-0 flex flex-col gap-4">
+    <div className="flex w-full flex-col gap-4 xl:w-64 xl:shrink-0">
       {/* Risk & Rules */}
-      <div className="rounded-xl p-5 card bg-gradient-to-b from-[var(--color-panel)] to-[var(--color-panel-2)]">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-ink)" }}>Risk &amp; Rules</p>
-          <span className="text-[9px] font-mono font-medium" style={{ color: "var(--color-faint)" }}>
-            Reset 21:42:08
-          </span>
+      <Panel className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <PanelLabel>Risk &amp; Rules</PanelLabel>
+          <span className="font-mono text-[0.5625rem] font-medium text-faint">Reset 21:42:08</span>
         </div>
 
-        <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "var(--color-faint)" }}>
-          Daily Drawdown
-        </p>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm font-black" style={{ color: "var(--color-ink)" }}>20%</span>
-        </div>
-        <div className="progress-track mb-1.5 h-1.5">
-          <div className="progress-fill-mint" style={{ width: "35%" }} />
-        </div>
-        <div className="flex justify-between text-[10px] font-medium mb-5" style={{ color: "var(--color-faint)" }}>
-          <span>-$200.00 today</span>
-          <span style={{ color: "var(--color-muted)" }}>$800.00 left</span>
-        </div>
+        <StatBar
+          label="Daily Drawdown"
+          value="20%"
+          pctWidth="35%"
+          color="linear-gradient(90deg, var(--color-acid), var(--color-cyan))"
+          foot={
+            <>
+              <span>-$200.00 today</span>
+              <span className="text-muted">$800.00 left</span>
+            </>
+          }
+        />
+        <StatBar
+          label="Max Drawdown"
+          value="2%"
+          pctWidth="8%"
+          color="var(--color-danger)"
+          foot={
+            <>
+              <span>$0.0 total</span>
+              <span className="text-muted">$3,000 left</span>
+            </>
+          }
+        />
 
-        <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "var(--color-faint)" }}>
-          Max Drawdown
-        </p>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-sm font-black" style={{ color: "var(--color-ink)" }}>2%</span>
-        </div>
-        <div className="progress-track mb-1.5 h-1.5">
-          <div className="progress-fill-red" style={{ width: "8%" }} />
-        </div>
-        <div className="flex justify-between text-[10px] font-medium mb-6" style={{ color: "var(--color-faint)" }}>
-          <span>$0.0 total</span>
-          <span style={{ color: "var(--color-muted)" }}>$3,000 left</span>
-        </div>
-
-        <div className="rounded-lg p-3.5 border border-[var(--color-line)] bg-[var(--color-bg)]">
-          <p className="text-[9px] uppercase tracking-widest mb-1 font-bold" style={{ color: "var(--color-faint)" }}>
-            Withdrawn
-          </p>
-          <p className="text-lg font-black tracking-tight" style={{ color: "var(--color-green)" }}>
-            +$12,480
-          </p>
-          <p className="text-[9px] mt-1 font-medium flex items-center justify-between" style={{ color: "var(--color-faint)" }}>
-            Lifetime 
-            <span style={{ color: "var(--color-green)", display: "flex", alignItems: "center", gap: "2px" }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-green)]" /> Paid out
+        <div className="rounded-lg border border-line bg-void p-3.5">
+          <PanelLabel className="mb-1">Withdrawn</PanelLabel>
+          <p className="text-lg font-black tracking-tight text-success tabular-nums">+$12,480</p>
+          <p className="mt-1 flex items-center justify-between text-[0.5625rem] font-medium text-faint">
+            Lifetime
+            <span className="flex items-center gap-1 text-success">
+              <span className="size-1.5 rounded-full bg-success" /> Paid out
             </span>
           </p>
         </div>
-      </div>
+      </Panel>
 
-      {/* Account Stats */}
-      <div className="rounded-xl p-5 card">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-ink)" }}>Statistics</p>
+      {/* Statistics */}
+      <Panel className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <PanelLabel>Statistics</PanelLabel>
           <div className="flex gap-1">
-            <button className="w-6 h-6 rounded flex items-center justify-center hover:bg-[var(--color-panel-2)] transition-colors border border-[var(--color-line)]">
-              <ChevronRight size={12} style={{ color: "var(--color-faint)", transform: "rotate(180deg)" }} />
+            <button type="button" aria-label="Previous period" className="flex size-6 items-center justify-center rounded border border-line text-faint hover:bg-panel-2">
+              <ChevronRight className="size-3 rotate-180" />
             </button>
-            <button className="w-6 h-6 rounded flex items-center justify-center hover:bg-[var(--color-panel-2)] transition-colors border border-[var(--color-line)]">
-              <ChevronRight size={12} style={{ color: "var(--color-faint)" }} />
+            <button type="button" aria-label="Next period" className="flex size-6 items-center justify-center rounded border border-line text-faint hover:bg-panel-2">
+              <ChevronRight className="size-3" />
             </button>
           </div>
         </div>
         <div className="space-y-3 text-xs">
-          {[
-            ["Avg Win",           "+$131.00", "var(--color-green)"],
-            ["Avg Loss",          "-$180.00", "var(--color-red)"],
-            ["Profit Factor",     "2.09",     "var(--color-ink)"],
-            ["Expectancy",        "+$65.00",  "var(--color-green)"],
-            ["Avg Hold",          "69m",      "var(--color-ink)"],
-            ["Best Day",          "-$419.00", "var(--color-red)"],
-            ["Worst Day",         "-$706.00", "var(--color-red)"],
-            ["Risk / Reward",     "1:0.73",   "var(--color-ink)"],
-          ].map(([k, v, c]) => (
-            <div key={k as string} className="flex items-center justify-between pb-2 border-b border-[var(--color-line)] last:border-0 last:pb-0">
-              <span className="font-medium" style={{ color: "var(--color-faint)" }}>{k}</span>
-              <span className="font-bold tnum" style={{ color: c as string }}>{v}</span>
+          {(
+            [
+              ["Avg Win", "+$131.00", "text-success"],
+              ["Avg Loss", "-$180.00", "text-danger"],
+              ["Profit Factor", "2.09", "text-ink"],
+              ["Expectancy", "+$65.00", "text-success"],
+              ["Avg Hold", "69m", "text-ink"],
+              ["Best Day", "-$419.00", "text-danger"],
+              ["Worst Day", "-$706.00", "text-danger"],
+              ["Risk / Reward", "1:0.73", "text-ink"],
+            ] as const
+          ).map(([k, v, c]) => (
+            <div key={k} className="flex items-center justify-between border-b border-line pb-2 last:border-0 last:pb-0">
+              <span className="font-medium text-faint">{k}</span>
+              <span className={`font-bold tabular-nums ${c}`}>{v}</span>
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* Streak */}
-      <div className="rounded-xl p-5 card">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-ink)" }}>Streak</p>
-          <span className="text-xs font-black px-2 py-0.5 rounded" style={{ color: "var(--color-red)", background: "rgba(239,68,68,0.12)" }}>2L</span>
+      <Panel className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <PanelLabel>Streak</PanelLabel>
+          <span className="rounded bg-danger/12 px-2 py-0.5 text-xs font-black text-danger">2L</span>
         </div>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex flex-wrap gap-1.5">
           {STREAK.map((s, i) => (
             <div
               key={i}
-              className="w-7 h-7 rounded flex items-center justify-center text-[11px] font-bold transition-transform hover:scale-110"
-              style={{
-                background: s === "W" ? "var(--color-green-dim)" : "var(--color-red-dim)",
-                color: s === "W" ? "var(--color-green)" : "var(--color-red)",
-                border: `1px solid ${s === "W" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
-              }}
+              className={`flex size-7 items-center justify-center rounded border text-[0.6875rem] font-bold ${
+                s === "W" ? "border-success/30 bg-success/12 text-success" : "border-danger/30 bg-danger/12 text-danger"
+              }`}
             >
               {s}
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
     </div>
+  );
+}
+
+function PositionsTable() {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Position</TableHead>
+          <TableHead className="text-right">Net Size</TableHead>
+          <TableHead className="text-right">Entry Price</TableHead>
+          <TableHead className="text-right">Mark Price</TableHead>
+          <TableHead className="text-right">Realized PnL</TableHead>
+          <TableHead className="text-right">Unrealized PnL</TableHead>
+          <TableHead className="text-right">Time Opened</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {POSITIONS.map((p) => {
+          const isShort = p.dir === "Short";
+          return (
+            <TableRow key={p.coin}>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-lg border border-line bg-panel-2 font-black text-ink">
+                    {p.coin.replace("$", "")[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold tracking-tight text-ink">{p.coin}</p>
+                    <p className={`text-[0.625rem] font-bold uppercase ${isShort ? "text-danger" : "text-success"}`}>
+                      {p.dir}
+                    </p>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="text-right font-bold tabular-nums">{p.size.toLocaleString()}</TableCell>
+              <TableCell className="text-right tabular-nums text-muted">{p.entry}</TableCell>
+              <TableCell className="text-right tabular-nums text-ink">{p.mark}</TableCell>
+              <TableCell className={`text-right font-bold tabular-nums ${p.rpnl.startsWith("-") ? "text-danger" : "text-success"}`}>
+                {p.rpnl}
+              </TableCell>
+              <TableCell className={`text-right font-black tabular-nums ${p.upnl.startsWith("-") ? "text-danger" : "text-success"}`}>
+                {p.upnl}
+              </TableCell>
+              <TableCell className="text-right tabular-nums text-faint">{p.opened}</TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }
 
 /* ── Page ───────────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { connected } = useWallet();
-  const [chartTab, setChartTab] = useState<"equity" | "pnl" | "days">("equity");
-  const [posTab, setPosTab] = useState<"open" | "history">("open");
 
   if (!connected) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "var(--color-bg)" }}>
-        <div className="w-16 h-16 rounded-2xl bg-[var(--color-panel-2)] border border-[var(--color-line)] flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(79,158,255,0.1)]">
-          <Zap size={24} style={{ color: "var(--color-mint)" }} />
-        </div>
-        <h2 className="text-2xl font-bold mb-2 text-[var(--color-ink)]">Connect your wallet</h2>
-        <p className="text-[var(--color-muted)] mb-8 text-center max-w-md">Connect your Phantom or Solflare wallet to access your dashboard, view performance metrics, and manage your account.</p>
-        <button className="btn-primary px-8 py-3 text-sm">
-          Connect Wallet
-        </button>
-      </div>
+      <ConnectGate
+        title="Connect your wallet"
+        description="Connect your Phantom or Solflare wallet to access your dashboard, view performance metrics, and manage your account."
+      />
     );
   }
 
   return (
-    <div className="min-h-full" style={{ background: "var(--color-bg)" }}>
-      <div className="px-8 py-8 max-w-screen-2xl mx-auto">
+    <PageShell width="wide">
+      <PageHeader kicker="Investor" title="Dashboard" subtitle="Track and analyze your trading performance" />
 
-        {/* Page header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-black mb-1 tracking-tight" style={{ color: "var(--color-ink)" }}>Dashboard</h1>
-          <p className="text-sm font-medium" style={{ color: "var(--color-faint)" }}>Track and analyze your trading performance</p>
+      {/* Account row */}
+      <Panel className="mb-6 flex flex-wrap items-center gap-8 border-l-2 border-l-acid p-5">
+        <div className="min-w-[140px]">
+          <PanelLabel className="mb-1">Account</PanelLabel>
+          <p className="text-lg font-black tracking-tight text-ink">{ACCOUNT.name}</p>
+          <p className="mt-0.5 text-[0.6875rem] font-medium text-muted">{ACCOUNT.status}</p>
         </div>
-
-        {/* Account row */}
-        <div className="rounded-xl p-5 mb-6 card flex items-center gap-8 flex-wrap bg-gradient-to-r from-[var(--color-panel)] to-[var(--color-bg)] border-l-4 border-l-[var(--color-mint)]">
-          <div className="min-w-[140px]">
-            <p className="text-[10px] uppercase tracking-widest font-bold mb-1" style={{ color: "var(--color-faint)" }}>Account</p>
-            <p className="text-lg font-black tracking-tight" style={{ color: "var(--color-ink)" }}>{ACCOUNT.name}</p>
-            <p className="text-[11px] font-medium mt-0.5" style={{ color: "var(--color-muted)" }}>{ACCOUNT.status}</p>
+        {(
+          [
+            ["Size", `$${(ACCOUNT.size / 1000).toFixed(0)}k`, "text-ink"],
+            ["Equity", `$${ACCOUNT.equity.toLocaleString()}`, "text-ink"],
+            ["Cum. PnL", `-$${Math.abs(ACCOUNT.cum_pnl).toLocaleString()}`, "text-danger"],
+            ["Win Rate", `${ACCOUNT.win_rate}%`, "text-ink"],
+            ["Trades", `${ACCOUNT.trades}`, "text-ink"],
+            ["Risk", ACCOUNT.risk, "text-ink"],
+          ] as const
+        ).map(([label, value, color]) => (
+          <div key={label} className="flex flex-col border-l border-line pl-8 first:border-0 first:pl-0">
+            <PanelLabel className="mb-1">{label}</PanelLabel>
+            <span className={`font-mono text-lg font-black tracking-tight tabular-nums ${color}`}>{value}</span>
           </div>
-          {[
-            { label: "Size",     value: `$${(ACCOUNT.size/1000).toFixed(0)}k`,    color: undefined },
-            { label: "Equity",   value: `$${ACCOUNT.equity.toLocaleString()}`,    color: undefined },
-            { label: "Cum. PnL", value: `-$${Math.abs(ACCOUNT.cum_pnl).toLocaleString()}`, color: "var(--color-red)" },
-            { label: "Win Rate", value: `${ACCOUNT.win_rate}%`,                   color: undefined },
-            { label: "Trades",   value: `${ACCOUNT.trades}`,                      color: undefined },
-            { label: "Risk",     value: ACCOUNT.risk,                             color: undefined },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="flex flex-col border-l border-[var(--color-line)] pl-8 first:border-0 first:pl-0">
-              <span className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "var(--color-faint)" }}>{label}</span>
-              <span className="text-lg font-black tnum tracking-tight" style={{ color: color ?? "var(--color-ink)" }}>{value}</span>
-            </div>
-          ))}
-          <div className="ml-auto">
-            <span
-              className="text-[11px] font-bold px-3 py-1.5 rounded-md flex items-center gap-1.5 shadow-[0_0_10px_rgba(79,158,255,0.15)]"
-              style={{ background: "var(--color-mint-dim)", color: "var(--color-mint)", border: "1px solid rgba(79,158,255,0.3)" }}
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-mint)] animate-pulse" /> Active
-            </span>
-          </div>
+        ))}
+        <div className="ml-auto">
+          <span className="flex items-center gap-1.5 rounded-md border border-success/30 bg-success/12 px-3 py-1.5 text-[0.6875rem] font-bold text-success">
+            <span className="size-1.5 rounded-full bg-success motion-safe:animate-pulse" /> Active
+          </span>
         </div>
+      </Panel>
 
-        {/* Main content + right panel */}
-        <div className="flex gap-6 flex-col xl:flex-row">
-          <div className="flex-1 min-w-0 flex flex-col gap-6">
-
-            {/* Chart card */}
-            <div className="rounded-xl card overflow-hidden">
-              <div className="flex items-center justify-between px-5 pt-4 pb-0 border-b border-[var(--color-line)] bg-[var(--color-panel-2)]">
-                <div className="flex gap-6">
-                  {(["equity", "pnl", "days"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setChartTab(t)}
-                      className="pb-3 text-xs font-bold uppercase tracking-widest relative transition-colors"
-                      style={{
-                        color: chartTab === t ? "var(--color-ink)" : "var(--color-faint)",
-                      }}
-                    >
-                      {t === "equity" ? "Account Equity" : t === "pnl" ? "PnL" : "Trading Days"}
-                      {chartTab === t && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--color-mint)] shadow-[0_0_8px_var(--color-mint)]" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex gap-1.5 pb-3">
-                  {["1D","7D","30D","ALL"].map((p) => (
-                    <button
+      {/* Main content + right panel */}
+      <div className="flex flex-col gap-6 xl:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col gap-6">
+          {/* Chart card */}
+          <Panel className="overflow-hidden">
+            <Tabs defaultValue="equity" className="gap-0">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-line bg-panel-2 px-5 py-3">
+                <TabsList>
+                  <TabsTrigger value="equity">Account Equity</TabsTrigger>
+                  <TabsTrigger value="pnl">PnL</TabsTrigger>
+                  <TabsTrigger value="days">Trading Days</TabsTrigger>
+                </TabsList>
+                <div className="flex gap-1.5" aria-hidden>
+                  {["1D", "7D", "30D", "ALL"].map((p) => (
+                    <span
                       key={p}
-                      className="text-[10px] px-2.5 py-1 rounded-md font-bold transition-colors"
-                      style={{
-                        background: p === "30D" ? "var(--color-mint-dim)" : "transparent",
-                        color: p === "30D" ? "var(--color-mint)" : "var(--color-muted)",
-                        border: p === "30D" ? "1px solid rgba(79,158,255,0.3)" : "1px solid transparent",
-                      }}
+                      className={`rounded-md border px-2.5 py-1 font-mono text-[0.625rem] font-bold ${
+                        p === "30D" ? "border-acid/30 bg-acid/10 text-acid" : "border-transparent text-muted"
+                      }`}
                     >
                       {p}
-                    </button>
+                    </span>
                   ))}
                 </div>
               </div>
 
-              {chartTab === "days" ? (
-                /* Calendar grid */
-                <div className="p-6">
-                  <div className="grid grid-cols-7 gap-2 mb-2">
-                    {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => (
-                      <div key={d} className="text-[10px] text-center font-bold uppercase tracking-widest py-1" style={{ color: "var(--color-faint)" }}>{d}</div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {/* offset for March starting on Saturday — offset 5 */}
-                    {Array(5).fill(null).map((_, i) => <div key={`e${i}`} className="bg-[var(--color-bg)] rounded-lg opacity-20 border border-[var(--color-line)]" />)}
-                    {MARCH_DAYS.map((day) => (
-                      <div
-                        key={day.d}
-                        className="rounded-lg p-2.5 min-h-[70px] transition-transform hover:scale-105"
-                        style={{
-                          background: day.pnl == null
-                            ? "var(--color-bg)"
-                            : day.pnl > 0
-                            ? "var(--color-green-dim)"
-                            : "var(--color-red-dim)",
-                          border: day.pnl == null
-                            ? "1px solid var(--color-line)"
-                            : day.pnl > 0
-                            ? "1px solid rgba(34,197,94,0.3)"
-                            : "1px solid rgba(239,68,68,0.3)",
-                        }}
-                      >
-                        <p className="text-[10px] font-bold mb-1" style={{ color: "var(--color-muted)" }}>{day.d}</p>
-                        {day.pnl != null && (
-                          <>
-                            <p className="text-[11px] font-black tnum tracking-tight" style={{ color: day.pnl > 0 ? "var(--color-green)" : "var(--color-red)" }}>
-                              {day.pnl > 0 ? "+" : ""}${Math.abs(day.pnl).toFixed(2)}
-                            </p>
-                            {day.trades > 0 && (
-                              <p className="text-[9px] font-medium mt-1" style={{ color: "var(--color-faint)" }}>{day.trades} Trades</p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="p-6">
-                  <ResponsiveContainer width="100%" height={260}>
-                    {chartTab === "equity" ? (
-                      <AreaChart data={EQUITY_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="eqMint" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-mint)" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="var(--color-mint)" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: "var(--color-faint)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: "var(--color-faint)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
-                        <Tooltip
-                          contentStyle={{ background: "rgba(15,17,23,0.9)", backdropFilter: "blur(8px)", border: "1px solid var(--color-line)", borderRadius: 8, fontSize: 12, fontWeight: "bold" }}
-                          itemStyle={{ color: "var(--color-mint)" }}
-                          labelStyle={{ color: "var(--color-muted)", marginBottom: 4 }}
-                        />
-                        <Area type="monotone" dataKey="equity" stroke="var(--color-mint)" strokeWidth={2} fill="url(#eqMint)" name="Equity" activeDot={{ r: 4, fill: "var(--color-mint)", stroke: "var(--color-bg)", strokeWidth: 2 }} />
-                        <Line type="monotone" dataKey="target" stroke="var(--color-accent)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Profit Target" />
-                        <Line type="monotone" dataKey="daily_dd" stroke="var(--color-gold)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Daily DD" />
-                        <Line type="monotone" dataKey="max_dd" stroke="var(--color-red)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Max DD" />
-                      </AreaChart>
-                    ) : (
-                      <LineChart data={PNL_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                        <XAxis dataKey="day" tick={{ fontSize: 10, fill: "var(--color-faint)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: "var(--color-faint)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
-                        <Tooltip
-                          contentStyle={{ background: "rgba(15,17,23,0.9)", backdropFilter: "blur(8px)", border: "1px solid var(--color-line)", borderRadius: 8, fontSize: 12, fontWeight: "bold" }}
-                          itemStyle={{ color: "var(--color-mint)" }}
-                          labelStyle={{ color: "var(--color-muted)", marginBottom: 4 }}
-                        />
-                        <ReferenceLine y={10000} stroke="var(--color-line)" strokeDasharray="4 4" />
-                        <Line type="monotone" dataKey="pnl" stroke="var(--color-mint)" strokeWidth={2} dot={false} name="PnL" activeDot={{ r: 4, fill: "var(--color-mint)", stroke: "var(--color-bg)", strokeWidth: 2 }} />
-                      </LineChart>
-                    )}
-                  </ResponsiveContainer>
-                  {chartTab === "equity" && (
-                    <div className="flex gap-5 mt-4 justify-center">
-                      {[
-                        { color: "var(--color-mint)", label: "Equity" },
-                        { color: "var(--color-accent)", label: "Profit Target", dashed: true },
-                        { color: "var(--color-gold)", label: "Daily Drawdown", dashed: true },
-                        { color: "var(--color-red)", label: "Max Drawdown", dashed: true },
-                      ].map((l) => (
-                        <div key={l.label} className="flex items-center gap-2">
-                          <div className="w-5 h-0.5 flex-shrink-0" style={{ background: l.color, opacity: l.dashed ? 0.7 : 1 }} />
-                          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>{l.label}</span>
-                        </div>
-                      ))}
+              <TabsContent value="equity" className="p-6">
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={EQUITY_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="eqAcid" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-acid)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="var(--color-acid)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" vertical={false} />
+                    <XAxis dataKey="day" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                    <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                    <Tooltip {...CHART_TOOLTIP} />
+                    <Area type="monotone" dataKey="equity" stroke="var(--color-acid)" strokeWidth={2} fill="url(#eqAcid)" name="Equity" activeDot={{ r: 4, fill: "var(--color-acid)", stroke: "var(--color-void)", strokeWidth: 2 }} />
+                    <Line type="monotone" dataKey="target" stroke="var(--color-cyan)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Profit Target" />
+                    <Line type="monotone" dataKey="daily_dd" stroke="var(--color-tier-advanced)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Daily DD" />
+                    <Line type="monotone" dataKey="max_dd" stroke="var(--color-danger)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Max DD" />
+                  </AreaChart>
+                </ResponsiveContainer>
+                <div className="mt-4 flex flex-wrap justify-center gap-5">
+                  {(
+                    [
+                      ["var(--color-acid)", "Equity"],
+                      ["var(--color-cyan)", "Profit Target"],
+                      ["var(--color-tier-advanced)", "Daily Drawdown"],
+                      ["var(--color-danger)", "Max Drawdown"],
+                    ] as const
+                  ).map(([color, label]) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="h-0.5 w-5 shrink-0" style={{ background: color }} />
+                      <PanelLabel>{label}</PanelLabel>
                     </div>
-                  )}
+                  ))}
                 </div>
-              )}
-            </div>
+              </TabsContent>
 
-            {/* Positions */}
-            <div className="rounded-xl card overflow-hidden flex-1">
-              <div className="flex items-center gap-6 px-5 pt-4 pb-0 border-b border-[var(--color-line)] bg-[var(--color-panel-2)]">
-                {(["open", "history"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setPosTab(t)}
-                    className="pb-3 text-xs font-bold uppercase tracking-widest relative transition-colors"
-                    style={{
-                      color: posTab === t ? "var(--color-ink)" : "var(--color-faint)",
-                    }}
-                  >
-                    {t === "open" ? "Open Positions" : "Historical Trades"}
-                    {posTab === t && (
-                      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--color-mint)] shadow-[0_0_8px_var(--color-mint)]" />
-                    )}
-                  </button>
-                ))}
-                <div className="ml-auto pb-3">
+              <TabsContent value="pnl" className="p-6">
+                <ResponsiveContainer width="100%" height={260}>
+                  <LineChart data={PNL_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" vertical={false} />
+                    <XAxis dataKey="day" tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                    <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                    <Tooltip {...CHART_TOOLTIP} />
+                    <ReferenceLine y={10000} stroke="var(--color-line)" strokeDasharray="4 4" />
+                    <Line type="monotone" dataKey="pnl" stroke="var(--color-acid)" strokeWidth={2} dot={false} name="PnL" activeDot={{ r: 4, fill: "var(--color-acid)", stroke: "var(--color-void)", strokeWidth: 2 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </TabsContent>
+
+              <TabsContent value="days" className="p-6">
+                <div className="mb-2 grid grid-cols-7 gap-2">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                    <div key={d} className="py-1 text-center font-mono text-[0.625rem] font-bold tracking-widest text-faint uppercase">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {Array(5)
+                    .fill(null)
+                    .map((_, i) => (
+                      <div key={`e${i}`} className="rounded-lg border border-line bg-void opacity-20" />
+                    ))}
+                  {MARCH_DAYS.map((day) => (
+                    <div
+                      key={day.d}
+                      className={`min-h-[70px] rounded-lg border p-2.5 ${
+                        day.pnl == null
+                          ? "border-line bg-void"
+                          : day.pnl > 0
+                            ? "border-success/30 bg-success/12"
+                            : "border-danger/30 bg-danger/12"
+                      }`}
+                    >
+                      <p className="mb-1 text-[0.625rem] font-bold text-muted">{day.d}</p>
+                      {day.pnl != null ? (
+                        <>
+                          <p className={`text-[0.6875rem] font-black tracking-tight tabular-nums ${day.pnl > 0 ? "text-success" : "text-danger"}`}>
+                            {day.pnl > 0 ? "+" : ""}${Math.abs(day.pnl).toFixed(2)}
+                          </p>
+                          {day.trades > 0 ? (
+                            <p className="mt-1 text-[0.5625rem] font-medium text-faint">{day.trades} Trades</p>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </Panel>
+
+          {/* Positions */}
+          <Panel className="flex-1 overflow-hidden">
+            <Tabs defaultValue="open" className="gap-0">
+              <div className="flex items-center gap-4 border-b border-line bg-panel-2 px-5 py-3">
+                <TabsList>
+                  <TabsTrigger value="open">Open Positions</TabsTrigger>
+                  <TabsTrigger value="history">Historical Trades</TabsTrigger>
+                </TabsList>
+                <div className="ml-auto">
                   <select
-                    className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-md outline-none cursor-pointer"
-                    style={{ background: "var(--color-panel)", color: "var(--color-ink)", border: "1px solid var(--color-line)" }}
+                    aria-label="Filter by asset"
+                    className="cursor-pointer rounded-md border border-line bg-panel px-3 py-1.5 font-mono text-[0.625rem] font-bold tracking-widest text-ink uppercase outline-none"
                   >
                     <option>All Assets</option>
                   </select>
                 </div>
               </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--color-line)] bg-[var(--color-bg)]">
-                      {["Position", "Net Size", "Entry Price", "Mark Price", "Realized PnL", "Unrealized PnL", "Time Opened"].map((h) => (
-                        <th key={h} className="py-3 px-5 text-left font-bold uppercase tracking-widest" style={{ color: "var(--color-faint)", fontSize: "9px" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {POSITIONS.map((p, i) => {
-                      const isShort = p.dir === "Short";
-                      return (
-                        <tr key={i} className="border-b border-[var(--color-line)] hover:bg-[var(--color-panel-2)] transition-colors group">
-                          <td className="py-4 px-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black" style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)" }}>
-                                {p.coin.replace("$","")[0]}
-                              </div>
-                              <div>
-                                <p className="font-bold text-sm tracking-tight" style={{ color: "var(--color-ink)" }}>{p.coin}</p>
-                                <p
-                                  className="text-[10px] font-bold uppercase tracking-wider"
-                                  style={{ color: isShort ? "var(--color-red)" : "var(--color-green)" }}
-                                >
-                                  {p.dir}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-5 tnum font-bold">{p.size.toLocaleString()}</td>
-                          <td className="py-4 px-5 tnum" style={{ color: "var(--color-muted)" }}>{p.entry}</td>
-                          <td className="py-4 px-5 tnum" style={{ color: "var(--color-ink)" }}>{p.mark}</td>
-                          <td className="py-4 px-5 tnum font-bold" style={{ color: p.rpnl.startsWith("-") ? "var(--color-red)" : "var(--color-green)" }}>{p.rpnl}</td>
-                          <td className="py-4 px-5 tnum font-black" style={{ color: p.upnl.startsWith("-") ? "var(--color-red)" : "var(--color-green)" }}>{p.upnl}</td>
-                          <td className="py-4 px-5 tnum font-mono" style={{ color: "var(--color-faint)" }}>{p.opened}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <RightPanel />
+              <TabsContent value="open">
+                <PositionsTable />
+              </TabsContent>
+              <TabsContent value="history">
+                <PositionsTable />
+              </TabsContent>
+            </Tabs>
+          </Panel>
         </div>
+
+        <RightPanel />
       </div>
-    </div>
+    </PageShell>
   );
 }

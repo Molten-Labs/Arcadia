@@ -5,24 +5,31 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { apiFetch } from "@/lib/utils";
-import { formatUSD, tierColor, shortAddr } from "@/lib/types";
-import type { TraderProfile, VaultInfo } from "@/lib/types";
-import { TierBadge } from "@/components/TierBadge";
-import { DepositsStatusBadge } from "@/components/DepositsStatusBadge";
-import { CapacityBar } from "@/components/CapacityBar";
-import { EmptyState } from "@/components/EmptyState";
+import { Activity, ArrowLeft, ArrowUpRight, BarChart3, DollarSign, Users, X, Zap } from "lucide-react";
+
 import { NavHistoryChart } from "@/components/NavHistoryChart";
 import { DepositModal } from "@/components/DepositModal";
-import {
-  ArrowUpRight, ArrowLeft, TrendingUp, TrendingDown,
-  Users, DollarSign, BarChart3, Activity, ExternalLink,
-  Zap, CheckCircle, X,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CountUp } from "@/components/acid";
+import { Kicker } from "@/components/pages/investor/chrome";
+import { Panel, PanelLabel } from "@/components/pages/investor/surfaces";
+import { CapacityMeter } from "@/components/pages/investor/CapacityMeter";
+import { DepositsBadge, TierChip, TraderAvatar } from "@/components/pages/investor/tier";
+import { apiFetch } from "@/lib/utils";
+import { formatUSD, shortAddr } from "@/lib/types";
+import type { TraderProfile, VaultInfo } from "@/lib/types";
+
+const TOP_GLOW = {
+  background:
+    "radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--color-acid) 7%, transparent), transparent 60%)",
+};
 
 export default function VaultPage() {
   const { handle } = useParams<{ handle: string }>();
-  const { connected, publicKey } = useWallet();
+  const { connected } = useWallet();
   const [showDeposit, setShowDeposit] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -40,27 +47,28 @@ export default function VaultPage() {
   });
 
   const loading = traderLoading || vaultLoading;
-  const tc = trader ? tierColor(trader.tier) : "#6a6a6a";
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 p-6" style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-        <div className="h-6 w-32 rounded bg-[var(--color-panel)] animate-pulse" />
-        <div className="grid grid-cols-4 gap-4">
+      <div className="flex min-h-screen flex-col gap-4 bg-void p-6">
+        <Skeleton className="h-6 w-32" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-xl bg-[var(--color-panel)] animate-pulse" />
+            <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
-        <div className="h-80 rounded-xl bg-[var(--color-panel)] animate-pulse" />
+        <Skeleton className="h-80 rounded-2xl" />
       </div>
     );
   }
 
   if (!trader) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4" style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-        <p className="text-lg font-bold" style={{ color: "var(--color-ink)" }}>Trader not found</p>
-        <Link href="/traders" className="text-sm" style={{ color: "var(--color-mint)" }}>Browse traders</Link>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-void">
+        <p className="font-display text-lg font-bold text-ink uppercase">Trader not found</p>
+        <Link href="/traders" className="text-sm text-acid hover:underline">
+          Browse traders
+        </Link>
       </div>
     );
   }
@@ -72,267 +80,265 @@ export default function VaultPage() {
   const perfFee = vault ? vault.perf_fee_bps / 100 : 5;
   const mgmtFee = vault ? vault.mgmt_fee_bps / 100 : 1;
 
+  const stats = [
+    { label: "Net Asset Value", value: <CountUp value={vaultAum} prefix="$" />, icon: DollarSign, accent: "text-ink" },
+    {
+      label: "NAV per Share",
+      value: vault ? `$${(vault.nav_per_share / 1_000_000).toFixed(4)}` : "—",
+      icon: BarChart3,
+      accent: "text-acid",
+    },
+    {
+      label: "Capacity Left",
+      value: formatUSD(capacityLeft, 0),
+      icon: Activity,
+      accent: capacityLeft > 0 ? "text-success" : "text-danger",
+    },
+    { label: "Investors", value: <CountUp value={investorCount} />, icon: Users, accent: "text-ink" },
+  ];
+
   return (
-    <div style={{ background: "var(--color-bg)", minHeight: "100vh" }}>
-      {/* ── Back nav ── */}
-      <div className="flex items-center gap-3 px-6 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
-        <Link href="/traders" className="flex items-center gap-1.5 text-xs font-medium no-underline" style={{ color: "var(--color-faint)" }}>
-          <ArrowLeft size={12} /> Traders
-        </Link>
-        <span style={{ color: "var(--color-faint)", fontSize: "0.625rem" }}>/</span>
-        <span className="text-xs font-semibold" style={{ color: "var(--color-ink)" }}>@{handle}</span>
-      </div>
+    <div className="relative min-h-screen bg-void">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-64" style={TOP_GLOW} />
 
-      {/* ── Vault header ── */}
-      <div className="px-6 py-6" style={{ borderBottom: "1px solid var(--color-line)" }}>
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-black shrink-0"
-              style={{ background: `${tc}18`, border: `2px solid ${tc}40`, color: tc }}
-            >
-              {trader.handle.slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5 mb-1">
-                <h1 className="text-xl font-extrabold m-0" style={{ color: "var(--color-ink)" }}>
-                  @{trader.handle}
-                </h1>
-                <TierBadge tier={trader.tier} />
-                <DepositsStatusBadge deposits_open={vault?.deposits_open ?? trader.deposits_open} />
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[10px]" style={{ color: "var(--color-faint)" }}>
-                  {shortAddr(trader.wallet)}
-                </span>
-                <span className="font-mono text-[10px] capitalize" style={{ color: "var(--color-muted)" }}>
-                  {vaultStatus}
-                </span>
-                <span className="font-mono text-[10px]" style={{ color: "var(--color-mint)" }}>
-                  {perfFee}% perf / {mgmtFee}% mgmt
-                </span>
+      <div className="relative">
+        {/* Back nav */}
+        <div className="flex items-center gap-3 border-b border-line px-6 py-3">
+          <Link href="/traders" className="flex items-center gap-1.5 text-xs font-medium text-faint hover:text-ink">
+            <ArrowLeft className="size-3" /> Traders
+          </Link>
+          <span className="text-[0.625rem] text-faint">/</span>
+          <span className="text-xs font-semibold text-ink">@{handle}</span>
+        </div>
+
+        {/* Header */}
+        <div className="border-b border-line px-6 py-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <TraderAvatar handle={trader.handle} tier={trader.tier} size={56} />
+              <div>
+                <div className="mb-1 flex flex-wrap items-center gap-2.5">
+                  <h1 className="font-display text-xl font-extrabold tracking-tight text-ink uppercase">
+                    @{trader.handle}
+                  </h1>
+                  <TierChip tier={trader.tier} />
+                  <DepositsBadge open={vault?.deposits_open ?? trader.deposits_open} />
+                </div>
+                <div className="flex flex-wrap items-center gap-3 font-mono text-[0.625rem]">
+                  <span className="text-faint">{shortAddr(trader.wallet)}</span>
+                  <span className="text-muted capitalize">{vaultStatus}</span>
+                  <span className="text-acid">
+                    {perfFee}% perf / {mgmtFee}% mgmt
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {connected && (
-              <button
-                onClick={() => setShowDeposit(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all"
-                style={{
-                  background: "var(--color-mint)", color: "#fff",
-                  boxShadow: "0 4px 16px rgba(79,158,255,0.25)",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#74b5ff")}
-                onMouseLeave={e => (e.currentTarget.style.background = "var(--color-mint)")}
-              >
-                <Zap size={12} /> Deposit
-              </button>
-            )}
-            <button
-              onClick={() => setShowWithdraw(!showWithdraw)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all"
-              style={{
-                border: "1px solid var(--color-line)", color: "var(--color-muted)",
-                background: "var(--color-panel)",
-              }}
-            >
-              Withdraw
-            </button>
+            <div className="flex items-center gap-2">
+              {connected ? (
+                <Button size="sm" onClick={() => setShowDeposit(true)}>
+                  <Zap className="size-3" /> Deposit
+                </Button>
+              ) : null}
+              <Button size="sm" variant="secondary" onClick={() => setShowWithdraw((v) => !v)}>
+                Withdraw
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Stats grid ── */}
-      <div className="grid grid-cols-4 gap-px" style={{ background: "var(--color-line)" }}>
-        {[
-          { label: "Net Asset Value",   value: formatUSD(vaultAum, 0),         icon: DollarSign,  color: "var(--color-ink)" },
-          { label: "NAV per Share",     value: vault ? `$${(vault.nav_per_share / 1_000_000).toFixed(4)}` : "—", icon: BarChart3, color: "var(--color-mint)" },
-          { label: "Capacity Left",     value: formatUSD(capacityLeft, 0),     icon: Activity,    color: capacityLeft > 0 ? "var(--color-green)" : "var(--color-red)" },
-          { label: "Investors",         value: investorCount.toString(),       icon: Users,       color: "var(--color-ink)" },
-        ].map((s) => (
-          <div key={s.label} className="flex flex-col gap-1.5 p-5" style={{ background: "var(--color-bg)" }}>
-            <div className="flex items-center gap-1.5">
-              <s.icon size={10} style={{ color: "var(--color-faint)" }} />
-              <span className="font-mono text-[9px] tracking-[0.15em] uppercase" style={{ color: "var(--color-faint)" }}>{s.label}</span>
+        {/* Stats grid */}
+        <div className="grid grid-cols-2 gap-px bg-line md:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.label} className="flex flex-col gap-1.5 bg-void p-5">
+              <div className="flex items-center gap-1.5">
+                <s.icon className="size-2.5 text-faint" />
+                <PanelLabel>{s.label}</PanelLabel>
+              </div>
+              <span className={`font-mono text-lg font-bold tracking-tight tabular-nums ${s.accent}`}>{s.value}</span>
             </div>
-            <span className="font-mono text-lg font-black tracking-[-0.02em]" style={{ color: s.color }}>{s.value}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* ── Capacity bar ── */}
-      <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--color-line)" }}>
-        <CapacityBar aum={trader.capacity.used} capacity_usd={trader.capacity.total} />
-      </div>
+        {/* Capacity */}
+        <div className="border-b border-line px-6 py-4">
+          <CapacityMeter aum={trader.capacity.used} capacity_usd={trader.capacity.total} />
+        </div>
 
-      {/* ── Main grid ── */}
-      <div className="grid grid-cols-[1fr_360px] gap-px" style={{ minHeight: 400 }}>
-        {/* Left: NAV chart + trades */}
-        <div style={{ borderRight: "1px solid var(--color-line)" }}>
-          {/* NAV History */}
-          <div className="p-5" style={{ borderBottom: "1px solid var(--color-line)" }}>
-            <h3 className="font-mono text-[9px] tracking-[0.2em] uppercase font-semibold mb-4" style={{ color: "var(--color-faint)" }}>
-              NAV History (TWR)
-            </h3>
-            <div className="h-64">
-              {trader.equity_curve.length > 0 ? (
-                <NavHistoryChart data={trader.equity_curve} />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-xs" style={{ color: "var(--color-faint)" }}>No history yet</span>
+        {/* Main grid */}
+        <div className="grid grid-cols-1 gap-px lg:grid-cols-[1fr_360px]">
+          {/* Left: NAV chart + trades */}
+          <div className="lg:border-r lg:border-line">
+            <div className="border-b border-line p-5">
+              <h3 className="mb-4">
+                <Kicker>NAV History (TWR)</Kicker>
+              </h3>
+              <div className="h-64">
+                {trader.equity_curve.length > 0 ? (
+                  <NavHistoryChart data={trader.equity_curve} />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <span className="text-xs text-faint">No history yet</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <PanelLabel>Trades ({trader.trades.length})</PanelLabel>
+                <Link
+                  href={`/t/${handle}/trades`}
+                  className="flex items-center gap-1 font-mono text-[0.625rem] tracking-[0.1em] text-acid uppercase hover:underline"
+                >
+                  View all <ArrowUpRight className="size-2.5" />
+                </Link>
+              </div>
+              {trader.trades.length === 0 ? (
+                <div className="flex h-24 items-center justify-center">
+                  <span className="text-xs text-faint">No trades yet</span>
                 </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Market</TableHead>
+                      <TableHead>Dir.</TableHead>
+                      <TableHead className="text-right">Size</TableHead>
+                      <TableHead className="text-right">Entry</TableHead>
+                      <TableHead className="text-right">Exit</TableHead>
+                      <TableHead className="text-right">PnL</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {trader.trades.slice(0, 8).map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-semibold text-ink">{t.market}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`rounded px-1.5 py-0.5 font-mono text-[0.625rem] font-bold uppercase ${
+                              t.direction === "long"
+                                ? "bg-success/12 text-success"
+                                : "bg-danger/12 text-danger"
+                            }`}
+                          >
+                            {t.direction}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums text-muted">{formatUSD(t.size_usd, 0)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted">{t.entry_px.toFixed(2)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted">{t.exit_px.toFixed(2)}</TableCell>
+                        <TableCell
+                          className={`text-right font-semibold tabular-nums ${
+                            t.realized_pnl >= 0 ? "text-success" : "text-danger"
+                          }`}
+                        >
+                          {t.realized_pnl >= 0 ? "+" : ""}
+                          {formatUSD(t.realized_pnl, 0)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </div>
           </div>
 
-          {/* Recent trades */}
-          <div className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-mono text-[9px] tracking-[0.2em] uppercase font-semibold" style={{ color: "var(--color-faint)" }}>
-                Trades ({trader.trades.length})
-              </h3>
-              <Link href={`/t/${handle}/trades`} className="font-mono text-[9px] tracking-[0.1em] uppercase no-underline flex items-center gap-1" style={{ color: "var(--color-mint)" }}>
-                View all <ArrowUpRight size={9} />
-              </Link>
-            </div>
-            {trader.trades.length === 0 ? (
-              <div className="flex items-center justify-center h-24">
-                <span className="text-xs" style={{ color: "var(--color-faint)" }}>No trades yet</span>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid var(--color-line)" }}>
-                      {["Market", "Dir.", "Size", "Entry", "Exit", "PnL"].map((h) => (
-                        <th key={h} className="py-2 pr-3 text-left font-mono text-[9px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--color-faint)" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trader.trades.slice(0, 8).map((t) => (
-                      <tr key={t.id} style={{ borderBottom: "1px solid var(--color-line)" }}>
-                        <td className="py-2 pr-3 font-semibold" style={{ color: "var(--color-ink)" }}>{t.market}</td>
-                        <td className="py-2 pr-3">
-                          <span className="font-mono text-[10px] font-bold uppercase px-1.5 py-0.5 rounded" style={{
-                            background: t.direction === "long" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                            color: t.direction === "long" ? "var(--color-green)" : "var(--color-red)",
-                          }}>{t.direction}</span>
-                        </td>
-                        <td className="py-2 pr-3 tnum" style={{ color: "var(--color-muted)" }}>{formatUSD(t.size_usd, 0)}</td>
-                        <td className="py-2 pr-3 tnum" style={{ color: "var(--color-muted)" }}>{t.entry_px.toFixed(2)}</td>
-                        <td className="py-2 pr-3 tnum" style={{ color: "var(--color-muted)" }}>{t.exit_px.toFixed(2)}</td>
-                        <td className="py-2 pr-3 tnum font-semibold" style={{ color: t.realized_pnl >= 0 ? "var(--color-green)" : "var(--color-red)" }}>
-                          {t.realized_pnl >= 0 ? "+" : ""}{formatUSD(t.realized_pnl, 0)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right: vault details + withdraw panel */}
-        <div className="p-5 flex flex-col gap-5">
-          {/* Withdraw panel */}
-          {showWithdraw && (
-            <div className="rounded-xl p-4" style={{ border: "1px solid var(--color-line)", background: "var(--color-panel)" }}>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold" style={{ color: "var(--color-ink)" }}>Request Withdraw</h4>
-                <button onClick={() => setShowWithdraw(false)} className="w-5 h-5 flex items-center justify-center rounded hover:bg-[var(--color-panel-2)]">
-                  <X size={10} style={{ color: "var(--color-faint)" }} />
-                </button>
-              </div>
-              <p className="text-[10px] mb-3" style={{ color: "var(--color-faint)" }}>
-                Withdrawals are subject to a settlement window.
-              </p>
-              <input
-                type="number"
-                value={withdrawAmount}
-                onChange={e => setWithdrawAmount(e.target.value)}
-                placeholder="Shares to withdraw"
-                className="w-full rounded-lg px-3 py-2 text-xs outline-none mb-3"
-                style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)", color: "var(--color-ink)" }}
-              />
-              <button
-                className="w-full py-2 rounded-lg text-xs font-bold transition-all"
-                style={{
-                  background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)",
-                  color: "var(--color-red)",
-                }}
-                disabled={!connected || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
-                onClick={() => {
-                  setWithdrawAmount("");
-                  setShowWithdraw(false);
-                }}
-              >
-                Request Withdraw
-              </button>
-            </div>
-          )}
-
-          {/* Vault info */}
-          <div>
-            <h3 className="font-mono text-[9px] tracking-[0.2em] uppercase font-semibold mb-3" style={{ color: "var(--color-faint)" }}>
-              Vault Details
-            </h3>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "Total Shares",   value: vault ? vault.total_shares.toLocaleString() : "—" },
-                { label: "Trader Shares",  value: vault ? vault.trader_shares.toLocaleString() : "—" },
-                { label: "HWM",            value: vault ? `$${(vault.hwm / 1_000_000).toFixed(4)}` : "—" },
-                { label: "Perf Fee",       value: `${perfFee}%` },
-                { label: "Mgmt Fee",       value: `${mgmtFee}%` },
-              ].map((r) => (
-                <div key={r.label} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid var(--color-line)" }}>
-                  <span className="text-[11px]" style={{ color: "var(--color-faint)" }}>{r.label}</span>
-                  <span className="text-[11px] font-semibold tnum" style={{ color: "var(--color-ink)" }}>{r.value}</span>
+          {/* Right: withdraw + details */}
+          <div className="flex flex-col gap-5 p-5">
+            {showWithdraw ? (
+              <Panel className="p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-ink">Request Withdraw</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowWithdraw(false)}
+                    aria-label="Close withdraw panel"
+                    className="flex size-5 items-center justify-center rounded text-faint hover:bg-panel-2 hover:text-ink"
+                  >
+                    <X className="size-2.5" />
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
+                <p className="mb-3 text-[0.625rem] text-faint">
+                  Withdrawals are subject to a settlement window.
+                </p>
+                <Input
+                  type="number"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder="Shares to withdraw"
+                  className="mb-3"
+                />
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  disabled={!connected || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                  onClick={() => {
+                    setWithdrawAmount("");
+                    setShowWithdraw(false);
+                  }}
+                >
+                  Request Withdraw
+                </Button>
+              </Panel>
+            ) : null}
 
-          {/* Performance summary */}
-          <div>
-            <h3 className="font-mono text-[9px] tracking-[0.2em] uppercase font-semibold mb-3" style={{ color: "var(--color-faint)" }}>
-              Performance
-            </h3>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "30d Return",  value: `+${trader.metrics.return_30d.toFixed(1)}%`, color: "var(--color-green)" },
-                { label: "90d Return",  value: `+${trader.metrics.return_90d.toFixed(1)}%`, color: "var(--color-green)" },
-                { label: "Max DD",      value: `${trader.metrics.max_dd.toFixed(1)}%`,     color: trader.metrics.max_dd < -10 ? "var(--color-red)" : "var(--color-gold)" },
-                { label: "Sortino",     value: trader.metrics.sortino.toFixed(2),           color: "var(--color-ink)" },
-                { label: "Win Rate",    value: `${trader.metrics.win_rate.toFixed(1)}%`,    color: "var(--color-mint)" },
-              ].map((r) => (
-                <div key={r.label} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid var(--color-line)" }}>
-                  <span className="text-[11px]" style={{ color: "var(--color-faint)" }}>{r.label}</span>
-                  <span className="text-[11px] font-semibold tnum" style={{ color: r.color }}>{r.value}</span>
-                </div>
-              ))}
+            <div>
+              <PanelLabel className="mb-3">Vault Details</PanelLabel>
+              <dl className="flex flex-col gap-2">
+                {(
+                  [
+                    ["Total Shares", vault ? vault.total_shares.toLocaleString() : "—"],
+                    ["Trader Shares", vault ? vault.trader_shares.toLocaleString() : "—"],
+                    ["HWM", vault ? `$${(vault.hwm / 1_000_000).toFixed(4)}` : "—"],
+                    ["Perf Fee", `${perfFee}%`],
+                    ["Mgmt Fee", `${mgmtFee}%`],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between border-b border-line py-1.5">
+                    <dt className="text-[0.6875rem] text-faint">{label}</dt>
+                    <dd className="text-[0.6875rem] font-semibold tabular-nums text-ink">{value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
-          </div>
 
-          {/* Trader profile link */}
-          <Link
-            href={`/t/${handle}`}
-            className="flex items-center justify-between rounded-lg px-4 py-3 text-xs font-semibold no-underline transition-all hover:bg-[var(--color-panel-2)]"
-            style={{ border: "1px solid var(--color-line)", color: "var(--color-ink)" }}
-          >
-            <span>View full trader profile</span>
-            <ArrowUpRight size={11} style={{ color: "var(--color-faint)" }} />
-          </Link>
+            <div>
+              <PanelLabel className="mb-3">Performance</PanelLabel>
+              <dl className="flex flex-col gap-2">
+                {(
+                  [
+                    ["30d Return", `+${trader.metrics.return_30d.toFixed(1)}%`, "text-success"],
+                    ["90d Return", `+${trader.metrics.return_90d.toFixed(1)}%`, "text-success"],
+                    [
+                      "Max DD",
+                      `${trader.metrics.max_dd.toFixed(1)}%`,
+                      trader.metrics.max_dd < -10 ? "text-danger" : "text-tier-advanced",
+                    ],
+                    ["Sortino", trader.metrics.sortino.toFixed(2), "text-ink"],
+                    ["Win Rate", `${trader.metrics.win_rate.toFixed(1)}%`, "text-acid"],
+                  ] as const
+                ).map(([label, value, color]) => (
+                  <div key={label} className="flex items-center justify-between border-b border-line py-1.5">
+                    <dt className="text-[0.6875rem] text-faint">{label}</dt>
+                    <dd className={`text-[0.6875rem] font-semibold tabular-nums ${color}`}>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <Link
+              href={`/t/${handle}`}
+              className="flex items-center justify-between rounded-lg border border-line px-4 py-3 text-xs font-semibold text-ink transition-colors hover:border-acid/30 hover:bg-panel-2"
+            >
+              <span>View full trader profile</span>
+              <ArrowUpRight className="size-3 text-faint" />
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* ── Deposit modal ── */}
-      {showDeposit && trader && (
-        <DepositModal trader={trader} onClose={() => setShowDeposit(false)} />
-      )}
+      {showDeposit && trader ? <DepositModal trader={trader} onClose={() => setShowDeposit(false)} /> : null}
     </div>
   );
 }

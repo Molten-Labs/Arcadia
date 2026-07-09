@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useRole } from "@/lib/role-context";
 import { useRouter } from "next/navigation";
-import {
-  CheckCircle, Bell, Sliders, Moon, Shield, Save,
-  TrendingUp, Crown, ExternalLink, Copy, Eye, EyeOff,
-} from "lucide-react";
+import type { ElementType } from "react";
+import { Bell, CheckCircle, Copy, Crown, ExternalLink, Eye, EyeOff, Moon, Save, Shield, Sliders, TrendingUp } from "lucide-react";
+
+import { useRole } from "@/lib/role-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PageHeader, PageShell } from "@/components/pages/investor/chrome";
+import { Panel, PanelLabel } from "@/components/pages/investor/surfaces";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "arcadia_settings";
 
@@ -26,6 +30,8 @@ interface Settings {
   devnetWarnings: boolean;
 }
 
+type ProfileKey = "displayName" | "bio" | "location" | "twitterHandle";
+
 const DEFAULTS: Settings = {
   notifScoreMilestone: true,
   notifDeposit: true,
@@ -41,6 +47,13 @@ const DEFAULTS: Settings = {
   devnetWarnings: true,
 };
 
+const PROFILE_FIELDS: { key: ProfileKey; label: string; placeholder: string }[] = [
+  { key: "displayName", label: "Display name", placeholder: "Your name" },
+  { key: "bio", label: "Bio", placeholder: "Short description…" },
+  { key: "location", label: "Location", placeholder: "City, Country" },
+  { key: "twitterHandle", label: "Twitter / X handle", placeholder: "@handle" },
+];
+
 function loadSettings(): Settings {
   if (typeof window === "undefined") return DEFAULTS;
   try {
@@ -49,6 +62,17 @@ function loadSettings(): Settings {
   } catch {
     return DEFAULTS;
   }
+}
+
+const emptySubscribe = () => () => {};
+
+/** SSR-safe hydration flag: false on the server and first client paint, true after. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 }
 
 function ToggleSwitch({
@@ -65,39 +89,38 @@ function ToggleSwitch({
   return (
     <div className="flex items-center justify-between py-3">
       <div>
-        <p className="text-xs font-semibold" style={{ color: "var(--color-ink)" }}>{label}</p>
-        {sub && <p className="text-[10px] mt-0.5" style={{ color: "var(--color-faint)" }}>{sub}</p>}
+        <p className="text-xs font-semibold text-ink">{label}</p>
+        {sub ? <p className="mt-0.5 text-[0.625rem] text-faint">{sub}</p> : null}
       </div>
       <button
+        type="button"
         onClick={() => onChange(!checked)}
-        className="relative w-10 h-5 rounded-full flex-shrink-0 transition-colors duration-200"
-        style={{
-          background: checked ? "var(--color-mint)" : "var(--color-panel-2)",
-          border: `1px solid ${checked ? "var(--color-mint)" : "var(--color-line)"}`,
-        }}
         role="switch"
         aria-checked={checked}
+        aria-label={label}
+        className={cn(
+          "relative h-5 w-10 shrink-0 rounded-full border motion-safe:transition-colors motion-safe:duration-200 focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
+          checked ? "border-acid bg-acid" : "border-line bg-panel-2",
+        )}
       >
         <span
-          className="absolute top-[2px] w-4 h-4 rounded-full bg-white transition-all duration-200 shadow-sm"
-          style={{ left: checked ? "calc(100% - 18px)" : "2px" }}
+          className="absolute top-[2px] size-4 rounded-full bg-void motion-safe:transition-all motion-safe:duration-200"
+          style={{ left: checked ? "calc(100% - 18px)" : "2px", background: checked ? "var(--color-void)" : "var(--color-muted)" }}
         />
       </button>
     </div>
   );
 }
 
-function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
+function SectionCard({ title, icon: Icon, children }: { title: string; icon: ElementType; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
-      <div className="flex items-center gap-2 px-5 py-3.5" style={{ borderBottom: "1px solid var(--color-line)", background: "var(--color-panel-2)" }}>
-        <Icon size={13} style={{ color: "var(--color-mint)" }} />
-        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-ink)" }}>{title}</p>
+    <Panel className="overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-line bg-panel-2 px-5 py-3.5">
+        <Icon className="size-3.5 text-acid" />
+        <PanelLabel>{title}</PanelLabel>
       </div>
-      <div className="px-5 divide-y" style={{ borderColor: "var(--color-line)" }}>
-        {children}
-      </div>
-    </div>
+      <div className="divide-y divide-line px-5">{children}</div>
+    </Panel>
   );
 }
 
@@ -105,14 +128,15 @@ export default function SettingsPage() {
   const { connected, publicKey } = useWallet();
   const { role, setRole } = useRole();
   const router = useRouter();
-  const [settings, setSettings] = useState<Settings>(DEFAULTS);
+  const hydrated = useHydrated();
+  const [settings, setSettings] = useState<Settings>(loadSettings);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showKey, setShowKey] = useState(false);
 
-  useEffect(() => {
-    setSettings(loadSettings());
-  }, []);
+  // Render defaults until hydrated so the client's first paint matches the
+  // server (no hydration mismatch); the persisted values swap in after mount.
+  const view = hydrated ? settings : DEFAULTS;
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -141,219 +165,192 @@ export default function SettingsPage() {
   const walletAddr = publicKey?.toBase58() ?? "";
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-2xl mx-auto px-5 py-8">
-        <div className="flex items-center justify-between mb-7">
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--color-ink)" }}>Settings</h1>
-            <p className="text-xs mt-0.5" style={{ color: "var(--color-faint)" }}>
-              Preferences saved to this browser
-            </p>
-          </div>
-          <button
-            onClick={save}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all"
-            style={{
-              background: saved ? "rgba(34,197,94,0.12)" : "var(--color-accent)",
-              color: saved ? "var(--color-green)" : "var(--color-bg)",
-              border: `1px solid ${saved ? "rgba(34,197,94,0.3)" : "transparent"}`,
-            }}
-          >
-            {saved ? <CheckCircle size={13} /> : <Save size={13} />}
+    <PageShell width="narrow">
+      <PageHeader
+        kicker="Preferences"
+        title="Settings"
+        subtitle="Preferences saved to this browser"
+        actions={
+          <Button variant={saved ? "secondary" : "default"} onClick={save}>
+            {saved ? <CheckCircle className="size-3.5 text-success" /> : <Save className="size-3.5" />}
             {saved ? "Saved!" : "Save changes"}
-          </button>
-        </div>
+          </Button>
+        }
+      />
 
-        <div className="space-y-4">
-          {/* Wallet */}
-          <SectionCard title="Wallet" icon={Shield}>
-            <div className="py-3">
-              <p className="text-xs font-semibold mb-2" style={{ color: "var(--color-ink)" }}>Connected wallet</p>
-              {connected ? (
-                <div
-                  className="flex items-center gap-2 rounded-lg px-3 py-2"
-                  style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)" }}
-                >
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "var(--color-green)" }} />
-                  <code
-                    className="text-[11px] font-mono flex-1 truncate"
-                    style={{ color: "var(--color-ink)" }}
-                  >
-                    {showKey ? walletAddr : `${walletAddr.slice(0, 8)}…${walletAddr.slice(-8)}`}
-                  </code>
-                  <button onClick={() => setShowKey((v) => !v)} title={showKey ? "Hide" : "Show full"}>
-                    {showKey
-                      ? <EyeOff size={12} style={{ color: "var(--color-faint)" }} />
-                      : <Eye size={12} style={{ color: "var(--color-faint)" }} />
-                    }
-                  </button>
-                  <button onClick={copyAddress} title="Copy address">
-                    {copied
-                      ? <CheckCircle size={12} style={{ color: "var(--color-green)" }} />
-                      : <Copy size={12} style={{ color: "var(--color-faint)" }} />
-                    }
-                  </button>
-                  <a
-                    href={`https://solscan.io/account/${walletAddr}?cluster=devnet`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="View on Solscan"
-                  >
-                    <ExternalLink size={12} style={{ color: "var(--color-mint)" }} />
-                  </a>
-                </div>
-              ) : (
-                <p className="text-xs" style={{ color: "var(--color-faint)" }}>Not connected</p>
-              )}
-            </div>
-            <ToggleSwitch
-              checked={settings.showWallet}
-              onChange={(v) => update("showWallet", v)}
-              label="Show wallet address publicly"
-              sub="Displayed on your trader profile"
-            />
-          </SectionCard>
-
-          {/* Role */}
-          <SectionCard title="Role" icon={TrendingUp}>
-            <div className="py-3">
-              <p className="text-[10px] mb-3" style={{ color: "var(--color-faint)" }}>
-                Switching role navigates you to the appropriate dashboard.
-              </p>
-              <div className="flex gap-2">
+      <div className="space-y-4">
+        {/* Wallet */}
+        <SectionCard title="Wallet" icon={Shield}>
+          <div className="py-3">
+            <p className="mb-2 text-xs font-semibold text-ink">Connected wallet</p>
+            {connected ? (
+              <div className="flex items-center gap-2 rounded-lg border border-line bg-panel-2 px-3 py-2">
+                <span aria-hidden className="size-2 shrink-0 rounded-full bg-success" />
+                <code className="flex-1 truncate font-mono text-[0.6875rem] text-ink">
+                  {showKey ? walletAddr : `${walletAddr.slice(0, 8)}…${walletAddr.slice(-8)}`}
+                </code>
                 <button
-                  onClick={() => switchRole("trader")}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all"
-                  style={{
-                    background: role === "trader" ? "rgba(79,158,255,0.1)" : "var(--color-panel-2)",
-                    border: `1px solid ${role === "trader" ? "rgba(79,158,255,0.4)" : "var(--color-line)"}`,
-                    color: role === "trader" ? "var(--color-mint)" : "var(--color-faint)",
-                  }}
+                  type="button"
+                  onClick={() => setShowKey((v) => !v)}
+                  aria-label={showKey ? "Hide full address" : "Show full address"}
+                  className="text-faint hover:text-ink"
                 >
-                  <TrendingUp size={13} />
-                  Trader
-                  {role === "trader" && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "rgba(79,158,255,0.2)", color: "var(--color-mint)" }}>Active</span>
-                  )}
+                  {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
                 </button>
                 <button
-                  onClick={() => switchRole("investor")}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all"
-                  style={{
-                    background: role === "investor" ? "rgba(168,85,247,0.1)" : "var(--color-panel-2)",
-                    border: `1px solid ${role === "investor" ? "rgba(168,85,247,0.4)" : "var(--color-line)"}`,
-                    color: role === "investor" ? "#a855f7" : "var(--color-faint)",
-                  }}
+                  type="button"
+                  onClick={copyAddress}
+                  aria-label="Copy address"
+                  className="text-faint hover:text-ink"
                 >
-                  <Crown size={13} />
-                  Investor
-                  {role === "investor" && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "rgba(168,85,247,0.2)", color: "#a855f7" }}>Active</span>
-                  )}
+                  {copied ? <CheckCircle className="size-3 text-success" /> : <Copy className="size-3" />}
                 </button>
+                <a
+                  href={`https://solscan.io/account/${walletAddr}?cluster=devnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="View on Solscan"
+                  className="text-acid hover:text-acid/80"
+                >
+                  <ExternalLink className="size-3" />
+                </a>
               </div>
-            </div>
-          </SectionCard>
-
-          {/* Profile */}
-          <SectionCard title="Profile" icon={Sliders}>
-            {[
-              { key: "displayName", label: "Display name", placeholder: "Your name" },
-              { key: "bio", label: "Bio", placeholder: "Short description…" },
-              { key: "location", label: "Location", placeholder: "City, Country" },
-              { key: "twitterHandle", label: "Twitter / X handle", placeholder: "@handle" },
-            ].map(({ key, label, placeholder }) => (
-              <div key={key} className="py-3">
-                <label className="text-[10px] font-bold uppercase tracking-widest mb-1.5 block" style={{ color: "var(--color-faint)" }}>
-                  {label}
-                </label>
-                <input
-                  type="text"
-                  value={(settings as unknown as Record<string, string>)[key] ?? ""}
-                  onChange={(e) => update(key as keyof Settings, e.target.value as never)}
-                  placeholder={placeholder}
-                  className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-all"
-                  style={{
-                    background: "var(--color-panel-2)",
-                    border: "1px solid var(--color-line)",
-                    color: "var(--color-ink)",
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = "var(--color-mint)"; }}
-                  onBlur={(e) => { e.target.style.borderColor = "var(--color-line)"; }}
-                />
-              </div>
-            ))}
-          </SectionCard>
-
-          {/* Notifications */}
-          <SectionCard title="Notifications" icon={Bell}>
-            <ToggleSwitch
-              checked={settings.notifScoreMilestone}
-              onChange={(v) => update("notifScoreMilestone", v)}
-              label="Score milestone alerts"
-              sub="When your Arcadia Score crosses a tier boundary"
-            />
-            <ToggleSwitch
-              checked={settings.notifDeposit}
-              onChange={(v) => update("notifDeposit", v)}
-              label="New investor deposits"
-              sub="When USDC enters your vault"
-            />
-            <ToggleSwitch
-              checked={settings.notifPayout}
-              onChange={(v) => update("notifPayout", v)}
-              label="Payout confirmations"
-              sub="When profit share is settled to your wallet"
-            />
-            <ToggleSwitch
-              checked={settings.notifNAV}
-              onChange={(v) => update("notifNAV", v)}
-              label="NAV update digest"
-              sub="Daily summary of vault NAV changes"
-            />
-          </SectionCard>
-
-          {/* Display */}
-          <SectionCard title="Display" icon={Moon}>
-            <ToggleSwitch
-              checked={settings.compactMode}
-              onChange={(v) => update("compactMode", v)}
-              label="Compact mode"
-              sub="Reduce spacing in tables and lists"
-            />
-            <ToggleSwitch
-              checked={settings.reduceMotion}
-              onChange={(v) => update("reduceMotion", v)}
-              label="Reduce motion"
-              sub="Disable animated transitions"
-            />
-            <ToggleSwitch
-              checked={settings.devnetWarnings}
-              onChange={(v) => update("devnetWarnings", v)}
-              label="Show devnet warnings"
-              sub="Label all simulated actions clearly"
-            />
-          </SectionCard>
-
-          {/* Save */}
-          <div className="pt-2">
-            <button
-              onClick={save}
-              className="w-full py-3 rounded-xl text-sm font-bold transition-all"
-              style={{
-                background: saved ? "rgba(34,197,94,0.12)" : "var(--color-accent)",
-                color: saved ? "var(--color-green)" : "var(--color-bg)",
-                border: `1px solid ${saved ? "rgba(34,197,94,0.3)" : "transparent"}`,
-              }}
-            >
-              {saved ? "✓ All changes saved" : "Save Settings"}
-            </button>
-            <p className="text-[10px] text-center mt-2" style={{ color: "var(--color-faint)" }}>
-              Settings are stored in your browser via localStorage
-            </p>
+            ) : (
+              <p className="text-xs text-faint">Not connected</p>
+            )}
           </div>
+          <ToggleSwitch
+            checked={view.showWallet}
+            onChange={(v) => update("showWallet", v)}
+            label="Show wallet address publicly"
+            sub="Displayed on your trader profile"
+          />
+        </SectionCard>
+
+        {/* Role */}
+        <SectionCard title="Role" icon={TrendingUp}>
+          <div className="py-3">
+            <p className="mb-3 text-[0.625rem] text-faint">
+              Switching role navigates you to the appropriate dashboard.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => switchRole("trader")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-bold transition-colors",
+                  role === "trader"
+                    ? "border-acid/40 bg-acid/10 text-acid"
+                    : "border-line bg-panel-2 text-faint hover:text-ink",
+                )}
+              >
+                <TrendingUp className="size-3.5" />
+                Trader
+                {role === "trader" ? (
+                  <span className="rounded bg-acid/20 px-1.5 py-0.5 text-[0.5625rem] text-acid">Active</span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchRole("investor")}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-xs font-bold transition-colors",
+                  role === "investor"
+                    ? "border-tier-established/40 bg-tier-established/10 text-tier-established"
+                    : "border-line bg-panel-2 text-faint hover:text-ink",
+                )}
+              >
+                <Crown className="size-3.5" />
+                Investor
+                {role === "investor" ? (
+                  <span className="rounded bg-tier-established/20 px-1.5 py-0.5 text-[0.5625rem] text-tier-established">
+                    Active
+                  </span>
+                ) : null}
+              </button>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Profile */}
+        <SectionCard title="Profile" icon={Sliders}>
+          {PROFILE_FIELDS.map(({ key, label, placeholder }) => (
+            <div key={key} className="py-3">
+              <label htmlFor={`settings-${key}`} className="mb-1.5 block">
+                <PanelLabel>{label}</PanelLabel>
+              </label>
+              <Input
+                id={`settings-${key}`}
+                type="text"
+                value={view[key]}
+                onChange={(e) => update(key, e.target.value)}
+                placeholder={placeholder}
+              />
+            </div>
+          ))}
+        </SectionCard>
+
+        {/* Notifications */}
+        <SectionCard title="Notifications" icon={Bell}>
+          <ToggleSwitch
+            checked={view.notifScoreMilestone}
+            onChange={(v) => update("notifScoreMilestone", v)}
+            label="Score milestone alerts"
+            sub="When your Arcadia Score crosses a tier boundary"
+          />
+          <ToggleSwitch
+            checked={view.notifDeposit}
+            onChange={(v) => update("notifDeposit", v)}
+            label="New investor deposits"
+            sub="When USDC enters your vault"
+          />
+          <ToggleSwitch
+            checked={view.notifPayout}
+            onChange={(v) => update("notifPayout", v)}
+            label="Payout confirmations"
+            sub="When profit share is settled to your wallet"
+          />
+          <ToggleSwitch
+            checked={view.notifNAV}
+            onChange={(v) => update("notifNAV", v)}
+            label="NAV update digest"
+            sub="Daily summary of vault NAV changes"
+          />
+        </SectionCard>
+
+        {/* Display */}
+        <SectionCard title="Display" icon={Moon}>
+          <ToggleSwitch
+            checked={view.compactMode}
+            onChange={(v) => update("compactMode", v)}
+            label="Compact mode"
+            sub="Reduce spacing in tables and lists"
+          />
+          <ToggleSwitch
+            checked={view.reduceMotion}
+            onChange={(v) => update("reduceMotion", v)}
+            label="Reduce motion"
+            sub="Disable animated transitions"
+          />
+          <ToggleSwitch
+            checked={view.devnetWarnings}
+            onChange={(v) => update("devnetWarnings", v)}
+            label="Show devnet warnings"
+            sub="Label all simulated actions clearly"
+          />
+        </SectionCard>
+
+        {/* Save */}
+        <div className="pt-2">
+          <Button variant={saved ? "secondary" : "default"} size="lg" className="w-full" onClick={save}>
+            {saved ? <CheckCircle className="size-4 text-success" /> : null}
+            {saved ? "All changes saved" : "Save Settings"}
+          </Button>
+          <p className="mt-2 text-center text-[0.625rem] text-faint">
+            Settings are stored in your browser via localStorage
+          </p>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
