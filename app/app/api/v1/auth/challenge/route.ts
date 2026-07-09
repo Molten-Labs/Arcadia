@@ -1,21 +1,26 @@
+/**
+ * POST /api/v1/auth/challenge — proxy to the Rust backend, or dev mock.
+ *
+ * With BACKEND_URL set this proxies upstream (nonce lives in Redis there);
+ * an upstream outage is a 502, never a silent mock fallback. Without
+ * BACKEND_URL it mints an HMAC-signed, expiring nonce that only this
+ * server's /verify will accept.
+ */
 import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
+import { mintNonce } from "@/lib/server/dev-auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
 
 export async function POST() {
-  // Proxy to Rust backend when configured
   if (BACKEND_URL) {
     try {
       const upstream = await fetch(`${BACKEND_URL}/v1/auth/challenge`, { method: "POST" });
       const data = await upstream.json();
       return NextResponse.json(data, { status: upstream.status });
     } catch {
-      // fall through to mock
+      return NextResponse.json({ error: "Auth backend unreachable" }, { status: 502 });
     }
   }
 
-  const nonce = randomBytes(16).toString("hex");
-  const expires_at = Math.floor(Date.now() / 1000) + 300;
-  return NextResponse.json({ nonce, expires_at });
+  return NextResponse.json(mintNonce());
 }
