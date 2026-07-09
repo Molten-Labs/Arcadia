@@ -1,223 +1,167 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+
 import { useRole } from "@/lib/role-context";
+import { cn } from "@/lib/utils";
+
+type RoleId = "trader" | "investor";
+
+interface RoleOption {
+  id: RoleId;
+  label: string;
+  headline: string;
+  body: string;
+  access: string;
+  route: string;
+  dotClass: string;
+  hueClass: string;
+  badgeClass: string;
+}
+
+const ROLES: RoleOption[] = [
+  {
+    id: "trader",
+    label: "Trader",
+    headline: "I trade.",
+    body: "Build an on-chain reputation, open a vault to investors, and earn a profit split based on your Arcadia Score.",
+    access: "Terminal / Analytics / Payouts / Vault",
+    route: "/terminal",
+    dotClass: "bg-acid",
+    hueClass: "text-acid",
+    badgeClass: "border-acid/25 bg-acid/[0.06]",
+  },
+  {
+    id: "investor",
+    label: "Investor",
+    headline: "I allocate.",
+    body: "Browse verified traders, deposit into vaults, and monitor your portfolio NAV and returns across the marketplace.",
+    access: "Marketplace / Portfolio / Returns / History",
+    route: "/dashboard",
+    dotClass: "bg-cyan",
+    hueClass: "text-cyan",
+    badgeClass: "border-cyan/25 bg-cyan/[0.06]",
+  },
+];
 
 export function RoleGate() {
-  const { showRoleGate, setRole } = useRole();
+  const { showRoleGate, setRole, dismissRoleGate } = useRole();
   const router = useRouter();
+  const firstOptionRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!showRoleGate) return;
+    firstOptionRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissRoleGate();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [showRoleGate, dismissRoleGate]);
 
   if (!showRoleGate) return null;
 
-  function choose(r: "trader" | "investor") {
-    setRole(r);
-    router.push(r === "trader" ? "/terminal" : "/dashboard");
+  function choose(role: RoleOption) {
+    setRole(role.id);
+    router.push(role.route);
   }
 
   return (
     <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 200,
-        background: "#000",
-        display: "flex", flexDirection: "column",
-      }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Select your Arcadia role"
+      className="fixed inset-0 z-[200] flex flex-col bg-void"
     >
       {/* Top bar */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "1.25rem 2rem",
-        borderBottom: "1px solid #181818",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: 7,
-            background: "var(--color-mint)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 7, fontWeight: 900, color: "#fff", letterSpacing: "0.05em" }}>ARC</span>
+      <div className="flex items-center justify-between border-b border-line px-6 py-5 sm:px-8">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-[26px] items-center justify-center rounded-[7px] bg-acid">
+            <span className="font-mono text-[7px] font-bold tracking-[0.05em] text-void">ARC</span>
           </div>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-ink)", letterSpacing: "-0.02em" }}>
-            Arcadia
-          </span>
+          <span className="font-mono text-[0.8125rem] font-bold tracking-tight text-ink">Arcadia</span>
         </div>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: "#333" }}>
+        <span className="font-mono text-[9px] tracking-[0.22em] text-faint uppercase">
           New session
         </span>
       </div>
 
       {/* Role prompt */}
-      <div style={{
-        padding: "3rem 2rem 1.5rem",
-        display: "flex", flexDirection: "column", alignItems: "flex-start",
-        maxWidth: 800,
-      }}>
-        <p style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: "0.25em", textTransform: "uppercase", color: "#444", marginBottom: "0.875rem" }}>
+      <div className="flex max-w-3xl flex-col items-start px-6 pt-12 pb-6 sm:px-8">
+        <p className="mb-3.5 font-mono text-[9px] tracking-[0.25em] text-faint uppercase">
           How are you using Arcadia?
         </p>
-        <h1 style={{
-          fontFamily: "var(--font-sans)", fontWeight: 800,
-          fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
-          color: "var(--color-ink)", letterSpacing: "-0.045em",
-          lineHeight: 1.1, margin: 0,
-        }}>
+        <h1 className="m-0 font-display text-[clamp(1.75rem,4vw,2.5rem)] font-bold leading-[1.1] tracking-[-0.03em] text-ink">
           Select your role to continue.
         </h1>
       </div>
 
       {/* Two-panel split */}
-      <div style={{
-        flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr",
-        borderTop: "1px solid #181818",
-        overflow: "hidden",
-      }}>
-
-        {/* Trader */}
-        <button
-          onClick={() => choose("trader")}
-          style={{
-            display: "flex", flexDirection: "column", justifyContent: "space-between",
-            padding: "2.5rem 2.5rem",
-            background: "transparent", border: "none",
-            borderRight: "1px solid #181818",
-            cursor: "pointer", textAlign: "left",
-            transition: "background 0.15s",
-            position: "relative",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#080808"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-        >
-          {/* Top */}
-          <div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "3px 10px", borderRadius: 4,
-              background: "rgba(79,158,255,0.08)",
-              border: "1px solid rgba(79,158,255,0.18)",
-              marginBottom: "2rem",
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-mint)", display: "block" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-mint)" }}>
-                Trader
-              </span>
-            </div>
-
-            <h2 style={{
-              fontFamily: "var(--font-sans)", fontWeight: 800,
-              fontSize: "clamp(2rem, 4vw, 3.5rem)", letterSpacing: "-0.05em",
-              color: "var(--color-ink)", margin: "0 0 1.25rem", lineHeight: 1,
-            }}>
-              I trade.
-            </h2>
-
-            <p style={{ fontSize: "0.9375rem", color: "#555", lineHeight: 1.6, maxWidth: "36ch", margin: 0 }}>
-              Build an on-chain reputation, open a vault to investors, and earn a profit split based on your Arcadia Score.
-            </p>
-          </div>
-
-          {/* Bottom */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            paddingTop: "2rem",
-            borderTop: "1px solid #181818",
-            marginTop: "3rem",
-          }}>
+      <div className="grid flex-1 grid-cols-1 overflow-hidden border-t border-line md:grid-cols-2">
+        {ROLES.map((role, i) => (
+          <button
+            key={role.id}
+            ref={i === 0 ? firstOptionRef : undefined}
+            type="button"
+            onClick={() => choose(role)}
+            className={cn(
+              "group relative flex flex-col justify-between p-8 text-left outline-none transition-colors sm:p-10",
+              "hover:bg-onyx hover:ring-1 hover:ring-acid/40 hover:ring-inset",
+              "focus-visible:bg-onyx focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-inset",
+              i === 0 && "border-b border-line md:border-r md:border-b-0",
+            )}
+          >
+            {/* Top */}
             <div>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#333", marginBottom: 4 }}>
-                Access
-              </p>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "#555" }}>
-                Terminal · Analytics · Payouts · Vault
-              </p>
-            </div>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700,
-              color: "var(--color-mint)", letterSpacing: "0.02em",
-            }}>
-              Continue <span style={{ fontSize: "1rem", lineHeight: 1 }}>→</span>
-            </div>
-          </div>
-        </button>
-
-        {/* Investor */}
-        <button
-          onClick={() => choose("investor")}
-          style={{
-            display: "flex", flexDirection: "column", justifyContent: "space-between",
-            padding: "2.5rem 2.5rem",
-            background: "transparent", border: "none",
-            cursor: "pointer", textAlign: "left",
-            transition: "background 0.15s",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#080808"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-        >
-          {/* Top */}
-          <div>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "3px 10px", borderRadius: 4,
-              background: "rgba(240,180,41,0.07)",
-              border: "1px solid rgba(240,180,41,0.18)",
-              marginBottom: "2rem",
-            }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "var(--color-gold)", display: "block" }} />
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 8, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--color-gold)" }}>
-                Investor
+              <span
+                className={cn(
+                  "mb-8 inline-flex items-center gap-2 rounded border px-2.5 py-[3px]",
+                  role.badgeClass,
+                )}
+              >
+                <span className={cn("size-[5px] rounded-full", role.dotClass)} />
+                <span className={cn("font-mono text-[8px] font-bold tracking-[0.2em] uppercase", role.hueClass)}>
+                  {role.label}
+                </span>
               </span>
-            </div>
 
-            <h2 style={{
-              fontFamily: "var(--font-sans)", fontWeight: 800,
-              fontSize: "clamp(2rem, 4vw, 3.5rem)", letterSpacing: "-0.05em",
-              color: "var(--color-ink)", margin: "0 0 1.25rem", lineHeight: 1,
-            }}>
-              I allocate.
-            </h2>
+              <h2 className="m-0 mb-5 font-display text-[clamp(2rem,4vw,3.5rem)] font-bold leading-none tracking-[-0.04em] text-ink">
+                {role.headline}
+              </h2>
 
-            <p style={{ fontSize: "0.9375rem", color: "#555", lineHeight: 1.6, maxWidth: "36ch", margin: 0 }}>
-              Browse verified traders, deposit into vaults, and monitor your portfolio NAV and returns across the marketplace.
-            </p>
-          </div>
-
-          {/* Bottom */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            paddingTop: "2rem",
-            borderTop: "1px solid #181818",
-            marginTop: "3rem",
-          }}>
-            <div>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: 8, letterSpacing: "0.2em", textTransform: "uppercase", color: "#333", marginBottom: 4 }}>
-                Access
-              </p>
-              <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.6875rem", color: "#555" }}>
-                Marketplace · Portfolio · Returns · History
+              <p className="m-0 max-w-[36ch] text-[0.9375rem] leading-relaxed text-muted">
+                {role.body}
               </p>
             </div>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              fontFamily: "var(--font-mono)", fontSize: "0.75rem", fontWeight: 700,
-              color: "var(--color-gold)", letterSpacing: "0.02em",
-            }}>
-              Continue <span style={{ fontSize: "1rem", lineHeight: 1 }}>→</span>
+
+            {/* Bottom */}
+            <div className="mt-12 flex items-center justify-between border-t border-line pt-8">
+              <div>
+                <p className="mb-1 font-mono text-[8px] tracking-[0.2em] text-faint uppercase">Access</p>
+                <p className="font-mono text-[0.6875rem] text-muted">{role.access}</p>
+              </div>
+              <div
+                className={cn(
+                  "flex items-center gap-2 font-mono text-xs font-bold tracking-[0.02em]",
+                  role.hueClass,
+                )}
+              >
+                Continue
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </div>
             </div>
-          </div>
-        </button>
+          </button>
+        ))}
       </div>
 
       {/* Footer */}
-      <div style={{
-        padding: "0.875rem 2rem",
-        borderTop: "1px solid #181818",
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-      }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#2a2a2a", letterSpacing: "0.1em" }}>
+      <div className="flex items-center justify-between border-t border-line px-6 py-3.5 sm:px-8">
+        <span className="font-mono text-[9px] tracking-[0.1em] text-faint">
           Role can be changed anytime from Settings
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "#2a2a2a" }}>
-          Solana Devnet
-        </span>
+        <span className="font-mono text-[9px] tracking-[0.1em] text-faint">Solana Devnet</span>
       </div>
     </div>
   );
