@@ -139,6 +139,13 @@ DONE (2026-07-09, third session — live-review polish round 2)
   (focus-within would hold the raise while typing).
 - Verified: eslint . 0/0, typecheck, build green; traders-card + hero hover
   states confirmed via forced-hover screenshots; consoles clean.
+- Brand identity (b59fc3f): new mark = flat-top geometric A on the acid tile;
+  LogoMark now token-driven SVG (neon orb replaced in nav/sidebar/footer);
+  app/icon.svg favicon + apple-icon.tsx PNG; opengraph-image.tsx build-time
+  1200x630 share card (Syne/Space Mono TTFs committed in assets/og, no
+  network at build); full metadata (title template, OG, twitter card,
+  metadataBase via NEXT_PUBLIC_SITE_URL - set that in prod); stale
+  public/favicon.svg + opengraph.jpg deleted.
 
 REMAINING
 - /investments + /returns are redirect stubs to /portfolio — keep (URL compat).
