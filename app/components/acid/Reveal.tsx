@@ -24,12 +24,8 @@ export function Reveal({ children, delay = 0, y = 28, className }: RevealProps) 
   const [shown, setShown] = useState(false);
 
   useEffect(() => {
-    if (reduced) {
-      setShown(true);
-      return;
-    }
     const el = ref.current;
-    if (!el) return;
+    if (!el || reduced) return;
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -54,8 +50,8 @@ export function Reveal({ children, delay = 0, y = 28, className }: RevealProps) 
         className
       )}
       style={{
-        opacity: shown ? 1 : 0,
-        transform: shown ? "none" : `translateY(${y}px)`,
+        opacity: shown || reduced ? 1 : 0,
+        transform: shown || reduced ? "none" : `translateY(${y}px)`,
         transitionDelay: `${delay}ms`,
       }}
     >

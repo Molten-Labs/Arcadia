@@ -38,12 +38,7 @@ export function CountUp({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-
-    if (reduced) {
-      setDisplay(value);
-      return;
-    }
+    if (!el || reduced) return;
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -68,7 +63,8 @@ export function CountUp({
     return () => io.disconnect();
   }, [reduced, value, duration]);
 
-  const formatted = display.toLocaleString("en-US", {
+  // Reduced-motion shows the final value directly; no animation state involved.
+  const formatted = (reduced ? value : display).toLocaleString("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });

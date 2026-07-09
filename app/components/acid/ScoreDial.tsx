@@ -48,12 +48,8 @@ export function ScoreDial({
   const [filled, setFilled] = useState(false);
 
   useEffect(() => {
-    if (reduced) {
-      setFilled(true);
-      return;
-    }
     const el = ref.current;
-    if (!el) return;
+    if (!el || reduced) return;
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -75,7 +71,7 @@ export function ScoreDial({
   const radius = center - stroke / 2 - tierGap;
   const circumference = 2 * Math.PI * radius;
   const pct = Math.min(Math.max(value / max, 0), 1);
-  const dashoffset = filled ? circumference * (1 - pct) : circumference;
+  const dashoffset = filled || reduced ? circumference * (1 - pct) : circumference;
   const tierRadius = center - 3;
 
   return (

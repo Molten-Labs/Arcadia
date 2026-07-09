@@ -46,13 +46,13 @@ export function PnLHeatmap({ data }: Props) {
   const endDate = new Date(`${year}-12-31`);
   const startDay = startDate.getDay();
 
-  let weekIdx = 0;
-  let dayIdx = startDay;
+  const weekIdx = 0;
+  const dayIdx = startDay;
 
   const totalWeeks = Math.ceil((365 + startDay) / 7) + 1;
   for (let w = 0; w < totalWeeks; w++) weekGrid.push([]);
 
-  let cursor = new Date(startDate);
+  const cursor = new Date(startDate);
   cursor.setDate(cursor.getDate() - startDay);
 
   for (let w = 0; w < totalWeeks; w++) {
