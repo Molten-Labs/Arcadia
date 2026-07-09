@@ -64,16 +64,38 @@ DONE (today, after the morning entries below)
   group so the landing is shell-free; acid shell (components/shell/: Sidebar,
   Topbar, MobileNav, notifications, wallet) with legacy shell deleted; wallet
   adapter button acid-restyled in globals.
-- Phase 3 in flight: three parallel agents rebuilding discovery (traders,
+- Phase 3 COMPLETE: all pages rebuilt on the acid system — discovery (traders,
   leaderboard, t/[handle](+trades)), investor (dashboard, portfolio,
-  vault/[handle], settings, DepositModal reskin), trader-side (terminal reskin,
-  analytics, reputation, payouts, manage) into components/pages/{discovery,
-  investor,trader}/.
+  vault/[handle], settings, DepositModal reskin), trader-side (terminal
+  reskinned in place with 4 panels extracted, analytics, reputation, payouts,
+  manage) into components/pages/{discovery,investor,trader}/.
+- Phase 4 cleanup: dead deps removed (framer-motion, @phosphor-icons/react,
+  @base-ui/react); orphaned legacy components deleted (StatCard, TraderCard,
+  TierBadge, CapacityBar, DepositsStatusBadge, RiskBars, EmptyState,
+  SkeletonCard, legacy ScoreDial).
+- VERIFIED: lint 0 errors (59 warnings, all in remaining legacy scope),
+  typecheck clean, build green (23 routes), all 17 routes smoke-tested 200
+  with zero real console errors in headless Chromium, deposit modal renders
+  correct disconnected state. Dev-auth probed earlier: 5/5 signature/nonce
+  cases correct.
 
-NOTES for cleanup
+REMAINING (next session / owner decisions)
+- Chart stack still legacy: components/charts/** (visx, 21 files), inline
+  recharts (4 files), lightweight-charts TvChart. They work and were recolored
+  via props where possible, but EquityChart/ScoreHistoryChart/PnLHeatmap have
+  no color props and still render the old mint/blue palette inside acid pages.
+  Rationalizing the 3 libs + tokenizing chart colors is the last visual item.
+- Legacy-styled shared bits still in use: RoleGate, ShareCard(+Modal), TextSwap,
+  shimmering-text, ErrorState — restyle pass pending.
+- Legacy tokens (mint/gold/green/red/accent) stay in globals.css until the two
+  items above land; then delete them + the shrunken eslint override block
+  (now: api routes, /trade, components/*.tsx, components/charts/**).
 - /investments + /returns are redirect stubs to /portfolio — keep (URL compat).
-- /trade (paper-trade page) is linked from nowhere; decide with owner: restyle,
-  or remove. Left legacy for now.
+- /trade (paper-trade page) is linked from nowhere; owner decision: restyle or
+  remove. Left legacy.
+- Manual pass with a real wallet (Phantom, devnet): connect, role gate, SIWS
+  sign-in, deposit (simulated + live), withdraw.
+- NO push/PR yet — owner approval required.
 
 ## Status (updated 2026-07-09, morning)
 
