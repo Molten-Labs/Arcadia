@@ -69,13 +69,14 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
 
   const candles = useMemo(() => {
     if (externalCandles && externalCandles.length > 0) {
-      return externalCandles.map((c) => ({
-        time: c.time as Time,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      }));
+      // setData asserts on non-ascending times: normalize ms -> s, sort,
+      // and drop duplicate timestamps (keep the latest update for a bucket).
+      const bySecond = new Map<number, CandlestickData>();
+      for (const c of externalCandles) {
+        const t = c.time > 1e12 ? Math.floor(c.time / 1000) : c.time;
+        bySecond.set(t, { time: t as Time, open: c.open, high: c.high, low: c.low, close: c.close });
+      }
+      return [...bySecond.values()].sort((a, b) => (a.time as number) - (b.time as number));
     }
     return generateCandles(market, SEED_PRICES[market] ?? 100);
   }, [market, externalCandles]);

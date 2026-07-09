@@ -45,6 +45,17 @@ export function usePhoenix() {
   return useContext(PhoenixContext);
 }
 
+// The REST seed returns candle times in milliseconds while the WebSocket
+// stream sends seconds. Everything stored in context is normalized to
+// seconds (lightweight-charts' UTCTimestamp unit).
+function toUnixSeconds(t: number): number {
+  return t > 1e12 ? Math.floor(t / 1000) : t;
+}
+
+function normalizeCandle(c: PhoenixCandle): PhoenixCandle {
+  return { ...c, time: toUnixSeconds(c.time) };
+}
+
 export function PhoenixProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PhoenixState>(defaultState);
   const wsRef = useRef<WebSocket | null>(null);
@@ -129,12 +140,13 @@ export function PhoenixProvider({ children }: { children: ReactNode }) {
               case "candles":
               case "candle": {
                 const c = msg as { symbol: string; timeframe: string; candle: PhoenixCandle };
+                const candle = normalizeCandle(c.candle);
                 setState((prev) => {
                   const existing = prev.candles[c.symbol] ?? [];
-                  const idx = existing.findIndex((x) => x.time === c.candle.time);
+                  const idx = existing.findIndex((x) => x.time === candle.time);
                   const next = idx >= 0
-                    ? [...existing.slice(0, idx), c.candle, ...existing.slice(idx + 1)]
-                    : [...existing, c.candle];
+                    ? [...existing.slice(0, idx), candle, ...existing.slice(idx + 1)]
+                    : [...existing, candle];
                   return {
                     ...prev,
                     candles: { ...prev.candles, [c.symbol]: next },
@@ -198,7 +210,8 @@ export function PhoenixProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch(`${REST_URL}/candles?symbol=${symbol}&timeframe=${timeframe}&limit=500`);
       if (!res.ok) return [];
-      const data: PhoenixCandle[] = await res.json();
+      const raw: PhoenixCandle[] = await res.json();
+      const data = raw.map(normalizeCandle);
       setState((prev) => ({
         ...prev,
         candles: { ...prev.candles, [symbol]: data },
