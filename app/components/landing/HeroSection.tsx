@@ -1,9 +1,10 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Circle, MoveRight, Zap } from "lucide-react";
 
-import { AcidButton, BlobCard, ChromeText, Marquee, Reveal } from "@/components/acid";
+import { AcidButton, ChromeText, Marquee, Reveal } from "@/components/acid";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Container } from "./bits";
 import { ORB_GRADIENT } from "./LogoMark";
 import { LINKS, SLASH_PHRASES } from "./data";
@@ -34,12 +35,43 @@ function Avatar({ letter }: { letter: string }) {
 
 function StaticBar({ pct }: { pct: number }) {
   return (
-    <span className="block h-[6px] overflow-hidden rounded-full bg-white/[0.08]">
-      <span
-        className="block h-full rounded-full"
-        style={{ width: `${pct}%`, backgroundImage: "linear-gradient(90deg, var(--color-acid), var(--color-pink))" }}
-      />
+    <span className="block h-[5px] overflow-hidden rounded-full bg-white/[0.07]">
+      <span className="block h-full rounded-full bg-acid" style={{ width: `${pct}%` }} />
     </span>
+  );
+}
+
+/**
+ * Hero product tile: sharp terminal-style panel (hairline border, acid corner
+ * ticks, mono kicker + index). Rectangular on purpose - the old breathing
+ * blobs clipped their own kickers and data rows at the curved edges.
+ */
+function HeroTile({
+  index,
+  label,
+  className,
+  children,
+}: {
+  index: string;
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative flex flex-col rounded-xl border border-white/10 bg-panel/80 p-5 backdrop-blur-[6px]",
+        className,
+      )}
+    >
+      <span aria-hidden className="absolute top-0 left-0 h-3 w-3 rounded-tl-xl border-t-2 border-l-2 border-acid/80" />
+      <span aria-hidden className="absolute right-0 bottom-0 h-3 w-3 rounded-br-xl border-r-2 border-b-2 border-acid/25" />
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <p className="min-w-0 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">{label}</p>
+        <span aria-hidden className="font-mono text-[0.6rem] text-faint/60">{index}</span>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -104,9 +136,7 @@ export function HeroSection() {
                 <div className="flex flex-wrap gap-4">
                   <AcidButton asChild variant="chrome">
                     <Link href={LINKS.traders}>
-                      <span className="relative z-[1] inline-flex items-center gap-2.5 mix-blend-difference">
-                        Browse the proven <ArrowRight />
-                      </span>
+                      Browse the proven <ArrowRight />
                     </Link>
                   </AcidButton>
                   <AcidButton asChild variant="acid">
@@ -119,78 +149,91 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Product card cluster */}
+          {/* Product tile cluster */}
           <Reveal delay={240}>
-            <div className="grid gap-4 sm:grid-cols-2" aria-label="Live protocol cards">
-              {/* Trader */}
-              <BlobCard radius="organic" className="lg:-rotate-1" innerClassName="p-5">
-                <p className="mb-2 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">Trader</p>
-                <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
+            <div className="relative" aria-label="Live protocol cards">
+              {/* Soft acid seat glow behind the cluster */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -inset-10 rounded-[48px]"
+                style={{
+                  background:
+                    "radial-gradient(60% 55% at 50% 42%, color-mix(in srgb, var(--color-acid) 7%, transparent), transparent 72%)",
+                }}
+              />
+              <div className="relative grid gap-4 sm:grid-cols-2">
+                {/* Trader */}
+                <HeroTile index="01" label="Trader">
+                  <div className="mb-3.5 flex items-center gap-3">
                     <Avatar letter="N" />
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-mono text-[0.95rem] text-ink">@nova</span>
-                      <span className="font-mono text-[0.68rem] tracking-[0.12em] text-tier-elite uppercase">Elite tier</span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-[0.95rem] text-ink">@nova</span>
+                        <Badge variant="elite">Elite</Badge>
+                      </div>
+                      <span className="font-mono text-[0.64rem] tracking-[0.12em] text-faint uppercase">SOL perps / momentum</span>
                     </div>
                   </div>
-                  <Badge variant="elite">Elite</Badge>
-                </div>
-                <div className="mb-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                  <span className="font-mono text-3xl font-bold tracking-[-0.02em] text-ink tabular-nums">912</span>
-                  <span className="font-mono text-sm text-faint">/1000</span>
-                  <span className="ml-auto font-mono text-[1.05rem] font-bold text-success tabular-nums">+41.2%</span>
-                </div>
-                <StaticBar pct={91.2} />
-                <div className="mt-2.5 flex justify-between font-mono text-[0.72rem] text-faint">
-                  <span>Arcadia Score</span>
-                  <span>91.2%</span>
-                </div>
-              </BlobCard>
+                  <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                    <span className="font-mono text-3xl font-bold tracking-[-0.02em] text-ink tabular-nums">912</span>
+                    <span className="font-mono text-sm text-faint">/1000</span>
+                    <span className="ml-auto font-mono text-[1.05rem] font-bold text-success tabular-nums">+41.2%</span>
+                  </div>
+                  <StaticBar pct={91.2} />
+                  <div className="mt-2 flex justify-between font-mono text-[0.7rem] text-faint">
+                    <span>Arcadia Score</span>
+                    <span>91.2%</span>
+                  </div>
+                </HeroTile>
 
-              {/* Vault */}
-              <BlobCard radius="soft" className="lg:rotate-1" innerClassName="p-5">
-                <p className="mb-3 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">Allocation vault / @nova</p>
-                <div className="flex flex-wrap items-center justify-between gap-2.5">
-                  <span className="font-mono text-2xl font-bold text-ink tabular-nums">$387K</span>
-                  <span className="rounded-full border border-acid/20 px-2.5 py-1 font-mono text-[0.64rem] tracking-[0.08em] whitespace-nowrap text-acid uppercase">
-                    Open / $525K left
-                  </span>
-                </div>
-                <p className="mt-2 font-mono text-[0.72rem] text-faint">capacity / reputation-based</p>
-              </BlobCard>
-
-              {/* Payout */}
-              <BlobCard radius="blob" className="lg:-rotate-1" innerClassName="p-5">
-                <p className="mb-2 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">Profit split / Solana</p>
-                <p className="font-mono text-[1.8rem] font-bold text-success tabular-nums">+$6,810</p>
-                <p className="mt-2 font-mono text-[0.72rem] text-faint">
-                  performance share above high-water mark / settles in 1.8s
-                </p>
-                <span className="mt-3 inline-flex items-center gap-2 rounded-lg border border-cyan/25 bg-cyan/[0.06] px-2.5 py-1.5 font-mono text-[0.72rem] text-cyan">
-                  <Zap className="size-3.5" aria-hidden />
-                  4PqRtLv9Xw...M3kN
-                </span>
-              </BlobCard>
-
-              {/* Reputation inputs */}
-              <BlobCard radius="organic" className="lg:rotate-1" innerClassName="p-5">
-                <p className="mb-3 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase">Reputation inputs</p>
-                <div className="flex flex-col gap-2.5">
-                  {[
-                    { label: "Risk-adj return", value: 91 },
-                    { label: "Consistency", value: 88 },
-                    { label: "Drawdown ctrl", value: 72 },
-                  ].map((row) => (
-                    <div key={row.label} className="grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1.5">
-                      <span className="font-mono text-[0.72rem] text-muted">{row.label}</span>
-                      <span className="font-mono text-[0.78rem] text-ink tabular-nums">{row.value}</span>
-                      <div className="col-span-2">
-                        <StaticBar pct={row.value} />
-                      </div>
+                {/* Vault */}
+                <HeroTile index="02" label="Allocation vault / @nova" className="sm:translate-y-5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-mono text-[1.7rem] font-bold text-ink tabular-nums">$387K</span>
+                    <span className="rounded-full border border-acid/25 bg-acid/[0.05] px-2.5 py-1 font-mono text-[0.62rem] tracking-[0.08em] whitespace-nowrap text-acid uppercase">
+                      Open / $525K left
+                    </span>
+                  </div>
+                  <div className="mt-auto pt-3">
+                    <StaticBar pct={42} />
+                    <div className="mt-2 flex justify-between font-mono text-[0.7rem] text-faint">
+                      <span>Capacity used</span>
+                      <span>42%</span>
                     </div>
-                  ))}
-                </div>
-              </BlobCard>
+                  </div>
+                </HeroTile>
+
+                {/* Payout */}
+                <HeroTile index="03" label="Profit split / Solana">
+                  <p className="font-mono text-[1.7rem] font-bold text-success tabular-nums">+$6,810</p>
+                  <p className="mt-1.5 font-mono text-[0.7rem] leading-relaxed text-faint">
+                    performance share above high-water mark / settles in 1.8s
+                  </p>
+                  <span className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg border border-cyan/25 bg-cyan/[0.06] px-2.5 py-1.5 font-mono text-[0.7rem] text-cyan">
+                    <Zap className="size-3.5 shrink-0" aria-hidden />
+                    <span className="truncate">4PqRtLv9Xw...M3kN</span>
+                  </span>
+                </HeroTile>
+
+                {/* Reputation inputs */}
+                <HeroTile index="04" label="Reputation inputs" className="sm:translate-y-5">
+                  <div className="flex flex-col gap-2.5">
+                    {[
+                      { label: "Risk-adj return", value: 91 },
+                      { label: "Consistency", value: 88 },
+                      { label: "Drawdown ctrl", value: 72 },
+                    ].map((row) => (
+                      <div key={row.label} className="grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-1.5">
+                        <span className="font-mono text-[0.7rem] text-muted">{row.label}</span>
+                        <span className="font-mono text-[0.76rem] text-ink tabular-nums">{row.value}</span>
+                        <div className="col-span-2">
+                          <StaticBar pct={row.value} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </HeroTile>
+              </div>
             </div>
           </Reveal>
         </div>

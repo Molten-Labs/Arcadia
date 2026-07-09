@@ -11,9 +11,9 @@ const acidButtonVariants = cva(
       variant: {
         // Signature acid-green solid, black label.
         acid: "bg-acid text-void hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-[0_0_26px_rgba(204,255,0,0.6),0_0_54px_rgba(204,255,0,0.25)]",
-        // Liquid-chrome, label rendered via mix-blend-difference.
+        // Clean chrome outline: hairline border, ink label, acid on hover.
         chrome:
-          "overflow-hidden border border-white/50 text-white hover:-translate-y-0.5 hover:scale-[1.04] hover:rotate-[-1deg] hover:shadow-[0_0_30px_rgba(204,255,0,0.5),0_0_60px_rgba(204,255,0,0.2)]",
+          "border border-white/25 bg-white/[0.04] text-ink backdrop-blur-sm hover:-translate-y-0.5 hover:border-acid/70 hover:text-acid hover:shadow-[0_0_24px_rgba(204,255,0,0.22)]",
         // Quiet outline.
         ghost:
           "border border-acid/20 bg-acid/[0.02] text-ink hover:-translate-y-0.5 hover:border-acid hover:shadow-[0_0_20px_rgba(204,255,0,0.35)]",
@@ -37,38 +37,24 @@ export type AcidButtonProps = ComponentProps<"button"> &
   };
 
 /**
- * The signature Arcadia CTA. `acid` (green solid) and `chrome` (liquid metal)
- * variants; both lift + neon-glow on hover with expo-out easing. Real
- * `<button>` (or any element via `asChild`), so keyboard + focus are native.
+ * The signature Arcadia CTA. `acid` (green solid), `chrome` (clean outline)
+ * and `ghost` (quiet acid outline) variants; all lift + glow on hover with
+ * expo-out easing. Real `<button>` (or any element via `asChild`), so
+ * keyboard + focus are native.
  */
 export function AcidButton({
   className,
   variant = "acid",
   size,
   asChild = false,
-  style,
   children,
   ...props
 }: AcidButtonProps) {
   const Comp = asChild ? Slot : "button";
-  const mergedStyle =
-    variant === "chrome"
-      ? { backgroundImage: "var(--acid-chrome-gradient)", ...style }
-      : style;
 
   return (
-    <Comp
-      className={cn(acidButtonVariants({ variant, size }), className)}
-      style={mergedStyle}
-      {...props}
-    >
-      {variant === "chrome" && !asChild ? (
-        <span className="relative z-[1] inline-flex items-center gap-2.5 mix-blend-difference">
-          {children}
-        </span>
-      ) : (
-        children
-      )}
+    <Comp className={cn(acidButtonVariants({ variant, size }), className)} {...props}>
+      {children}
     </Comp>
   );
 }

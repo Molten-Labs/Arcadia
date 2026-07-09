@@ -31,21 +31,11 @@ export function DualCta() {
                     </h3>
                     <p className="flex-1 text-[1.02rem] text-muted">{card.body}</p>
                     <div>
-                      {card.cta.variant === "chrome" ? (
-                        <AcidButton asChild variant="chrome">
-                          <Link href={card.cta.href}>
-                            <span className="relative z-[1] inline-flex items-center gap-2.5 mix-blend-difference">
-                              {card.cta.label} <ArrowRight />
-                            </span>
-                          </Link>
-                        </AcidButton>
-                      ) : (
-                        <AcidButton asChild variant="acid">
-                          <Link href={card.cta.href}>
-                            {card.cta.label} <ArrowRight />
-                          </Link>
-                        </AcidButton>
-                      )}
+                      <AcidButton asChild variant={card.cta.variant === "chrome" ? "chrome" : "acid"}>
+                        <Link href={card.cta.href}>
+                          {card.cta.label} <ArrowRight />
+                        </Link>
+                      </AcidButton>
                     </div>
                   </div>
                 </div>
