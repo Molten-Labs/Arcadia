@@ -119,6 +119,27 @@ DONE (2026-07-09, second session — redesign COMPLETE, 30 commits on branch)
   clean; 0 phoenix requests outside /terminal; screenshots confirm acid
   charts/404//trade.
 
+DONE (2026-07-09, third session — live-review polish round 2)
+- Chrome CTA cleaned: beveled metal gradient + mix-blend label replaced by a
+  hairline outline pill (ink label, acid border/glow on hover) (27af94f).
+- Hero card cluster rethought: breathing iridescent blobs (clipped their own
+  kickers/rows, rainbow borders) -> sharp terminal tiles with acid corner
+  ticks, 01-04 indices, staggered right column, solid acid bars, seat glow
+  (27af94f); BlobCard primitive kept in the kit but now unused.
+- Interaction vocabulary added to globals + acid README: acid-int (lift +
+  acid edge + glow), acid-sheen (single diagonal sweep), acid-bar (fill
+  shimmer on group hover); centrally hover-capability + reduced-motion gated
+  (bc3298f). Hero tiles are the reference implementation.
+- Site-wide hover pass via 2 agents (081522d landing/discovery, e4cba6c
+  investor/trader/shell): TraderMarketCard lift + avatar tilt + bar sheen,
+  row hovers with key-cell sharpen, stat tiles lift, sidebar acid edge
+  indicator + icon nudge, bell tilt, mobile active-tab pop, press feedback
+  app-wide; DepositModal carries the single app sheen; terminal kept subtle
+  (border/row tints only); form panels with live inputs not lifted
+  (focus-within would hold the raise while typing).
+- Verified: eslint . 0/0, typecheck, build green; traders-card + hero hover
+  states confirmed via forced-hover screenshots; consoles clean.
+
 REMAINING
 - /investments + /returns are redirect stubs to /portfolio — keep (URL compat).
 - Manual pass with a real wallet (Phantom, devnet): connect, role gate, SIWS
