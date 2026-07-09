@@ -6,7 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useRole } from "@/lib/role-context";
 
 import { Notifications } from "./Notifications";
-import { RoleAvatar, RoleBadge } from "./RoleBadge";
+import { RoleBadge } from "./RoleBadge";
 import { WalletButton } from "./WalletButton";
 import { useHydrated } from "./use-hydrated";
 import { routeLabel } from "./nav-items";
@@ -53,7 +53,6 @@ export function Topbar() {
           connected={connected}
         />
         <WalletButton />
-        <RoleAvatar role={role} />
       </div>
     </header>
   );
