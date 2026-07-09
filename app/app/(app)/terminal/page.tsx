@@ -84,10 +84,14 @@ function TerminalContent() {
   const openInterest = marketStats?.openInterest ?? 0;
 
   const phoenixInterval = interval.toLowerCase();
+  // Depend on the stable callbacks, never the context object itself: the
+  // provider re-creates its value on every WS message, so listing `phoenix`
+  // here refires this effect per tick and stampedes the REST API into 429s.
+  const { seedCandles, fetchMarketConfig } = phoenix;
   useEffect(() => {
-    phoenix.seedCandles(symbol, phoenixInterval);
-    phoenix.fetchMarketConfig(symbol);
-  }, [symbol, phoenixInterval, phoenix]);
+    seedCandles(symbol, phoenixInterval);
+    fetchMarketConfig(symbol);
+  }, [symbol, phoenixInterval, seedCandles, fetchMarketConfig]);
 
   const phoenixCandles = phoenix.candles[symbol] ?? [];
 
