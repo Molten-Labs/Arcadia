@@ -50,40 +50,42 @@ function HeroTile({
   index,
   label,
   className,
+  floatDelay,
   children,
 }: {
   index: string;
   label: string;
   className?: string;
+  floatDelay?: string;
   children: ReactNode;
 }) {
   return (
     <div
-      className={cn(
-        "group acid-int acid-sheen relative flex flex-col rounded-xl border border-white/10 bg-panel/80 p-5 backdrop-blur-[6px]",
-        className,
-      )}
+      className={cn("hero-float", className)}
+      style={floatDelay ? { animationDelay: floatDelay } : undefined}
     >
-      <span
-        aria-hidden
-        className="absolute top-0 left-0 h-3 w-3 rounded-tl-xl border-t-2 border-l-2 border-acid/80 transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:h-5 group-hover:w-5 group-hover:border-acid"
-      />
-      <span
-        aria-hidden
-        className="absolute right-0 bottom-0 h-3 w-3 rounded-br-xl border-r-2 border-b-2 border-acid/25 transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:h-5 group-hover:w-5 group-hover:border-acid/80"
-      />
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <p className="min-w-0 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase transition-colors duration-300 group-hover:text-muted">
-          {label}
-        </p>
+      <div className="group acid-int acid-sheen relative flex h-full flex-col rounded-xl border border-white/10 bg-panel/80 p-5 backdrop-blur-[6px]">
         <span
           aria-hidden
-          className="font-mono text-[0.6rem] text-faint/60 transition-colors duration-300 group-hover:text-acid"
-        >
-          {index}
-        </span>
+          className="absolute top-0 left-0 h-3 w-3 rounded-tl-xl border-t-2 border-l-2 border-acid/80 transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:h-5 group-hover:w-5 group-hover:border-acid"
+        />
+        <span
+          aria-hidden
+          className="absolute right-0 bottom-0 h-3 w-3 rounded-br-xl border-r-2 border-b-2 border-acid/25 transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:h-5 group-hover:w-5 group-hover:border-acid/80"
+        />
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <p className="min-w-0 font-mono text-[0.62rem] tracking-[0.16em] text-faint uppercase transition-colors duration-300 group-hover:text-muted">
+            {label}
+          </p>
+          <span
+            aria-hidden
+            className="font-mono text-[0.6rem] text-faint/60 transition-colors duration-300 group-hover:text-acid"
+          >
+            {index}
+          </span>
+        </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
@@ -176,7 +178,7 @@ export function HeroSection() {
               />
               <div className="relative grid gap-4 sm:grid-cols-2">
                 {/* Trader */}
-                <HeroTile index="01" label="Trader">
+                <HeroTile index="01" label="Trader" floatDelay="0s">
                   <div className="mb-3.5 flex items-center gap-3">
                     <Avatar letter="N" />
                     <div className="min-w-0">
@@ -200,7 +202,7 @@ export function HeroSection() {
                 </HeroTile>
 
                 {/* Vault */}
-                <HeroTile index="02" label="Allocation vault / @nova" className="sm:translate-y-5">
+                <HeroTile index="02" label="Allocation vault / @nova" className="sm:translate-y-5" floatDelay="-3s">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-mono text-[1.7rem] font-bold text-ink tabular-nums">$387K</span>
                     <span className="rounded-full border border-acid/25 bg-acid/[0.05] px-2.5 py-1 font-mono text-[0.62rem] tracking-[0.08em] whitespace-nowrap text-acid uppercase">
@@ -217,7 +219,7 @@ export function HeroSection() {
                 </HeroTile>
 
                 {/* Payout */}
-                <HeroTile index="03" label="Profit split / Solana">
+                <HeroTile index="03" label="Profit split / Solana" floatDelay="-1.5s">
                   <p className="font-mono text-[1.7rem] font-bold text-success tabular-nums">+$6,810</p>
                   <p className="mt-1.5 font-mono text-[0.7rem] leading-relaxed text-faint">
                     performance share above high-water mark / settles in 1.8s
@@ -229,7 +231,7 @@ export function HeroSection() {
                 </HeroTile>
 
                 {/* Reputation inputs */}
-                <HeroTile index="04" label="Reputation inputs" className="sm:translate-y-5">
+                <HeroTile index="04" label="Reputation inputs" className="sm:translate-y-5" floatDelay="-4.5s">
                   <div className="flex flex-col gap-2.5">
                     {[
                       { label: "Risk-adj return", value: 91 },

@@ -561,6 +561,19 @@ body {
   }
 }
 
+/* Hero tile idle float. Runs on a wrapper node (not the tile) so it never
+   fights the tile's own hover lift: acid-int animates `transform` on the inner
+   tile, the stagger uses the `translate` property, and this uses `transform`
+   on the outer node. Per-card animation-delay staggers the drift. */
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.hero-float {
+  animation: hero-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .acid-chrome { filter: none; }
   .acid-aberration::before,
@@ -573,4 +586,5 @@ body {
   .acid-int:focus-within { transform: none; }
   .acid-sheen::before { display: none; }
   .acid-bar::after { animation: none !important; }
+  .hero-float { animation: none !important; }
 }
