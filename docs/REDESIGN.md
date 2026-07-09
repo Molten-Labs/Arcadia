@@ -89,26 +89,43 @@ DONE (2026-07-09 late, post-build polish with Allen reviewing live)
 - Hero + landing nav widened to a 1660px container (b19e277, 8d78ca7);
   decorative left rail removed with its offset padding (3031515).
 
-REMAINING (next session / owner decisions)
-- LandingRedirect still auto-bounces connected-wallet users from / into the
-  app, so Allen (and anyone connected) can never see the landing. Recommend
-  deleting the redirect (Launch App button already covers app entry) —
-  awaiting Allen's call.
-- Chart stack still legacy: components/charts/** (visx, 21 files), inline
-  recharts (4 files), lightweight-charts TvChart. They work and were recolored
-  via props where possible, but EquityChart/ScoreHistoryChart/PnLHeatmap have
-  no color props and still render the old mint/blue palette inside acid pages.
-  Rationalizing the 3 libs + tokenizing chart colors is the last visual item.
-- Legacy-styled shared bits still in use: RoleGate, ShareCard(+Modal), TextSwap,
-  shimmering-text, ErrorState — restyle pass pending.
-- Legacy tokens (mint/gold/green/red/accent) stay in globals.css until the two
-  items above land; then delete them + the shrunken eslint override block
-  (now: api routes, /trade, components/*.tsx, components/charts/**).
+DONE (2026-07-09, second session — redesign COMPLETE, 30 commits on branch)
+- Allen's decisions: /trade -> RESTYLE (done); LandingRedirect -> DELETE (done).
+- components/charts/** (the visx framework, ~70 files) had ZERO consumers after
+  the page rebuilds — deleted wholesale with its 10 @visx/* deps and
+  shimmering-text (its last dependent). Chart stack rationalized to
+  recharts (3 shared components) + lightweight-charts (terminal).
+- Chart retokening: TvChart reads acid tokens from the :root mirror via
+  getComputedStyle (canvas needs concrete strings); EquityChart /
+  NavHistoryChart / ScoreHistoryChart on acid/danger/cyan/tier tokens;
+  PnLHeatmap ramp rebuilt on color-mix over success/danger.
+- Legacy bits reskinned: RoleGate (accessible acid dialog), ShareCard(+Modal)
+  (tier tokens at runtime for html2canvas, QR img -> role=img div), ErrorState;
+  TextSwap audited clean, unchanged.
+- /trade rebuilt on the acid system (PaperTradeMarketBar/OrderForm/Positions in
+  components/pages/trader/), honest simulation labelling, disconnected gate,
+  secondary "Paper Trade" nav link (FlaskConical).
+- API proxy routes de-any'd (Array.isArray narrowing).
+- globals.css purged: legacy tokens (mint/gold/green/red/accent), dead visx
+  chart token blocks, dead utilities and landing-era classes/keyframes;
+  922 -> 504 lines. pnlClass/pnlArrow helpers removed. 404 page rebuilt acid.
+- eslint override block DELETED — `eslint .` = 0 errors, 0 warnings, no
+  exceptions. typecheck + build green (29 routes).
+- BUG found by smoke + fixed: terminal's candle-seed effect depended on the
+  phoenix context object (recreated per WS message) -> refired per tick and
+  stampeded the Phoenix REST API into 429s. Now depends on the stable
+  callbacks (548cc7c).
+- Verified: all 17 routes 200 on a production build; fresh-visit consoles
+  clean; 0 phoenix requests outside /terminal; screenshots confirm acid
+  charts/404//trade.
+
+REMAINING
 - /investments + /returns are redirect stubs to /portfolio — keep (URL compat).
-- /trade (paper-trade page) is linked from nowhere; owner decision: restyle or
-  remove. Left legacy.
 - Manual pass with a real wallet (Phantom, devnet): connect, role gate, SIWS
-  sign-in, deposit (simulated + live), withdraw.
+  sign-in, deposit (simulated + live), withdraw, paper-trade flow on /trade,
+  analytics/dashboard charts (wallet-gated, not headless-verifiable).
+- Topbar label for /trade says "Trade" while the nav link says "Paper Trade" —
+  unify if Allen cares (one ROUTE_LABELS line).
 - NO push/PR yet — owner approval required.
 
 ## Status (updated 2026-07-09, morning)
