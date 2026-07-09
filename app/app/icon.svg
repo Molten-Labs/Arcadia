@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Arcadia mark: flat-top geometric A on the acid tile.
+       Standalone asset: literal brand hex (tokens live in globals.css). -->
+  <rect width="64" height="64" rx="14" fill="#CCFF00"/>
+  <path fill="#000000" d="M26.5 14 H37.5 L55 50 H43.5 L32 27 L20.5 50 H9 Z M21 38 H43 V45.5 H21 Z"/>
+</svg>
