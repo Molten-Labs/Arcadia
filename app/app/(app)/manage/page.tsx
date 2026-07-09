@@ -2,13 +2,25 @@
 
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { StatCard } from "@/components/StatCard";
-import { formatUSD } from "@/lib/types";
+import { CheckCircle, Clock, ExternalLink, Loader2, Wallet } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DataRow,
+  EnvChip,
+  MicroLabel,
+  PageHeader,
+  Panel,
+  StatTile,
+} from "@/components/pages/trader/trader-ui";
 import { MOCK_TRADERS } from "@/lib/mock-data";
+import { formatUSD } from "@/lib/types";
 import { useArcadiaVault } from "@/lib/use-arcadia-vault";
-import { ExternalLink, CheckCircle, Clock, Loader2 } from "lucide-react";
 
 const DEMO_TRADER = MOCK_TRADERS[0];
+
+const PENDING_PHASES = ["checking", "init-investor", "signing", "confirming"];
 
 export default function ManagePage() {
   const { connected, publicKey } = useWallet();
@@ -17,15 +29,15 @@ export default function ManagePage() {
 
   const { deposit, txState, resetTx } = useArcadiaVault();
 
-  const score        = DEMO_TRADER.score;
-  const capacity     = score * 1000;
-  const aum          = DEMO_TRADER.aum;
-  const selfFunded   = DEMO_TRADER.trader_self_funded;
+  const score = DEMO_TRADER.score;
+  const capacity = score * 1000;
+  const aum = DEMO_TRADER.aum;
+  const selfFunded = DEMO_TRADER.trader_self_funded;
   const capacityLeft = capacity - aum;
 
-  const isPending = ["checking", "init-investor", "signing", "confirming"].includes(txState.phase);
+  const isPending = PENDING_PHASES.includes(txState.phase);
   const isSuccess = txState.phase === "success";
-  const isError   = txState.phase === "error";
+  const isError = txState.phase === "error";
 
   const handleSelfFund = async () => {
     const amount = parseFloat(selfFundAmount);
@@ -37,106 +49,106 @@ export default function ManagePage() {
 
   if (!connected) {
     return (
-      <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <p className="text-sm" style={{ color: "var(--color-muted)" }}>
-            Connect wallet to manage your vault
-          </p>
-        </div>
+      <div className="grid min-h-[70vh] place-items-center bg-void px-5">
+        <Panel className="max-w-sm p-10 text-center">
+          <div className="mx-auto mb-5 grid size-14 place-items-center rounded-full border border-acid/25 bg-acid/10">
+            <Wallet size={24} className="text-acid" />
+          </div>
+          <p className="mb-2 text-base font-semibold text-ink">Connect wallet</p>
+          <p className="text-sm text-faint">Connect your wallet to manage your vault.</p>
+        </Panel>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-ink)" }}>Manage Vault</h1>
-          <div
-            className="text-[10px] px-3 py-1.5 rounded-lg font-mono"
-            style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)", color: "var(--color-faint)" }}
-          >
-            Solana devnet
-          </div>
-        </div>
+    <div className="min-h-full bg-void">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <PageHeader title="Manage Vault">
+          <EnvChip live>Solana devnet</EnvChip>
+        </PageHeader>
 
         {/* Capacity formula callout */}
-        <div
-          className="rounded-xl p-4 mb-6 flex items-center gap-4"
-          style={{ background: "var(--color-panel)", border: "1px solid rgba(79,158,255,0.2)" }}
-        >
-          <div className="text-2xl font-black tnum" style={{ color: "var(--color-accent)" }}>{score}</div>
-          <div className="text-lg font-bold" style={{ color: "var(--color-faint)" }}>×</div>
+        <Panel className="mb-6 flex flex-wrap items-center gap-4 border-acid/20 p-4">
+          <div className="font-mono text-2xl font-bold tabular-nums text-acid">{score}</div>
+          <div className="text-lg font-bold text-faint">×</div>
           <div>
-            <p className="text-xs font-bold" style={{ color: "var(--color-faint)" }}>Score × $1,000</p>
-            <p className="text-sm font-black" style={{ color: "var(--color-ink)" }}>{formatUSD(capacity, 0)} vault capacity</p>
+            <MicroLabel>Score × $1,000</MicroLabel>
+            <p className="text-sm font-bold text-ink">
+              {formatUSD(capacity, 0)} vault capacity
+            </p>
           </div>
           <div className="ml-auto text-right">
-            <p className="text-[10px]" style={{ color: "var(--color-faint)" }}>Utilized</p>
-            <p className="text-base font-black tnum" style={{ color: "var(--color-mint)" }}>
+            <MicroLabel>Utilized</MicroLabel>
+            <p className="font-mono text-base font-bold tabular-nums text-acid">
               {Math.round((aum / capacity) * 100)}%
             </p>
           </div>
+        </Panel>
+
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+          <StatTile label="AUM" value={formatUSD(aum, 0)} />
+          <StatTile label="Capacity" value={formatUSD(capacity, 0)} />
+          <StatTile label="Capacity Left" value={formatUSD(capacityLeft, 0)} />
+          <StatTile label="Self-funded" value={formatUSD(selfFunded, 0)} />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard label="AUM" value={formatUSD(aum, 0)} />
-          <StatCard label="Capacity" value={formatUSD(capacity, 0)} />
-          <StatCard label="Capacity Left" value={formatUSD(capacityLeft, 0)} />
-          <StatCard label="Self-funded" value={formatUSD(selfFunded, 0)} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Self-fund */}
-          <div className="rounded-xl p-5" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-faint)" }}>
-              Self-fund Vault
+          <Panel className="p-5">
+            <MicroLabel className="mb-2">Self-fund Vault</MicroLabel>
+            <p className="mb-4 text-xs leading-relaxed text-muted">
+              Deposit your own USDC as a trader-own position. Signals skin-in-the-game to
+              investors. Withdraws via the normal path.
             </p>
-            <p className="text-xs mb-4 leading-relaxed" style={{ color: "var(--color-muted)" }}>
-              Deposit your own USDC as a trader-own position. Signals skin-in-the-game to investors. Withdraws via the normal path.
-            </p>
-            <div className="mb-3">
-              <label className="text-xs mb-1 block" style={{ color: "var(--color-faint)" }}>Amount (USDC)</label>
-              <input
-                type="number"
-                value={selfFundAmount}
-                onChange={(e) => setSelfFundAmount(e.target.value)}
-                placeholder="0.00"
-                disabled={isPending}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none tnum"
-                style={{ background: "var(--color-panel-2)", border: "1px solid var(--color-line)", color: "var(--color-ink)" }}
-              />
-            </div>
+
+            <label
+              htmlFor="self-fund-amount"
+              className="mb-1 block text-xs text-faint"
+            >
+              Amount (USDC)
+            </label>
+            <Input
+              id="self-fund-amount"
+              type="number"
+              value={selfFundAmount}
+              onChange={(e) => setSelfFundAmount(e.target.value)}
+              placeholder="0.00"
+              disabled={isPending}
+              className="mb-3 tabular-nums"
+            />
 
             {capacityLeft <= 0 ? (
-              <div className="w-full py-2 rounded-lg text-sm text-center font-semibold" style={{ background: "var(--color-panel-2)", color: "var(--color-faint)", border: "1px solid var(--color-line)" }}>
+              <div className="w-full rounded-lg border border-white/10 bg-panel-2 py-2 text-center text-sm font-semibold text-faint">
                 Vault at capacity
               </div>
             ) : (
-              <button
+              <Button
                 onClick={handleSelfFund}
                 disabled={isPending || !selfFundAmount}
-                className="w-full py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: "var(--color-mint)", color: "#ffffff" }}
+                size="lg"
+                className="w-full"
               >
-                {isPending && <Loader2 size={13} className="animate-spin" />}
+                {isPending && <Loader2 size={14} className="animate-spin" />}
                 {isPending ? "Signing transaction…" : "Deposit (own)"}
-              </button>
+              </Button>
             )}
 
             {isPending && (
-              <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: "var(--color-faint)" }}>
+              <div className="mt-3 flex items-center gap-2 text-xs text-faint">
                 <Clock size={12} />
                 {txState.message}
               </div>
             )}
 
             {isSuccess && (
-              <div className="mt-3 rounded-lg p-3" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle size={13} style={{ color: "var(--color-green)" }} />
-                  <span className="text-xs font-bold" style={{ color: "var(--color-green)" }}>
-                    {txState.simulated ? "Self-fund simulated (vault not live on devnet)" : "Self-fund confirmed"}
+              <div className="mt-3 rounded-lg border border-success/25 bg-success/10 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <CheckCircle size={13} className="text-success" />
+                  <span className="text-xs font-bold text-success">
+                    {txState.simulated
+                      ? "Self-fund simulated (vault not live on devnet)"
+                      : "Self-fund confirmed"}
                   </span>
                 </div>
                 {txState.sig && (
@@ -144,10 +156,11 @@ export default function ManagePage() {
                     href={`https://solscan.io/tx/${txState.sig}?cluster=devnet`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 font-mono text-[10px] transition-opacity hover:opacity-70"
-                    style={{ color: "var(--color-mint)" }}
+                    className="flex items-center gap-1 font-mono text-[0.65rem] text-cyan transition-opacity hover:opacity-70"
                   >
-                    <span>{txState.sig.slice(0, 8)}…{txState.sig.slice(-6)}</span>
+                    <span>
+                      {txState.sig.slice(0, 8)}…{txState.sig.slice(-6)}
+                    </span>
                     <ExternalLink size={10} />
                   </a>
                 )}
@@ -155,50 +168,52 @@ export default function ManagePage() {
             )}
 
             {isError && (
-              <div className="mt-3 rounded-lg p-3 text-xs" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "#ef4444" }}>
+              <div className="mt-3 rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs text-danger">
                 {txState.message}
               </div>
             )}
-          </div>
+          </Panel>
 
           {/* Vault status */}
-          <div className="rounded-xl p-5" style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--color-faint)" }}>
-              Vault Controls
-            </p>
-            <div className="space-y-3 text-xs mb-6">
-              {[
-                ["Status", "Active"],
-                ["Score", DEMO_TRADER.score.toString()],
-                ["Capacity formula", `${score} × $1,000 = ${formatUSD(capacity, 0)}`],
-                ["Deposits open", depositsOpen ? "Yes" : "No"],
-                ["Capacity left", formatUSD(capacityLeft, 0)],
-                ["NAV / Share", "1.000000"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between py-1.5" style={{ borderBottom: "1px solid var(--color-line)" }}>
-                  <span style={{ color: "var(--color-faint)" }}>{k}</span>
-                  <span className="tnum font-medium" style={{ color: "var(--color-ink)" }}>{v}</span>
-                </div>
-              ))}
+          <Panel className="p-5">
+            <MicroLabel className="mb-4">Vault Controls</MicroLabel>
+            <div className="mb-6 space-y-0 text-xs">
+              <DataRow label="Status">Active</DataRow>
+              <DataRow label="Score">{DEMO_TRADER.score}</DataRow>
+              <DataRow label="Capacity formula">
+                {score} × $1,000 = {formatUSD(capacity, 0)}
+              </DataRow>
+              <DataRow label="Deposits open">{depositsOpen ? "Yes" : "No"}</DataRow>
+              <DataRow label="Capacity left">{formatUSD(capacityLeft, 0)}</DataRow>
+              <DataRow label="NAV / Share">1.000000</DataRow>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--color-ink)" }}>Accept Deposits</p>
-                <p className="text-[10px]" style={{ color: "var(--color-faint)" }}>Open / close your vault to investors</p>
+                <p className="text-xs font-semibold text-ink">Accept Deposits</p>
+                <p className="text-[0.65rem] text-faint">
+                  Open / close your vault to investors
+                </p>
               </div>
               <button
+                type="button"
+                role="switch"
+                aria-checked={depositsOpen}
+                aria-label="Accept deposits"
                 onClick={() => setDepositsOpen((v) => !v)}
-                className="relative w-12 h-6 rounded-full transition-colors duration-300 flex-shrink-0"
-                style={{ background: depositsOpen ? "var(--color-mint)" : "var(--color-panel-2)", border: "1px solid var(--color-line)" }}
+                className={`relative h-6 w-12 shrink-0 rounded-full border border-white/10 transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void ${
+                  depositsOpen ? "bg-acid" : "bg-panel-2"
+                }`}
               >
                 <span
-                  className="absolute top-[2px] w-5 h-5 rounded-full bg-white transition-all duration-300"
+                  className={`absolute top-[2px] size-5 rounded-full transition-all duration-300 ${
+                    depositsOpen ? "bg-void" : "bg-white"
+                  }`}
                   style={{ left: depositsOpen ? "calc(100% - 22px)" : "2px" }}
                 />
               </button>
             </div>
-          </div>
+          </Panel>
         </div>
       </div>
     </div>

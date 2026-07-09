@@ -46,7 +46,36 @@ components for public read-only pages where it helps first paint.
 ESLint clean, `tsc --noEmit` clean, `next build` passes, dev server runs, smoke-test every
 route, exercise the deposit flow. Fix findings. Commit per feature with Conventional Commits.
 
-## Status (updated 2026-07-09)
+## Status (updated 2026-07-09, evening)
+
+DONE (today, after the morning entries below)
+- Lint: FlatCompat -> eslint-config-next 16 native flat exports; acid primitives now
+  hook-rule clean (useSyncExternalStore reduced-motion, render-derived end states);
+  temporary warn-downgrade scoped to pre-redesign files only (shrinks per rebuild).
+- Arch: typed ArcadiaIdl (Program<ArcadiaIdl>, no anchor `as any`); cursor borsh
+  decoders + PlatformConfig decoder; lib/vault-client.ts (RpcUnreachableError,
+  offline/platform/vault-live status union); use-arcadia-vault rewritten around
+  structured VaultTxState — RPC outage = error, simulation = labelled + sigless;
+  DepositModal consumes the hook (dup flow deleted); Phoenix WS scoped to /terminal;
+  dev auth actually verifies (HMAC nonce + ed25519, probed: 5/5 cases); BACKEND_URL
+  outage = 502, not mock; use-auth/role-context on useSyncExternalStore; typed
+  backend-transform (lib/** out of the lint override).
+- Phase 3: acid landing (components/landing/, / prerenders static); (app) route
+  group so the landing is shell-free; acid shell (components/shell/: Sidebar,
+  Topbar, MobileNav, notifications, wallet) with legacy shell deleted; wallet
+  adapter button acid-restyled in globals.
+- Phase 3 in flight: three parallel agents rebuilding discovery (traders,
+  leaderboard, t/[handle](+trades)), investor (dashboard, portfolio,
+  vault/[handle], settings, DepositModal reskin), trader-side (terminal reskin,
+  analytics, reputation, payouts, manage) into components/pages/{discovery,
+  investor,trader}/.
+
+NOTES for cleanup
+- /investments + /returns are redirect stubs to /portfolio — keep (URL compat).
+- /trade (paper-trade page) is linked from nowhere; decide with owner: restyle,
+  or remove. Left legacy for now.
+
+## Status (updated 2026-07-09, morning)
 
 DONE
 - Phase 1 platform + hygiene. Next 16 (webpack bundler via --webpack), ESLint added, dead deps

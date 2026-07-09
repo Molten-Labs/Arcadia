@@ -14,10 +14,6 @@ const eslintConfig = [
     // Do NOT add new files to this list.
     files: [
       "app/api/v1/**",
-      "app/(app)/analytics/page.tsx",
-      "app/(app)/payouts/page.tsx",
-      "app/(app)/reputation/page.tsx",
-      "app/(app)/terminal/page.tsx",
       "app/(app)/trade/page.tsx",
       "components/*.tsx",
       "components/charts/**",
