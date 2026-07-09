@@ -29,7 +29,6 @@ const eslintConfig = [
       "app/vault/**",
       "components/*.tsx",
       "components/charts/**",
-      "lib/**",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
