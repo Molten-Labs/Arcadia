@@ -13,10 +13,12 @@ function pnlColor(pnl: number): string {
   if (pnl === 0) return "var(--color-panel-2)";
   if (pnl > 0) {
     const intensity = Math.min(1, pnl / 3000);
-    return `rgba(34,197,94,${0.15 + intensity * 0.75})`;
+    const pct = (0.15 + intensity * 0.75) * 100;
+    return `color-mix(in srgb, var(--color-success) ${pct}%, transparent)`;
   }
   const intensity = Math.min(1, Math.abs(pnl) / 2000);
-  return `rgba(239,68,68,${0.15 + intensity * 0.75})`;
+  const pct = (0.15 + intensity * 0.75) * 100;
+  return `color-mix(in srgb, var(--color-danger) ${pct}%, transparent)`;
 }
 
 function formatPnl(pnl: number): string {
@@ -43,11 +45,7 @@ export function PnLHeatmap({ data }: Props) {
 
   const weekGrid: Array<Array<{ date: string; pnl: number | null }>> = [];
   const startDate = new Date(`${year}-01-01`);
-  const endDate = new Date(`${year}-12-31`);
   const startDay = startDate.getDay();
-
-  const weekIdx = 0;
-  const dayIdx = startDay;
 
   const totalWeeks = Math.ceil((365 + startDay) / 7) + 1;
   for (let w = 0; w < totalWeeks; w++) weekGrid.push([]);
@@ -92,7 +90,7 @@ export function PnLHeatmap({ data }: Props) {
             <span className="font-medium" style={{ color: "var(--color-faint)" }}>Year P&L </span>
             <span
               className="font-black tnum"
-              style={{ color: totalPnl >= 0 ? "var(--color-green)" : "var(--color-red)" }}
+              style={{ color: totalPnl >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
             >
               {formatPnl(totalPnl)}
             </span>
@@ -111,8 +109,8 @@ export function PnLHeatmap({ data }: Props) {
               onClick={() => setYear(y)}
               className="text-[10px] font-bold px-2 py-1 rounded transition-all"
               style={{
-                background: y === year ? "var(--color-accent)" : "var(--color-panel-2)",
-                color: y === year ? "var(--color-bg)" : "var(--color-faint)",
+                background: y === year ? "var(--color-acid)" : "var(--color-panel-2)",
+                color: y === year ? "var(--color-void)" : "var(--color-faint)",
                 border: "1px solid var(--color-line)",
               }}
             >
@@ -124,13 +122,13 @@ export function PnLHeatmap({ data }: Props) {
 
       {hovered && hovered.date && (
         <div
-          className="mb-3 px-3 py-2 rounded-lg text-xs flex items-center gap-3 border"
-          style={{ background: "var(--color-panel-2)", borderColor: "var(--color-line)" }}
+          className="mb-3 px-3 py-2 rounded-lg text-xs flex items-center gap-3 border font-mono"
+          style={{ background: "var(--color-panel)", borderColor: "var(--color-line)" }}
         >
           <span className="font-mono" style={{ color: "var(--color-faint)" }}>{hovered.date}</span>
           <span
             className="font-black tnum"
-            style={{ color: (hovered.pnl ?? 0) >= 0 ? "var(--color-green)" : "var(--color-red)" }}
+            style={{ color: (hovered.pnl ?? 0) >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
           >
             {hovered.pnl != null && hovered.pnl !== 0 ? formatPnl(hovered.pnl) : "No trades"}
           </span>
@@ -178,7 +176,7 @@ export function PnLHeatmap({ data }: Props) {
                         height: 11,
                         borderRadius: 2,
                         background: cell.date ? pnlColor(cell.pnl ?? 0) : "transparent",
-                        border: cell.date ? "1px solid rgba(255,255,255,0.04)" : "none",
+                        border: cell.date ? "1px solid var(--color-line)" : "none",
                         cursor: cell.date ? "default" : "default",
                       }}
                     />
@@ -189,14 +187,14 @@ export function PnLHeatmap({ data }: Props) {
           </div>
 
           <div className="flex items-center gap-2 mt-3 ml-7">
-            <span className="text-[9px]" style={{ color: "var(--color-faint)" }}>Loss</span>
+            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Loss</span>
             {[-3000, -1500, 0, 1500, 3000].map((v) => (
               <div
                 key={v}
-                style={{ width: 11, height: 11, borderRadius: 2, background: pnlColor(v), border: "1px solid rgba(255,255,255,0.04)" }}
+                style={{ width: 11, height: 11, borderRadius: 2, background: pnlColor(v), border: "1px solid var(--color-line)" }}
               />
             ))}
-            <span className="text-[9px]" style={{ color: "var(--color-faint)" }}>Win</span>
+            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "var(--color-faint)" }}>Win</span>
           </div>
         </div>
       </div>

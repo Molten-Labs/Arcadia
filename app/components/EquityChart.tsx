@@ -26,8 +26,10 @@ function fmt(ts: number) {
 export function EquityChart({ data, benchmarkData, costBasis, height = 120 }: EquityChartProps) {
   const last        = data[data.length - 1]?.value ?? 1;
   const isUp        = last >= (costBasis ?? data[0]?.value ?? 1);
-  const strokeColor = isUp ? "var(--color-mint)" : "var(--color-red)";
-  const glowRgba    = isUp ? "rgba(79,158,255,0.5)" : "rgba(239,68,68,0.5)";
+  const strokeColor = isUp ? "var(--color-acid)" : "var(--color-danger)";
+  const glowRgba    = isUp
+    ? "color-mix(in srgb, var(--color-acid) 50%, transparent)"
+    : "color-mix(in srgb, var(--color-danger) 50%, transparent)";
   const gradId      = `equityGrad-${isUp ? "up" : "down"}`;
   const filterId    = `equityGlow-${isUp ? "up" : "down"}`;
 
@@ -65,7 +67,7 @@ export function EquityChart({ data, benchmarkData, costBasis, height = 120 }: Eq
 
         <Tooltip
           contentStyle={{
-            background:    "rgba(13,13,13,0.95)",
+            background:    "color-mix(in srgb, var(--color-panel) 95%, transparent)",
             backdropFilter: "blur(12px)",
             border:         "1px solid var(--color-line)",
             borderRadius:   "10px",
@@ -109,7 +111,7 @@ export function EquityChart({ data, benchmarkData, costBasis, height = 120 }: Eq
           strokeWidth={2}
           fill={`url(#${gradId})`}
           dot={false}
-          activeDot={{ r: 4, fill: strokeColor, stroke: "var(--color-bg)", strokeWidth: 2 }}
+          activeDot={{ r: 4, fill: strokeColor, stroke: "var(--color-void)", strokeWidth: 2 }}
           animationDuration={800}
           animationEasing="ease-out"
         />
@@ -118,12 +120,12 @@ export function EquityChart({ data, benchmarkData, costBasis, height = 120 }: Eq
           <Line
             type="monotone"
             dataKey="benchmark"
-            stroke="var(--color-gold)"
+            stroke="var(--color-cyan)"
             strokeWidth={1.5}
             strokeDasharray="4 3"
             dot={false}
             strokeOpacity={0.6}
-            activeDot={{ r: 3, fill: "var(--color-gold)" }}
+            activeDot={{ r: 3, fill: "var(--color-cyan)" }}
           />
         )}
       </ComposedChart>

@@ -16,6 +16,24 @@ import type {
   Time,
 } from "lightweight-charts";
 
+// Read an acid token from the :root mirror. lightweight-charts renders to a
+// canvas and cannot resolve var(), so we resolve concrete strings at runtime
+// with literal fallbacks that match the acid palette.
+function readToken(name: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+// Append an alpha channel to a 6-digit hex color, yielding 8-digit hex.
+function withAlpha(hex: string, alpha: number): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${hex}${a}`;
+}
+
 const SEED_PRICES: Record<string, number> = {
   "SOL-PERP": 152.4,
   "BTC-PERP": 67420,
@@ -82,52 +100,66 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
   }, [market, externalCandles]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Resolve acid tokens once at chart-creation time (canvas needs literals).
+    const panel   = readToken("--color-panel",   "#0d0d14");
+    const line    = readToken("--color-line",    "#1c1c1c");
+    const faint   = readToken("--color-faint",   "#5C6470");
+    const panel2  = readToken("--color-panel-2", "#14141c");
+    const acid    = readToken("--color-acid",    "#CCFF00");
+    const success = readToken("--color-success", "#34E29B");
+    const danger  = readToken("--color-danger",  "#FF3B6B");
+    const crosshair = withAlpha(acid, 0.4);
+
+    // Snapshot the price-line map this effect owns so cleanup uses a stable ref.
+    const priceLines = priceLinesRef.current;
 
     const resolvedHeight = fullHeight
-      ? (containerRef.current.clientHeight || 400)
+      ? (container.clientHeight || 400)
       : height;
 
-    const chart = createChart(containerRef.current, {
+    const chart = createChart(container, {
       layout: {
-        background: { type: ColorType.Solid, color: "#11151a" },
-        textColor: "#6b7280",
+        background: { type: ColorType.Solid, color: panel },
+        textColor: faint,
         fontSize: 11,
-        fontFamily: "'JetBrains Mono', 'Menlo', monospace",
+        fontFamily: "'Space Mono', ui-monospace, 'Menlo', monospace",
       },
       grid: {
-        vertLines: { color: "#1a2030", style: 1 },
-        horzLines: { color: "#1a2030", style: 1 },
+        vertLines: { color: line, style: 1 },
+        horzLines: { color: line, style: 1 },
       },
       crosshair: {
         mode: CrosshairMode.Magnet,
-        vertLine: { color: "#27c08a55", labelBackgroundColor: "#1a5f4a" },
-        horzLine: { color: "#27c08a55", labelBackgroundColor: "#1a5f4a" },
+        vertLine: { color: crosshair, labelBackgroundColor: panel2 },
+        horzLine: { color: crosshair, labelBackgroundColor: panel2 },
       },
       timeScale: {
-        borderColor: "#1e2530",
+        borderColor: line,
         timeVisible: true,
         secondsVisible: false,
         fixLeftEdge: false,
         lockVisibleTimeRangeOnResize: true,
       },
       rightPriceScale: {
-        borderColor: "#1e2530",
+        borderColor: line,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       handleScroll: { mouseWheel: true, pressedMouseMove: true },
       handleScale: { mouseWheel: true, pinch: true },
-      width: containerRef.current.clientWidth,
+      width: container.clientWidth,
       height: resolvedHeight,
     });
 
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: "#27c08a",
-      downColor: "#ff5c6c",
-      borderUpColor: "#27c08a",
-      borderDownColor: "#ff5c6c",
-      wickUpColor: "#27c08a80",
-      wickDownColor: "#ff5c6c80",
+      upColor: success,
+      downColor: danger,
+      borderUpColor: success,
+      borderDownColor: danger,
+      wickUpColor: withAlpha(success, 0.5),
+      wickDownColor: withAlpha(danger, 0.5),
     });
 
     series.setData(candles);
@@ -135,7 +167,7 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
 
     chartRef.current = chart;
     seriesRef.current = series;
-    priceLinesRef.current.clear();
+    priceLines.clear();
 
     const ro = new ResizeObserver(() => {
       if (containerRef.current) {
@@ -145,14 +177,14 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
         chart.applyOptions({ width: containerRef.current.clientWidth, height: newH });
       }
     });
-    ro.observe(containerRef.current);
+    ro.observe(container);
 
     return () => {
       ro.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
-      priceLinesRef.current.clear();
+      priceLines.clear();
     };
   }, [candles, height, fullHeight]);
 
@@ -160,6 +192,9 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
+
+    const longColor  = readToken("--color-success", "#34E29B");
+    const shortColor = readToken("--color-danger",  "#FF3B6B");
 
     const existing = priceLinesRef.current;
     const activeIds = new Set(positions.map((p) => p.id));
@@ -176,7 +211,7 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
     for (const pos of positions) {
       if (!existing.has(pos.id)) {
         const isLong = pos.direction === "long";
-        const color = isLong ? "#27c08a" : "#ff5c6c";
+        const color = isLong ? longColor : shortColor;
         const label = `${isLong ? "▲ LONG" : "▼ SHORT"} ${pos.leverage}x · $${pos.size_usd.toLocaleString()}`;
 
         const line = series.createPriceLine({

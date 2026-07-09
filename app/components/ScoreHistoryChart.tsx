@@ -18,17 +18,21 @@ interface Props {
 }
 
 const TIER_BANDS = [
-  { lo: 900, hi: 1000, color: "#d8a93a", label: "Elite" },
-  { lo: 800, hi: 900,  color: "#9b7fd8", label: "Advanced" },
-  { lo: 700, hi: 800,  color: "#5a9bd8", label: "Established" },
-  { lo: 600, hi: 700,  color: "#5fb89a", label: "Verified" },
+  { lo: 900, hi: 1000, color: "var(--color-tier-elite)",       label: "Elite" },
+  { lo: 800, hi: 900,  color: "var(--color-tier-advanced)",    label: "Advanced" },
+  { lo: 700, hi: 800,  color: "var(--color-tier-established)", label: "Established" },
+  { lo: 600, hi: 700,  color: "var(--color-tier-verified)",    label: "Verified" },
 ];
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: number }) {
   if (!active || !payload?.length) return null;
   const score = payload[0].value;
   const tier = score >= 900 ? "Elite" : score >= 800 ? "Advanced" : score >= 700 ? "Established" : "Verified";
-  const color = score >= 900 ? "#d8a93a" : score >= 800 ? "#9b7fd8" : score >= 700 ? "#5a9bd8" : "#5fb89a";
+  const color =
+    score >= 900 ? "var(--color-tier-elite)"
+    : score >= 800 ? "var(--color-tier-advanced)"
+    : score >= 700 ? "var(--color-tier-established)"
+    : "var(--color-tier-verified)";
   return (
     <div
       className="rounded-lg px-3 py-2 text-xs shadow-xl border"
@@ -100,10 +104,10 @@ export function ScoreHistoryChart({ data, height = 220 }: Props) {
         <Line
           type="monotone"
           dataKey="score"
-          stroke="var(--color-accent)"
+          stroke="var(--color-acid)"
           strokeWidth={2}
           dot={false}
-          activeDot={{ r: 4, fill: "var(--color-accent)", stroke: "var(--color-bg)", strokeWidth: 2 }}
+          activeDot={{ r: 4, fill: "var(--color-acid)", stroke: "var(--color-void)", strokeWidth: 2 }}
         />
       </LineChart>
     </ResponsiveContainer>
