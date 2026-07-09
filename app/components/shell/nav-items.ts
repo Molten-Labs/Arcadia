@@ -40,9 +40,7 @@ const TRADER_NAV: NavLink[] = [
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard", primary: false },
 ];
 
-/* Investor pages consolidated to Dashboard (all-in-one) + Portfolio. */
 const INVESTOR_NAV: NavLink[] = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", primary: true },
   { href: "/portfolio", icon: Briefcase, label: "Portfolio", primary: true },
   { href: "/traders", icon: Users, label: "Traders", primary: false },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard", primary: false },
@@ -75,10 +73,10 @@ export function getNavLinks(role: ArcadiaRole, connected: boolean): NavLink[] {
   return GUEST_NAV;
 }
 
-/** Role-aware home target: traders land on the terminal, investors on the dashboard. */
+/** Role-aware home target: traders land on the terminal, investors on their portfolio. */
 export function getHomeHref(role: ArcadiaRole, connected: boolean): string {
   if (!connected || !role) return "/";
-  return role === "trader" ? "/terminal" : "/dashboard";
+  return role === "trader" ? "/terminal" : "/portfolio";
 }
 
 /** Mobile bottom-bar items: guests get 3, connected get 4 primary + More. */

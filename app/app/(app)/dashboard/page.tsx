@@ -297,7 +297,7 @@ export default function DashboardPage() {
 
   return (
     <PageShell width="wide">
-      <PageHeader kicker="Investor" title="Dashboard" subtitle="Track and analyze your trading performance" />
+      <PageHeader kicker="Trader" title="Dashboard" subtitle="Track and analyze your trading performance" />
 
       {/* Account row */}
       <Panel className="mb-6 flex flex-wrap items-center gap-8 border-l-2 border-l-acid p-5">
