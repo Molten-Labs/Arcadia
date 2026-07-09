@@ -76,4 +76,4 @@ trap cleanup EXIT INT TERM
 echo "[dev] Starting Next.js dev server on port 5000..."
 cd app && PORT=5000 \
   BACKEND_URL="${BACKEND_URL:-http://localhost:8080}" \
-  node_modules/.bin/next dev --port 5000 --hostname 0.0.0.0
+  node_modules/.bin/next dev --webpack --port 5000 --hostname 0.0.0.0

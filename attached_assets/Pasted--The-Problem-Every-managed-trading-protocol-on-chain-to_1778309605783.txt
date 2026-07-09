@@ -1,0 +1,21 @@
+**The Problem**
+
+Every managed trading protocol on-chain today forces a choice between two bad options. Either the trader's strategy is fully public — every route, every size, every timing — which means anyone watching the chain can front-run them, copy them, or undercut their edge before they finish executing. Or the strategy stays private, but then investors have no way to verify that risk rules are being followed, position limits are respected, or that their capital is protected at all. They are back to trusting a person instead of a system.
+
+This is why serious traders do not manage capital on-chain. The transparency that makes DeFi trustworthy is the same transparency that makes professional strategy execution impossible.
+
+**The Feature**
+
+Private Intent Vault Guard lets traders submit trade intents without revealing the route, the size, or the strategy to anyone on-chain. A trusted evaluator running in a private environment checks the intent against Arcadia's existing risk rules — the same vault guard that enforces position limits, reserve floors, cooldown periods, and junior-first loss protection. The evaluator returns one public result: approved or rejected. The trade details never touch the blockchain. Only a commitment hash and the guard outcome do.
+
+When a trade is approved and settles with a loss, the waterfall still applies publicly. Junior capital absorbs the loss before senior capital. Investors can see the junior health drop, the position limits tighten, and their capital remain untouched — without knowing anything about what the trader actually did.
+
+When a trade is rejected because it is too large or too risky, that rejection is recorded on-chain with a guard code. The investor can see the system worked. The trader's strategy remains hidden.
+
+**What This Solves**
+
+For traders, it removes the only reason not to manage capital on-chain. Strategy stays private. Edge stays intact. Front-running and copy-trading become impossible because the details never become public.
+
+For investors, nothing changes about their protection. The vault guard still runs. The junior buffer still absorbs losses first. Graduation requirements still apply. The proof that risk rules are being followed is still fully public and verifiable. They do not need to see the trader's moves to know they are safe — the system proves it without them.
+
+For DeFi broadly, it demonstrates that transparency and privacy are not opposites. A protocol can be simultaneously private about strategy execution and fully transparent about risk enforcement. Traders keep their edge. Investors keep their proof. The protocol keeps its integrity.

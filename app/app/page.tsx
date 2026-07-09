@@ -3,12 +3,11 @@ import { AllocationRail } from "@/components/landing/AllocationRail";
 import { Container, Kicker, SectionHeading } from "@/components/landing/bits";
 import { DualCta } from "@/components/landing/DualCta";
 import { Faq } from "@/components/landing/Faq";
+import { FlowSection } from "@/components/landing/FlowSection";
 import { HeroSection } from "@/components/landing/HeroSection";
-import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LiveLeaderboard } from "@/components/landing/LiveLeaderboard";
-import { ProblemSection } from "@/components/landing/ProblemSection";
 import { TheScore } from "@/components/landing/TheScore";
 import { TrustStrip } from "@/components/landing/TrustStrip";
 import { TwoSides } from "@/components/landing/TwoSides";
@@ -31,9 +30,8 @@ export default function LandingPage() {
         <div id="top">
           <HeroSection />
           <TrustStrip />
-          <ProblemSection />
+          <FlowSection />
           <AllocationRail />
-          <HowItWorks />
           <TheScore />
 
           <section aria-label="Two sides" className="py-[clamp(5rem,12vw,10rem)]">

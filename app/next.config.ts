@@ -4,6 +4,7 @@ import path from "path";
 const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   // App owns its own lockfile; pin the tracing/workspace root to silence the
   // multi-lockfile root inference warning.
   outputFileTracingRoot: path.resolve(__dirname),
