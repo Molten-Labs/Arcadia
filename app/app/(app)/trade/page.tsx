@@ -1,16 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
+import { Wallet } from "lucide-react";
+
+import { PaperTradeMarketBar, fmtPx } from "@/components/pages/trader/PaperTradeMarketBar";
+import { PaperTradeOrderForm } from "@/components/pages/trader/PaperTradeOrderForm";
+import { PaperTradePositions } from "@/components/pages/trader/PaperTradePositions";
+import type { Direction } from "@/components/pages/trader/terminal-types";
+import { EnvChip, MicroLabel, PageHeader } from "@/components/pages/trader/trader-ui";
+import { WalletButton } from "@/components/shell/WalletButton";
 import { apiFetch } from "@/lib/utils";
-import { formatUSD, pnlClass } from "@/lib/types";
-import type { PriceData, OpenPosition } from "@/lib/types";
+import type { OpenPosition, PriceData } from "@/lib/types";
 
-const TvChart = dynamic(() => import("@/components/TvChart").then((m) => m.TvChart), { ssr: false });
+const TvChart = dynamic(() => import("@/components/TvChart").then((m) => m.TvChart), {
+  ssr: false,
+});
 
-type Direction = "long" | "short";
+const MARKETS = ["SOL-PERP", "BTC-PERP", "ETH-PERP", "ARB-PERP"];
 
 export default function TradePage() {
   const { connected } = useWallet();
@@ -20,8 +29,14 @@ export default function TradePage() {
   const [leverage, setLeverage] = useState(3);
   const [positions, setPositions] = useState<OpenPosition[]>([]);
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const { data: prices, refetch: refetchPrices } = useQuery<PriceData[]>({
+  // Wall-clock captured only inside effect callbacks so opened_at can be read in
+  // the event handler without calling Date.now() during render (keeps
+  // react-hooks/purity clean without an eslint-disable).
+  const nowRef = useRef(0);
+
+  const { data: prices } = useQuery<PriceData[]>({
     queryKey: ["prices"],
     queryFn: () => apiFetch("/prices"),
     refetchInterval: 3000,
@@ -29,15 +44,18 @@ export default function TradePage() {
 
   const currentPrice = prices?.find((p) => p.market === market);
 
+  // Recompute simulated uPnL from the latest polled prices on a fixed cadence.
   useEffect(() => {
+    nowRef.current = Date.now();
     const interval = setInterval(() => {
+      nowRef.current = Date.now();
       setPositions((prev) =>
         prev.map((pos) => {
           const price = prices?.find((p) => p.market === pos.market)?.price ?? pos.entry_px;
           const upnl =
             pos.direction === "long"
-              ? pos.size_usd * pos.leverage * (price - pos.entry_px) / pos.entry_px
-              : pos.size_usd * pos.leverage * (pos.entry_px - price) / pos.entry_px;
+              ? (pos.size_usd * pos.leverage * (price - pos.entry_px)) / pos.entry_px
+              : (pos.size_usd * pos.leverage * (pos.entry_px - price)) / pos.entry_px;
           return { ...pos, upnl };
         }),
       );
@@ -48,16 +66,20 @@ export default function TradePage() {
   const openPosition = () => {
     if (!connected || !currentPrice) return;
     const newPos: OpenPosition = {
-      id: Math.random().toString(36).slice(2, 10),
+      id: crypto.randomUUID(),
       market,
       direction,
       size_usd: parseFloat(sizeUSD) || 1000,
       leverage,
       entry_px: currentPrice.price,
-      opened_at: Math.floor(Date.now() / 1000),
+      opened_at: Math.floor(nowRef.current / 1000),
       upnl: 0,
     };
-    setPositions((prev) => [newPos, ...prev]);
+    setSubmitting(true);
+    setTimeout(() => {
+      setPositions((prev) => [newPos, ...prev]);
+      setSubmitting(false);
+    }, 600);
   };
 
   const closePosition = (id: string) => {
@@ -65,191 +87,83 @@ export default function TradePage() {
     setTimeout(() => {
       setPositions((prev) => prev.filter((p) => p.id !== id));
       setClosingId(null);
-    }, 1500);
+    }, 1200);
   };
 
-  const markets = ["SOL-PERP", "BTC-PERP", "ETH-PERP", "ARB-PERP"];
-
-  return (
-    <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
-      
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold" style={{ color: "var(--color-ink)" }}>
-            Trade
-          </h1>
-          <div
-            className="text-xs px-2.5 py-1 rounded"
-            style={{ background: "var(--color-panel-2)", color: "var(--color-gold)", border: "1px solid var(--color-line)" }}
-          >
-            Devnet simulation — no real capital
+  if (!connected) {
+    return (
+      <div className="grid min-h-[70vh] place-items-center bg-void px-5">
+        <div className="max-w-sm rounded-2xl border border-white/10 bg-panel p-10 text-center">
+          <div className="mx-auto mb-5 grid size-14 place-items-center rounded-full border border-acid/25 bg-acid/10">
+            <Wallet size={24} className="text-acid" />
+          </div>
+          <p className="mb-2 text-base font-semibold text-ink">Connect wallet to paper trade</p>
+          <p className="mb-6 text-sm text-faint">
+            Paper trading on Solana devnet. Simulated fills, no real capital at risk.
+          </p>
+          <div className="flex justify-center">
+            <WalletButton />
           </div>
         </div>
+      </div>
+    );
+  }
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-1 space-y-4">
-            <div
-              className="rounded-xl p-4 space-y-3"
-              style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-faint)" }}>
-                Order
-              </p>
+  const changePct = currentPrice?.change_pct_24h ?? 0;
+  const up = changePct >= 0;
 
-              <div>
-                <label className="text-xs mb-1 block" style={{ color: "var(--color-faint)" }}>Market</label>
-                <select
-                  value={market}
-                  onChange={(e) => setMarket(e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                  style={{
-                    background: "var(--color-panel-2)",
-                    border: "1px solid var(--color-line)",
-                    color: "var(--color-ink)",
-                  }}
-                >
-                  {markets.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
+  return (
+    <div className="min-h-full bg-void">
+      <div className="mx-auto max-w-7xl px-4 py-8">
+        <PageHeader title="Paper Trade">
+          <EnvChip live>Solana devnet - simulated fills - no real capital</EnvChip>
+        </PageHeader>
 
-              <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid var(--color-line)" }}>
-                {(["long", "short"] as Direction[]).map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDirection(d)}
-                    className="flex-1 py-2 text-sm font-semibold transition-colors"
-                    style={{
-                      background: direction === d
-                        ? d === "long" ? "var(--color-green)" : "var(--color-red)"
-                        : "var(--color-panel-2)",
-                      color: direction === d ? "#000" : "var(--color-muted)",
-                    }}
-                  >
-                    {d.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-
-              <div>
-                <label className="text-xs mb-1 block" style={{ color: "var(--color-faint)" }}>Size (USD)</label>
-                <input
-                  type="number"
-                  min={0}
-                  value={sizeUSD}
-                  onChange={(e) => setSizeUSD(e.target.value)}
-                  className="w-full rounded-lg px-3 py-2 text-sm outline-none tnum"
-                  style={{
-                    background: "var(--color-panel-2)",
-                    border: "1px solid var(--color-line)",
-                    color: "var(--color-ink)",
-                  }}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs" style={{ color: "var(--color-faint)" }}>Leverage</label>
-                  <span className="text-xs tnum font-medium" style={{ color: "var(--color-ink)" }}>{leverage}x</span>
-                </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={10}
-                  value={leverage}
-                  onChange={(e) => setLeverage(parseInt(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-
-              {currentPrice && (
-                <div className="text-xs space-y-1" style={{ color: "var(--color-muted)" }}>
-                  <div className="flex justify-between">
-                    <span>Entry price</span>
-                    <span className="tnum">{currentPrice.price.toFixed(market === "BTC-PERP" ? 0 : 4)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Notional</span>
-                    <span className="tnum">{formatUSD(parseFloat(sizeUSD) * leverage)}</span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={openPosition}
-                disabled={!connected}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold transition-colors"
-                style={{
-                  background: !connected ? "var(--color-panel-2)" : direction === "long" ? "var(--color-green)" : "var(--color-red)",
-                  color: !connected ? "var(--color-faint)" : "#000",
-                }}
-              >
-                {!connected ? "Connect wallet" : `Open ${direction.toUpperCase()}`}
-              </button>
-            </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {/* Order ticket */}
+          <div className="lg:col-span-1">
+            <PaperTradeOrderForm
+              markets={MARKETS}
+              market={market}
+              setMarket={setMarket}
+              direction={direction}
+              setDirection={setDirection}
+              sizeUSD={sizeUSD}
+              setSizeUSD={setSizeUSD}
+              leverage={leverage}
+              setLeverage={setLeverage}
+              currentPrice={currentPrice?.price}
+              onSubmit={openPosition}
+              submitting={submitting}
+              connected={connected}
+            />
           </div>
 
-          <div className="lg:col-span-3 space-y-4">
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}
-            >
-              <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-faint)" }}>
-                  Live Prices
-                </p>
-              </div>
-              <div className="flex gap-0 overflow-x-auto">
-                {prices?.map((p) => (
-                  <button
-                    key={p.market}
-                    onClick={() => setMarket(p.market)}
-                    className="flex-1 min-w-[140px] px-4 py-3 text-left transition-colors"
-                    style={{
-                      background: market === p.market ? "var(--color-panel-2)" : "transparent",
-                      borderRight: "1px solid var(--color-line)",
-                    }}
-                  >
-                    <p className="text-xs font-medium mb-0.5" style={{ color: "var(--color-muted)" }}>
-                      {p.market}
-                    </p>
-                    <p className="text-base font-bold tnum" style={{ color: "var(--color-ink)" }}>
-                      {p.market === "BTC-PERP" ? p.price.toFixed(0) : p.price.toFixed(3)}
-                    </p>
-                    <p
-                      className="text-xs tnum"
-                      style={{ color: p.change_pct_24h >= 0 ? "var(--color-green)" : "var(--color-red)" }}
-                    >
-                      {p.change_pct_24h >= 0 ? "+" : ""}{p.change_pct_24h.toFixed(2)}%
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Market bar + chart + positions */}
+          <div className="space-y-6 lg:col-span-3">
+            <PaperTradeMarketBar prices={prices} market={market} setMarket={setMarket} />
 
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}
-            >
-              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--color-line)" }}>
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-panel">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-faint)" }}>
-                    {market}
-                  </p>
+                  <MicroLabel>{market}</MicroLabel>
                   {currentPrice && (
-                    <span className="text-sm font-bold tnum" style={{ color: "var(--color-ink)" }}>
-                      {market === "BTC-PERP" ? currentPrice.price.toFixed(0) : currentPrice.price.toFixed(3)}
-                    </span>
-                  )}
-                  {currentPrice && (
-                    <span
-                      className="text-xs tnum"
-                      style={{ color: currentPrice.change_pct_24h >= 0 ? "var(--color-green)" : "var(--color-red)" }}
-                    >
-                      {currentPrice.change_pct_24h >= 0 ? "+" : ""}{currentPrice.change_pct_24h.toFixed(2)}%
-                    </span>
+                    <>
+                      <span className="font-mono text-sm font-bold tabular-nums text-ink">
+                        {fmtPx(market, currentPrice.price)}
+                      </span>
+                      <span
+                        className={`font-mono text-xs font-semibold tabular-nums ${
+                          up ? "text-success" : "text-danger"
+                        }`}
+                      >
+                        {up ? "+" : ""}
+                        {changePct.toFixed(2)}%
+                      </span>
+                    </>
                   )}
                 </div>
-                <span className="text-xs px-2 py-0.5 rounded" style={{ background: "var(--color-panel-2)", color: "var(--color-faint)", border: "1px solid var(--color-line)" }}>
+                <span className="rounded border border-white/10 bg-panel-2 px-2 py-0.5 font-mono text-[0.62rem] tracking-[0.14em] text-faint uppercase">
                   15m
                 </span>
               </div>
@@ -269,70 +183,12 @@ export default function TradePage() {
               />
             </div>
 
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ background: "var(--color-panel)", border: "1px solid var(--color-line)" }}
-            >
-              <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--color-line)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--color-faint)" }}>
-                  Open Positions ({positions.length})
-                </p>
-              </div>
-              {positions.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-xs" style={{ color: "var(--color-faint)" }}>No open positions</p>
-                </div>
-              ) : (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid var(--color-line)" }}>
-                      {["Market", "Side", "Size", "Lev", "Entry", "uPnL", ""].map((h) => (
-                        <th key={h} className="py-2.5 px-4 text-left font-medium" style={{ color: "var(--color-faint)" }}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {positions.map((pos) => (
-                      <tr
-                        key={pos.id}
-                        style={{ borderBottom: "1px solid var(--color-line)" }}
-                      >
-                        <td className="py-3 px-4 font-mono">{pos.market}</td>
-                        <td
-                          className="py-3 px-4 font-semibold"
-                          style={{ color: pos.direction === "long" ? "var(--color-green)" : "var(--color-red)" }}
-                        >
-                          {pos.direction.toUpperCase()}
-                        </td>
-                        <td className="py-3 px-4 tnum">{formatUSD(pos.size_usd, 0)}</td>
-                        <td className="py-3 px-4 tnum">{pos.leverage}x</td>
-                        <td className="py-3 px-4 tnum" style={{ color: "var(--color-muted)" }}>
-                          {pos.entry_px.toFixed(pos.market === "BTC-PERP" ? 0 : 3)}
-                        </td>
-                        <td className={`py-3 px-4 tnum font-medium ${pnlClass(pos.upnl ?? 0)}`}>
-                          {(pos.upnl ?? 0) >= 0 ? "+" : ""}{formatUSD(pos.upnl ?? 0, 0)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => closePosition(pos.id)}
-                            disabled={closingId === pos.id}
-                            className="text-xs px-2.5 py-1 rounded"
-                            style={{
-                              border: "1px solid var(--color-line)",
-                              color: closingId === pos.id ? "var(--color-faint)" : "var(--color-muted)",
-                            }}
-                          >
-                            {closingId === pos.id ? "Closing…" : "Close"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <PaperTradePositions
+              positions={positions}
+              prices={prices}
+              closingId={closingId}
+              onClose={closePosition}
+            />
           </div>
         </div>
       </div>
