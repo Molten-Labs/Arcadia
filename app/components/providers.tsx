@@ -21,7 +21,6 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { useAuth } from "@/lib/use-auth";
 import { RoleProvider } from "@/lib/role-context";
 import { RoleGate } from "@/components/RoleGate";
-import { PhoenixProvider } from "@/lib/phoenix-context";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,11 +79,9 @@ function SolanaProviders({ children }: { children: ReactNode }) {
         <WalletModalProvider>
           <AuthProvider>
             <RoleProvider>
-              <PhoenixProvider>
-                {/* Role selection gate — appears as full-screen overlay when needed */}
-                <RoleGate />
-                {children}
-              </PhoenixProvider>
+              {/* Role selection gate — appears as full-screen overlay when needed */}
+              <RoleGate />
+              {children}
             </RoleProvider>
           </AuthProvider>
         </WalletModalProvider>

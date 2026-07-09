@@ -6,7 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
 import { formatUSD } from "@/lib/types";
 import type { OpenPosition } from "@/lib/types";
-import { usePhoenix } from "@/lib/phoenix-context";
+import { PhoenixProvider, usePhoenix } from "@/lib/phoenix-context";
 import type { PhoenixTrade } from "@/lib/phoenix-types";
 import {
   ChevronDown, TrendingUp, TrendingDown, X, Minus, Plus,
@@ -1353,8 +1353,12 @@ function FundingTabPanel({ symbol }: { symbol: string }) {
 
 export default function TerminalPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-full bg-[var(--color-bg)]" />}>
-      <TerminalContent />
-    </Suspense>
+    // PhoenixProvider is route-scoped: the market-data WebSocket only opens
+    // while the terminal is mounted, and closes on navigation away.
+    <PhoenixProvider>
+      <Suspense fallback={<div className="h-screen w-full bg-[var(--color-bg)]" />}>
+        <TerminalContent />
+      </Suspense>
+    </PhoenixProvider>
   );
 }
