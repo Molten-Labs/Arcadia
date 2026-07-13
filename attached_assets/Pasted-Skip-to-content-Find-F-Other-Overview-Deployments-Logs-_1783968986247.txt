@@ -1,0 +1,159 @@
+Skip to content
+
+Find
+F
+Other
+Overview
+Deployments
+Logs
+Analytics
+Speed Insights
+Observability
+Firewall
+CDN
+Environment Variables
+Domains
+Connect
+Beta
+Integrations
+Storage
+Flags
+Agent
+AI Gateway
+Sandboxes
+Workflows
+Images
+Beta
+Usage
+Support
+Settings
+
+Avatar for dodobedo67-5304
+AbduoVo
+
+
+Deployments
+All Branches
+All Authors
+Adjust website styling and fix deployment build process
+Error
+1m 40s
+Production
+Redeploy of A6itqjeRC
+7m ago
+dodobedo67-5304 Avatar
+Adjust website styling and fix deployment build process
+Error
+1m 40s
+Production
+11423c2
+main
+5m ago
+github/replit-agent
+fix
+Error
+1m 37s
+Production
+56ca3d3
+main
+42m ago
+github/Abduovv
+Update build configuration to correctly locate output files
+Error
+1m 49s
+Production
+b64fb1d
+main
+51m ago
+github/replit-agent
+Update build configuration to correctly locate output files
+Error
+1m 43s
+Production
+bcdd580
+main
+1h ago
+github/replit-agent
+Update build configuration to correctly deploy the application
+Error
+1m 45s
+Production
+4277161
+main
+1h ago
+github/replit-agent
+Fix build output path for Next.js application deployments
+Error
+Production
+b2427ea
+main
+1h ago
+github/replit-agent
+Address Turbopack build errors by adjusting configuration
+Error
+1m 41s
+Production
+2c22fa1
+main
+2h ago
+github/replit-agent
+Fix build error by removing invalid Turbopack configuration
+Error
+1m 6s
+Production
+0f79585
+main
+2h ago
+github/replit-agent
+Configure Vercel to build from the application directory
+Error
+1m 12s
+Production
+377b5a5
+main
+2h ago
+github/replit-agent
+Remove unnecessary start command from deployment configuration
+Error
+1m 7s
+Production
+5ee462a
+main
+2h ago
+github/replit-agent
+Add startup script and health check to Docker container
+Error
+1m 55s
+Production
+e7bca8e
+main
+2h ago
+github/replit-agent
+Fix build errors by adjusting project configuration
+Error
+1m 56s
+Production
+a888034
+main
+2h ago
+github/replit-agent
+Configure Vercel to correctly build the Next.js application
+Error
+1m 51s
+Production
+edc8b69
+main
+2h ago
+github/replit-agent
+Switch to npm for Vercel builds to resolve installation errors
+Error
+1m 59s
+Production
+ba7d4f6
+main
+2h ago
+github/replit-agent
+Deployment Retention is enabled for this project — some deployments will be deleted after a set time period. Learn more
+
+arcadiai – Deployments – Vercel
+21:39:30
