@@ -1,0 +1,47 @@
+19:11:30.429 Running build in Washington, D.C., USA (East) – iad1
+19:11:30.430 Build machine configuration: 2 cores, 8 GB
+19:11:30.535 Cloning github.com/Molten-Labs/Arcadia (Branch: main, Commit: b4abbc4)
+19:11:30.536 Previous build caches not available.
+19:11:31.018 Cloning completed: 483.000ms
+19:11:31.345 Running "vercel build"
+19:11:31.363 Vercel CLI 55.0.0
+19:11:31.786 Running "install" command: `cd app && pnpm install --shamefully-hoist --no-frozen-lockfile`...
+19:11:32.290  WARN  Ignoring not compatible lockfile at /vercel/path0/app/pnpm-lock.yaml
+19:11:32.317  WARN  GET https://registry.npmjs.org/@eslint%2Feslintrc error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.318  WARN  GET https://registry.npmjs.org/@tailwindcss%2Fpostcss error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.319  WARN  GET https://registry.npmjs.org/@types%2Fd3-array error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.319  WARN  GET https://registry.npmjs.org/@types%2Fd3-shape error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.320  WARN  GET https://registry.npmjs.org/@types%2Fnode error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.320  WARN  GET https://registry.npmjs.org/@types%2Fqrcode error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.323  WARN  GET https://registry.npmjs.org/@types%2Freact error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.323  WARN  GET https://registry.npmjs.org/@types%2Freact-dom error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.324  WARN  GET https://registry.npmjs.org/eslint error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.324  WARN  GET https://registry.npmjs.org/eslint-config-next error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.324  WARN  GET https://registry.npmjs.org/postcss error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.324  WARN  GET https://registry.npmjs.org/tailwindcss error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.324  WARN  GET https://registry.npmjs.org/typescript error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.324  WARN  GET https://registry.npmjs.org/@coral-xyz%2Fanchor error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.325  WARN  GET https://registry.npmjs.org/@number-flow%2Freact error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:32.325  WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-accordion error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:11:42.319  WARN  GET https://registry.npmjs.org/@eslint%2Feslintrc error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.321  WARN  GET https://registry.npmjs.org/@tailwindcss%2Fpostcss error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.321  WARN  GET https://registry.npmjs.org/@types%2Fd3-array error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.321  WARN  GET https://registry.npmjs.org/@types%2Fd3-shape error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.321  WARN  GET https://registry.npmjs.org/@types%2Fnode error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.322  WARN  GET https://registry.npmjs.org/@types%2Fqrcode error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.322  WARN  GET https://registry.npmjs.org/@types%2Freact error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.322  WARN  GET https://registry.npmjs.org/@types%2Freact-dom error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.323  WARN  GET https://registry.npmjs.org/eslint error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.323  WARN  GET https://registry.npmjs.org/eslint-config-next error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.326  WARN  GET https://registry.npmjs.org/postcss error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.326  WARN  GET https://registry.npmjs.org/tailwindcss error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.326  WARN  GET https://registry.npmjs.org/typescript error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.327  WARN  GET https://registry.npmjs.org/@coral-xyz%2Fanchor error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.327  WARN  GET https://registry.npmjs.org/@number-flow%2Freact error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:11:42.327  WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-accordion error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+19:12:42.322  WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-dialog error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:12:42.323  ERR_PNPM_META_FETCH_FAIL  GET https://registry.npmjs.org/@eslint%2Feslintrc: Value of "this" must be of type URLSearchParams
+19:12:42.324  WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-dropdown-menu error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:12:42.324  WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-label error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:12:42.325  WARN  GET https://registry.npmjs.org/@radix-ui%2Freact-popover error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+19:12:42.342 Error: Command "cd app && pnpm install --shamefully-hoist --no-frozen-lockfile" exited with 1
