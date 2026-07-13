@@ -4,8 +4,6 @@ import path from "path";
 const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
 
 const nextConfig: NextConfig = {
-  // App owns its own lockfile; pin the tracing/workspace root to silence the
-  // multi-lockfile root inference warning.
   outputFileTracingRoot: path.resolve(__dirname),
   allowedDevOrigins: [
     "*.replit.dev",
@@ -17,6 +15,25 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+
+  // ── Turbopack (Next.js 15/16 default on Vercel) ─────────────────────────────
+  // Mirror the webpack fallbacks so Solana/Anchor packages can resolve
+  // Node.js built-ins in a browser context.
+  turbopack: {
+    resolveAlias: {
+      fs: { browser: false },
+      crypto: { browser: false },
+      stream: { browser: false },
+      path: { browser: false },
+      os: { browser: false },
+      // Packages used internally by Solana libs that must not be bundled
+      "pino-pretty": { browser: false },
+      lokijs: { browser: false },
+      encoding: { browser: false },
+    },
+  },
+
+  // ── Webpack (local dev / fallback) ──────────────────────────────────────────
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

@@ -2,11 +2,10 @@
   "name": "@workspace/arcadia-web",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@10.26.1",
   "scripts": {
-    "dev": "next dev --webpack --port $PORT --hostname 0.0.0.0",
-    "build": "next build --webpack",
-    "vercel-build": "next build --webpack",
+    "dev": "next dev --port $PORT --hostname 0.0.0.0",
+    "build": "next build",
+    "vercel-build": "next build",
     "start": "next start --port $PORT --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
