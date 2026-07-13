@@ -1,0 +1,28 @@
+19:21:39.086 Running build in Washington, D.C., USA (East) – iad1
+19:21:39.087 Build machine configuration: 2 cores, 8 GB
+19:21:39.191 Cloning github.com/Molten-Labs/Arcadia (Branch: main, Commit: ba7d4f6)
+19:21:39.192 Previous build caches not available.
+19:21:40.101 Cloning completed: 910.000ms
+19:21:40.472 Running "vercel build"
+19:21:40.488 Vercel CLI 55.0.0
+19:21:40.910 Running "install" command: `cd app && npm install --legacy-peer-deps`...
+19:22:29.068 npm warn deprecated uuid@8.3.2: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+19:22:29.077 npm warn deprecated uuid@9.0.1: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+19:22:31.746 npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+19:22:43.202 
+19:22:43.202 added 741 packages, and audited 742 packages in 1m
+19:22:43.203 
+19:22:43.203 166 packages are looking for funding
+19:22:43.204   run `npm fund` for details
+19:22:43.259 
+19:22:43.260 11 vulnerabilities (8 moderate, 3 high)
+19:22:43.260 
+19:22:43.261 To address all issues possible (including breaking changes), run:
+19:22:43.261   npm audit fix --force
+19:22:43.261 
+19:22:43.262 Some issues need review, and may require choosing
+19:22:43.262 a different dependency.
+19:22:43.263 
+19:22:43.263 Run `npm audit` for details.
+19:22:43.312 Warning: Could not identify Next.js version, ensure it is defined as a project dependency.
+19:22:43.326 Error: No Next.js version detected. Make sure your package.json has "next" in either "dependencies" or "devDependencies". Also check your Root Directory setting matches the directory of your package.json file.
