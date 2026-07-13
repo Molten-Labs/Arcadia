@@ -16,24 +16,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
 
-  // ── Turbopack (Next.js 15/16 default on Vercel) ─────────────────────────────
-  // Mirror the webpack fallbacks so Solana/Anchor packages can resolve
-  // Node.js built-ins in a browser context.
-  turbopack: {
-    resolveAlias: {
-      fs: { browser: false },
-      crypto: { browser: false },
-      stream: { browser: false },
-      path: { browser: false },
-      os: { browser: false },
-      // Packages used internally by Solana libs that must not be bundled
-      "pino-pretty": { browser: false },
-      lokijs: { browser: false },
-      encoding: { browser: false },
-    },
-  },
-
-  // ── Webpack (local dev / fallback) ──────────────────────────────────────────
+  // ── Webpack (local dev + fallback) ──────────────────────────────────────────
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
