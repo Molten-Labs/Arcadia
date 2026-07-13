@@ -1,0 +1,134 @@
+Skip to content
+
+Find
+F
+Other
+Overview
+Deployments
+Logs
+Analytics
+Speed Insights
+Observability
+Firewall
+CDN
+Environment Variables
+Domains
+Connect
+Beta
+Integrations
+Storage
+Flags
+Agent
+AI Gateway
+Sandboxes
+Workflows
+Images
+Beta
+Usage
+Support
+Settings
+
+Avatar for dodobedo67-5304
+AbduoVo
+
+
+Deployments
+4X45tfRK3
+
+Deployment
+Logs
+Resources
+Source
+Open Graph
+Deployment Details
+Build Failed
+Command "cd app && npm run build" exited with 1
+Created
+github/replit-agent
+replit-agent
+3m ago
+Status
+Error
+Latest
+Duration
+1m 10s
+Just now
+Environment
+Production
+Domains
+arcadiai-git-main-molten-labs.vercel.app
+arcadiai-lrh3t3r7o-molten-labs.vercel.app
+Source
+main
+82cc68d
+Improve database connection script to handle various URL formats
+
+Deployment Settings
+3 Recommendations
+Build Logs
+1m 10s
+62 lines
+
+3
+
+1
+Find in logs
+CtrlF
+22:12:15.491 
+  Creating an optimized production build ...
+22:12:15.829 
+FATAL: An unexpected Turbopack error occurred:
+22:12:15.830 
+Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.
+22:12:15.830 
+22:12:15.831 
+Debug info:
+22:12:15.831 
+- Execution of Project::project_fs failed
+22:12:15.831 
+- Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.
+22:12:16.865 
+22:12:16.865 
+> Build error occurred
+22:12:16.868 
+Error [TurbopackInternalError]: Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.
+22:12:16.869 
+22:12:16.869 
+Debug info:
+22:12:16.869 
+- Execution of Project::project_fs failed
+22:12:16.870 
+- Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.
+22:12:16.870 
+    at <unknown> (TurbopackInternalError: Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.) {
+22:12:16.870 
+  type: 'TurbopackInternalError',
+22:12:16.870 
+  location: undefined
+22:12:16.871 
+}
+22:12:16.898 
+Error: Command "cd app && npm run build" exited with 1
+Deployment Summary
+Deployment Checks
+Assigning Custom Domains
+Runtime Logs
+
+View and debug runtime logs & errors
+
+Observability
+
+Monitor app health & performance
+
+Speed Insights
+
+Not Enabled
+Performance metrics from real users
+
+Web Analytics
+
+Not Enabled
+Analyze visitors & traffic in real-time
+
+arcadiai – Deployment Overview – Vercel
+21:39:30
