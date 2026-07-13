@@ -1,0 +1,97 @@
+Skip to content
+8zM9a6tjE
+Deployment
+Logs
+Resources
+Source
+Open Graph
+Build Failed
+The Next.js output directory "app/.next" was not found at "/vercel/path0/app/app/.next". This is usually caused by one of the following: 1. The "Output Directory" setting in your project is misconfigured. Check your project settings and ensure the output directory matches your Next.js configuration. 2. If using Turborepo, ensure your task outputs include the Next.js build directory. Add "app/.next/**" to the "outputs" array in your turbo.json for the build task. 3. The build command did not complete successfully. Check the build logs above for errors.
+Created
+github/replit-agent
+replit-agent
+4m ago
+Status
+Error
+Latest
+Duration
+1m 49s
+Just now
+Environment
+Production
+Domains
+arcadiai-git-main-molten-labs.vercel.app
+arcadiai-71uqzm63y-molten-labs.vercel.app
+Source
+main
+b64fb1d
+Update build configuration to correctly locate output files
+
+Deployment Settings
+Build Logs
+1m 49s
+46 lines
+
+1
+21:00:48 
+21:00:48 
+Some issues need review, and may require choosing
+21:00:48 
+a different dependency.
+21:00:48 
+21:00:48 
+Run `npm audit` for details.
+21:00:48 
+Detected Next.js version: 16.2.10
+21:00:48 
+Running "npm run vercel-build"
+21:00:48 
+21:00:48 
+> @workspace/arcadia-web@0.0.0 vercel-build
+21:00:48 
+> next build
+21:00:48 
+21:00:48 
+  Applying modifyConfig from Vercel
+21:00:48 
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+21:00:48 
+This information is used to shape Next.js' roadmap and prioritize features.
+21:00:48 
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+21:00:48 
+https://nextjs.org/telemetry
+21:00:48 
+21:00:48 
+▲ Next.js 16.2.10 (Turbopack)
+21:00:48 
+21:00:48 
+  Creating an optimized production build ...
+21:01:07 
+✓ Compiled successfully in 17.8s
+21:01:07 
+  Running TypeScript ...
+Summary
+Checks
+Assigning Custom Domains
+Runtime Logs
+
+View and debug runtime logs & errors
+
+Observability
+
+Monitor app health & performance
+
+Speed Insights
+
+Not Enabled
+Performance metrics from real users
+
+Web Analytics
+
+Not Enabled
+Analyze visitors & traffic in real-time
+
+
+Find
+
