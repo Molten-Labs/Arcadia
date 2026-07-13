@@ -1,0 +1,130 @@
+Skip to content
+
+Find
+F
+Other
+Overview
+Deployments
+Logs
+Analytics
+Speed Insights
+Observability
+Firewall
+CDN
+Environment Variables
+Domains
+Connect
+Beta
+Integrations
+Storage
+Flags
+Agent
+AI Gateway
+Sandboxes
+Workflows
+Images
+Beta
+Usage
+Support
+Settings
+
+Avatar for dodobedo67-5304
+AbduoVo
+
+
+Deployments
+A6itqjeRC
+
+Deployment
+Logs
+Resources
+Source
+Open Graph
+Deployment Details
+Build Failed
+The Next.js output directory "app/.next" was not found at "/vercel/path0/app/app/.next". This is usually caused by one of the following: 1. The "Output Directory" setting in your project is misconfigured. Check your project settings and ensure the output directory matches your Next.js configuration. 2. If using Turborepo, ensure your task outputs include the Next.js build directory. Add "app/.next/**" to the "outputs" array in your turbo.json for the build task. 3. The build command did not complete successfully. Check the build logs above for errors.
+Created
+github/replit-agent
+replit-agent
+2m ago
+Status
+Error
+Latest
+Duration
+1m 40s
+Just now
+Environment
+Production
+Domains
+arcadiai-git-main-molten-labs.vercel.app
+arcadiai-aon3yb7st-molten-labs.vercel.app
+Source
+main
+11423c2
+Adjust website styling and fix deployment build process
+
+Deployment Settings
+3 Recommendations
+Build Logs
+1m 40s
+104 lines
+
+1
+
+1
+Find in logs
+CtrlF
+21:45:36.814 
+├ ƒ /t/[handle]
+21:45:36.814 
+├ ƒ /t/[handle]/trades
+21:45:36.815 
+├ ○ /terminal
+21:45:36.815 
+├ ○ /trade
+21:45:36.815 
+├ ○ /traders
+21:45:36.815 
+└ ƒ /vault/[handle]
+21:45:36.815 
+21:45:36.815 
+21:45:36.815 
+○  (Static)   prerendered as static content
+21:45:36.816 
+ƒ  (Dynamic)  server-rendered on demand
+21:45:36.817 
+21:45:37.188 
+Error: The Next.js output directory "app/.next" was not found at "/vercel/path0/app/app/.next". This is usually caused by one of the following:
+21:45:37.188 
+21:45:37.188 
+1. The "Output Directory" setting in your project is misconfigured. Check your project settings and ensure the output directory matches your Next.js configuration.
+21:45:37.189 
+21:45:37.189 
+2. If using Turborepo, ensure your task outputs include the Next.js build directory. Add "app/.next/**" to the "outputs" array in your turbo.json for the build task.
+21:45:37.189 
+21:45:37.190 
+3. The build command did not complete successfully. Check the build logs above for errors.
+21:45:37.190 
+Learn More: https://err.sh/vercel/vercel/now-next-routes-manifest
+Deployment Summary
+Deployment Checks
+Assigning Custom Domains
+Runtime Logs
+
+View and debug runtime logs & errors
+
+Observability
+
+Monitor app health & performance
+
+Speed Insights
+
+Not Enabled
+Performance metrics from real users
+
+Web Analytics
+
+Not Enabled
+Analyze visitors & traffic in real-time
+
+arcadiai – Deployment Overview – Vercel
