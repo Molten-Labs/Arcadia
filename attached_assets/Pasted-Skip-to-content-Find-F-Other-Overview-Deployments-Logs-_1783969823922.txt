@@ -1,0 +1,133 @@
+Skip to content
+
+Find
+F
+Other
+Overview
+Deployments
+Logs
+Analytics
+Speed Insights
+Observability
+Firewall
+CDN
+Environment Variables
+Domains
+Connect
+Beta
+Integrations
+Storage
+Flags
+Agent
+AI Gateway
+Sandboxes
+Workflows
+Images
+Beta
+Usage
+Support
+Settings
+
+Avatar for dodobedo67-5304
+AbduoVo
+
+
+Deployments
+CqsXMpZee
+
+Deployment
+Logs
+Resources
+Source
+Open Graph
+Deployment Details
+Build Failed
+Command "cd app && npm run build" exited with 1
+Created
+github/replit-agent
+replit-agent
+6m ago
+Status
+Error
+Stale
+Duration
+1m 12s
+Just now
+Environment
+Production
+Domains
+arcadiai-git-main-molten-labs.vercel.app
+arcadiai-7e4mswb9s-molten-labs.vercel.app
+Source
+main
+100fd26
+Fix deployment build by correcting output directory and build commands
+
+Deployment Settings
+3 Recommendations
+Build Logs
+1m 12s
+47 lines
+
+2
+
+1
+Find in logs
+CtrlF
+22:09:56.123 
+Run `npm audit` for details.
+22:09:56.176 
+Detected Next.js version: 16.2.10
+22:09:56.178 
+Running "cd app && npm run build"
+22:09:56.286 
+22:09:56.286 
+> @workspace/arcadia-web@0.0.0 build
+22:09:56.286 
+> next build
+22:09:56.287 
+22:09:58.288 
+22:09:58.289 
+> Build error occurred
+22:09:58.292 
+Error [TurbopackInternalError]: Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.
+22:09:58.292 
+22:09:58.292 
+Debug info:
+22:09:58.292 
+- Execution of Project::project_fs failed
+22:09:58.294 
+- Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.
+22:09:58.294 
+    at <unknown> (TurbopackInternalError: Invalid distDirRoot: "../.next". distDirRoot should not navigate out of the projectPath.) {
+22:09:58.294 
+  type: 'TurbopackInternalError',
+22:09:58.294 
+  location: undefined
+22:09:58.294 
+}
+22:09:58.320 
+Error: Command "cd app && npm run build" exited with 1
+Deployment Summary
+Deployment Checks
+Assigning Custom Domains
+Runtime Logs
+
+View and debug runtime logs & errors
+
+Observability
+
+Monitor app health & performance
+
+Speed Insights
+
+Not Enabled
+Performance metrics from real users
+
+Web Analytics
+
+Not Enabled
+Analyze visitors & traffic in real-time
+
+arcadiai – Deployment Overview – Vercel
+21:39:30

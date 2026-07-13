@@ -4,10 +4,6 @@ import path from "path";
 const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
 
 const nextConfig: NextConfig = {
-  // On Vercel the repo root is one level above app/. Writing .next there lets
-  // vercel.json use outputDirectory:".next" at the repo root unambiguously,
-  // regardless of whether the Vercel project has rootDirectory set or not.
-  distDir: process.env.VERCEL ? "../.next" : ".next",
   outputFileTracingRoot: path.resolve(__dirname),
   allowedDevOrigins: [
     "*.replit.dev",
