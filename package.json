@@ -1,6 +1,7 @@
 {
   "name": "kiln-workspace",
   "private": true,
+  "packageManager": "pnpm@10.26.1",
   "scripts": {
     "dev": "bash dev.sh",
     "setup": "bash setup.sh",
