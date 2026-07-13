@@ -1,0 +1,230 @@
+Has a developer you know lost their peace? Is that developer you? Find a more peaceful way.
+
+
+
+merry-adaptation
+
+production
+
+
+
+30 days or $5.00 left
+
+
+Agent
+
+
+
+
+
+Arcadia
+Deployments
+Variables
+Metrics
+Console
+Settings
+Unexposed service
+US West
+1 Replica
+
+
+
+History
+
+Hide Skipped
+
+
+
+
+
+
+Arcadia
+/
+d3e3a54c
+Crashed
+
+Jul 13, 2026, 9:52 PM GMT+3
+Get Help
+Details
+Build Logs
+Deploy Logs
+Network Flow Logs
+Search build logs
+
+You reached the start of the range
+Jul 13, 2026, 9:47 PM
+unpacking archive
+13.8 MB
+64ms
+
+internal
+load build definition from Dockerfile
+0ms
+uploading snapshot
+11.1 MB
+345ms
+
+internal
+load metadata for docker.io/library/debian:bookworm-slim
+407ms
+
+internal
+load metadata for docker.io/library/rust:1.89-bookworm
+485ms
+
+internal
+load .dockerignore
+0ms
+
+internal
+load build context
+0ms
+
+runtime
+FROM docker.io/library/debian:bookworm-slim@sha256:60eac759739651111db372c07be67863818726f754804b8707c90979bda511df
+32ms
+
+builder
+FROM docker.io/library/rust:1.89-bookworm@sha256:948f9b08a66e7fe01b03a98ef1c7568292e07ec2e4fe90d88c07bb14563c84ff
+36ms
+
+runtime
+RUN apt-get update   && apt-get install -y --no-install-recommends ca-certificates libssl3 netcat-openbsd   && rm -rf /var/lib/apt/lists/* cached
+0ms
+
+runtime
+WORKDIR /app cached
+0ms
+
+builder
+COPY server-rs/crates/api/Cargo.toml     ./crates/api/ cached
+0ms
+
+builder
+COPY server-rs/bin/Cargo.toml             ./bin/ cached
+0ms
+
+builder
+COPY server-rs/Cargo.toml server-rs/Cargo.lock ./ cached
+0ms
+
+builder
+COPY rust-toolchain.toml ./ cached
+0ms
+
+builder
+RUN apt-get update   && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates   && rm -rf /var/lib/apt/lists/* cached
+0ms
+
+builder
+WORKDIR /app cached
+0ms
+
+builder
+RUN touch bin/src/main.rs   && for f in crates/*/src/lib.rs; do touch "$f"; done cached
+0ms
+
+builder
+COPY server-rs/crates  ./crates cached
+0ms
+
+builder
+COPY server-rs/bin     ./bin cached
+0ms
+
+builder
+RUN cargo build --release --locked -p arcadia-server 2>/dev/null; true cached
+0ms
+
+builder
+RUN mkdir -p       bin/src       crates/api/src       crates/chain/src       crates/core/src       crates/db/src       crates/decode/src       crates/prices/src       crates/scoring/src       crates/workers/src   && echo 'fn main() {}' > bin/src/main.rs   && for crate in api chain core db decode prices scoring workers; do        echo 'pub fn _stub() {}' > crates/$crate/src/lib.rs;      done cached
+0ms
+
+runtime
+COPY --from=builder /app/target/release/arcadia-server ./arcadia-server cached
+0ms
+
+builder
+COPY server-rs/crates/scoring/Cargo.toml ./crates/scoring/ cached
+0ms
+
+builder
+COPY server-rs/crates/prices/Cargo.toml  ./crates/prices/ cached
+0ms
+
+builder
+COPY server-rs/crates/decode/Cargo.toml  ./crates/decode/ cached
+0ms
+
+builder
+COPY server-rs/crates/db/Cargo.toml      ./crates/db/ cached
+0ms
+
+builder
+COPY server-rs/crates/core/Cargo.toml    ./crates/core/ cached
+0ms
+
+builder
+RUN cargo build --release --locked -p arcadia-server cached
+0ms
+
+builder
+COPY server-rs/crates/chain/Cargo.toml   ./crates/chain/ cached
+0ms
+
+builder
+COPY server-rs/crates/workers/Cargo.toml ./crates/workers/ cached
+0ms
+
+runtime
+COPY entrypoint.sh ./entrypoint.sh cached
+0ms
+
+runtime
+RUN chmod +x ./entrypoint.sh cached
+0ms
+
+exporting to docker image format
+187ms
+containerimage.digest: sha256:312f641328b7c371eb5ba34b9e8bd550d276deec8622f398b0142c42a26e71e4
+containerimage.descriptor: eyJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJkaWdlc3QiOiJzaGEyNTY6MzEyZjY0MTMyOGI3YzM3MWViNWJhMzRiOWU4YmQ1NTBkMjc2ZGVlYzg2MjJmMzk4YjAxNDJjNDJhMjZlNzFlNCIsInNpemUiOjE0MjgsImFubm90YXRpb25zIjp7Im9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wNy0xM1QxODo1MzowNFoifSwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In19
+containerimage.config.digest: sha256:307ab1023f565777b7bb335063999e2d67ad3f28a236cfbbeeac525248b41c80
+image push
+35 MB
+1.5s
+scheduling build on Metal builder "builder-bfuusr"
+You reached the end of the range
+Jul 13, 2026, 10:09 PM
+
+
+Server link integration for frontend
+
+
+Agent is now billable.
+Usage counts toward your workspace spend. Learn more →
+
+the server link to add it to the frontend
+
+I'll help you get the server link to connect to your frontend. Let me check your services first.
+
+Checked environment status
+
+Hide result
+1 of 1 service with issues
+•
+2 recent failures
+Arcadia
+Online
+Let me get the full configuration for your service to find the server link:
+
+Fetched service config
+Your Arcadia service doesn't have a public HTTP domain configured yet. The server is running on the internal Railway network.
+
+To add a public link, I need to know:
+
+What port is your backend running on? (e.g., 3000, 4000, 8000)
+Do you want a public Railway domain (like arcadia-xyz.up.railway.app), or do you prefer to add a custom domain later?
+Once you tell me the port, I'll enable the public service domain so your frontend can reach it.
+
+Develop, debug, deploy anything...
+
