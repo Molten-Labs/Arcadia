@@ -30,7 +30,7 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-line bg-void/90 px-4 backdrop-blur-[12px] sm:px-5">
       <div className="flex min-w-0 items-center gap-3">
-        <h1 className="truncate font-display text-sm font-extrabold uppercase tracking-[-0.01em] text-ink">
+        <h1 className="truncate font-display text-sm uppercase tracking-[-0.01em] text-ink font-bold">
           {label}
         </h1>
 
