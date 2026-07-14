@@ -4,7 +4,6 @@ import path from "path";
 const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.resolve(__dirname),
   allowedDevOrigins: [
     "*.replit.dev",
     "*.kirk.replit.dev",
