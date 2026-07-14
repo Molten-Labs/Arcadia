@@ -45,7 +45,7 @@
     "lightweight-charts": "^5.0.7",
     "lucide-react": "^0.545.0",
     "motion": "^12.42.2",
-    "next": "^16",
+    "next": "15.5.6",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
