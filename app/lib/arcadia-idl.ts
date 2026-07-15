@@ -201,40 +201,7 @@ export const IDL = {
       discriminator: [145, 143, 236, 150, 229, 40, 195, 88],
     },
   ],
-  events: [
-    {
-      name: "ProfileInitialized",
-      discriminator: [1, 31, 122, 19, 193, 205, 23, 27],
-    },
-    {
-      name: "InvestorInitialized",
-      discriminator: [16, 194, 111, 52, 41, 37, 204, 206],
-    },
-    {
-      name: "Deposited",
-      discriminator: [111, 141, 26, 45, 161, 35, 100, 57],
-    },
-    {
-      name: "WithdrawRequested",
-      discriminator: [114, 16, 240, 206, 93, 128, 151, 39],
-    },
-    {
-      name: "Withdrawn",
-      discriminator: [20, 89, 223, 198, 194, 124, 219, 13],
-    },
-    {
-      name: "TradeClosed",
-      discriminator: [65, 245, 176, 171, 79, 161, 47, 121],
-    },
-    {
-      name: "Settled",
-      discriminator: [232, 210, 40, 17, 142, 124, 145, 238],
-    },
-    {
-      name: "ProfitWithdrawn",
-      discriminator: [165, 15, 185, 73, 134, 218, 84, 78],
-    },
-  ],
+  events: [],
   errors: [
     { code: 6000, name: "Unauthorized",              msg: "Caller is not authorized for this action" },
     { code: 6001, name: "VaultNotActive",             msg: "Profile/vault is not active" },
