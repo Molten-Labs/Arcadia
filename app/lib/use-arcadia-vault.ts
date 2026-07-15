@@ -189,7 +189,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         progress("signing", "Confirm in wallet…");
         const sig = await program.methods
           .initializeProfile(maxLeverage)
-          .accounts({
+          .accountsPartial({
             trader: publicKey,
             config: configPda,
             profile: profAddr,
