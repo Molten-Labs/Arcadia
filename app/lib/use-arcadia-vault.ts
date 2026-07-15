@@ -187,7 +187,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const [configPda] = findPlatformConfig();
         const vaultKeypair = Keypair.generate();
         progress("signing", "Confirm in wallet…");
-        const sig = await program.methods
+        const tx = await program.methods
           .initializeProfile(maxLeverage)
           .accountsPartial({
             trader: publicKey,
@@ -199,8 +199,8 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: SYSVAR_RENT_PUBKEY,
           })
-          .signers([vaultKeypair])
-          .send();
+          .transaction();
+        const sig = await sendTransaction(tx, connection, { signers: [vaultKeypair] });
 
         succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
@@ -214,7 +214,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         return fail(`Initialize profile failed: ${errorMessage(err)}`);
       }
     },
-    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
+    [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Initialize Investor (profile-independent) ────────────────── */
@@ -245,14 +245,15 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         const program = makeArcadiaProgram(connection, anchorWallet);
         progress("signing", "Confirm in wallet…");
-        const sig = await program.methods
+        const tx = await program.methods
           .initializeInvestor()
           .accountsPartial({
             wallet: publicKey,
             investorAccount: invAddr,
             systemProgram: SystemProgram.programId,
           })
-          .rpc();
+          .transaction();
+        const sig = await sendTransaction(tx, connection);
         succeed(`Investor account created. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "InvestorInitialized",
@@ -264,7 +265,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         return fail(`Initialize investor failed: ${errorMessage(err)}`);
       }
     },
-    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
+    [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Deposit ──────────────────────────────────────────────────── */
@@ -302,21 +303,22 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         if (!status.investorExists) {
           progress("init-investor", "Creating investor account on-chain…");
-          await program.methods
+          const initTx = await program.methods
             .initializeInvestor()
             .accountsPartial({
               wallet: publicKey,
               investorAccount: investorPda,
               systemProgram: SystemProgram.programId,
             })
-            .rpc();
+            .transaction();
+          await sendTransaction(initTx, connection);
         }
 
         progress("signing", `Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`);
         const amountU64 = new BN(Math.floor(amountUsdc * 1_000_000));
         const depositorToken = getAssociatedTokenAddressSync(status.baseMint, publicKey);
 
-        const sig = await program.methods
+        const tx = await program.methods
           .deposit(amountU64)
           .accountsPartial({
             depositor: publicKey,
@@ -329,7 +331,8 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
           })
-          .rpc();
+          .transaction();
+        const sig = await sendTransaction(tx, connection);
 
         succeed(
           `Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`,
@@ -351,7 +354,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         return fail(`Deposit failed: ${errorMessage(err)}`);
       }
     },
-    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
+    [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Request Withdraw ─────────────────────────────────────────── */
@@ -376,7 +379,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const program = makeArcadiaProgram(connection, anchorWallet);
         const sharesU64 = new BN(Math.floor(shares * 1_000_000));
         progress("signing", "Confirm in wallet…");
-        const sig = await program.methods
+        const tx = await program.methods
           .requestWithdraw(sharesU64)
           .accountsPartial({
             owner: publicKey,
@@ -384,14 +387,15 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             vaultToken: status.vaultToken,
             position: positionPda,
           })
-          .rpc();
+          .transaction();
+        const sig = await sendTransaction(tx, connection);
         succeed(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`, sig, false);
         return true;
       } catch (err) {
         return fail(`Withdraw request failed: ${errorMessage(err)}`);
       }
     },
-    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
+    [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Process Withdraw ─────────────────────────────────────────── */
@@ -417,7 +421,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const program = makeArcadiaProgram(connection, anchorWallet);
 
         progress("signing", "Confirm in wallet…");
-        const sig = await program.methods
+        const tx = await program.methods
           .processWithdraw()
           .accountsPartial({
             owner: publicKey,
@@ -428,7 +432,8 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             ownerToken,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
-          .rpc();
+          .transaction();
+        const sig = await sendTransaction(tx, connection);
         succeed(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "Withdrawn",
@@ -442,7 +447,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         return fail(`Process withdraw failed: ${errorMessage(err)}`);
       }
     },
-    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
+    [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
   /* ── Record Trade (oracle co-sign via backend) ────────────────── */
@@ -548,7 +553,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const program = makeArcadiaProgram(connection, anchorWallet);
 
         progress("signing", "Confirm in wallet…");
-        const sig = await program.methods
+        const tx = await program.methods
           .traderWithdrawProfit(amountU64)
           .accountsPartial({
             trader: publicKey,
@@ -558,14 +563,15 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             traderToken,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
-          .rpc();
+          .transaction();
+        const sig = await sendTransaction(tx, connection);
         succeed(`$${amountUsdc.toFixed(2)} profit withdrawn. Signature: ${sig.slice(0, 8)}…`, sig, false);
         return true;
       } catch (err) {
         return fail(`Withdrawal failed: ${errorMessage(err)}`);
       }
     },
-    [anchorWallet, connection, publicKey, progress, succeed, fail, statusOrFail],
+    [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
   return {
