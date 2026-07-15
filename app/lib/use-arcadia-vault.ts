@@ -19,7 +19,7 @@ import {
   useConnection,
   useWallet,
 } from "@solana/wallet-adapter-react";
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction, Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SystemProgram } from "@solana/web3.js";
@@ -185,17 +185,32 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         const program = makeArcadiaProgram(connection, anchorWallet);
         const [configPda] = findPlatformConfig();
+        const vaultKeypair = Keypair.generate();
         progress("signing", "Confirm in wallet…");
-        const sig = await program.methods
-          .initializeProfile(maxLeverage)
-          .accountsPartial({
-            trader: publicKey,
-            config: configPda,
-            profile: profAddr,
-            baseMint: status.platformBaseMint,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
+        let sig: string;
+        try {
+          sig = await program.methods
+            .initializeProfile(maxLeverage)
+            .accountsPartial({
+              trader: publicKey,
+              config: configPda,
+              profile: profAddr,
+              baseMint: status.platformBaseMint,
+              vaultToken: vaultKeypair.publicKey,
+              systemProgram: SystemProgram.programId,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+            })
+            .signers([vaultKeypair])
+            .rpc({ skipPreflight: true });
+        } catch (rpcErr: any) {
+          if (rpcErr?.message?.includes("Event not found")) {
+            sig = rpcErr.signature ?? rpcErr?.txSig ?? "";
+            if (!sig) throw rpcErr;
+          } else {
+            throw rpcErr;
+          }
+        }
         succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "ProfileInitialized",
