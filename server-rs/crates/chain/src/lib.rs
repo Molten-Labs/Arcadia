@@ -24,7 +24,7 @@ impl OracleConfig {
             rpc_url: std::env::var("SOLANA_RPC_URL")
                 .unwrap_or_else(|_| "https://api.devnet.solana.com".into()),
             program_id: std::env::var("PROGRAM_ID")
-                .unwrap_or_else(|_| "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C".into()),
+                .unwrap_or_else(|_| "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd".into()),
         })
     }
 }

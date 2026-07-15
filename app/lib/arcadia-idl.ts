@@ -1,9 +1,9 @@
 /**
  * Arcadia Vault — Anchor IDL (hand-generated from source)
- * Program ID: gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C
+ * Program ID: FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd
  */
 export const IDL = {
-  address: "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C",
+  address: "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd",
   metadata: {
     name: "arcadia_vault",
     version: "0.1.0",

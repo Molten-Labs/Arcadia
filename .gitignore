@@ -25,3 +25,5 @@ target/
 *.log
 .env
 .gstack/
+.vercel
+.env*

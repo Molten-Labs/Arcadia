@@ -13,7 +13,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { IDL } from "./arcadia-idl";
 
-export const PROGRAM_ID = new PublicKey("gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C");
+export const PROGRAM_ID = new PublicKey("FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd");
 
 export const HELIUS_RPC =
   process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";

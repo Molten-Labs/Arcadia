@@ -31,7 +31,7 @@ pub(crate) use instructions::trader_withdraw_profit::__client_accounts_trader_wi
 pub(crate) use instructions::withdraw::__client_accounts_process_withdraw;
 pub(crate) use instructions::withdraw::__client_accounts_request_withdraw;
 
-declare_id!("gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C");
+declare_id!("FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd");
 
 #[program]
 pub mod arcadia_vault {

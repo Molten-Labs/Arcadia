@@ -8,11 +8,11 @@
 #   - HELIUS_RPC set in env
 #
 # After deploying, run the IDL init so the TypeScript client can fetch it:
-#   anchor idl init --provider.cluster devnet --filepath target/idl/arcadia_vault.json gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C
+#   anchor idl init --provider.cluster devnet --filepath target/idl/arcadia_vault.json FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd
 
 set -e
 
-PROGRAM_ID="gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C"
+PROGRAM_ID="FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd"
 HELIUS_RPC="${HELIUS_RPC:-https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548}"
 
 echo "=== Arcadia Protocol — Devnet Deploy ==="

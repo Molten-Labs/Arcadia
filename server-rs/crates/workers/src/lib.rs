@@ -43,7 +43,7 @@ impl WorkerConfig {
             price_interval_secs: std::env::var("PRICE_INTERVAL_SECS")
                 .ok().and_then(|s| s.parse().ok()).unwrap_or(5),
             program_id: std::env::var("PROGRAM_ID")
-                .unwrap_or_else(|_| "gTHauBMdJHs45tc8tjCKL7MejvBECQHgD184io3hx1C".into()),
+                .unwrap_or_else(|_| "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd".into()),
             yellowstone_endpoint: std::env::var("YELLOWSTONE_ENDPOINT")
                 .unwrap_or_else(|_| "https://grpc.your-provider.com".into()),
             yellowstone_token: std::env::var("YELLOWSTONE_TOKEN")
