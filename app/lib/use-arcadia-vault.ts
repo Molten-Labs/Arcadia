@@ -19,7 +19,7 @@ import {
   useConnection,
   useWallet,
 } from "@solana/wallet-adapter-react";
-import { PublicKey, Transaction, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { PublicKey, Transaction, Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SystemProgram } from "@solana/web3.js";
@@ -193,7 +193,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         const program = makeArcadiaProgram(connection, anchorWallet);
         const [configPda] = findPlatformConfig();
-        const vaultTokenAta = getAssociatedTokenAddressSync(status.platformBaseMint, profAddr);
+        const vaultKeypair = Keypair.generate();
         progress("signing", "Confirm in wallet…");
         const tx = await program.methods
           .initializeProfile(maxLeverage)
@@ -202,13 +202,14 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             config: configPda,
             profile: profAddr,
             baseMint: status.platformBaseMint,
-            vaultToken: vaultTokenAta,
+            vaultToken: vaultKeypair.publicKey,
             systemProgram: SystemProgram.programId,
             tokenProgram: TOKEN_PROGRAM_ID,
             rent: SYSVAR_RENT_PUBKEY,
           })
+          .signers([vaultKeypair])
           .transaction();
-        const sig = await sendTransaction(tx, connection);
+        const sig = await sendTransaction(tx, connection, { signers: [vaultKeypair] });
 
         succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({

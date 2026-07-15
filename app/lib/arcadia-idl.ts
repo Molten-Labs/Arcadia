@@ -37,7 +37,7 @@ export const IDL = {
         { name: "config" },
         { name: "profile", writable: true, pda: { seeds: [{ kind: "const", value: [112, 114, 111, 102, 105, 108, 101] }, { kind: "account", path: "trader" }] } },
         { name: "baseMint" },
-        { name: "vaultToken", writable: true },
+        { name: "vaultToken", writable: true, signer: true },
         { name: "systemProgram", address: "11111111111111111111111111111111" },
         { name: "tokenProgram" },
         { name: "rent", address: "SysvarRent111111111111111111111111111111111" },
