@@ -187,30 +187,21 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const [configPda] = findPlatformConfig();
         const vaultKeypair = Keypair.generate();
         progress("signing", "Confirm in wallet…");
-        let sig: string;
-        try {
-          sig = await program.methods
-            .initializeProfile(maxLeverage)
-            .accountsPartial({
-              trader: publicKey,
-              config: configPda,
-              profile: profAddr,
-              baseMint: status.platformBaseMint,
-              vaultToken: vaultKeypair.publicKey,
-              systemProgram: SystemProgram.programId,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-            })
-            .signers([vaultKeypair])
-            .rpc({ skipPreflight: true });
-        } catch (rpcErr: any) {
-          if (rpcErr?.message?.includes("Event not found")) {
-            sig = rpcErr.signature ?? rpcErr?.txSig ?? "";
-            if (!sig) throw rpcErr;
-          } else {
-            throw rpcErr;
-          }
-        }
+        const sig = await program.methods
+          .initializeProfile(maxLeverage)
+          .accounts({
+            trader: publicKey,
+            config: configPda,
+            profile: profAddr,
+            baseMint: status.platformBaseMint,
+            vaultToken: vaultKeypair.publicKey,
+            systemProgram: SystemProgram.programId,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            rent: SYSVAR_RENT_PUBKEY,
+          })
+          .signers([vaultKeypair])
+          .send();
+
         succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "ProfileInitialized",
