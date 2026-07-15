@@ -13,7 +13,7 @@ export const IDL = {
   instructions: [
     {
       name: "initializePlatform",
-      discriminator: [233, 146, 209, 142, 207, 104, 64, 188],
+      discriminator: [119, 201, 101, 45, 75, 122, 89, 3],
       accounts: [
         { name: "admin", writable: true, signer: true },
         { name: "config", writable: true, pda: { seeds: [{ kind: "const", value: [112, 108, 97, 116, 102, 111, 114, 109] }] } },
@@ -31,7 +31,7 @@ export const IDL = {
     },
     {
       name: "initializeProfile",
-      discriminator: [134, 189, 219, 93, 25, 73, 192, 35],
+      discriminator: [32, 145, 77, 213, 58, 39, 251, 234],
       accounts: [
         { name: "trader", writable: true, signer: true },
         { name: "config" },
@@ -46,7 +46,7 @@ export const IDL = {
     },
     {
       name: "setCapacity",
-      discriminator: [7, 94, 122, 66, 242, 200, 104, 89],
+      discriminator: [144, 85, 95, 65, 125, 139, 44, 27],
       accounts: [
         { name: "oracleAuthority", signer: true },
         { name: "config" },
@@ -59,7 +59,7 @@ export const IDL = {
     },
     {
       name: "initializeInvestor",
-      discriminator: [188, 69, 226, 186, 218, 243, 104, 106],
+      discriminator: [12, 105, 129, 28, 138, 149, 223, 135],
       accounts: [
         { name: "wallet", writable: true, signer: true },
         { name: "investorAccount", writable: true, pda: { seeds: [{ kind: "const", value: [105, 110, 118, 101, 115, 116, 111, 114] }, { kind: "account", path: "wallet" }] } },
@@ -85,7 +85,7 @@ export const IDL = {
     },
     {
       name: "requestWithdraw",
-      discriminator: [100, 177, 45, 117, 44, 96, 31, 217],
+      discriminator: [137, 95, 187, 96, 250, 138, 31, 182],
       accounts: [
         { name: "owner", signer: true },
         { name: "profile" },
@@ -96,7 +96,7 @@ export const IDL = {
     },
     {
       name: "processWithdraw",
-      discriminator: [163, 103, 49, 166, 3, 79, 190, 37],
+      discriminator: [166, 189, 47, 170, 19, 135, 210, 19],
       accounts: [
         { name: "owner", writable: true, signer: true },
         { name: "profile", writable: true },
@@ -110,7 +110,7 @@ export const IDL = {
     },
     {
       name: "recordTrade",
-      discriminator: [237, 106, 73, 25, 214, 252, 107, 91],
+      discriminator: [83, 201, 2, 171, 223, 122, 186, 127],
       accounts: [
         { name: "trader", signer: true },
         { name: "oracleAuthority", signer: true },
@@ -152,7 +152,7 @@ export const IDL = {
     },
     {
       name: "traderWithdrawProfit",
-      discriminator: [195, 142, 119, 27, 119, 143, 197, 4],
+      discriminator: [87, 1, 195, 95, 15, 124, 120, 152],
       accounts: [
         { name: "trader", writable: true, signer: true },
         { name: "profile", writable: true },
@@ -165,7 +165,7 @@ export const IDL = {
     },
     {
       name: "initializeSmoke",
-      discriminator: [143, 220, 132, 57, 53, 175, 183, 12],
+      discriminator: [81, 152, 126, 223, 22, 188, 176, 110],
       accounts: [
         { name: "authority", writable: true, signer: true },
         { name: "smokeState", writable: true, pda: { seeds: [{ kind: "const", value: [115, 109, 111, 107, 101] }, { kind: "account", path: "authority" }] } },
@@ -175,7 +175,7 @@ export const IDL = {
     },
     {
       name: "ping",
-      discriminator: [5, 152, 233, 195, 124, 206, 136, 182],
+      discriminator: [173, 0, 94, 236, 73, 133, 225, 153],
       accounts: [
         { name: "authority", signer: true },
         { name: "smokeState", writable: true, pda: { seeds: [{ kind: "const", value: [115, 109, 111, 107, 101] }, { kind: "account", path: "authority" }] } },
@@ -186,53 +186,53 @@ export const IDL = {
   accounts: [
     {
       name: "PlatformConfig",
-      discriminator: [218, 32, 57, 94, 162, 123, 217, 6],
+      discriminator: [160, 78, 128, 0, 248, 83, 230, 160],
     },
     {
       name: "TraderProfile",
-      discriminator: [74, 130, 64, 151, 111, 201, 182, 25],
+      discriminator: [99, 135, 170, 100, 49, 79, 225, 169],
     },
     {
       name: "InvestorAccount",
-      discriminator: [121, 192, 186, 102, 79, 159, 174, 198],
+      discriminator: [170, 82, 242, 38, 219, 28, 212, 55],
     },
     {
       name: "InvestorPosition",
-      discriminator: [253, 152, 119, 229, 60, 182, 253, 61],
+      discriminator: [145, 143, 236, 150, 229, 40, 195, 88],
     },
   ],
   events: [
     {
       name: "ProfileInitialized",
-      discriminator: [168, 197, 63, 244, 173, 226, 81, 27],
+      discriminator: [1, 31, 122, 19, 193, 205, 23, 27],
     },
     {
       name: "InvestorInitialized",
-      discriminator: [12, 94, 144, 196, 196, 201, 84, 120],
+      discriminator: [16, 194, 111, 52, 41, 37, 204, 206],
     },
     {
       name: "Deposited",
-      discriminator: [52, 210, 210, 162, 80, 60, 193, 71],
+      discriminator: [111, 141, 26, 45, 161, 35, 100, 57],
     },
     {
       name: "WithdrawRequested",
-      discriminator: [105, 139, 152, 197, 51, 191, 188, 121],
+      discriminator: [114, 16, 240, 206, 93, 128, 151, 39],
     },
     {
       name: "Withdrawn",
-      discriminator: [28, 234, 51, 98, 113, 181, 16, 192],
+      discriminator: [20, 89, 223, 198, 194, 124, 219, 13],
     },
     {
       name: "TradeClosed",
-      discriminator: [136, 105, 183, 51, 97, 108, 21, 175],
+      discriminator: [65, 245, 176, 171, 79, 161, 47, 121],
     },
     {
       name: "Settled",
-      discriminator: [176, 215, 151, 166, 82, 191, 21, 181],
+      discriminator: [232, 210, 40, 17, 142, 124, 145, 238],
     },
     {
       name: "ProfitWithdrawn",
-      discriminator: [8, 176, 86, 84, 183, 22, 212, 213],
+      discriminator: [165, 15, 185, 73, 134, 218, 84, 78],
     },
   ],
   errors: [
