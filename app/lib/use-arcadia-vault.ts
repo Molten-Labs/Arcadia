@@ -65,7 +65,15 @@ function toTraderKey(walletOrProfile: string, fallback: PublicKey): PublicKey {
 }
 
 function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    if (typeof e.message === "string" && e.message) return e.message;
+    if (e.logs && Array.isArray(e.logs)) return e.logs.join("\n");
+    try { return JSON.stringify(err); } catch { return String(err); }
+  }
+  return String(err);
 }
 
 /* ── Hook ───────────────────────────────────────────────────────────── */
@@ -211,6 +219,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         });
         return true;
       } catch (err) {
+        console.error("[initializeProfile] full error:", err);
         return fail(`Initialize profile failed: ${errorMessage(err)}`);
       }
     },
