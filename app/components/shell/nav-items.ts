@@ -3,7 +3,6 @@ import {
   Briefcase,
   DollarSign,
   Home,
-  LayoutDashboard,
   Settings,
   Shield,
   Terminal,
@@ -34,8 +33,7 @@ const TRADER_NAV: NavLink[] = [
   { href: "/analytics", icon: TrendingUp, label: "Analytics", primary: true },
   { href: "/reputation", icon: Shield, label: "Reputation", primary: true },
   { href: "/payouts", icon: DollarSign, label: "Payouts", primary: true },
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", primary: true },
-  { href: "/manage", icon: BarChart2, label: "Manage Vault", primary: true },
+  { href: "/manage", icon: BarChart2, label: "Vault", primary: true },
   { href: "/traders", icon: Users, label: "Traders", primary: false },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard", primary: false },
 ];

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Activity, ArrowLeft, ArrowUpRight, BarChart3, DollarSign, Users, X, Zap } from "lucide-react";
+import { Activity, AlertCircle, ArrowLeft, ArrowUpRight, BarChart3, CheckCircle, DollarSign, Loader2, Users, X, Zap } from "lucide-react";
 
 import { NavHistoryChart } from "@/components/NavHistoryChart";
 import { DepositModal } from "@/components/DepositModal";
@@ -18,9 +18,11 @@ import { Kicker } from "@/components/pages/investor/chrome";
 import { Panel, PanelLabel } from "@/components/pages/investor/surfaces";
 import { CapacityMeter } from "@/components/pages/investor/CapacityMeter";
 import { DepositsBadge, TierChip, TraderAvatar } from "@/components/pages/investor/tier";
-import { apiFetch } from "@/lib/utils";
+import { apiFetch, cn } from "@/lib/utils";
 import { formatUSD, shortAddr } from "@/lib/types";
-import type { TraderProfile, VaultInfo } from "@/lib/types";
+import { useArcadiaVault } from "@/lib/use-arcadia-vault";
+import type { TraderProfile, VaultInfo, TraderClassification } from "@/lib/types";
+import { ClassificationBadgeSet } from "@/components/pages/trader/trader-ui";
 
 const TOP_GLOW = {
   background:
@@ -34,6 +36,13 @@ export default function VaultPage() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [showWithdraw, setShowWithdraw] = useState(false);
 
+  const { requestWithdraw, txState, resetTx } = useArcadiaVault();
+
+  const withdrawPhase = txState.phase;
+  const withdrawPending = withdrawPhase === "signing" || withdrawPhase === "confirming" || withdrawPhase === "checking";
+  const withdrawDone = withdrawPhase === "success";
+  const withdrawError = withdrawPhase === "error";
+
   const { data: trader, isLoading: traderLoading } = useQuery<TraderProfile>({
     queryKey: ["trader", handle],
     queryFn: () => apiFetch(`/traders/${handle}`),
@@ -44,6 +53,13 @@ export default function VaultPage() {
     queryKey: ["vault", trader?.profile],
     queryFn: () => apiFetch(`/vaults/${trader!.profile}`),
     enabled: !!trader?.profile,
+  });
+
+  const { data: classification } = useQuery<TraderClassification>({
+    queryKey: ["classification", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/classification`),
+    enabled: !!handle,
+    staleTime: 120_000,
   });
 
   const loading = traderLoading || vaultLoading;
@@ -123,6 +139,7 @@ export default function VaultPage() {
                   </h1>
                   <TierChip tier={trader.tier} />
                   <DepositsBadge open={vault?.deposits_open ?? trader.deposits_open} />
+                  {classification ? <ClassificationBadgeSet data={classification} /> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-3 font-mono text-[0.625rem]">
                   <span className="text-faint">{shortAddr(trader.wallet)}</span>
@@ -267,24 +284,77 @@ export default function VaultPage() {
                 <p className="mb-3 text-[0.625rem] text-faint">
                   Withdrawals are subject to a settlement window.
                 </p>
-                <Input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="Shares to withdraw"
-                  className="mb-3"
-                />
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  disabled={!connected || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
-                  onClick={() => {
-                    setWithdrawAmount("");
-                    setShowWithdraw(false);
-                  }}
-                >
-                  Request Withdraw
-                </Button>
+                    {withdrawDone ? (
+                    <div className="rounded-lg border border-success/25 bg-success/10 p-3 text-center">
+                      <CheckCircle size={16} className="mx-auto mb-2 text-success" />
+                      <p className="text-xs font-bold text-success">
+                        {txState.simulated ? "Withdraw simulated (vault not live)" : "Withdraw requested"}
+                      </p>
+                      {txState.sig && (
+                        <p className="mt-1 font-mono text-[0.55rem] text-faint break-all">
+                          {txState.sig.slice(0, 8)}…
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { resetTx(); setShowWithdraw(false); }}
+                        className="mt-2 w-full rounded border border-white/10 py-1 text-[0.6rem] text-faint"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  ) : withdrawError ? (
+                    <div className="rounded-lg border border-danger/25 bg-danger/10 p-3">
+                      <div className="mb-1 flex items-center gap-2">
+                        <AlertCircle size={12} className="text-danger" />
+                        <span className="text-xs font-bold text-danger">Withdraw failed</span>
+                      </div>
+                      <p className="text-[0.6rem] text-faint">{txState.message}</p>
+                      <button
+                        type="button"
+                        onClick={resetTx}
+                        className="mt-2 w-full rounded border border-white/10 py-1 text-[0.6rem] text-faint"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        type="number"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        placeholder="Shares to withdraw"
+                        className="mb-3"
+                      />
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        disabled={!connected || !withdrawAmount || parseFloat(withdrawAmount) <= 0 || withdrawPending}
+                        onClick={async () => {
+                          const shares = parseFloat(withdrawAmount);
+                          if (!shares || shares <= 0) return;
+                          resetTx();
+                          await requestWithdraw(trader.wallet, shares);
+                          if (txState.phase !== "error") {
+                            setWithdrawAmount("");
+                          }
+                        }}
+                      >
+                        {withdrawPending ? (
+                          <><Loader2 size={14} className="mr-1 animate-spin" /> Processing…</>
+                        ) : (
+                          "Request Withdraw"
+                        )}
+                      </Button>
+                      {withdrawPending && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[0.6rem] text-faint">
+                          <Loader2 size={10} className="animate-spin" />
+                          {txState.message}
+                        </div>
+                      )}
+                    </>
+                  )}
               </Panel>
             ) : null}
 

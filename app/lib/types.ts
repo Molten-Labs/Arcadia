@@ -171,6 +171,37 @@ export interface OpenPosition {
   upnl?: number;
 }
 
+export interface TraderClassification {
+  bot: {
+    verdict: "bot" | "human" | "uncertain";
+    evidence: string[];
+  };
+  size_tier: {
+    tier: "shrimp" | "fish" | "dolphin" | "shark" | "whale";
+    median_trade_usd: number;
+  };
+  profile: {
+    label: string;
+    evidence: string[];
+  };
+  wash: {
+    fired: number;
+    total: number;
+    evidence: string[];
+    notes: string[];
+  };
+}
+
+export interface ScorePoint {
+  ts: number;
+  score: number;
+}
+
+export interface DailyPnL {
+  date: string;
+  pnl: number;
+}
+
 export interface AuthChallenge {
   nonce: string;
   expires_at: number;

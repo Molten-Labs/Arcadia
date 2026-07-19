@@ -5,7 +5,7 @@ use sqlx::PgPool;
 
 // ── TraderProfile ─────────────────────────────────────────────────────────────
 
-const TRADER_PROFILE_COLS: &str = "profile, trader, handle, status, score_tier,
+const TRADER_PROFILE_COLS: &str = "id, profile, trader, handle, status, score_tier,
     total_shares, trader_shares, nav_per_share, hwm_per_share,
     capacity_cap_usd, trader_claimable, max_leverage, aum_usd,
     trader_self_funded, deposits_open, investors_count,
@@ -328,7 +328,7 @@ pub async fn score_history(
 
 pub async fn get_investor_account(pool: &PgPool, owner: &str) -> Result<Option<DbInvestorAccount>> {
     Ok(sqlx::query_as::<_, DbInvestorAccount>(
-        "SELECT owner, position_count, total_deposited_usd, initialized_at, updated_at
+        "SELECT id, owner, position_count, total_deposited_usd, initialized_at, updated_at
          FROM investor_account WHERE owner = $1",
     )
     .bind(owner)
@@ -447,6 +447,76 @@ pub async fn get_nav_history(
     )
     .bind(profile)
     .bind(days)
+    .fetch_all(pool)
+    .await?)
+}
+
+// ── Investor flows (deposits, withdrawals, settlements by owner) ──────────────
+
+pub async fn get_trader_by_wallet(pool: &PgPool, wallet: &str) -> Result<Option<DbTraderProfile>> {
+    Ok(sqlx::query_as::<_, DbTraderProfile>(&format!(
+        "SELECT {TRADER_PROFILE_COLS} FROM trader_profile WHERE trader = $1"
+    ))
+    .bind(wallet)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn get_flows_for_profile_and_trader(
+    pool: &PgPool,
+    profile: &str,
+    limit: i64,
+) -> Result<Vec<DbFlow>> {
+    Ok(sqlx::query_as::<_, DbFlow>(
+        "SELECT signature, event_index, slot, profile, owner, is_trader,
+                kind, amount_usd, shares, nav_per_share, ts
+         FROM flow
+         WHERE profile = $1 AND is_trader = true AND kind = 'withdraw'
+         ORDER BY ts DESC LIMIT $2",
+    )
+    .bind(profile)
+    .bind(limit)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn set_deposits_open(pool: &PgPool, profile: &str, open: bool) -> Result<()> {
+    sqlx::query(
+        "UPDATE trader_profile SET deposits_open = $2, updated_at = now() WHERE profile = $1",
+    )
+    .bind(profile)
+    .bind(open)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn toggle_deposits_open(pool: &PgPool, profile: &str) -> Result<bool> {
+    let row: Option<(bool,)> = sqlx::query_as(
+        "UPDATE trader_profile SET deposits_open = NOT deposits_open, updated_at = now()
+         WHERE profile = $1
+         RETURNING deposits_open",
+    )
+    .bind(profile)
+    .fetch_optional(pool)
+    .await?;
+    row.map(|r| r.0).ok_or_else(|| anyhow::anyhow!("profile not found"))
+}
+
+pub async fn get_flows_for_owner(
+    pool: &PgPool,
+    owner: &str,
+    limit: i64,
+) -> Result<Vec<DbFlow>> {
+    Ok(sqlx::query_as::<_, DbFlow>(
+        "SELECT signature, event_index, slot, profile, owner, is_trader,
+                kind, amount_usd, shares, nav_per_share, ts
+         FROM flow
+         WHERE owner = $1
+         ORDER BY ts DESC LIMIT $2",
+    )
+    .bind(owner)
+    .bind(limit)
     .fetch_all(pool)
     .await?)
 }

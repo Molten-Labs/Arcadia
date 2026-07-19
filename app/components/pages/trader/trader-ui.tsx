@@ -154,6 +154,59 @@ export function StatTile({
   );
 }
 
+/**
+ * Classification badges shown on trader profile / vault / reputation pages.
+ * Maps the Rust classify engine output to Badge variants.
+ */
+import { Badge } from "@/components/ui/badge";
+import type { TraderClassification } from "@/lib/types";
+
+const BOT_BADGE: Record<string, "success" | "danger" | "secondary"> = {
+  human: "success",
+  bot: "danger",
+  uncertain: "secondary",
+};
+
+const SIZE_BADGE: Record<string, "secondary" | "default" | "verified" | "advanced" | "elite"> = {
+  shrimp: "secondary",
+  fish: "default",
+  dolphin: "verified",
+  shark: "advanced",
+  whale: "elite",
+};
+
+const PROFILE_TONE: Record<string, "default" | "danger" | "success" | "secondary"> = {
+  "HFT / market-maker bot": "danger",
+  "Wash trader / points farmer": "danger",
+  Scalper: "default",
+  "Position / swing holder": "success",
+  "Active trader": "success",
+  Dormant: "secondary",
+  "One-shot punter": "secondary",
+  "No activity": "secondary",
+};
+
+export function ClassificationBadgeSet({ data, className }: { data: TraderClassification; className?: string }) {
+  return (
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      <Badge variant={BOT_BADGE[data.bot.verdict] ?? "secondary"}>
+        {data.bot.verdict === "human" ? "human" : data.bot.verdict === "bot" ? "bot" : "uncertain"}
+      </Badge>
+      <Badge variant={SIZE_BADGE[data.size_tier.tier] ?? "secondary"}>
+        {data.size_tier.tier}
+      </Badge>
+      <Badge variant={PROFILE_TONE[data.profile.label] ?? "default"}>
+        {data.profile.label}
+      </Badge>
+      {data.wash.fired > 0 && (
+        <Badge variant="danger">
+          wash-flagged
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export type MetricTone = "acid" | "success" | "danger" | "muted";
 
 const METRIC_FILL: Record<MetricTone, string> = {

@@ -6,7 +6,11 @@ import type {
   PriceData,
   EquityPoint,
   TradeRecord,
+  ScorePoint,
+  DailyPnL,
 } from "./types";
+
+export type { ScorePoint, DailyPnL };
 
 const now = Math.floor(Date.now() / 1000);
 
@@ -20,9 +24,6 @@ function fakeSig(seed: number): string {
   }
   return s;
 }
-
-export interface ScorePoint { ts: number; score: number }
-export interface DailyPnL { date: string; pnl: number }
 
 function genEquityCurve(days: number, start: number, end: number): EquityPoint[] {
   const pts: EquityPoint[] = [];

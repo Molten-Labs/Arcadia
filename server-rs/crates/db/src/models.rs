@@ -1,10 +1,12 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// DB row mirrors trader_profile table.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct DbTraderProfile {
+    pub id: Uuid,
     pub profile: String,
     pub trader: String,
     pub handle: String,
@@ -30,6 +32,7 @@ pub struct DbTraderProfile {
 /// DB row mirrors investor_account table.
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct DbInvestorAccount {
+    pub id: Uuid,
     pub owner: String,
     pub position_count: i32,
     pub total_deposited_usd: Decimal,

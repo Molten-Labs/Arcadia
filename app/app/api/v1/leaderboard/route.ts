@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { MOCK_LEADERBOARD, MOCK_TRADERS } from "@/lib/mock-data";
-import { proxyToBackend } from "@/lib/backend-proxy";
+import { proxyToBackend, shouldUseMockFallback } from "@/lib/backend-proxy";
 import { transformLeaderboard } from "@/lib/backend-transform";
 
 const HANDLE_MAP = Object.fromEntries(
@@ -9,9 +9,15 @@ const HANDLE_MAP = Object.fromEntries(
 
 export async function GET() {
   const result = await proxyToBackend("/v1/leaderboard");
-  if (result?.ok) {
+  if (result.kind === "ok" && result.ok) {
     const transformed = transformLeaderboard(result.data, HANDLE_MAP);
     return NextResponse.json(transformed);
   }
-  return NextResponse.json(MOCK_LEADERBOARD);
+  if (shouldUseMockFallback(result)) {
+    return NextResponse.json(MOCK_LEADERBOARD);
+  }
+  return NextResponse.json(
+    { error: "Backend unavailable", details: result.kind === "error" ? result.message : undefined },
+    { status: result.kind === "error" ? result.status : 502 },
+  );
 }

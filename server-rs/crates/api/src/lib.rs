@@ -8,7 +8,7 @@ pub mod state;
 pub use axum::serve;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, patch, post},
     Router,
 };
 use state::AppState;
@@ -26,17 +26,26 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/auth/verify",                 post(auth::verify))
         .route("/v1/traders",                     get(routes::list_traders))
         .route("/v1/traders/:handle",             get(routes::get_trader))
+        .route("/v1/traders/:handle/score-history", get(routes::trader_score_history))
+        .route("/v1/traders/:handle/pnl-history", get(routes::trader_pnl_history))
+        .route("/v1/traders/:handle/payouts",    get(routes::get_trader_payouts))
+        .route("/v1/traders/:handle/classification", get(routes::get_trader_classification))
         .route("/v1/vaults/:profile",             get(routes::get_vault))
-        .route("/v1/vaults/:profile/trades",      get(routes::get_vault_trades))
+        .route("/v1/vaults/:profile/trades",     get(routes::get_vault_trades))
+        .route("/v1/vaults/:profile/nav-history", get(routes::vault_nav_history))
+        .route("/v1/vaults/:profile/deposits",  patch(routes::patch_vault_deposits))
         .route("/v1/leaderboard",                 get(routes::leaderboard))
         .route("/v1/prices",                      get(routes::prices))
-        .route("/v1/score",                       get(routes::get_score));
+        .route("/v1/score",                       get(routes::get_score))
+        .route("/v1/me",                          get(routes::me));
 
     let protected = Router::new()
-        .route("/v1/investors/:wallet/account",   get(routes::get_investor_account))
-        .route("/v1/investors/:wallet/portfolio", get(routes::get_investor_portfolio))
-        .route("/v1/trades/simulate",             post(simulate::handler))
-        .route("/v1/events",                      post(events::handler));
+        .route("/v1/investors/:wallet/account",        get(routes::get_investor_account))
+        .route("/v1/investors/:wallet/portfolio",      get(routes::get_investor_portfolio))
+        .route("/v1/investors/:wallet/flows",         get(routes::get_investor_flows))
+        .route("/v1/investors/:wallet/notifications", get(routes::get_investor_notifications))
+        .route("/v1/trades/simulate",                 post(simulate::handler))
+        .route("/v1/events",                          post(events::handler));
 
     Router::new()
         .merge(public)

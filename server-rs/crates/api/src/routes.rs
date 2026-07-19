@@ -1,6 +1,6 @@
 /// All /v1 route handlers.
 use crate::{
-    auth::{self, verify_jwt},
+    auth::verify_jwt,
     error::ApiError,
     state::AppState,
 };
@@ -12,7 +12,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 // ── GET /v1/traders ───────────────────────────────────────────────────────────
@@ -306,6 +306,379 @@ pub async fn get_score(
         "capacity_usd": snap.capacity_usd.to_string(),
         "computed_at":  snap.computed_at,
     })))
+}
+
+// ── GET /v1/traders/:handle/score-history ─────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct ScoreHistoryQuery {
+    limit: Option<i64>,
+}
+
+pub async fn trader_score_history(
+    State(ctx): State<AppState>,
+    Path(handle): Path<String>,
+    Query(q): Query<ScoreHistoryQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let t = queries::get_trader_by_handle(&ctx.db, &handle)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    let limit = q.limit.unwrap_or(180).clamp(1, 730);
+    let snaps = queries::score_history(&ctx.db, &t.profile, limit).await?;
+
+    let list: Vec<Value> = snaps.iter().rev().map(|s| json!({
+        "computed_at": s.computed_at,
+        "score":       s.score,
+        "tier":        s.tier,
+        "confidence":  s.confidence,
+        "ci":          [s.ci_low, s.ci_high],
+        "max_dd":      s.max_dd,
+        "sortino":     s.sortino,
+        "calmar":      s.calmar,
+        "trade_count": s.trade_count,
+        "days_active": s.days_active,
+    })).collect();
+
+    Ok(Json(json!(list)))
+}
+
+// ── GET /v1/traders/:handle/pnl-history ───────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct PnlHistoryQuery {
+    days: Option<i64>,
+}
+
+/// Per-day realized PnL aggregated from closed trades in the vault.
+pub async fn trader_pnl_history(
+    State(ctx): State<AppState>,
+    Path(handle): Path<String>,
+    Query(q): Query<PnlHistoryQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let t = queries::get_trader_by_handle(&ctx.db, &handle)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    let days = q.days.unwrap_or(365).clamp(1, 3650);
+    let since = Utc::now() - chrono::Duration::days(days as i64);
+
+    let trades = queries::get_all_trades_for_profile(&ctx.db, &t.profile).await?;
+
+    use std::collections::BTreeMap;
+    let mut by_day: BTreeMap<chrono::NaiveDate, Decimal> = BTreeMap::new();
+    for tr in &trades {
+        if tr.closed_at < since { continue; }
+        let day = tr.closed_at.date_naive();
+        let entry = by_day.entry(day).or_insert(Decimal::ZERO);
+        *entry += tr.realized_pnl;
+    }
+
+    let list: Vec<Value> = by_day.iter().map(|(day, pnl)| json!({
+        "day":     day,
+        "pnl_usd": pnl,
+    })).collect();
+
+    Ok(Json(json!(list)))
+}
+
+// ── GET /v1/vaults/:profile/nav-history ────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct NavHistoryQuery {
+    days: Option<i64>,
+}
+
+pub async fn vault_nav_history(
+    State(ctx): State<AppState>,
+    Path(profile): Path<String>,
+    Query(q): Query<NavHistoryQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let days = q.days.unwrap_or(90).clamp(1, 3650);
+
+    if queries::get_trader_by_profile(&ctx.db, &profile).await?.is_none() {
+        return Err(ApiError::NotFound);
+    }
+
+    let curve = queries::get_nav_history(&ctx.db, &profile, days).await?;
+
+    let list: Vec<Value> = curve.iter().map(|ep| json!({
+        "day":     ep.day,
+        "nav":     ep.twr_nav,
+        "aum_usd": ep.aum_usd,
+    })).collect();
+
+    Ok(Json(json!(list)))
+}
+
+// ── GET /v1/investors/:wallet/flows (protected) ────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct FlowsQuery {
+    limit: Option<i64>,
+}
+
+pub async fn get_investor_flows(
+    State(ctx): State<AppState>,
+    Path(wallet): Path<String>,
+    headers: HeaderMap,
+    Query(q): Query<FlowsQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let authed = extract_wallet(&headers, &ctx.jwt_secret)?;
+    if authed != wallet {
+        return Err(ApiError::Forbidden);
+    }
+
+    let limit = q.limit.unwrap_or(200).clamp(1, 1000);
+    let flows = queries::get_flows_for_owner(&ctx.db, &wallet, limit).await?;
+
+    let mut handles: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    for f in &flows {
+        if handles.contains_key(&f.profile) { continue; }
+        if let Some(t) = queries::get_trader_by_profile(&ctx.db, &f.profile).await? {
+            handles.insert(f.profile.clone(), t.handle);
+        }
+    }
+
+    let list: Vec<Value> = flows.iter().map(|f| {
+        let handle = handles.get(&f.profile).cloned().unwrap_or_else(|| f.profile.clone());
+        json!({
+            "signature":      f.signature,
+            "profile":         f.profile,
+            "trader_handle":  handle,
+            "is_trader":      f.is_trader,
+            "kind":           f.kind,
+            "amount_usd":     f.amount_usd.to_string(),
+            "shares":         f.shares.to_string(),
+            "nav_per_share":  f.nav_per_share.to_string(),
+            "ts":             f.ts,
+        })
+    }).collect();
+
+    Ok(Json(json!(list)))
+}
+
+// ── GET /v1/investors/:wallet/notifications (protected) ───────────────────────
+
+#[derive(Deserialize)]
+pub struct NotificationsQuery {
+    limit: Option<i64>,
+}
+
+/// Derived notification feed: most-recent investor flows + vault trade
+/// settlements for vaults the investor holds (or held) a position in.
+pub async fn get_investor_notifications(
+    State(ctx): State<AppState>,
+    Path(wallet): Path<String>,
+    headers: HeaderMap,
+    Query(q): Query<NotificationsQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let authed = extract_wallet(&headers, &ctx.jwt_secret)?;
+    if authed != wallet {
+        return Err(ApiError::Forbidden);
+    }
+
+    let limit = q.limit.unwrap_or(25).clamp(1, 200);
+
+    // Investor's own flows (deposits, withdrawals, settlements).
+    let flows = queries::get_flows_for_owner(&ctx.db, &wallet, limit * 2).await?;
+
+    // Positions held (current) so we can surface vault trades for those vaults.
+    let positions = queries::get_investor_positions(&ctx.db, &wallet).await?;
+
+    let held_profiles: std::collections::HashSet<String> =
+        positions.iter().map(|p| p.profile.clone()).collect();
+
+    let mut notifications: Vec<(DateTime<Utc>, Value)> = Vec::new();
+
+    // Pre-fetch handle for each profile involved (dedupe).
+    let mut handles: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+    for f in &flows {
+        if handles.contains_key(&f.profile) { continue; }
+        if let Some(t) = queries::get_trader_by_profile(&ctx.db, &f.profile).await? {
+            handles.insert(f.profile.clone(), t.handle);
+        }
+    }
+    for p in &held_profiles {
+        if handles.contains_key(p) { continue; }
+        if let Some(t) = queries::get_trader_by_profile(&ctx.db, p).await? {
+            handles.insert(p.clone(), t.handle);
+        }
+    }
+
+    for f in &flows {
+        let kind_label = match f.kind.as_str() {
+            "deposit"  => "Deposit confirmed",
+            "withdraw" => "Withdrawal requested",
+            "settle"   | "settlement" => "Performance fee settled",
+            other      => other,
+        };
+        let handle = handles.get(&f.profile).cloned().unwrap_or_default();
+        let title = if handle.is_empty() {
+            kind_label.to_string()
+        } else {
+            format!("{} @{}", kind_label, handle)
+        };
+        let amount = f.amount_usd.abs();
+        let sign = if f.kind == "withdraw" { "-" } else { "+" };
+        notifications.push((
+            f.ts,
+            json!({
+                "kind":   f.kind,
+                "title":  title,
+                "detail": format!("{}${} USDC", sign, amount),
+                "ts":     f.ts,
+            }),
+        ));
+    }
+
+    // Vault trade settlements for held positions (per-profile, last N).
+    for profile in &held_profiles {
+        let handle = handles.get(profile).cloned().unwrap_or_default();
+        let trades =
+            queries::get_vault_trades(&ctx.db, profile, limit, None).await?;
+        for tr in &trades {
+            let dir = if tr.direction == 0 { "long" } else { "short" };
+            let pnl = tr.realized_pnl;
+            let verb = if pnl.is_zero() { "closed" }
+                       else if pnl.is_sign_negative() { "loss" }
+                       else { "win" };
+            notifications.push((
+                tr.closed_at,
+                json!({
+                    "kind":   "trade",
+                    "title":  format!("@{} closed {} {} {}", handle, dir, tr.market, verb),
+                    "detail": format!("{}${} USDC", if pnl.is_sign_negative() { "-" } else { "+" }, pnl.abs()),
+                    "ts":     tr.closed_at,
+                }),
+            ));
+        }
+    }
+
+    notifications.sort_by(|a, b| b.0.cmp(&a.0));
+    notifications.truncate(limit as usize);
+
+    let list: Vec<Value> = notifications.iter().map(|(_, v)| v.clone()).collect();
+    Ok(Json(json!(list)))
+}
+
+// ── GET /v1/me  (protected) ────────────────────────────────────────────────────
+
+pub async fn me(
+    State(ctx): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let wallet = extract_wallet(&headers, &ctx.jwt_secret)?;
+
+    // Check if this wallet belongs to a trader
+    if let Some(trader) = queries::get_trader_by_wallet(&ctx.db, &wallet).await? {
+        return Ok(Json(json!({
+            "role":    "trader",
+            "wallet":  wallet,
+            "handle":  trader.handle,
+            "profile": trader.profile,
+        })));
+    }
+
+    // Default to investor
+    Ok(Json(json!({
+        "role":   "investor",
+        "wallet": wallet,
+    })))
+}
+
+// ── GET /v1/traders/:handle/classification ────────────────────────────────────
+
+pub async fn get_trader_classification(
+    State(ctx): State<AppState>,
+    Path(handle): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    let t = queries::get_trader_by_handle(&ctx.db, &handle)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    let trades = queries::get_all_trades_for_profile(&ctx.db, &t.profile).await?;
+
+    use arcadia_core::classify::{self, TradeSample};
+
+    let samples: Vec<TradeSample> = trades
+        .iter()
+        .map(|tr| TradeSample {
+            direction: tr.direction,
+            size_usd: tr.size_usd,
+            realized_pnl: tr.realized_pnl,
+            fees_usd: tr.fees_usd,
+            market: tr.market.clone(),
+            closed_at_ts: tr.closed_at.timestamp(),
+        })
+        .collect();
+
+    let features = classify::build_features(&samples);
+    let result = classify::classify(&[features]);
+
+    Ok(Json(serde_json::to_value(result).map_err(|e| {
+        ApiError::Internal(anyhow::anyhow!(e))
+    })?))
+}
+
+// ── GET /v1/traders/:handle/payouts ───────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct PayoutsQuery {
+    limit: Option<i64>,
+}
+
+pub async fn get_trader_payouts(
+    State(ctx): State<AppState>,
+    Path(handle): Path<String>,
+    Query(q): Query<PayoutsQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let t = queries::get_trader_by_handle(&ctx.db, &handle)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    let limit = q.limit.unwrap_or(50).clamp(1, 500);
+    let flows = queries::get_flows_for_profile_and_trader(&ctx.db, &t.profile, limit).await?;
+
+    let list: Vec<Value> = flows.iter().map(|f| json!({
+        "signature":  f.signature,
+        "amount_usd": f.amount_usd.to_string(),
+        "shares":     f.shares.to_string(),
+        "ts":         f.ts,
+    })).collect();
+
+    Ok(Json(json!(list)))
+}
+
+// ── PATCH /v1/vaults/:profile/deposits (protected) ────────────────────────────
+
+#[derive(Deserialize)]
+pub struct DepositsBody {
+    pub open: bool,
+}
+
+pub async fn patch_vault_deposits(
+    State(ctx): State<AppState>,
+    Path(profile): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<DepositsBody>,
+) -> Result<Json<Value>, ApiError> {
+    let wallet = extract_wallet(&headers, &ctx.jwt_secret)?;
+
+    let trader = queries::get_trader_by_profile(&ctx.db, &profile)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    if trader.trader != wallet {
+        return Err(ApiError::Forbidden);
+    }
+
+    // Update deposits_open to the requested value
+    queries::set_deposits_open(&ctx.db, &profile, body.open).await?;
+
+    Ok(Json(json!({ "deposits_open": body.open })))
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

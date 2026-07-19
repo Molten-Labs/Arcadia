@@ -1,6 +1,7 @@
 "use client";
 
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronRight, Shield, TrendingUp, Wallet } from "lucide-react";
 
 import { CountUp } from "@/components/acid/CountUp";
@@ -16,20 +17,10 @@ import {
   StatTile,
 } from "@/components/pages/trader/trader-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MOCK_DAILY_PNL, MOCK_SCORE_HISTORY } from "@/lib/mock-data";
-import type { ScoreTier } from "@/lib/types";
-
-const DEMO = {
-  handle: "nova",
-  score: 912,
-  tier: "Elite" as const,
-  confidence: "high" as const,
-  ci: { lo: 895, point: 912, hi: 928 },
-  days_active: 127,
-  trade_count: 847,
-  capacity_usd: 912000,
-  sub_scores: { consistency: 94, risk_adjusted: 91, drawdown: 88, volume: 82 },
-};
+import { apiFetch } from "@/lib/utils";
+import { useMe } from "@/lib/hooks";
+import type { ScoreTier, ScorePoint, DailyPnL, TraderProfile, TraderClassification } from "@/lib/types";
+import { ClassificationBadgeSet } from "@/components/pages/trader/trader-ui";
 
 const TIERS = [
   { tier: "Verified" as const, range: "600–699", profit: 20, capacity: "×$1k/pt" },
@@ -62,6 +53,41 @@ const TIER_ACCENT: Record<ScoreTier, { text: string; dot: string; ring: string }
 
 export default function ReputationPage() {
   const { connected } = useWallet();
+  const { data: me } = useMe();
+  const handle = me?.handle;
+
+  const { data: trader } = useQuery<TraderProfile>({
+    queryKey: ["trader", handle],
+    queryFn: () => apiFetch(`/traders/${handle}`),
+    enabled: !!handle,
+  });
+
+  const { data: scoreHistory } = useQuery<ScorePoint[]>({
+    queryKey: ["score-history", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/score-history?limit=180`),
+    enabled: !!handle,
+  });
+
+  const { data: dailyPnl } = useQuery<DailyPnL[]>({
+    queryKey: ["pnl-history", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/pnl-history?days=365`),
+    enabled: !!handle,
+  });
+
+  const { data: classification } = useQuery<TraderClassification>({
+    queryKey: ["classification", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/classification`),
+    enabled: !!handle,
+    staleTime: 120_000,
+  });
+
+  const score = trader?.score ?? 0;
+  const tier = trader?.tier ?? "Verified";
+  const confidence = trader?.confidence ?? "low";
+  const ci = trader?.ci ?? { lo: 0, point: 0, hi: 0 };
+  const capacity_usd = trader?.capacity.total ?? 0;
+  const tradeCount = trader?.trades.length ?? 0;
+  const tierLabel = tier as ScoreTier;
 
   if (!connected) {
     return (
@@ -98,27 +124,30 @@ export default function ReputationPage() {
                 "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(204,255,0,0.08) 0%, transparent 70%)",
             }}
           >
-            <ScoreDial value={DEMO.score} tier="elite" size={140} />
+            <ScoreDial value={score} tier={tier.toLowerCase() as "elite" | "advanced" | "established" | "verified"} size={140} />
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <TierChip tier={DEMO.tier} />
+              <TierChip tier={tierLabel} />
               <span className="rounded-full border border-success/25 bg-success/10 px-2 py-0.5 font-mono text-[0.6rem] tracking-wider text-success uppercase">
-                {DEMO.confidence} confidence
+                {confidence} confidence
               </span>
             </div>
+            {classification ? (
+              <ClassificationBadgeSet data={classification} className="mt-2 justify-center" />
+            ) : null}
             <p className="font-mono text-[0.7rem] tabular-nums text-faint">
-              95% CI: [{DEMO.ci.lo} – {DEMO.ci.hi}]
+              95% CI: [{ci.lo} – {ci.hi}]
             </p>
           </Panel>
 
           <div className="grid grid-cols-2 gap-3 md:col-span-2">
-            <StatTile label="Arcadia Score" value={<CountUp value={DEMO.score} />} accent />
+            <StatTile label="Arcadia Score" value={<CountUp value={score} />} accent />
             <StatTile
               label="Vault Capacity"
-              value={<CountUp value={DEMO.capacity_usd / 1000} prefix="$" suffix="k" />}
-              sub={`${DEMO.score} × $1,000`}
+              value={<CountUp value={capacity_usd / 1000} prefix="$" suffix="k" />}
+              sub={`${score} × $1,000`}
             />
-            <StatTile label="Total Trades" value={<CountUp value={DEMO.trade_count} />} />
-            <StatTile label="Profit Share" value="35%" sub="Elite tier" accent />
+            <StatTile label="Total Trades" value={<CountUp value={tradeCount} />} />
+            <StatTile label="Profit Share" value={`${tier === "Elite" ? 35 : tier === "Advanced" ? 30 : tier === "Established" ? 25 : 20}%`} sub={`${tier} tier`} accent />
           </div>
         </div>
 
@@ -128,31 +157,31 @@ export default function ReputationPage() {
             <div key={m.score} className="flex shrink-0 items-center gap-1">
               <div
                 className={`flex flex-col items-center gap-1 rounded-lg border px-4 py-2 ${
-                  m.reached ? "border-acid/25 bg-acid/[0.06]" : "border-white/10 bg-panel-2"
+                  score >= m.score ? "border-acid/25 bg-acid/[0.06]" : "border-white/10 bg-panel-2"
                 }`}
               >
                 <span
                   className={`font-mono text-[0.65rem] font-black tabular-nums ${
-                    m.reached ? "text-acid" : "text-faint"
+                    score >= m.score ? "text-acid" : "text-faint"
                   }`}
                 >
                   {m.score}
                 </span>
                 <span
                   className={`text-[0.55rem] font-bold tracking-wider uppercase ${
-                    m.reached ? "text-ink" : "text-faint"
+                    score >= m.score ? "text-ink" : "text-faint"
                   }`}
                 >
                   {m.label}
                 </span>
-                {m.reached && (
+                {score >= m.score && (
                   <span className="text-[0.5rem] text-success">✓ Reached</span>
                 )}
               </div>
               {i < MILESTONES.length - 1 && (
                 <div
                   className={`h-px w-6 shrink-0 ${
-                    m.reached && MILESTONES[i + 1].reached ? "bg-acid" : "bg-white/10"
+                    score >= m.score && score >= MILESTONES[i + 1].score ? "bg-acid" : "bg-white/10"
                   }`}
                 />
               )}
@@ -202,7 +231,7 @@ export default function ReputationPage() {
                 <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
                   <span className="text-xs font-medium text-faint">Total Score</span>
                   <span className="font-mono text-xl font-black tabular-nums text-acid">
-                    {DEMO.score}
+                    {score}
                   </span>
                 </div>
               </Panel>
@@ -212,7 +241,7 @@ export default function ReputationPage() {
                 <MicroLabel className="mb-4">Tier Progression</MicroLabel>
                 <div className="space-y-2">
                   {TIERS.map((t) => {
-                    const active = DEMO.tier === t.tier;
+                    const active = tier === t.tier;
                     const accent = TIER_ACCENT[t.tier];
                     return (
                       <div
@@ -257,7 +286,7 @@ export default function ReputationPage() {
                 <TrendingUp size={14} className="text-acid" />
                 <MicroLabel>Score History — 180 days</MicroLabel>
               </div>
-              <ScoreHistoryChart data={MOCK_SCORE_HISTORY["nova"] ?? []} height={280} />
+              <ScoreHistoryChart data={scoreHistory ?? []} height={280} />
               <p className="mt-3 text-[0.6rem] leading-relaxed text-faint">
                 Score is recomputed after every trade settlement. Tier bands shown as shaded
                 regions.
@@ -268,7 +297,7 @@ export default function ReputationPage() {
           <TabsContent value="heatmap">
             <Panel className="group acid-int p-5">
               <MicroLabel className="mb-5">Daily P&amp;L Heatmap</MicroLabel>
-              <PnLHeatmap data={MOCK_DAILY_PNL["nova"] ?? []} />
+              <PnLHeatmap data={dailyPnl ?? []} />
             </Panel>
           </TabsContent>
         </Tabs>

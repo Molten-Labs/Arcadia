@@ -10,7 +10,7 @@ import {
   ReferenceLine,
   ReferenceArea,
 } from "recharts";
-import type { ScorePoint } from "@/lib/mock-data";
+import type { ScorePoint } from "@/lib/types";
 
 interface Props {
   data: ScorePoint[];

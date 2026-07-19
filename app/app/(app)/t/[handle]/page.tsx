@@ -15,9 +15,8 @@ import {
 } from "lucide-react";
 
 import { apiFetch, cn } from "@/lib/utils";
-import { formatUSD, type TradeRecord, type TraderProfile } from "@/lib/types";
+import { formatUSD, type TradeRecord, type TraderProfile, type ScorePoint, type DailyPnL, type LeaderboardEntry, type TraderClassification } from "@/lib/types";
 import { useRole } from "@/lib/role-context";
-import { MOCK_DAILY_PNL, MOCK_SCORE_HISTORY, MOCK_TRADERS } from "@/lib/mock-data";
 import { EquityChart } from "@/components/EquityChart";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { PnLHeatmap } from "@/components/PnLHeatmap";
@@ -25,6 +24,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { DepositModal } from "@/components/DepositModal";
 import { ShareCardModal } from "@/components/ShareCardModal";
 import { AcidButton, ChromeText, CountUp, Reveal, ScoreDial } from "@/components/acid";
+import { ClassificationBadgeSet } from "@/components/pages/trader/trader-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -292,11 +292,34 @@ export default function TraderProfilePage() {
     enabled: !!handle,
   });
 
-  /* Estimate leaderboard rank from mock data */
+  const { data: scoreHistory } = useQuery<ScorePoint[]>({
+    queryKey: ["score-history", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/score-history?limit=180`),
+    enabled: !!handle,
+  });
+
+  const { data: dailyPnl } = useQuery<DailyPnL[]>({
+    queryKey: ["pnl-history", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/pnl-history?days=365`),
+    enabled: !!handle,
+  });
+
+  const { data: leaderboard } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["leaderboard"],
+    queryFn: () => apiFetch(`/leaderboard`),
+  });
+
+  const { data: classification } = useQuery<TraderClassification>({
+    queryKey: ["classification", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/classification`),
+    enabled: !!handle,
+    staleTime: 120_000,
+  });
+
+  /* Derive rank from the leaderboard if the trader is ranked there */
   const rank = (() => {
-    if (!trader) return null;
-    const sorted = [...MOCK_TRADERS].sort((a, b) => b.score - a.score);
-    const idx = sorted.findIndex((t) => t.handle === trader.handle);
+    if (!trader || !leaderboard) return null;
+    const idx = leaderboard.findIndex((e) => e.handle === trader.handle);
     return idx >= 0 ? idx + 1 : null;
   })();
 
@@ -344,8 +367,6 @@ export default function TraderProfilePage() {
   ];
 
   const isWatched = watchlist.includes(trader.handle);
-  const scoreHistory = MOCK_SCORE_HISTORY[trader.handle];
-  const dailyPnl = MOCK_DAILY_PNL[trader.handle];
   const capacityPct = Math.round((trader.aum / trader.capacity.total) * 100);
 
   const returns = [
@@ -423,6 +444,9 @@ export default function TraderProfilePage() {
                     </span>
                   ))}
                 </div>
+                {classification ? (
+                  <ClassificationBadgeSet data={classification} className="mt-3" />
+                ) : null}
 
                 <div className="mt-5 flex flex-wrap items-center gap-2">
                   <button

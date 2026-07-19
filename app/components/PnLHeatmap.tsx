@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { DailyPnL } from "@/lib/mock-data";
+import type { DailyPnL } from "@/lib/types";
 
 interface Props {
   data: DailyPnL[];

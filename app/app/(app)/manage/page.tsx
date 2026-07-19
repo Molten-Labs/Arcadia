@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Clock, ExternalLink, Loader2, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DataRow,
   EnvChip,
@@ -14,26 +16,44 @@ import {
   Panel,
   StatTile,
 } from "@/components/pages/trader/trader-ui";
-import { MOCK_TRADERS } from "@/lib/mock-data";
-import { formatUSD } from "@/lib/types";
+import { apiFetch } from "@/lib/utils";
+import { useMe } from "@/lib/hooks";
+import { formatUSD, type TraderProfile, type VaultInfo } from "@/lib/types";
 import { useArcadiaVault } from "@/lib/use-arcadia-vault";
-
-const DEMO_TRADER = MOCK_TRADERS[0];
 
 const PENDING_PHASES = ["checking", "init-investor", "signing", "confirming"];
 
 export default function ManagePage() {
   const { connected, publicKey } = useWallet();
+  const queryClient = useQueryClient();
+  const { data: me } = useMe();
+  const handle = me?.handle;
+  const profile = me?.profile;
+
   const [selfFundAmount, setSelfFundAmount] = useState("");
-  const [depositsOpen, setDepositsOpen] = useState(DEMO_TRADER.deposits_open);
+  const [togglePending, setTogglePending] = useState(false);
 
   const { deposit, txState, resetTx } = useArcadiaVault();
 
-  const score = DEMO_TRADER.score;
+  const { data: trader } = useQuery<TraderProfile>({
+    queryKey: ["trader", handle],
+    queryFn: () => apiFetch(`/traders/${handle}`),
+    enabled: !!handle,
+  });
+
+  const { data: vault } = useQuery<VaultInfo>({
+    queryKey: ["vault", profile],
+    queryFn: () => apiFetch(`/vaults/${profile}`),
+    enabled: !!profile,
+  });
+
+  const score = trader?.score ?? 0;
   const capacity = score * 1000;
-  const aum = DEMO_TRADER.aum;
-  const selfFunded = DEMO_TRADER.trader_self_funded;
+  const aum = trader?.aum ?? 0;
+  const selfFunded = trader?.trader_self_funded ?? 0;
+  const depositsOpen = vault?.deposits_open ?? true;
   const capacityLeft = capacity - aum;
+  const navPerShare = vault ? `$${(vault.nav_per_share / 1_000_000).toFixed(6)}` : "—";
 
   const isPending = PENDING_PHASES.includes(txState.phase);
   const isSuccess = txState.phase === "success";
@@ -47,6 +67,23 @@ export default function ManagePage() {
     if (ok) setSelfFundAmount("");
   };
 
+  const handleToggleDeposits = async () => {
+    if (!profile) return;
+    setTogglePending(true);
+    try {
+      await apiFetch(`/vaults/${profile}/deposits`, {
+        method: "PATCH",
+        body: JSON.stringify({ open: !depositsOpen }),
+        headers: { "Content-Type": "application/json" },
+      } as RequestInit);
+      queryClient.invalidateQueries({ queryKey: ["vault", profile] });
+    } catch (e) {
+      console.error("Failed to toggle deposits:", e);
+    } finally {
+      setTogglePending(false);
+    }
+  };
+
   if (!connected) {
     return (
       <div className="grid min-h-[70vh] place-items-center bg-void px-5">
@@ -57,6 +94,29 @@ export default function ManagePage() {
           <p className="mb-2 text-base font-semibold text-ink">Connect wallet</p>
           <p className="text-sm text-faint">Connect your wallet to manage your vault.</p>
         </Panel>
+      </div>
+    );
+  }
+
+  if (!trader) {
+    return (
+      <div className="min-h-full bg-void">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <PageHeader title="Manage Vault">
+            <EnvChip live>Solana devnet</EnvChip>
+          </PageHeader>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Panel key={i} className="p-5">
+                <Skeleton className="mb-3 h-3 w-16" />
+                <Skeleton className="h-6 w-24" />
+              </Panel>
+            ))}
+          </div>
+          <Panel className="mt-6 p-10 text-center text-sm text-faint">
+            No vault data available yet.
+          </Panel>
+        </div>
       </div>
     );
   }
@@ -81,7 +141,7 @@ export default function ManagePage() {
           <div className="ml-auto text-right">
             <MicroLabel>Utilized</MicroLabel>
             <p className="font-mono text-base font-bold tabular-nums text-acid">
-              {Math.round((aum / capacity) * 100)}%
+              {capacity > 0 ? Math.round((aum / capacity) * 100) : 0}%
             </p>
           </div>
         </Panel>
@@ -178,14 +238,14 @@ export default function ManagePage() {
           <Panel className="group acid-int p-5">
             <MicroLabel className="mb-4">Vault Controls</MicroLabel>
             <div className="mb-6 space-y-0 text-xs">
-              <DataRow label="Status">Active</DataRow>
-              <DataRow label="Score">{DEMO_TRADER.score}</DataRow>
+              <DataRow label="Status">{vault?.status === "active" ? "Active" : vault?.status ?? "—"}</DataRow>
+              <DataRow label="Score">{score}</DataRow>
               <DataRow label="Capacity formula">
                 {score} × $1,000 = {formatUSD(capacity, 0)}
               </DataRow>
               <DataRow label="Deposits open">{depositsOpen ? "Yes" : "No"}</DataRow>
               <DataRow label="Capacity left">{formatUSD(capacityLeft, 0)}</DataRow>
-              <DataRow label="NAV / Share">1.000000</DataRow>
+              <DataRow label="NAV / Share">{navPerShare}</DataRow>
             </div>
 
             <div className="flex items-center justify-between">
@@ -200,7 +260,8 @@ export default function ManagePage() {
                 role="switch"
                 aria-checked={depositsOpen}
                 aria-label="Accept deposits"
-                onClick={() => setDepositsOpen((v) => !v)}
+                onClick={handleToggleDeposits}
+                disabled={togglePending}
                 className={`relative h-6 w-12 shrink-0 rounded-full border border-white/10 transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void ${
                   depositsOpen ? "bg-acid" : "bg-panel-2"
                 }`}

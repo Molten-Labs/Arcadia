@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { MOCK_TRADERS } from "@/lib/mock-data";
-import { proxyToBackend } from "@/lib/backend-proxy";
+import { proxyToBackend, shouldUseMockFallback } from "@/lib/backend-proxy";
 import { transformVaultTrades } from "@/lib/backend-transform";
 
 export async function GET(
@@ -9,17 +9,19 @@ export async function GET(
 ) {
   const { profile } = await params;
   const result = await proxyToBackend(`/v1/vaults/${profile}/trades`);
-  if (result?.ok) {
+  if (result.kind === "ok" && result.ok) {
     const transformed = transformVaultTrades(
       Array.isArray(result.data) ? result.data : [],
       profile,
     );
     return NextResponse.json(transformed);
   }
-
-  const trader = MOCK_TRADERS.find((t) => t.profile === profile);
-  if (!trader) {
-    return NextResponse.json([], { status: 200 });
+  if (shouldUseMockFallback(result)) {
+    const trader = MOCK_TRADERS.find((t) => t.profile === profile);
+    if (!trader) {
+      return NextResponse.json([], { status: 200 });
+    }
+    return NextResponse.json(trader.trades.slice(0, 50));
   }
-  return NextResponse.json(trader.trades.slice(0, 50));
+  return NextResponse.json([], { status: 200 });
 }
