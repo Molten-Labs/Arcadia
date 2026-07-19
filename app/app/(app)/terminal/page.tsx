@@ -663,9 +663,6 @@ function TerminalContent() {
             connected={connected}
             market={market}
             openDeposit={openDeposit}
-            availableBalance={availableBalance}
-            totalMarginUsed={totalMarginUsed}
-            totalUnrealizedPnL={totalUnrealizedPnL}
           />
         </div>
       </div>
