@@ -17,6 +17,8 @@ export interface TraderListItem {
   deposits_open: boolean;
   style_tags: string[];
   trader_self_funded: number;
+  agent?: string;
+  style?: string;
 }
 
 export interface TraderMetrics {
@@ -175,10 +177,6 @@ export interface TraderClassification {
   bot: {
     verdict: "bot" | "human" | "uncertain";
     evidence: string[];
-  };
-  size_tier: {
-    tier: "shrimp" | "fish" | "dolphin" | "shark" | "whale";
-    median_trade_usd: number;
   };
   profile: {
     label: string;

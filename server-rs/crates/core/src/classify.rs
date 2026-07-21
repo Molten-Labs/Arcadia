@@ -2,7 +2,7 @@
 ///
 /// Ported from perps-observatory's `lib/traderProfile.ts`. Takes position-level
 /// trade records (single close event per position) and produces qualitative
-/// signals: bot/human, size tier, trading style, wash trading flags.
+/// signals: bot/human, trading style, wash trading flags.
 ///
 /// Timezone inference was intentionally removed — personal profiling (deducing
 /// where a trader lives from activity patterns) is inappropriate for a vault
@@ -65,12 +65,6 @@ pub struct BotVerdict {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SizeTier {
-    pub tier: String, // "shrimp" | "fish" | "dolphin" | "shark" | "whale"
-    pub median_trade_usd: f64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WashVerdict {
     pub fired: u32,
     pub total: u32,
@@ -81,7 +75,6 @@ pub struct WashVerdict {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Classification {
     pub bot: BotVerdict,
-    pub size_tier: SizeTier,
     pub profile: ProfileLabel,
     pub wash: WashVerdict,
 }
@@ -347,33 +340,6 @@ pub fn classify(feature_sets: &[TraderFeatures]) -> Classification {
         }
     };
 
-    // ── Size tier ──
-    let mut median_trade_usd = 0.0_f64;
-    if feature_sets.len() == 1 {
-        median_trade_usd = feature_sets[0].median_trade_usd;
-    } else if !feature_sets.is_empty() {
-        let tot_vol: f64 = feature_sets.iter().map(|f| f.total_volume_usd).sum();
-        if tot_vol > 0.0 {
-            median_trade_usd = feature_sets
-                .iter()
-                .map(|f| f.median_trade_usd * f.total_volume_usd)
-                .sum::<f64>()
-                / tot_vol;
-        }
-    }
-
-    let tier_label = if median_trade_usd >= 100_000.0 {
-        "whale"
-    } else if median_trade_usd >= 10_000.0 {
-        "shark"
-    } else if median_trade_usd >= 1_000.0 {
-        "dolphin"
-    } else if median_trade_usd >= 100.0 {
-        "fish"
-    } else {
-        "shrimp"
-    };
-
     // ── Wash signals ──
     let mut wash_evidence: Vec<String> = Vec::new();
     let wash_notes: Vec<String> = Vec::new();
@@ -492,10 +458,6 @@ pub fn classify(feature_sets: &[TraderFeatures]) -> Classification {
 
     Classification {
         bot: bot_verdict,
-        size_tier: SizeTier {
-            tier: tier_label.into(),
-            median_trade_usd,
-        },
         profile,
         wash: WashVerdict {
             fired: wash_fired,

@@ -18,11 +18,33 @@ use serde_json::{json, Value};
 // ── GET /v1/traders ───────────────────────────────────────────────────────────
 
 pub async fn list_traders(State(ctx): State<AppState>) -> Result<Json<Value>, ApiError> {
+    use arcadia_core::classify::{self, TradeSample};
     let traders = queries::list_traders(&ctx.db).await?;
 
     let mut list: Vec<Value> = Vec::with_capacity(traders.len());
     for t in &traders {
         let snap = queries::latest_score(&ctx.db, &t.profile).await.unwrap_or(None);
+
+        let (agent, style) = if let Ok(trades) = queries::get_all_trades_for_profile(&ctx.db, &t.profile).await {
+            if trades.is_empty() {
+                ("human".to_string(), "No activity".to_string())
+            } else {
+                let samples: Vec<TradeSample> = trades.iter().map(|tr| TradeSample {
+                    direction: tr.direction,
+                    size_usd: tr.size_usd,
+                    realized_pnl: tr.realized_pnl,
+                    fees_usd: tr.fees_usd,
+                    market: tr.market.clone(),
+                    closed_at_ts: tr.closed_at.timestamp(),
+                }).collect();
+                let features = classify::build_features(&samples);
+                let result = classify::classify(&[features]);
+                (result.bot.verdict, result.profile.label)
+            }
+        } else {
+            ("human".to_string(), "No activity".to_string())
+        };
+
         list.push(json!({
             "handle":        t.handle,
             "wallet":        t.trader,
@@ -36,6 +58,8 @@ pub async fn list_traders(State(ctx): State<AppState>) -> Result<Json<Value>, Ap
             "sortino":       snap.as_ref().map(|s| s.sortino).unwrap_or(Decimal::ZERO),
             "style_tags":    t.style_tags,
             "deposits_open": t.deposits_open,
+            "agent":         agent,
+            "style":         style,
         }));
     }
     Ok(Json(json!(list)))

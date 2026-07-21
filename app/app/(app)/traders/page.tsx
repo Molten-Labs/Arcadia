@@ -47,11 +47,15 @@ function SkeletonMarketCard() {
   );
 }
 
+const STYLES = ["Scalper", "Position / swing holder", "Active trader", "HFT / market-maker bot", "Wash trader / points farmer", "Dormant", "One-shot punter", "No activity"];
+
 export default function TradersPage() {
   const [sort, setSort] = useState<SortKey>("score");
   const [search, setSearch] = useState("");
   const [onlyOpen, setOnlyOpen] = useState(false);
   const [watchlistOnly, setWatchlistOnly] = useState(false);
+  const [agentFilter, setAgentFilter] = useState<string>(""); // "" | "human" | "agent" | "uncertain"
+  const [styleFilter, setStyleFilter] = useState<string>("");
   const { watchlist, toggle } = useWatchlist();
 
   const { data, isLoading, error, refetch } = useQuery<TraderListItem[]>({
@@ -64,6 +68,8 @@ export default function TradersPage() {
       if (onlyOpen && !t.deposits_open) return false;
       if (watchlistOnly && !watchlist.includes(t.handle)) return false;
       if (search && !t.handle.toLowerCase().includes(search.toLowerCase())) return false;
+      if (agentFilter && t.agent !== agentFilter) return false;
+      if (styleFilter && t.style !== styleFilter) return false;
       return true;
     })
     .sort((a, b) => {
@@ -79,6 +85,8 @@ export default function TradersPage() {
     setOnlyOpen(false);
     setSort("score");
     setWatchlistOnly(false);
+    setAgentFilter("");
+    setStyleFilter("");
   };
 
   return (
@@ -133,6 +141,30 @@ export default function TradersPage() {
                 Watchlist{watchlist.length > 0 ? ` (${watchlist.length})` : ""}
               </span>
             </button>
+
+            <select
+              aria-label="Filter by agent verdict"
+              value={agentFilter}
+              onChange={(e) => setAgentFilter(e.target.value)}
+              className="h-11 rounded-lg border border-line bg-panel-2 px-3 font-mono text-xs font-bold tracking-[0.1em] uppercase text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+            >
+              <option value="">All agents</option>
+              <option value="human">Human</option>
+              <option value="bot">Agent</option>
+              <option value="uncertain">Uncertain</option>
+            </select>
+
+            <select
+              aria-label="Filter by trade style"
+              value={styleFilter}
+              onChange={(e) => setStyleFilter(e.target.value)}
+              className="h-11 rounded-lg border border-line bg-panel-2 px-3 font-mono text-xs font-bold tracking-[0.1em] uppercase text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+            >
+              <option value="">All styles</option>
+              {STYLES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">

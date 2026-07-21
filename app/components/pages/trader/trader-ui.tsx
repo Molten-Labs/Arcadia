@@ -161,22 +161,14 @@ export function StatTile({
 import { Badge } from "@/components/ui/badge";
 import type { TraderClassification } from "@/lib/types";
 
-const BOT_BADGE: Record<string, "success" | "danger" | "secondary"> = {
+const BOT_BADGE: Record<string, "default" | "success" | "secondary"> = {
   human: "success",
-  bot: "danger",
+  bot: "default",
   uncertain: "secondary",
 };
 
-const SIZE_BADGE: Record<string, "secondary" | "default" | "verified" | "advanced" | "elite"> = {
-  shrimp: "secondary",
-  fish: "default",
-  dolphin: "verified",
-  shark: "advanced",
-  whale: "elite",
-};
-
 const PROFILE_TONE: Record<string, "default" | "danger" | "success" | "secondary"> = {
-  "HFT / market-maker bot": "danger",
+  "HFT / market-maker bot": "default",
   "Wash trader / points farmer": "danger",
   Scalper: "default",
   "Position / swing holder": "success",
@@ -190,10 +182,7 @@ export function ClassificationBadgeSet({ data, className }: { data: TraderClassi
   return (
     <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
       <Badge variant={BOT_BADGE[data.bot.verdict] ?? "secondary"}>
-        {data.bot.verdict === "human" ? "human" : data.bot.verdict === "bot" ? "bot" : "uncertain"}
-      </Badge>
-      <Badge variant={SIZE_BADGE[data.size_tier.tier] ?? "secondary"}>
-        {data.size_tier.tier}
+        {data.bot.verdict === "bot" ? "Agent" : data.bot.verdict}
       </Badge>
       <Badge variant={PROFILE_TONE[data.profile.label] ?? "default"}>
         {data.profile.label}
