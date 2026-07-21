@@ -127,3 +127,41 @@ pub struct DbIngestCursor {
     pub last_slot: i64,
     pub updated_at: DateTime<Utc>,
 }
+
+/// Waitlist user.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DbWaitlistUser {
+    pub id:             i64,
+    pub email:          String,
+    pub email_verified: bool,
+    pub name:           String,
+    pub role:           String,
+    pub experience:     String,
+    pub twitter:        String,
+    pub discord:        String,
+    pub wallet:         String,
+    pub status:         String,
+    pub referral_code:  String,
+    pub referred_by:    Option<String>,
+    pub source:         String,
+    pub utm_source:     String,
+    pub utm_medium:     String,
+    pub utm_campaign:   String,
+    pub utm_term:       String,
+    pub ip_hash:        String,
+    pub user_agent:     String,
+    pub created_at:     DateTime<Utc>,
+    pub verified_at:    Option<DateTime<Utc>>,
+    pub updated_at:     DateTime<Utc>,
+}
+
+/// Verification token.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DbVerificationToken {
+    pub id:         i64,
+    pub email:      String,
+    pub token:      String,
+    pub expires_at: DateTime<Utc>,
+    pub used:       bool,
+    pub created_at: DateTime<Utc>,
+}

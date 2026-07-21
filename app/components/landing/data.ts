@@ -10,13 +10,14 @@ export const LINKS = {
   traders: "/traders",
   leaderboard: "/leaderboard",
   terminal: "/terminal",
+  waitlist: "/waitlist",
   docs: "#",
 } as const;
 
 export const NAV_LINKS = [
   { label: "Traders", href: LINKS.traders },
   { label: "Leaderboard", href: LINKS.leaderboard },
-  { label: "Docs", href: LINKS.docs },
+  { label: "Demo", href: LINKS.terminal },
 ] as const;
 
 /** Trust-strip marquee tokens. `icon` keys map to marks in TrustStrip. */
@@ -151,7 +152,7 @@ export const TWO_SIDES = {
       { n: "3", title: "Build your score", body: "Consistent, risk-aware performance raises your Arcadia Score." },
       { n: "4", title: "Earn allocated capital", body: "As investors back you, you manage more and earn a profit share." },
     ],
-    cta: { label: "Build your reputation", href: LINKS.terminal },
+    cta: { label: "Try the demo", href: LINKS.terminal },
   },
   investors: {
     intro: "Back traders based on proof, not promises.",
@@ -162,7 +163,7 @@ export const TWO_SIDES = {
       { n: "3", title: "Track the record", body: "Follow vault activity, score changes, and performance in one dashboard." },
       { n: "4", title: "Share in the upside", body: "When the trader profits, investors participate through the vault." },
     ],
-    cta: { label: "Browse verified traders", href: LINKS.traders },
+    cta: { label: "Join waitlist", href: LINKS.waitlist },
   },
 } as const;
 
@@ -198,13 +199,13 @@ export const DUAL_CTA = [
     accent: "acid" as const,
     heading: "Turn your record into allocated capital.",
     body: "Stop proving yourself with screenshots. Build a reputation from real on-chain trades and let capital find you.",
-    cta: { label: "Build your reputation", href: LINKS.terminal, variant: "acid" as const },
+    cta: { label: "Try the demo", href: LINKS.terminal, variant: "acid" as const },
   },
   {
     accent: "cyan" as const,
-    heading: "Back talent with proof, not promises.",
-    body: "See the score, read the record, and allocate through vaults that keep trust on-chain.",
-    cta: { label: "Browse verified traders", href: LINKS.traders, variant: "chrome" as const },
+    heading: "Get early access.",
+    body: "Arcadia is in private beta. Join the waitlist and be first to know when vaults open.",
+    cta: { label: "Join waitlist", href: LINKS.waitlist, variant: "chrome" as const },
   },
 ];
 

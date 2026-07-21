@@ -147,20 +147,20 @@ export function HeroSection() {
                 </p>
               </Reveal>
 
-              <Reveal delay={240}>
-                <div className="flex flex-wrap gap-4">
-                  <AcidButton asChild variant="chrome">
-                    <Link href={LINKS.traders}>
-                      Browse the proven <ArrowRight />
-                    </Link>
-                  </AcidButton>
-                  <AcidButton asChild variant="acid">
-                    <Link href={LINKS.terminal}>
-                      Prove yourself <Circle className="fill-current" />
-                    </Link>
-                  </AcidButton>
-                </div>
-              </Reveal>
+                <Reveal delay={240}>
+                  <div className="flex flex-wrap gap-4">
+                    <AcidButton asChild variant="chrome">
+                      <Link href={LINKS.terminal}>
+                        Try Demo <ArrowRight />
+                      </Link>
+                    </AcidButton>
+                    <AcidButton asChild variant="acid">
+                      <Link href={LINKS.waitlist}>
+                        Join Waitlist <Circle className="fill-current" />
+                      </Link>
+                    </AcidButton>
+                  </div>
+                </Reveal>
             </div>
           </div>
 

@@ -705,6 +705,170 @@ pub async fn patch_vault_deposits(
     Ok(Json(json!({ "deposits_open": body.open })))
 }
 
+// ── Waitlist ──────────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct WaitlistSignupBody {
+    email:      String,
+    #[serde(default)]
+    name:       String,
+    #[serde(default)]
+    role:       String,
+    #[serde(default)]
+    experience: String,
+    #[serde(default)]
+    twitter:    String,
+    #[serde(default)]
+    discord:    String,
+    #[serde(default)]
+    wallet:     String,
+    #[serde(default)]
+    ref_code:   String,
+    #[serde(default)]
+    utm_source:   String,
+    #[serde(default)]
+    utm_medium:   String,
+    #[serde(default)]
+    utm_campaign: String,
+    #[serde(default)]
+    utm_term:     String,
+}
+
+pub async fn post_waitlist(
+    State(ctx): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<WaitlistSignupBody>,
+) -> Result<Json<Value>, ApiError> {
+    let email = body.email.trim().to_lowercase();
+    if !email.contains('@') || !email.contains('.') {
+        return Err(ApiError::BadRequest("Invalid email address".into()));
+    }
+    if queries::is_disposable_email(&email) {
+        return Err(ApiError::BadRequest("Disposable email addresses are not allowed".into()));
+    }
+
+    let ip = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok())
+        .or_else(|| headers.get("x-real-ip").and_then(|v| v.to_str().ok()))
+        .unwrap_or("unknown");
+    let ip_hash = sha256_hex(ip);
+
+    let user_agent = headers.get("user-agent")
+        .and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+
+    // Verify referrer if provided
+    let referred_by = if !body.ref_code.is_empty() {
+        Some(body.ref_code.to_uppercase())
+    } else { None };
+
+    let result = queries::insert_waitlist_user(
+        &ctx.db, &email, &body.name, &body.role, &body.experience,
+        &body.twitter, &body.discord, &body.wallet,
+        referred_by.as_deref(), "landing",
+        &body.utm_source, &body.utm_medium, &body.utm_campaign, &body.utm_term,
+        &ip_hash, &user_agent,
+    ).await?;
+
+    let user = result.ok_or_else(|| ApiError::BadRequest("Email already registered".into()))?;
+
+    let token = uuid::Uuid::new_v4().to_string();
+    let expires_at = Utc::now() + chrono::Duration::hours(24);
+    queries::insert_verification_token(&ctx.db, &email, &token, &expires_at).await?;
+
+    tracing::info!("[waitlist] verify token for {email}: {token}");
+
+    Ok(Json(json!({
+        "ok": true,
+        "message": "Check your email to verify your address.",
+        "email": email,
+        "dev_token": token,
+        "referral_code": user.referral_code,
+    })))
+}
+
+#[derive(Deserialize)]
+pub struct VerifyBody { token: String }
+
+pub async fn verify_email(
+    State(ctx): State<AppState>,
+    Json(body): Json<VerifyBody>,
+) -> Result<Json<Value>, ApiError> {
+    let email = queries::consume_verification_token(&ctx.db, &body.token)
+        .await?
+        .ok_or_else(|| ApiError::BadRequest("Invalid or expired verification token".into()))?;
+
+    let user = queries::verify_waitlist_user(&ctx.db, &email)
+        .await?
+        .ok_or_else(|| ApiError::BadRequest("User not found".into()))?;
+
+    use jsonwebtoken::{encode, EncodingKey, Header};
+    let claims = serde_json::json!({
+        "sub": user.email, "uid": user.id,
+        "exp": (Utc::now() + chrono::Duration::days(30)).timestamp(),
+        "iat": Utc::now().timestamp(),
+    });
+    let jwt = encode(&Header::default(), &claims,
+        &EncodingKey::from_secret(ctx.jwt_secret.as_bytes()))
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!(e)))?;
+
+    Ok(Json(json!({
+        "ok": true, "token": jwt,
+        "user": { "id": user.id, "email": user.email, "role": user.role, "referral_code": user.referral_code }
+    })))
+}
+
+#[derive(Deserialize)]
+pub struct TokenQuery { token: String }
+
+pub async fn get_waitlist_position(
+    State(ctx): State<AppState>,
+    Query(q): Query<TokenQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let uid = extract_waitlist_uid(&q.token, &ctx.jwt_secret)?;
+    let pos = queries::get_waitlist_position(&ctx.db, uid).await?;
+    Ok(Json(json!({ "position": pos })))
+}
+
+pub async fn get_waitlist_me(
+    State(ctx): State<AppState>,
+    Query(q): Query<TokenQuery>,
+) -> Result<Json<Value>, ApiError> {
+    let (uid, email) = extract_waitlist_jwt(&q.token, &ctx.jwt_secret)?;
+    let user = queries::get_waitlist_user_by_email(&ctx.db, &email)
+        .await?.ok_or(ApiError::NotFound)?;
+    let position = queries::get_waitlist_position(&ctx.db, uid).await?;
+    Ok(Json(json!({
+        "id": user.id, "email": user.email,
+        "email_verified": user.email_verified,
+        "name": user.name, "role": user.role,
+        "experience": user.experience,
+        "twitter": user.twitter, "discord": user.discord, "wallet": user.wallet,
+        "status": user.status,
+        "referral_code": user.referral_code,
+        "position": position,
+        "created_at": user.created_at, "verified_at": user.verified_at,
+    })))
+}
+
+fn extract_waitlist_uid(token: &str, secret: &str) -> Result<i64, ApiError> {
+    use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+    let data = decode::<serde_json::Value>(token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::new(Algorithm::HS256))
+        .map_err(|_| ApiError::Unauthorized)?;
+    data.claims.get("uid").and_then(|v| v.as_i64()).ok_or(ApiError::Unauthorized)
+}
+
+fn extract_waitlist_jwt(token: &str, secret: &str) -> Result<(i64, String), ApiError> {
+    use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+    let data = decode::<serde_json::Value>(token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::new(Algorithm::HS256))
+        .map_err(|_| ApiError::Unauthorized)?;
+    let uid = data.claims.get("uid").and_then(|v| v.as_i64()).ok_or(ApiError::Unauthorized)?;
+    let sub = data.claims.get("sub").and_then(|v| v.as_str()).ok_or(ApiError::Unauthorized)?;
+    Ok((uid, sub.to_string()))
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 
 pub async fn health() -> StatusCode {

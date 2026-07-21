@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkle } from "lucide-react";
+import { ArrowRight, Mail, ShieldCheck, Sparkle } from "lucide-react";
 
 import { AcidButton, Reveal } from "@/components/acid";
 import { Container } from "./bits";

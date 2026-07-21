@@ -1,5 +1,6 @@
 use crate::models::*;
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 
@@ -512,11 +513,116 @@ pub async fn get_flows_for_owner(
         "SELECT signature, event_index, slot, profile, owner, is_trader,
                 kind, amount_usd, shares, nav_per_share, ts
          FROM flow
-         WHERE owner = $1
+          WHERE owner = $1
          ORDER BY ts DESC LIMIT $2",
     )
     .bind(owner)
     .bind(limit)
     .fetch_all(pool)
     .await?)
+}
+
+// ── Waitlist ───────────────────────────────────────────────────────────────────
+
+const DISPOSABLE_DOMAINS: &[&str] = &[
+    "mailinator.com", "guerrillamail.com", "10minutemail.com", "tempmail.com",
+    "throwaway.io", "yopmail.com", "trashmail.com", "sharklasers.com",
+    "maildrop.cc", "getairmail.com", "temp-mail.org", "fakeinbox.com",
+    "emailondeck.com", "mailexpire.com", "mailsac.com",
+];
+
+pub fn is_disposable_email(email: &str) -> bool {
+    let domain = email.split('@').nth(1).unwrap_or("").to_lowercase();
+    DISPOSABLE_DOMAINS.iter().any(|d| domain == *d || domain.ends_with(&format!(".{d}")))
+}
+
+fn generate_referral_code() -> String {
+    uuid::Uuid::new_v4().to_string()[..8].to_uppercase()
+}
+
+pub async fn insert_waitlist_user(
+    pool: &PgPool,
+    email: &str, name: &str, role: &str, experience: &str,
+    twitter: &str, discord: &str, wallet: &str,
+    referred_by: Option<&str>,
+    source: &str,
+    utm_source: &str, utm_medium: &str, utm_campaign: &str, utm_term: &str,
+    ip_hash: &str, user_agent: &str,
+) -> Result<Option<DbWaitlistUser>> {
+    let code = generate_referral_code();
+    Ok(sqlx::query_as::<_, DbWaitlistUser>(
+        "INSERT INTO waitlist_users
+            (email, name, role, experience, twitter, discord, wallet,
+             referral_code, referred_by, source,
+             utm_source, utm_medium, utm_campaign, utm_term,
+             ip_hash, user_agent)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         ON CONFLICT (email) DO NOTHING
+         RETURNING *",
+    )
+    .bind(email).bind(name).bind(role).bind(experience)
+    .bind(twitter).bind(discord).bind(wallet)
+    .bind(&code).bind(referred_by).bind(source)
+    .bind(utm_source).bind(utm_medium).bind(utm_campaign).bind(utm_term)
+    .bind(ip_hash).bind(user_agent)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn get_waitlist_user_by_email(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
+    Ok(sqlx::query_as::<_, DbWaitlistUser>(
+        "SELECT * FROM waitlist_users WHERE email = $1"
+    ).bind(email).fetch_optional(pool).await?)
+}
+
+/// Verified-only queue position (computed, not stored).
+pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
+    let row: (DateTime<Utc>,) = sqlx::query_as(
+        "SELECT created_at FROM waitlist_users WHERE id = $1"
+    ).bind(user_id).fetch_one(pool).await?;
+
+    let count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM waitlist_users
+         WHERE email_verified = true AND created_at < $1 AND id != $2"
+    ).bind(row.0).bind(user_id).fetch_one(pool).await?;
+
+    Ok(count.0 + 1)
+}
+
+// ── Verification tokens ─────────────────────────────────────────────────────────
+
+pub async fn insert_verification_token(
+    pool: &PgPool,
+    email: &str,
+    token: &str,
+    expires_at: &DateTime<Utc>,
+) -> Result<DbVerificationToken> {
+    Ok(sqlx::query_as::<_, DbVerificationToken>(
+        "INSERT INTO verification_tokens (email, token, expires_at)
+         VALUES ($1, $2, $3) RETURNING *"
+    ).bind(email).bind(token).bind(expires_at).fetch_one(pool).await?)
+}
+
+pub async fn consume_verification_token(pool: &PgPool, token: &str) -> Result<Option<String>> {
+    let vt = sqlx::query_as::<_, DbVerificationToken>(
+        "SELECT * FROM verification_tokens WHERE token = $1 FOR UPDATE"
+    ).bind(token).fetch_optional(pool).await?;
+
+    match vt {
+        Some(t) if !t.used && t.expires_at > Utc::now() => {
+            sqlx::query("UPDATE verification_tokens SET used = true WHERE id = $1")
+                .bind(t.id).execute(pool).await?;
+            Ok(Some(t.email))
+        }
+        _ => Ok(None),
+    }
+}
+
+pub async fn verify_waitlist_user(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
+    Ok(sqlx::query_as::<_, DbWaitlistUser>(
+        "UPDATE waitlist_users
+         SET email_verified = true, status = 'verified', verified_at = now(), updated_at = now()
+         WHERE email = $1 AND email_verified = false
+         RETURNING *"
+    ).bind(email).fetch_optional(pool).await?)
 }
