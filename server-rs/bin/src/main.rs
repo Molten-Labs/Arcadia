@@ -56,11 +56,15 @@ async fn main() -> Result<()> {
     let public_url = std::env::var("PUBLIC_URL")
         .unwrap_or_else(|_| "https://arcadia-production-7854.up.railway.app".into());
 
+    let admin_key = std::env::var("ADMIN_KEY")
+        .unwrap_or_default();
+
     let api_state = AppState {
         db,
         redis,
         jwt_secret,
         public_url,
+        admin_key,
         cfg: ApiConfig::from_env(),
     };
 

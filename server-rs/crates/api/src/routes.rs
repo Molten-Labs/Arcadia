@@ -851,6 +851,59 @@ fn extract_waitlist_jwt(token: &str, secret: &str) -> Result<(i64, String), ApiE
     Ok((uid, sub.to_string()))
 }
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+pub async fn get_admin_waitlist(
+    State(ctx): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, ApiError> {
+    let provided = headers.get("x-admin-key")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if !constant_time_eq(provided, &ctx.admin_key) || ctx.admin_key.is_empty() {
+        tracing::warn!("[admin] rejected request from {ip}", ip = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()).unwrap_or("unknown"));
+        return Err(ApiError::Unauthorized);
+    }
+
+    let users = queries::list_waitlist_users(&ctx.db).await?;
+    let mut list: Vec<Value> = Vec::with_capacity(users.len());
+    for u in users {
+        let position = queries::get_waitlist_position(&ctx.db, u.id).await?;
+        list.push(json!({
+            "id":              u.id,
+            "email":           u.email,
+            "email_verified":  u.email_verified,
+            "name":            u.name,
+            "role":            u.role,
+            "experience":      u.experience,
+            "twitter":         u.twitter,
+            "discord":         u.discord,
+            "wallet":          u.wallet,
+            "status":          u.status,
+            "referral_code":   u.referral_code,
+            "referred_by":     u.referred_by,
+            "source":          u.source,
+            "utm_source":      u.utm_source,
+            "utm_medium":      u.utm_medium,
+            "utm_campaign":    u.utm_campaign,
+            "utm_term":        u.utm_term,
+            "position":        position,
+            "created_at":      u.created_at,
+            "verified_at":     u.verified_at,
+        }));
+    }
+    tracing::info!("[admin] waitlist exported ({} rows)", list.len());
+    Ok(Json(json!({ "users": list, "total": list.len() })))
+}
+
+/// Constant-time string comparison to resist timing attacks on admin key.
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.bytes().zip(b.bytes()).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 
 pub async fn health() -> StatusCode {

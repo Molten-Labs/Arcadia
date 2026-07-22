@@ -574,6 +574,12 @@ pub async fn get_waitlist_user_by_email(pool: &PgPool, email: &str) -> Result<Op
     ).bind(email).fetch_optional(pool).await?)
 }
 
+pub async fn list_waitlist_users(pool: &PgPool) -> Result<Vec<DbWaitlistUser>> {
+    Ok(sqlx::query_as::<_, DbWaitlistUser>(
+        "SELECT * FROM waitlist_users ORDER BY created_at DESC"
+    ).fetch_all(pool).await?)
+}
+
 /// Queue position (computed from created_at order, all users count).
 pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
     let count: (i64,) = sqlx::query_as(

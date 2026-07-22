@@ -8,6 +8,7 @@ pub struct AppState {
     pub jwt_secret: String,
     pub public_url: String,
     pub cfg:        ApiConfig,
+    pub admin_key:  String,
 }
 
 #[derive(Clone, Debug)]
