@@ -588,6 +588,19 @@ pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
     Ok(count.0 + 1)
 }
 
+pub async fn update_waitlist_extra(
+    pool: &PgPool, email: &str, experience: &str, discord: &str,
+) -> Result<Option<DbWaitlistUser>> {
+    Ok(sqlx::query_as::<_, DbWaitlistUser>(
+        "UPDATE waitlist_users
+         SET experience = COALESCE(NULLIF($2, ''), experience),
+             discord = COALESCE(NULLIF($3, ''), discord),
+             updated_at = now()
+         WHERE email = $1
+         RETURNING *"
+    ).bind(email).bind(experience).bind(discord).fetch_optional(pool).await?)
+}
+
 pub async fn verify_waitlist_user(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
     Ok(sqlx::query_as::<_, DbWaitlistUser>(
         "UPDATE waitlist_users

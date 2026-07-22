@@ -39,34 +39,45 @@ export default function WaitlistPage() {
           </Link>
         </div>
 
-        {/* Hero */}
+        {/* Hero — content left, form right */}
         <section className="mx-auto max-w-[1180px] px-5 py-[clamp(3rem,8vh,6rem)] sm:px-8">
-          <Reveal><Kicker>private beta</Kicker></Reveal>
-          <Reveal delay={80}>
-            <h1 className="mt-5 font-display text-[clamp(2.5rem,8vw,5rem)] leading-[0.9] font-extrabold tracking-[-0.04em] text-ink uppercase">
-              turn trading<br /><span className="text-acid">into capital.</span>
-            </h1>
-          </Reveal>
-          <Reveal delay={160}>
-            <p className="mt-5 max-w-[56ch] text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
-              arcadia reads your on-chain history and turns it into<br />
-              reputation investors can actually check.
-            </p>
-            <p className="mt-2 text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
-              no pitch decks. no screenshots. the chain doesn&apos;t lie.
-            </p>
-          </Reveal>
-          <Reveal delay={240}>
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              {BENEFITS.map((b) => (
-                <div key={b.title} className="rounded-xl border border-white/10 bg-panel/60 p-4 backdrop-blur-sm">
-                  <b.icon className="mb-2 size-4 text-acid" aria-hidden />
-                  <h3 className="mb-1 text-sm font-bold text-ink">{b.title}</h3>
-                  <p className="text-xs leading-relaxed text-muted">{b.desc}</p>
+          <div className="grid gap-14 lg:grid-cols-[1fr_400px] lg:items-start">
+            <div>
+              <Reveal><Kicker>private beta</Kicker></Reveal>
+              <Reveal delay={80}>
+                <h1 className="mt-5 font-display text-[clamp(2.5rem,8vw,5rem)] leading-[0.9] font-extrabold tracking-[-0.04em] text-ink uppercase">
+                  turn trading<br /><span className="text-acid">into capital.</span>
+                </h1>
+              </Reveal>
+              <Reveal delay={160}>
+                <p className="mt-5 max-w-[56ch] text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
+                  arcadia reads your on-chain history and turns it into<br />
+                  reputation investors can actually check.
+                </p>
+                <p className="mt-2 text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
+                  no pitch decks. no screenshots. the chain doesn&apos;t lie.
+                </p>
+              </Reveal>
+              <Reveal delay={240}>
+                <div className="mt-10 grid gap-3 sm:grid-cols-3">
+                  {BENEFITS.map((b) => (
+                    <div key={b.title} className="rounded-xl border border-white/10 bg-panel/60 p-4 backdrop-blur-sm">
+                      <b.icon className="mb-2 size-4 text-acid" aria-hidden />
+                      <h3 className="mb-1 text-sm font-bold text-ink">{b.title}</h3>
+                      <p className="text-xs leading-relaxed text-muted">{b.desc}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </Reveal>
             </div>
-          </Reveal>
+
+            <Reveal delay={240}>
+              <div className="rounded-2xl border border-line bg-panel p-5 sm:p-6">
+                <p className="mb-4 font-display text-lg font-extrabold text-ink">join the waitlist</p>
+                <WaitlistForm source="waitlist-page" />
+              </div>
+            </Reveal>
+          </div>
         </section>
 
         {/* How it works */}
@@ -88,23 +99,6 @@ export default function WaitlistPage() {
                   </div>
                 </Reveal>
               ))}
-            </div>
-          </Container>
-        </section>
-
-        {/* Waitlist CTA */}
-        <section className="border-t border-white/10 py-[clamp(4rem,8vw,7rem)]">
-          <Container>
-            <div className="mx-auto max-w-[500px] text-center">
-              <Reveal><Kicker>join the waitlist</Kicker></Reveal>
-              <Reveal delay={80}>
-                <p className="mt-3 mb-8 text-lg text-muted">be first when vaults open.</p>
-              </Reveal>
-              <Reveal delay={160}>
-                <div className="rounded-2xl border border-line bg-panel p-6 sm:p-8 text-left">
-                  <WaitlistForm source="waitlist-page" />
-                </div>
-              </Reveal>
             </div>
           </Container>
         </section>
