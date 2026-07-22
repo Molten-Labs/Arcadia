@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { CheckCircle, Loader2, Copy, ChevronDown } from "lucide-react";
+import { CheckCircle, Loader2, Copy } from "lucide-react";
 
-const ROLE_OPTIONS = ["", "trader", "investor", "both"] as const;
+const ROLE_OPTIONS = ["trader", "investor", "both"] as const;
 const EXP_OPTIONS = ["", "beginner", "<1", "1-3", "3+"] as const;
 
 interface SuccessState {
@@ -15,6 +15,7 @@ interface SuccessState {
 export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
+  const [experience, setExperience] = useState("");
   const [twitter, setTwitter] = useState("");
   const [wallet, setWallet] = useState("");
 
@@ -44,6 +45,7 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
         body: JSON.stringify({
           email: email.trim(),
           role,
+          experience,
           twitter: twitter.trim(),
           wallet: wallet.trim(),
           ref_code: refCode.trim().toUpperCase(),
@@ -83,12 +85,33 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
       </div>
 
       <div>
-        <label htmlFor="wl-role" className="mb-1.5 block font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">I am a... *</label>
-        <select id="wl-role" value={role} onChange={(e) => setRole(e.target.value)}
+        <p className="mb-1.5 font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">I am a... *</p>
+        <div className="flex gap-2">
+          {ROLE_OPTIONS.map((r) => {
+            const active = role === r;
+            const label = r.charAt(0).toUpperCase() + r.slice(1);
+            return (
+              <button type="button" key={r}
+                onClick={() => setRole(r)}
+                className={`flex-1 h-11 rounded-xl border font-mono text-sm font-bold tracking-[0.06em] uppercase transition-all ${
+                  active
+                    ? "border-acid bg-acid text-void"
+                    : "border-line bg-panel-2 text-faint hover:border-acid/40 hover:text-ink"
+                }`}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="wl-exp" className="mb-1.5 block font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">Experience</label>
+        <select id="wl-exp" value={experience} onChange={(e) => setExperience(e.target.value)}
           className="h-11 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none focus:border-acid/50 focus:ring-1 focus:ring-acid/30">
           <option value="">Select...</option>
-          {ROLE_OPTIONS.filter(Boolean).map((r) => (
-            <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+          {EXP_OPTIONS.filter(Boolean).map((e) => (
+            <option key={e} value={e}>{e === "<1" ? "<1 year" : e === "3+" ? "3+ years" : e === "1-3" ? "1-3 years" : e.charAt(0).toUpperCase() + e.slice(1)}</option>
           ))}
         </select>
       </div>
@@ -121,21 +144,7 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
 
 function SuccessView({ email, referralCode, position }: { email: string; referralCode: string; position: number }) {
   const [copied, setCopied] = useState(false);
-  const [showExtra, setShowExtra] = useState(false);
-  const [experience, setExperience] = useState("");
-  const [discord, setDiscord] = useState("");
-  const [extraSent, setExtraSent] = useState(false);
   const refLink = `https://arcadia.dev/waitlist?ref=${referralCode}`;
-
-  async function handleExtra(e: FormEvent) {
-    e.preventDefault();
-    await fetch("/api/v1/waitlist/extra", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, experience, discord }),
-    });
-    setExtraSent(true);
-  }
 
   return (
     <div className="space-y-5 text-center">
@@ -162,42 +171,6 @@ function SuccessView({ email, referralCode, position }: { email: string; referra
           {copied ? "Copied!" : "Copy referral link"}
         </button>
       </div>
-
-      {!extraSent && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowExtra(!showExtra)}
-            className="inline-flex items-center gap-1.5 font-mono text-xs tracking-[0.12em] text-faint uppercase hover:text-ink"
-          >
-            <ChevronDown className={`size-3 transition-transform ${showExtra ? "rotate-180" : ""}`} aria-hidden />
-            Complete your profile
-          </button>
-          {showExtra && (
-            <form onSubmit={handleExtra} className="mt-3 space-y-3 text-left">
-              <div>
-                <label htmlFor="wl-exp" className="mb-1 block font-mono text-[0.6rem] tracking-[0.12em] text-faint uppercase">Experience</label>
-                <select id="wl-exp" value={experience} onChange={(e) => setExperience(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-line bg-panel-2 px-3 font-mono text-sm text-ink outline-none focus:border-acid/50">
-                  <option value="">Select...</option>
-                  {EXP_OPTIONS.filter(Boolean).map((e) => (
-                    <option key={e} value={e}>{e === "<1" ? "<1 year" : e === "3+" ? "3+ years" : e === "1-3" ? "1-3 years" : e.charAt(0).toUpperCase() + e.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="wl-discord" className="mb-1 block font-mono text-[0.6rem] tracking-[0.12em] text-faint uppercase">Discord</label>
-                <input id="wl-discord" type="text" value={discord} onChange={(e) => setDiscord(e.target.value)} placeholder="user#0000"
-                  className="h-10 w-full rounded-xl border border-line bg-panel-2 px-3 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50" />
-              </div>
-              <button type="submit"
-                className="h-10 w-full rounded-xl border border-acid/30 font-mono text-xs font-bold tracking-[0.1em] text-acid uppercase hover:bg-acid/10">
-                Save
-              </button>
-            </form>
-          )}
-        </div>
-      )}
     </div>
   );
 }

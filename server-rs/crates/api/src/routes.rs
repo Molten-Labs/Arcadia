@@ -851,29 +851,6 @@ fn extract_waitlist_jwt(token: &str, secret: &str) -> Result<(i64, String), ApiE
     Ok((uid, sub.to_string()))
 }
 
-// ── Waitlist extra (post-signup profile completion) ───────────────────────────────
-
-#[derive(Deserialize)]
-pub struct WaitlistExtraBody {
-    email:      String,
-    #[serde(default)]
-    experience: String,
-    #[serde(default)]
-    discord:    String,
-}
-
-pub async fn patch_waitlist_extra(
-    State(ctx): State<AppState>,
-    Json(body): Json<WaitlistExtraBody>,
-) -> Result<Json<Value>, ApiError> {
-    let email = body.email.trim().to_lowercase();
-    let result = queries::update_waitlist_extra(&ctx.db, &email, &body.experience, &body.discord).await?;
-    if result.is_none() {
-        return Err(ApiError::NotFound);
-    }
-    Ok(Json(json!({ "ok": true })))
-}
-
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 pub async fn get_admin_waitlist(

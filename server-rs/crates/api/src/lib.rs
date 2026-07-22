@@ -41,7 +41,6 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/waitlist",                    post(routes::post_waitlist))
         .route("/v1/waitlist/position",           get(routes::get_waitlist_position))
         .route("/v1/waitlist/me",                 get(routes::get_waitlist_me))
-        .route("/v1/waitlist/extra",             patch(routes::patch_waitlist_extra))
         .route("/v1/admin/waitlist",              get(routes::get_admin_waitlist));
 
     let protected = Router::new()
