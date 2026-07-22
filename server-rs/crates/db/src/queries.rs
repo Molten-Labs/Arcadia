@@ -1,6 +1,5 @@
 use crate::models::*;
 use anyhow::Result;
-use chrono::Utc;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 
