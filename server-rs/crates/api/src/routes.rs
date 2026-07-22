@@ -755,7 +755,6 @@ pub async fn post_waitlist(
     let user_agent = headers.get("user-agent")
         .and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
 
-    // Verify referrer if provided
     let referred_by = if !body.ref_code.is_empty() {
         Some(body.ref_code.to_uppercase())
     } else { None };
@@ -770,36 +769,13 @@ pub async fn post_waitlist(
 
     let user = result.ok_or_else(|| ApiError::BadRequest("Email already registered".into()))?;
 
-    let token = uuid::Uuid::new_v4().to_string();
-    let expires_at = Utc::now() + chrono::Duration::hours(24);
-    queries::insert_verification_token(&ctx.db, &email, &token, &expires_at).await?;
+    // Mark verified immediately — no email verification step
+    queries::verify_waitlist_user(&ctx.db, &email).await?;
 
-    tracing::info!("[waitlist] verify token for {email}: {token}");
+    // Compute queue position
+    let position = queries::get_waitlist_position(&ctx.db, user.id).await?;
 
-    Ok(Json(json!({
-        "ok": true,
-        "message": "Check your email to verify your address.",
-        "email": email,
-        "dev_token": token,
-        "referral_code": user.referral_code,
-    })))
-}
-
-#[derive(Deserialize)]
-pub struct VerifyBody { token: String }
-
-pub async fn verify_email(
-    State(ctx): State<AppState>,
-    Json(body): Json<VerifyBody>,
-) -> Result<Json<Value>, ApiError> {
-    let email = queries::consume_verification_token(&ctx.db, &body.token)
-        .await?
-        .ok_or_else(|| ApiError::BadRequest("Invalid or expired verification token".into()))?;
-
-    let user = queries::verify_waitlist_user(&ctx.db, &email)
-        .await?
-        .ok_or_else(|| ApiError::BadRequest("User not found".into()))?;
-
+    // Mint JWT for optional /me and /position lookups
     use jsonwebtoken::{encode, EncodingKey, Header};
     let claims = serde_json::json!({
         "sub": user.email, "uid": user.id,
@@ -810,9 +786,15 @@ pub async fn verify_email(
         &EncodingKey::from_secret(ctx.jwt_secret.as_bytes()))
         .map_err(|e| ApiError::Internal(anyhow::anyhow!(e)))?;
 
+    tracing::info!("[waitlist] {email} joined — position {position} (ref: {})", user.referral_code);
+
     Ok(Json(json!({
-        "ok": true, "token": jwt,
-        "user": { "id": user.id, "email": user.email, "role": user.role, "referral_code": user.referral_code }
+        "ok": true,
+        "message": "You're on the waitlist!",
+        "email": email,
+        "position": position,
+        "referral_code": user.referral_code,
+        "jwt": jwt,
     })))
 }
 

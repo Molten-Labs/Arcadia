@@ -53,10 +53,14 @@ async fn main() -> Result<()> {
         cfg: worker_cfg,
     };
 
+    let public_url = std::env::var("PUBLIC_URL")
+        .unwrap_or_else(|_| "https://arcadia-production-7854.up.railway.app".into());
+
     let api_state = AppState {
         db,
         redis,
         jwt_secret,
+        public_url,
         cfg: ApiConfig::from_env(),
     };
 

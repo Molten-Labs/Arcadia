@@ -1,6 +1,6 @@
 use crate::models::*;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 
@@ -575,54 +575,19 @@ pub async fn get_waitlist_user_by_email(pool: &PgPool, email: &str) -> Result<Op
     ).bind(email).fetch_optional(pool).await?)
 }
 
-/// Verified-only queue position (computed, not stored).
+/// Queue position (computed from created_at order, all users count).
 pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
-    let row: (DateTime<Utc>,) = sqlx::query_as(
-        "SELECT created_at FROM waitlist_users WHERE id = $1"
-    ).bind(user_id).fetch_one(pool).await?;
-
     let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM waitlist_users
-         WHERE email_verified = true AND created_at < $1 AND id != $2"
-    ).bind(row.0).bind(user_id).fetch_one(pool).await?;
-
+        "SELECT COUNT(*) FROM waitlist_users WHERE id < $1"
+    ).bind(user_id).fetch_one(pool).await?;
     Ok(count.0 + 1)
-}
-
-// ── Verification tokens ─────────────────────────────────────────────────────────
-
-pub async fn insert_verification_token(
-    pool: &PgPool,
-    email: &str,
-    token: &str,
-    expires_at: &DateTime<Utc>,
-) -> Result<DbVerificationToken> {
-    Ok(sqlx::query_as::<_, DbVerificationToken>(
-        "INSERT INTO verification_tokens (email, token, expires_at)
-         VALUES ($1, $2, $3) RETURNING *"
-    ).bind(email).bind(token).bind(expires_at).fetch_one(pool).await?)
-}
-
-pub async fn consume_verification_token(pool: &PgPool, token: &str) -> Result<Option<String>> {
-    let vt = sqlx::query_as::<_, DbVerificationToken>(
-        "SELECT * FROM verification_tokens WHERE token = $1 FOR UPDATE"
-    ).bind(token).fetch_optional(pool).await?;
-
-    match vt {
-        Some(t) if !t.used && t.expires_at > Utc::now() => {
-            sqlx::query("UPDATE verification_tokens SET used = true WHERE id = $1")
-                .bind(t.id).execute(pool).await?;
-            Ok(Some(t.email))
-        }
-        _ => Ok(None),
-    }
 }
 
 pub async fn verify_waitlist_user(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
     Ok(sqlx::query_as::<_, DbWaitlistUser>(
         "UPDATE waitlist_users
-         SET email_verified = true, status = 'verified', verified_at = now(), updated_at = now()
-         WHERE email = $1 AND email_verified = false
+         SET email_verified = true, status = 'verified', verified_at = COALESCE(verified_at, now()), updated_at = now()
+         WHERE email = $1
          RETURNING *"
     ).bind(email).fetch_optional(pool).await?)
 }

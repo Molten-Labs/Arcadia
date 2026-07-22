@@ -39,7 +39,6 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/score",                       get(routes::get_score))
         .route("/v1/me",                          get(routes::me))
         .route("/v1/waitlist",                    post(routes::post_waitlist))
-        .route("/v1/waitlist/verify",             post(routes::verify_email))
         .route("/v1/waitlist/position",           get(routes::get_waitlist_position))
         .route("/v1/waitlist/me",                 get(routes::get_waitlist_me));
 

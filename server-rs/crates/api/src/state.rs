@@ -6,6 +6,7 @@ pub struct AppState {
     pub db:         PgPool,
     pub redis:      redis::Client,
     pub jwt_secret: String,
+    pub public_url: String,
     pub cfg:        ApiConfig,
 }
 

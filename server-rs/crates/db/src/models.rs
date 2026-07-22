@@ -155,13 +155,4 @@ pub struct DbWaitlistUser {
     pub updated_at:     DateTime<Utc>,
 }
 
-/// Verification token.
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct DbVerificationToken {
-    pub id:         i64,
-    pub email:      String,
-    pub token:      String,
-    pub expires_at: DateTime<Utc>,
-    pub used:       bool,
-    pub created_at: DateTime<Utc>,
-}
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { CheckCircle, Loader2, Copy } from "lucide-react";
 
 const ROLE_OPTIONS = ["", "trader", "investor", "both"] as const;
@@ -9,7 +9,7 @@ const EXP_OPTIONS = ["", "beginner", "<1", "1-3", "3+"] as const;
 interface SuccessState {
   email: string;
   referral_code: string;
-  dev_token: string;
+  position: number;
 }
 
 export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) {
@@ -25,6 +25,12 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState<SuccessState | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) setRefCode(ref.toUpperCase());
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -57,8 +63,7 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
 
       if (res.ok) {
         setStatus("success");
-        setSuccess({ email: data.email, referral_code: data.referral_code, dev_token: data.dev_token });
-        setMessage("Check your email to verify your address.");
+        setSuccess({ email: data.email, referral_code: data.referral_code, position: data.position });
       } else {
         setStatus("error");
         setMessage(data?.error?.message ?? "Something went wrong.");
@@ -70,12 +75,11 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
   }
 
   if (status === "success" && success) {
-    return <SuccessView email={success.email} referralCode={success.referral_code} />;
+    return <SuccessView email={success.email} referralCode={success.referral_code} position={success.position} />;
   }
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
-      {/* Email */}
       <div>
         <label htmlFor="wl-email" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-faint uppercase">Email *</label>
         <input id="wl-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
@@ -83,14 +87,12 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
           className="h-12 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
       </div>
 
-      {/* Name */}
       <div>
         <label htmlFor="wl-name" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-faint uppercase">Name</label>
         <input id="wl-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Optional"
           className="h-12 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
       </div>
 
-      {/* Role + Experience grid */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="wl-role" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-faint uppercase">Role</label>
@@ -114,7 +116,6 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
         </div>
       </div>
 
-      {/* Twitter + Discord */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="wl-twitter" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-faint uppercase">X (Twitter)</label>
@@ -128,17 +129,15 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
         </div>
       </div>
 
-      {/* Wallet */}
       <div>
         <label htmlFor="wl-wallet" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-faint uppercase">Wallet address</label>
         <input id="wl-wallet" type="text" value={wallet} onChange={(e) => setWallet(e.target.value)} placeholder="Solana wallet (optional)"
           className="h-12 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
       </div>
 
-      {/* Referral code */}
       <div>
         <label htmlFor="wl-ref" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-faint uppercase">Referral code</label>
-        <input id="wl-ref" type="text" value={refCode} onChange={(e) => setRefCode(e.target.value)} placeholder="ABC123 (optional)"
+        <input id="wl-ref" type="text" value={refCode} onChange={(e) => setRefCode(e.target.value)} placeholder="ABC123"
           className="h-12 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
       </div>
 
@@ -155,7 +154,7 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
   );
 }
 
-function SuccessView({ email, referralCode }: { email: string; referralCode: string }) {
+function SuccessView({ email, referralCode, position }: { email: string; referralCode: string; position: number }) {
   const [copied, setCopied] = useState(false);
   const refLink = `https://arcadia.dev/waitlist?ref=${referralCode}`;
 
@@ -164,16 +163,18 @@ function SuccessView({ email, referralCode }: { email: string; referralCode: str
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-acid/25 bg-acid/[0.04] p-8">
         <CheckCircle className="size-10 text-acid" aria-hidden />
         <p className="text-lg font-bold text-ink">You&apos;re on the list.</p>
-        <p className="max-w-sm text-sm text-muted">
-          We sent a verification email to <span className="font-mono text-ink">{email}</span>.
-          Click the link to confirm your spot.
+        <p className="font-display text-5xl font-extrabold tracking-tight text-acid">
+          #{position}
+        </p>
+        <p className="text-sm text-muted">
+          <span className="font-mono text-ink">{email}</span> &mdash; you&apos;re <strong>#{position}</strong> in the queue.
         </p>
       </div>
 
       <div className="rounded-2xl border border-line bg-panel p-6">
         <p className="mb-2 font-mono text-xs tracking-[0.12em] text-faint uppercase">Your referral code</p>
         <p className="font-display text-3xl font-extrabold tracking-wider text-acid">{referralCode}</p>
-        <p className="mt-2 text-xs text-muted">Share your code — friends who join and verify move you up the queue.</p>
+        <p className="mt-2 text-xs text-muted">Share your unique link &mdash; people who join through it move you up the queue.</p>
 
         <button
           onClick={() => { navigator.clipboard.writeText(refLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}

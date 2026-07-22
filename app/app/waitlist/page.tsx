@@ -73,7 +73,7 @@ export default function WaitlistPage() {
               <div className="rounded-2xl border border-line bg-panel p-6 sm:p-8">
                 <h2 className="mb-1 font-display text-xl font-extrabold text-ink">Join the waitlist</h2>
                 <p className="mb-6 text-sm text-muted">Be first to know when vaults open.</p>
-                <WaitlistForm />
+                <WaitlistForm source="waitlist-page" />
               </div>
             </Reveal>
           </div>
