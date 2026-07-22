@@ -1,29 +1,28 @@
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Shield, TrendingUp, Users, Zap } from "lucide-react";
+import { ArrowLeft, BarChart3, Shield, TrendingUp, Zap } from "lucide-react";
 
 import { DriftBlobs, NoiseOverlay, Reveal } from "@/components/acid";
 import { Container, Kicker, SectionHeading } from "@/components/landing/bits";
 import { WaitlistForm } from "@/components/waitlist/WaitlistForm";
 
 const BENEFITS = [
-  { icon: BarChart3, title: "Verify your track record", desc: "Turn on-chain history into a portable reputation score that investors trust." },
-  { icon: Shield, title: "Non-custodial vaults", desc: "Investor capital sits in smart-contract vaults, not wallets." },
-  { icon: TrendingUp, title: "Earn what you're worth", desc: "Higher score unlocks more allocation. On-chain profit sharing." },
-  { icon: Users, title: "Back proven talent", desc: "Real scores, real records. Allocate through vaults, not promises." },
+  { icon: BarChart3, title: "verify your track record", desc: "your history becomes a portable score. investors see it, not your word for it." },
+  { icon: Shield, title: "non-custodial vaults", desc: "capital sits in the contract. never in a wallet, never in your hands." },
+  { icon: TrendingUp, title: "earn what you prove", desc: "higher score, more allocation. profit splits on-chain, automatically." },
 ];
 
 const HOW_IT_WORKS = [
-  { n: "01", title: "Connect your wallet", body: "Arcadia reads your on-chain history into a verified reputation profile." },
-  { n: "02", title: "Build your score", body: "Consistent, risk-aware performance raises your Arcadia Score." },
-  { n: "03", title: "Open a vault", body: "Fund with your own capital first, then earn allocations from investors." },
-  { n: "04", title: "Share in the upside", body: "When the vault performs, profits are shared on-chain." },
+  { n: "01", title: "connect wallet", body: "arcadia reads your on-chain history in." },
+  { n: "02", title: "build your score", body: "consistent, risk-aware performance moves the number up." },
+  { n: "03", title: "open a vault", body: "fund it yourself first. investors follow the proof." },
+  { n: "04", title: "split the upside", body: "vault performs, everyone gets paid on-chain." },
 ];
 
 const FAQ = [
-  { q: "What is Arcadia?", a: "The allocation rail for on-chain trading talent. Real trading history becomes verified reputation; investor capital flows through smart-contract vaults." },
-  { q: "How does the Arcadia Score work?", a: "A 0-1000 reputation metric built from real trading data — consistency, risk control, drawdown, and performance. Higher scores unlock more allocation." },
-  { q: "Can a trader run away with investor funds?", a: "No. Investor capital goes into a smart-contract vault, not the trader's wallet. Traders can trade but cannot withdraw investor capital." },
-  { q: "When does Arcadia launch?", a: "We're in private beta. Join the waitlist for early access." },
+  { q: "what is arcadia?", a: "a protocol that turns on-chain trading history into a reputation score, then lets investors allocate through non-custodial vaults built on that score." },
+  { q: "how does the arcadia score work?", a: "it reads consistency and risk-adjusted performance from your on-chain history. no self-reporting, no manual review." },
+  { q: "can a trader run off with investor funds?", a: "no. capital never leaves the vault contract. traders trade it, they don't hold it." },
+  { q: "when does arcadia launch?", a: "private beta first. waitlist gets access before anyone else." },
 ];
 
 export default function WaitlistPage() {
@@ -42,49 +41,40 @@ export default function WaitlistPage() {
 
         {/* Hero */}
         <section className="mx-auto max-w-[1180px] px-5 py-[clamp(3rem,8vh,6rem)] sm:px-8">
-          <div className="grid gap-14 lg:grid-cols-[1fr_420px] lg:items-start">
-            <div>
-              <Reveal><Kicker>Private beta</Kicker></Reveal>
-              <Reveal delay={80}>
-                <h1 className="mt-5 font-display text-[clamp(2.5rem,8vw,5rem)] leading-[0.9] font-extrabold tracking-[-0.04em] text-ink uppercase">
-                  Get early<br /><span className="text-acid">access.</span>
-                </h1>
-              </Reveal>
-              <Reveal delay={160}>
-                <p className="mt-5 max-w-[48ch] text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
-                  Arcadia turns on-chain trading history into verified reputation.
-                  Investors allocate through non-custodial vaults.
-                </p>
-              </Reveal>
-              <Reveal delay={240}>
-                <div className="mt-10 grid gap-3 sm:grid-cols-2">
-                  {BENEFITS.map((b) => (
-                    <div key={b.title} className="rounded-xl border border-white/10 bg-panel/60 p-4 backdrop-blur-sm">
-                      <b.icon className="mb-2 size-4 text-acid" aria-hidden />
-                      <h3 className="mb-1 text-sm font-bold text-ink">{b.title}</h3>
-                      <p className="text-xs leading-relaxed text-muted">{b.desc}</p>
-                    </div>
-                  ))}
+          <Reveal><Kicker>private beta</Kicker></Reveal>
+          <Reveal delay={80}>
+            <h1 className="mt-5 font-display text-[clamp(2.5rem,8vw,5rem)] leading-[0.9] font-extrabold tracking-[-0.04em] text-ink uppercase">
+              turn trading<br /><span className="text-acid">into capital.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={160}>
+            <p className="mt-5 max-w-[56ch] text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
+              arcadia reads your on-chain history and turns it into<br />
+              reputation investors can actually check.
+            </p>
+            <p className="mt-2 text-[clamp(1rem,1.6vw,1.15rem)] leading-[1.6] text-muted">
+              no pitch decks. no screenshots. the chain doesn&apos;t lie.
+            </p>
+          </Reveal>
+          <Reveal delay={240}>
+            <div className="mt-10 grid gap-3 sm:grid-cols-3">
+              {BENEFITS.map((b) => (
+                <div key={b.title} className="rounded-xl border border-white/10 bg-panel/60 p-4 backdrop-blur-sm">
+                  <b.icon className="mb-2 size-4 text-acid" aria-hidden />
+                  <h3 className="mb-1 text-sm font-bold text-ink">{b.title}</h3>
+                  <p className="text-xs leading-relaxed text-muted">{b.desc}</p>
                 </div>
-              </Reveal>
+              ))}
             </div>
-
-            <Reveal delay={240}>
-              <div className="rounded-2xl border border-line bg-panel p-6 sm:p-8">
-                <h2 className="mb-1 font-display text-xl font-extrabold text-ink">Join the waitlist</h2>
-                <p className="mb-6 text-sm text-muted">Be first to know when vaults open.</p>
-                <WaitlistForm source="waitlist-page" />
-              </div>
-            </Reveal>
-          </div>
+          </Reveal>
         </section>
 
         {/* How it works */}
         <section className="border-t border-white/10 py-[clamp(4rem,8vw,7rem)]">
           <Container>
-            <Reveal><Kicker>How it works</Kicker></Reveal>
+            <Reveal><Kicker>how it works</Kicker></Reveal>
             <Reveal delay={80}>
-              <SectionHeading className="mt-4 mb-10">From trader to&nbsp;allocated.</SectionHeading>
+              <SectionHeading className="mt-4 mb-10">trader to&nbsp;allocated.</SectionHeading>
             </Reveal>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {HOW_IT_WORKS.map((step) => (
@@ -102,14 +92,31 @@ export default function WaitlistPage() {
           </Container>
         </section>
 
+        {/* Waitlist CTA */}
+        <section className="border-t border-white/10 py-[clamp(4rem,8vw,7rem)]">
+          <Container>
+            <div className="mx-auto max-w-[500px] text-center">
+              <Reveal><Kicker>join the waitlist</Kicker></Reveal>
+              <Reveal delay={80}>
+                <p className="mt-3 mb-8 text-lg text-muted">be first when vaults open.</p>
+              </Reveal>
+              <Reveal delay={160}>
+                <div className="rounded-2xl border border-line bg-panel p-6 sm:p-8 text-left">
+                  <WaitlistForm source="waitlist-page" />
+                </div>
+              </Reveal>
+            </div>
+          </Container>
+        </section>
+
         {/* FAQ */}
         <section className="pb-[clamp(5rem,10vw,8rem)]">
           <Container>
-            <Reveal><Kicker>FAQ</Kicker></Reveal>
+            <Reveal><Kicker>faq</Kicker></Reveal>
             <Reveal delay={80}>
-              <SectionHeading className="mt-4 mb-10">Questions?</SectionHeading>
+              <SectionHeading className="mt-4 mb-10">questions?</SectionHeading>
             </Reveal>
-            <div className="grid gap-3 max-w-3xl">
+            <div className="grid gap-3 max-w-3xl mx-auto">
               {FAQ.map((item) => (
                 <Reveal key={item.q} delay={120}>
                   <details className="group rounded-xl border border-white/10 bg-panel/60 transition-colors open:border-acid/30">
