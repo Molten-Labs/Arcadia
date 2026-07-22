@@ -142,7 +142,7 @@ function SuccessView({ email, referralCode, position }: { email: string; referra
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-acid/25 bg-acid/[0.04] p-8">
         <CheckCircle className="size-10 text-acid" aria-hidden />
         <p className="text-lg font-bold text-ink">You&apos;re on the list.</p>
-        <p className="font-display text-5xl font-extrabold tracking-tight text-acid">
+        <p className="font-mono text-5xl font-bold tracking-tight text-acid">
           #{position}
         </p>
         <p className="text-sm text-muted">
@@ -152,7 +152,7 @@ function SuccessView({ email, referralCode, position }: { email: string; referra
 
       <div className="rounded-2xl border border-line bg-panel p-6">
         <p className="mb-2 font-mono text-xs tracking-[0.12em] text-faint uppercase">Your referral code</p>
-        <p className="font-display text-3xl font-extrabold tracking-wider text-acid">{referralCode}</p>
+        <p className="font-mono text-2xl font-bold tracking-[0.15em] text-acid">{referralCode}</p>
         <p className="mt-2 text-xs text-muted">Share your unique link &mdash; people who join through it move you up the queue.</p>
         <button
           onClick={() => { navigator.clipboard.writeText(refLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
