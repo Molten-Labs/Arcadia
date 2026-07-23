@@ -50,6 +50,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/investors/:wallet/flows",         get(routes::get_investor_flows))
         .route("/v1/investors/:wallet/notifications", get(routes::get_investor_notifications))
         .route("/v1/trades/simulate",                 post(simulate::handler))
+        .route("/v1/traders/init",                    post(routes::init_trader))
         .route("/v1/events",                          post(events::handler));
 
     Router::new()

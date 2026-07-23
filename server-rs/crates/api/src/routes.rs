@@ -12,7 +12,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 // ── GET /v1/traders ───────────────────────────────────────────────────────────
@@ -902,6 +902,40 @@ fn constant_time_eq(a: &str, b: &str) -> bool {
         return false;
     }
     a.bytes().zip(b.bytes()).fold(0, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+// ── POST /v1/traders/init ──────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+pub struct InitTraderReq {
+    /// Optional display handle (auto-generated from wallet if omitted).
+    pub handle: Option<String>,
+}
+
+/// POST /v1/traders/init — create a trader profile for the authenticated wallet.
+///
+/// In dev/simulation mode the wallet address doubles as the profile PDA.
+pub async fn init_trader(
+    State(ctx): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<InitTraderReq>,
+) -> Result<Json<Value>, ApiError> {
+    let wallet = extract_wallet(&headers, &ctx.jwt_secret)?;
+
+    if let Some(_) = queries::get_trader_by_wallet(&ctx.db, &wallet).await? {
+        return Err(ApiError::BadRequest("trader profile already exists".into()));
+    }
+
+    let profile = wallet.clone();
+    let handle = body.handle.unwrap_or_else(|| format!("trader_{}", &wallet[..8]));
+    let now = Utc::now();
+    queries::upsert_trader_profile(&ctx.db, &profile, &wallet, &handle, now).await?;
+
+    Ok(Json(json!({
+        "profile": profile,
+        "handle":  handle,
+        "role":    "trader",
+    })))
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────
