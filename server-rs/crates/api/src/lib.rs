@@ -24,6 +24,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/health",                      get(routes::health))
         .route("/v1/auth/challenge",              post(auth::challenge))
         .route("/v1/auth/verify",                 post(auth::verify))
+        .route("/v1/auth/privy",                  post(auth::privy_verify))
         .route("/v1/traders",                     get(routes::list_traders))
         .route("/v1/traders/:handle",             get(routes::get_trader))
         .route("/v1/traders/:handle/score-history", get(routes::trader_score_history))

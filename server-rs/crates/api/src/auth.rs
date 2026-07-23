@@ -131,6 +131,83 @@ pub fn verify_jwt(token: &str, secret: &str) -> Result<String, ApiError> {
     Ok(data.claims.sub)
 }
 
+// ── Privy auth ────────────────────────────────────────────────────────────────
+//
+// We verify access tokens by calling GET
+// https://api.privy.io/v1/users/me with the user's bearer token.  Privy
+// docs: https://docs.privy.io/api/rest/authentication
+
+#[derive(Deserialize)]
+pub struct PrivyReq {
+    pub token: String,
+}
+
+#[derive(Serialize)]
+pub struct PrivyRes {
+    pub jwt: String,
+}
+
+#[derive(Deserialize)]
+struct PrivyUser {
+    id:        String,
+    #[serde(default)]
+    linked_accounts: Vec<PrivyLinkedAccount>,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "type")]
+enum PrivyLinkedAccount {
+    #[serde(rename = "solana_wallet")]
+    SolanaWallet { address: String },
+    #[serde(other)]
+    Other,
+}
+
+/// POST /v1/auth/privy
+pub async fn privy_verify(
+    State(ctx): State<AppState>,
+    Json(body): Json<PrivyReq>,
+) -> Result<Json<PrivyRes>, ApiError> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .get("https://api.privy.io/v1/users/me")
+        .bearer_auth(&body.token)
+        .send()
+        .await
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("privy verify request: {e}")))?;
+
+    if !resp.status().is_success() {
+        return Err(ApiError::Unauthorized);
+    }
+
+    let user: PrivyUser = resp
+        .json()
+        .await
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("privy decode: {e}")))?;
+
+    // Extract first linked Solana wallet
+    let wallet = user
+        .linked_accounts
+        .into_iter()
+        .find_map(|a| match a {
+            PrivyLinkedAccount::SolanaWallet { address } => Some(address),
+            _ => None,
+        })
+        .ok_or_else(|| ApiError::BadRequest("no solana wallet linked in privy".into()))?;
+
+    let now = Utc::now().timestamp();
+    let exp = now + ctx.cfg.jwt_expiry_secs as i64;
+    let claims = Claims { sub: wallet, iat: now, exp };
+    let jwt = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(ctx.jwt_secret.as_bytes()),
+    )
+    .map_err(|e| ApiError::Internal(anyhow::anyhow!(e)))?;
+
+    Ok(Json(PrivyRes { jwt }))
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn random_b58(len: usize) -> String {
