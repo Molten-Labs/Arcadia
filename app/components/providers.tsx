@@ -1,26 +1,11 @@
 "use client";
 
-// Suppress the wallet-adapter-react 0.15+ "WalletContext without providing one"
-// console.error that fires during Next.js SSR/hydration. The page renders
-// correctly after hydration; this is a known compatibility issue.
-if (typeof window !== "undefined") {
-  const _consoleError = console.error.bind(console);
-  console.error = (...args: unknown[]) => {
-    const msg = typeof args[0] === "string" ? args[0] : "";
-    if (msg.includes("WalletContext without providing one")) return;
-    _consoleError(...args);
-  };
-}
-
-import { type ReactNode, useMemo, createContext, useContext } from "react";
+import { type ReactNode, createContext, useContext } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
-import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { useAuth } from "@/lib/use-auth";
 import { RoleProvider } from "@/lib/role-context";
-import { RoleGate } from "@/components/RoleGate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,9 +15,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-const RPC_ENDPOINT =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
 
 /* ── Auth context ─────────────────────────────────────────────────── */
 
@@ -65,37 +47,48 @@ function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 
-/* ── Solana wallet providers ──────────────────────────────────────── */
+/* ── Privy config ─────────────────────────────────────────────────── */
 
-function SolanaProviders({ children }: { children: ReactNode }) {
-  const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    [],
-  );
-
-  return (
-    <ConnectionProvider endpoint={RPC_ENDPOINT}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          <AuthProvider>
-            <RoleProvider>
-              {/* Role selection gate — appears as full-screen overlay when needed */}
-              <RoleGate />
-              {children}
-            </RoleProvider>
-          </AuthProvider>
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
-  );
-}
+const PRIVY_APP_ID = "cmowmjzxf002r0cl5zonkvtai";
 
 /* ── Root providers ───────────────────────────────────────────────── */
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <SolanaProviders>{children}</SolanaProviders>
+      <PrivyProvider
+        appId={PRIVY_APP_ID}
+        config={{
+          appearance: {
+            theme: "#222224",
+            walletChainType: "solana-only",
+            walletList: [
+              "detected_solana_wallets",
+              "phantom",
+              "solflare",
+              "backpack",
+            ],
+          },
+          loginMethods: ["email", "google", "wallet"],
+          embeddedWallets: {
+            showWalletUIs: true,
+            solana: {
+              createOnLogin: "users-without-wallets",
+            },
+          },
+          externalWallets: {
+            solana: {
+              connectors: toSolanaWalletConnectors(),
+            },
+          },
+        }}
+      >
+        <AuthProvider>
+          <RoleProvider>
+            {children}
+          </RoleProvider>
+        </AuthProvider>
+      </PrivyProvider>
     </QueryClientProvider>
   );
 }

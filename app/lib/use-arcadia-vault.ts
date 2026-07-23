@@ -1,24 +1,11 @@
 "use client";
 
-/**
- * useArcadiaVault — the single React hook for Arcadia Protocol transactions.
- *
- * All vault flows (deposit, withdraw, profile/investor init, profit, trade
- * recording) live here; transaction UIs consume `txState` and never build
- * program calls themselves.
- *
- * Three outcomes, never conflated:
- *  - live:      the program + profile exist on devnet → real Anchor tx.
- *  - simulated: program not live → clearly-labelled simulation, no signature.
- *  - error:     RPC unreachable or tx failed → error phase with the cause.
- */
-
 import { useCallback, useState } from "react";
 import {
-  useAnchorWallet,
-  useConnection,
-  useWallet,
-} from "@solana/wallet-adapter-react";
+  useWalletCompat,
+  useConnectionCompat,
+  useAnchorWalletCompat,
+} from "@/lib/use-wallet-compat";
 import { PublicKey, Transaction, Keypair, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
@@ -39,8 +26,6 @@ import {
 } from "./vault-client";
 
 export type { VaultTxPhase, VaultTxState } from "./vault-client";
-
-/* ── On-chain state snapshot (read-only panel data) ─────────────────── */
 
 export interface VaultOnChainState {
   programDeployed: boolean;
@@ -76,12 +61,10 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 
-/* ── Hook ───────────────────────────────────────────────────────────── */
-
 export function useArcadiaVault(traderProfilePubkey?: string) {
-  const { connection } = useConnection();
-  const anchorWallet = useAnchorWallet();
-  const { publicKey, sendTransaction } = useWallet();
+  const { connection } = useConnectionCompat();
+  const anchorWallet = useAnchorWalletCompat();
+  const { publicKey, sendTransaction } = useWalletCompat();
 
   const [txState, setTxState] = useState<VaultTxState>(IDLE_TX_STATE);
   const [onChainState, setOnChainState] = useState<VaultOnChainState | null>(null);
@@ -106,7 +89,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     return false;
   }, []);
 
-  /** Chain status with RPC failures surfaced as an error phase (returns null). */
   const statusOrFail = useCallback(
     async (traderKey: PublicKey, depositor: PublicKey): Promise<VaultChainStatus | null> => {
       try {
@@ -119,7 +101,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [connection, fail],
   );
 
-  /* ── Fetch on-chain state (read-only status panel) ────────────── */
   const fetchOnChainState = useCallback(async () => {
     if (!publicKey) return;
     setLoadingChain(true);
@@ -165,7 +146,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     }
   }, [connection, publicKey, traderProfilePubkey]);
 
-  /* ── Initialize Profile ───────────────────────────────────────── */
   const initializeProfile = useCallback(
     async (handle: string, maxLeverage: number): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
@@ -209,7 +189,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           })
           .signers([vaultKeypair])
           .transaction();
-        const sig = await sendTransaction(tx, connection, { signers: [vaultKeypair] });
+        const sig = await sendTransaction!(tx, connection);
 
         succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
@@ -227,7 +207,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
-  /* ── Initialize Investor (profile-independent) ────────────────── */
   const initializeInvestor = useCallback(
     async (): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
@@ -263,7 +242,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             systemProgram: SystemProgram.programId,
           })
           .transaction();
-        const sig = await sendTransaction(tx, connection);
+        const sig = await sendTransaction!(tx, connection);
         succeed(`Investor account created. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "InvestorInitialized",
@@ -278,7 +257,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
-  /* ── Deposit ──────────────────────────────────────────────────── */
   const deposit = useCallback(
     async (traderWalletOrProfile: string, amountUsdc: number): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
@@ -321,7 +299,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
               systemProgram: SystemProgram.programId,
             })
             .transaction();
-          await sendTransaction(initTx, connection);
+          await sendTransaction!(initTx, connection);
         }
 
         progress("signing", `Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`);
@@ -342,7 +320,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             systemProgram: SystemProgram.programId,
           })
           .transaction();
-        const sig = await sendTransaction(tx, connection);
+        const sig = await sendTransaction!(tx, connection);
 
         succeed(
           `Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`,
@@ -367,7 +345,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
-  /* ── Request Withdraw ─────────────────────────────────────────── */
   const requestWithdraw = useCallback(
     async (traderWalletOrProfile: string, shares: number): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
@@ -398,7 +375,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             position: positionPda,
           })
           .transaction();
-        const sig = await sendTransaction(tx, connection);
+        const sig = await sendTransaction!(tx, connection);
         succeed(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`, sig, false);
         return true;
       } catch (err) {
@@ -408,7 +385,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
-  /* ── Process Withdraw ─────────────────────────────────────────── */
   const processWithdraw = useCallback(
     async (traderWalletOrProfile: string): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
@@ -443,7 +419,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             tokenProgram: TOKEN_PROGRAM_ID,
           })
           .transaction();
-        const sig = await sendTransaction(tx, connection);
+        const sig = await sendTransaction!(tx, connection);
         succeed(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`, sig, false);
         pushEvent({
           event_type: "Withdrawn",
@@ -460,7 +436,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [anchorWallet, connection, publicKey, sendTransaction, progress, succeed, fail, statusOrFail],
   );
 
-  /* ── Record Trade (oracle co-sign via backend) ────────────────── */
   const recordTrade = useCallback(
     async (params: {
       profileAddress: string;
@@ -521,7 +496,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (tx_base64) {
           progress("signing", "Confirm in wallet…");
           const tx = Transaction.from(Buffer.from(tx_base64, "base64"));
-          const sig = await sendTransaction(tx, connection);
+          const sig = await sendTransaction!(tx, connection);
           progress("confirming", "Confirming on Solana…");
           await connection.confirmTransaction(sig, "confirmed");
           succeed(`Trade recorded on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
@@ -537,7 +512,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
     [connection, publicKey, sendTransaction, progress, succeed, fail],
   );
 
-  /* ── Withdraw Profit (trader) ─────────────────────────────────── */
   const withdrawProfit = useCallback(
     async (amountUsdc: number): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
@@ -574,7 +548,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
             tokenProgram: TOKEN_PROGRAM_ID,
           })
           .transaction();
-        const sig = await sendTransaction(tx, connection);
+        const sig = await sendTransaction!(tx, connection);
         succeed(`$${amountUsdc.toFixed(2)} profit withdrawn. Signature: ${sig.slice(0, 8)}…`, sig, false);
         return true;
       } catch (err) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useWallet } from "@solana/wallet-adapter-react";
 import { useQuery } from "@tanstack/react-query";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { apiFetch } from "./utils";
 
 export interface MeResponse {
@@ -11,13 +11,8 @@ export interface MeResponse {
   profile?: string;
 }
 
-/**
- * Resolve the connected wallet to a trader handle + role.
- * Returns `{ role: "investor", wallet: null }` when wallet is not connected
- * or the backend is unreachable.
- */
 export function useMe() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWalletCompat();
 
   return useQuery<MeResponse>({
     queryKey: ["me", publicKey?.toBase58()],
@@ -27,10 +22,6 @@ export function useMe() {
   });
 }
 
-/**
- * Get the trader handle for the connected wallet.
- * Shortcut for `useMe().data?.handle`.
- */
 export function useTraderHandle(): string | undefined {
   const { data } = useMe();
   return data?.handle;

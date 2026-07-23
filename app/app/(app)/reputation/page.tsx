@@ -1,6 +1,6 @@
 "use client";
 
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, ChevronRight, Shield, TrendingUp, Wallet } from "lucide-react";
 
@@ -52,7 +52,7 @@ const TIER_ACCENT: Record<ScoreTier, { text: string; dot: string; ring: string }
 };
 
 export default function ReputationPage() {
-  const { connected } = useWallet();
+  const { connected } = useWalletCompat();
   const { data: me } = useMe();
   const handle = me?.handle;
 

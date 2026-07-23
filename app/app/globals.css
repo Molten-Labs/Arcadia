@@ -118,43 +118,7 @@ body {
   font-feature-settings: "tnum";
 }
 
-/* Wallet adapter — acid CTA */
-.wallet-adapter-button {
-  background: var(--color-acid) !important;
-  color: var(--color-void) !important;
-  border-radius: 999px !important;
-  font-family: var(--font-mono) !important;
-  font-size: 0.6875rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
-  text-transform: uppercase !important;
-  height: 2.25rem !important;
-  padding: 0 1rem !important;
-  transition: box-shadow 0.2s ease, transform 0.2s ease !important;
-}
-.wallet-adapter-button:hover {
-  background: var(--color-acid) !important;
-  box-shadow: 0 0 24px color-mix(in srgb, var(--color-acid) 45%, transparent) !important;
-  transform: translateY(-1px);
-}
-.wallet-adapter-button:focus-visible {
-  outline: 2px solid var(--color-acid) !important;
-  outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .wallet-adapter-button, .wallet-adapter-button:hover { transition: none !important; transform: none; }
-}
-.wallet-adapter-modal-wrapper {
-  background: var(--color-panel) !important;
-  border: 1px solid var(--color-line) !important;
-  border-radius: 0.75rem !important;
-}
-.wallet-adapter-modal-title { color: var(--color-ink) !important; }
-.wallet-adapter-modal-list li { color: var(--color-muted) !important; }
-.wallet-adapter-modal-list-more { color: var(--color-muted) !important; }
-/* Layer the wallet picker above app dialogs (DepositModal is z-[9999]) so the
-   "Connect Wallet" CTA inside a modal opens on top, not hidden behind it. */
-.wallet-adapter-modal { z-index: 10000 !important; }
+
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }

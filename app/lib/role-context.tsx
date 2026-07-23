@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 
 export type ArcadiaRole = "trader" | "investor" | null;
 
@@ -49,22 +49,12 @@ function subscribeRole(onChange: () => void) {
   };
 }
 
-/* ── SSR-safe hydration flag ────────────────────────────────────────── */
-// wallet-adapter-react 0.15+ uses a Proxy default context that console.errors
-// on property access outside a WalletProvider; only dereference it client-side.
-const noopSubscribe = () => () => {};
-
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const walletAdapter = useWallet();
-  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const { connected, publicKey } = useWalletCompat();
   const role = useSyncExternalStore(subscribeRole, getRoleSnapshot, () => null);
 
-  // The gate is derived, not stored: first wallet connection with no role
-  // chosen shows it, until the user picks a role or dismisses it for this key.
   const [dismissedForKey, setDismissedForKey] = useState<string | null>(null);
 
-  const connected = hydrated ? walletAdapter.connected : false;
-  const publicKey = hydrated ? walletAdapter.publicKey : null;
   const currentKey = publicKey?.toBase58() ?? null;
 
   const showRoleGate =

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 
 import { useRole } from "@/lib/role-context";
 
@@ -11,16 +11,10 @@ import { WalletButton } from "./WalletButton";
 import { useHydrated } from "./use-hydrated";
 import { routeLabel } from "./nav-items";
 
-/**
- * App topbar. Left: current route label + a live network chip (the shell's one
- * sanctioned always-on acid accent) + role chip. Right: notifications, wallet
- * connect/disconnect, and a role avatar. Wallet-derived UI is gated on hydration
- * so SSR and the first client paint agree.
- */
 export function Topbar() {
   const pathname = usePathname();
   const hydrated = useHydrated();
-  const wallet = useWallet();
+  const wallet = useWalletCompat();
   const { role: rawRole } = useRole();
 
   const connected = hydrated && wallet.connected;

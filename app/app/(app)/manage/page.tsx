@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Clock, ExternalLink, Loader2, Wallet } from "lucide-react";
 
@@ -24,7 +24,7 @@ import { useArcadiaVault } from "@/lib/use-arcadia-vault";
 const PENDING_PHASES = ["checking", "init-investor", "signing", "confirming"];
 
 export default function ManagePage() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWalletCompat();
   const queryClient = useQueryClient();
   const { data: me } = useMe();
   const handle = me?.handle;

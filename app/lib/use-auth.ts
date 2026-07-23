@@ -1,47 +1,39 @@
 "use client";
 
 /**
- * useAuth — Sign-In With Solana (SIWS) hook.
+ * useAuth — Authentication via Privy access token.
  *
  * Flow:
- *  1. signIn() fetches a nonce from /api/v1/auth/challenge
- *  2. Builds the canonical SIWS message (lib/siws, matches Rust auth.rs)
- *  3. Asks the wallet to sign the message bytes
- *  4. POSTs { pubkey, signature (base58), nonce } to /api/v1/auth/verify
- *  5. Stores the returned token in localStorage
+ *  1. User logs in through Privy (email, Google, X, or Solana wallet)
+ *  2. Privy provides an access token via usePrivy().getAccessToken()
+ *  3. The token is sent to the backend as Authorization: Bearer <token>
+ *  4. Backend verifies the token via privy-rs and returns an internal JWT
+ *  5. The internal JWT is stored in localStorage for apiFetch to use
  *
  * The stored session is exposed via useSyncExternalStore (single source of
  * truth: localStorage), and only counts as authenticated while the stored
- * wallet matches the currently connected key. apiFetch (utils.ts) reads the
- * same token for Authorization: Bearer.
+ * token is valid. apiFetch (utils.ts) reads the same token for Authorization.
  */
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import bs58 from "bs58";
-import { buildSiwsMessage } from "./siws";
+import { usePrivy, useToken } from "@privy-io/react-auth";
+import { useWalletCompat } from "./use-wallet-compat";
 
 const TOKEN_KEY = "arcadia_jwt";
-const WALLET_KEY = "arcadia_wallet";
 const AUTH_EVENT = "arcadia-auth-change";
 
 interface StoredSession {
   token: string;
-  wallet: string;
 }
 
 /* ── localStorage-backed session store ──────────────────────────────── */
 
-let cachedSession: StoredSession | null = null;
+let cachedToken: string | null = null;
 
-function getSessionSnapshot(): StoredSession | null {
+function getSessionSnapshot(): string | null {
   const token = localStorage.getItem(TOKEN_KEY);
-  const wallet = localStorage.getItem(WALLET_KEY);
-  if (!token || !wallet) return (cachedSession = null);
-  if (!cachedSession || cachedSession.token !== token || cachedSession.wallet !== wallet) {
-    cachedSession = { token, wallet };
-  }
-  return cachedSession;
+  cachedToken = token;
+  return token;
 }
 
 function subscribeSession(onChange: () => void) {
@@ -53,101 +45,80 @@ function subscribeSession(onChange: () => void) {
   };
 }
 
-function writeSession(session: StoredSession | null) {
-  if (session) {
-    localStorage.setItem(TOKEN_KEY, session.token);
-    localStorage.setItem(WALLET_KEY, session.wallet);
+function writeToken(token: string | null) {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(WALLET_KEY);
   }
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
-/* ── SSR-safe hydration flag ────────────────────────────────────────── */
-// wallet-adapter-react 0.15+ uses a Proxy default context that console.errors
-// on property access outside a WalletProvider; only dereference it client-side.
-const noopSubscribe = () => () => {};
-function useHydrated(): boolean {
-  return useSyncExternalStore(noopSubscribe, () => true, () => false);
-}
-
 export function useAuth() {
-  const walletAdapter = useWallet();
-  const hydrated = useHydrated();
-  const session = useSyncExternalStore(subscribeSession, getSessionSnapshot, () => null);
+  const privy = usePrivy();
+  const { publicKey } = useWalletCompat();
+  const { getAccessToken } = useToken();
+  const storedToken = useSyncExternalStore(subscribeSession, getSessionSnapshot, () => null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const publicKey = hydrated ? walletAdapter.publicKey : null;
-  const signMessage = hydrated ? walletAdapter.signMessage : undefined;
-  const disconnect = hydrated ? walletAdapter.disconnect : undefined;
+  const isAuthenticated = !!storedToken;
 
-  const currentKey = publicKey?.toBase58() ?? null;
-  const sessionValid = session !== null && session.wallet === currentKey;
-
-  // A stored session for a *different* connected wallet is stale — wipe it so
-  // apiFetch (which reads localStorage directly) can't send its credentials.
-  // When no wallet is connected yet (autoConnect still resolving) the session
-  // is kept; it simply doesn't count as authenticated until the keys match.
+  // When Privy authenticates, exchange the Privy token for our backend JWT.
   useEffect(() => {
-    if (session && currentKey && session.wallet !== currentKey) {
-      writeSession(null);
+    if (!privy.authenticated || !privy.ready) return;
+    if (storedToken) return;
+
+    const exchange = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const accessToken = await getAccessToken();
+        if (!accessToken) throw new Error("No Privy access token.");
+
+        const res = await fetch("/api/v1/auth/privy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: accessToken }),
+        });
+
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? "Token exchange failed.");
+        }
+
+        const { jwt } = (await res.json()) as { jwt: string };
+        writeToken(jwt);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void exchange();
+  }, [privy.authenticated, privy.ready, storedToken, getAccessToken]);
+
+  // If Privy logs out, clear our session.
+  useEffect(() => {
+    if (privy.ready && !privy.authenticated && storedToken) {
+      writeToken(null);
     }
-  }, [session, currentKey]);
+  }, [privy.ready, privy.authenticated, storedToken]);
 
   const signIn = useCallback(async () => {
-    if (!publicKey || !signMessage) {
-      setError("Wallet not connected or does not support message signing.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-
-    try {
-      const challengeRes = await fetch("/api/v1/auth/challenge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!challengeRes.ok) throw new Error("Failed to get auth challenge.");
-      const { nonce } = (await challengeRes.json()) as { nonce: string };
-
-      const message = buildSiwsMessage(publicKey.toBase58(), nonce);
-      const sigBytes = await signMessage(new TextEncoder().encode(message));
-      const sigBase58 = bs58.encode(sigBytes);
-
-      const verifyRes = await fetch("/api/v1/auth/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pubkey: publicKey.toBase58(),
-          signature: sigBase58,
-          nonce,
-        }),
-      });
-      if (!verifyRes.ok) {
-        const body = (await verifyRes.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Signature verification failed.");
-      }
-      const { token } = (await verifyRes.json()) as { token: string };
-
-      writeSession({ token, wallet: publicKey.toBase58() });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [publicKey, signMessage]);
+    privy.login();
+  }, [privy]);
 
   const signOut = useCallback(async () => {
-    writeSession(null);
-    await disconnect?.();
-  }, [disconnect]);
+    writeToken(null);
+    await privy.logout();
+  }, [privy]);
 
   return {
-    token: sessionValid ? session.token : null,
-    wallet: sessionValid ? session.wallet : null,
-    isAuthenticated: sessionValid,
+    token: storedToken,
+    wallet: publicKey?.toBase58() ?? null,
+    isAuthenticated,
     loading,
     error,
     signIn,

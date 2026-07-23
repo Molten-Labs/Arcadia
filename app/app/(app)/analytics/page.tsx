@@ -1,6 +1,6 @@
 "use client";
 
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Wallet } from "lucide-react";
 
@@ -36,7 +36,7 @@ function pnlTone(n: number) {
 }
 
 export default function AnalyticsPage() {
-  const { connected } = useWallet();
+  const { connected } = useWalletCompat();
 
   const { data: trader } = useQuery<TraderProfile>({
     queryKey: ["trader", FALLBACK_HANDLE],

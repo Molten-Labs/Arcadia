@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import dynamic from "next/dynamic";
 import {
   Activity,
@@ -72,7 +72,7 @@ function fmtCompact(n: number): string {
 }
 
 function TerminalContent() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWalletCompat();
   const searchParams = useSearchParams();
   const phoenix = usePhoenix();
   const { recordTrade } = useArcadiaVault();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useRouter } from "next/navigation";
 import type { ElementType } from "react";
 import { Bell, CheckCircle, Copy, Crown, ExternalLink, Eye, EyeOff, Moon, Save, Shield, Sliders, TrendingUp } from "lucide-react";
@@ -125,7 +125,7 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: Ele
 }
 
 export default function SettingsPage() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWalletCompat();
   const { role, setRole } = useRole();
   const router = useRouter();
   const hydrated = useHydrated();

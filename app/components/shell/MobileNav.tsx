@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 
 import { useRole } from "@/lib/role-context";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,7 @@ function MobileNavItem({ href, icon: Icon, label, active }: NavLink & { active: 
 export function MobileNav() {
   const pathname = usePathname();
   const hydrated = useHydrated();
-  const wallet = useWallet();
+  const wallet = useWalletCompat();
   const { role: rawRole } = useRole();
 
   if (!hydrated) return null;

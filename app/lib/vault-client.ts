@@ -16,7 +16,7 @@
 
 import type { Connection, PublicKey } from "@solana/web3.js";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
-import type { AnchorWallet } from "@solana/wallet-adapter-react";
+import type { AnchorWallet } from "./use-wallet-compat";
 import { ARCADIA_IDL, type ArcadiaIdl } from "./arcadia-idl";
 import {
   decodePlatformConfig,

@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { Activity, AlertCircle, ArrowLeft, ArrowUpRight, BarChart3, CheckCircle, DollarSign, Loader2, Users, X, Zap } from "lucide-react";
 
 import { NavHistoryChart } from "@/components/NavHistoryChart";
@@ -31,7 +31,7 @@ const TOP_GLOW = {
 
 export default function VaultPage() {
   const { handle } = useParams<{ handle: string }>();
-  const { connected } = useWallet();
+  const { connected } = useWalletCompat();
   const [showDeposit, setShowDeposit] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [showWithdraw, setShowWithdraw] = useState(false);

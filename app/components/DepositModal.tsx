@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { usePrivy } from "@privy-io/react-auth";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { AlertCircle, CheckCircle, ExternalLink, Loader2, X, Zap } from "lucide-react";
 
 import { useArcadiaVault, type VaultTxPhase } from "@/lib/use-arcadia-vault";
@@ -21,12 +21,11 @@ interface DepositModalProps {
 }
 
 export function DepositModal({ trader, onClose }: DepositModalProps) {
-  const { publicKey } = useWallet();
-  const { setVisible: setWalletModalVisible } = useWalletModal();
+  const privy = usePrivy();
+  const { publicKey } = useWalletCompat();
   const { deposit, txState, resetTx } = useArcadiaVault();
   const [amount, setAmount] = useState("");
 
-  // Escape-to-close (additive a11y; deposit logic unchanged).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -53,11 +52,9 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
     void deposit(trader.wallet, parsedAmount);
   };
 
-  // Primary CTA: connect the wallet when disconnected (opens the wallet-adapter
-  // modal, which layers above this dialog), otherwise submit the deposit.
   const handlePrimary = () => {
     if (!isConnected) {
-      setWalletModalVisible(true);
+      privy.connectWallet();
       return;
     }
     handleDeposit();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CheckCircle, Clock, DollarSign, Server, Wallet } from "lucide-react";
 import { useMemo } from "react";
@@ -78,7 +78,7 @@ interface PayoutRecord {
 }
 
 export default function PayoutsPage() {
-  const { connected } = useWallet();
+  const { connected } = useWalletCompat();
   const { data: me } = useMe();
   const handle = me?.handle;
 

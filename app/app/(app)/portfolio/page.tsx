@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 
@@ -133,7 +133,7 @@ function signed(value: string, positive: boolean) {
 }
 
 export default function PortfolioPage() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey } = useWalletCompat();
 
   const { data, isLoading } = useQuery<PortfolioItem[]>({
     queryKey: ["portfolio", publicKey?.toBase58()],
