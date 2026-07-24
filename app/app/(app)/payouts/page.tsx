@@ -317,7 +317,7 @@ export default function PayoutsPage() {
                   <div className="mb-2 flex items-center gap-2">
                     <CheckCircle size={14} className="text-success" />
                     <span className="text-xs font-bold text-success">
-                      {txState.simulated ? "Payout simulated · devnet" : "Payout submitted"}
+                      Payout submitted
                     </span>
                   </div>
                   <p className="mb-2 font-mono text-[0.6rem] text-faint">{payoutResult}</p>

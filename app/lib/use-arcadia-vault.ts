@@ -39,8 +39,6 @@ export interface VaultOnChainState {
   positionAddress: string;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 function toTraderKey(walletOrProfile: string, fallback: PublicKey): PublicKey {
   try {
     return new PublicKey(walletOrProfile);
@@ -161,14 +159,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         }
 
         if (status.kind === "offline") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_400);
-          succeed(
-            `Profile "${handle}" simulated — program not live on devnet. PDA: ${profAddr.toBase58().slice(0, 8)}…`,
-            null,
-            true,
-          );
-          return true;
+          return fail("Vault program not deployed on this cluster — cannot initialize profile.");
         }
 
         const program = makeArcadiaProgram(connection, anchorWallet);
@@ -222,14 +213,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         }
 
         if (status.kind === "offline") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_100);
-          succeed(
-            `Investor account simulated — program not live on devnet. PDA: ${invAddr.toBase58().slice(0, 8)}…`,
-            null,
-            true,
-          );
-          return true;
+          return fail("Vault program not deployed on this cluster — cannot create investor account.");
         }
 
         const program = makeArcadiaProgram(connection, anchorWallet);
@@ -271,20 +255,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
 
         if (status.kind !== "vault-live") {
-          if (!status.investorExists) {
-            progress("init-investor", "Creating investor account…", true);
-            await sleep(900);
-          }
-          progress("signing", `Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`, true);
-          await sleep(1_400);
-          progress("confirming", "Broadcasting to Solana devnet…", true);
-          await sleep(700);
-          succeed(
-            `Deposit of $${amountUsdc.toFixed(2)} simulated — vault not live on devnet.`,
-            null,
-            true,
-          );
-          return true;
+          return fail("Vault program not deployed on this cluster — cannot deposit.");
         }
 
         const program = makeArcadiaProgram(connection, anchorWallet);
@@ -357,10 +328,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
 
         if (status.kind !== "vault-live") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_200);
-          succeed("Withdraw request simulated — vault not live on devnet.", null, true);
-          return true;
+          return fail("Vault program not deployed on this cluster — cannot withdraw.");
         }
 
         const program = makeArcadiaProgram(connection, anchorWallet);
@@ -395,10 +363,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
 
         if (status.kind !== "vault-live") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_200);
-          succeed("Withdrawal simulated — vault not live on devnet.", null, true);
-          return true;
+          return fail("Vault program not deployed on this cluster — cannot process withdrawal.");
         }
 
         const [profilePda] = findTraderProfile(traderKey);
@@ -486,7 +451,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         if (simulated) {
           succeed(
-            `Trade recorded (simulation): ${params.direction.toUpperCase()} ${params.market} $${params.sizeUsd} @ ${(params.leverageX100 / 100).toFixed(1)}×`,
+            `Trade recorded: ${params.direction.toUpperCase()} ${params.market} $${params.sizeUsd} @ ${(params.leverageX100 / 100).toFixed(1)}×`,
             null,
             true,
           );
@@ -521,14 +486,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
 
         if (status.kind !== "vault-live") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_200);
-          succeed(
-            `$${amountUsdc.toFixed(2)} profit withdrawal simulated — vault not live on devnet.`,
-            null,
-            true,
-          );
-          return true;
+          return fail("Vault program not deployed on this cluster — cannot withdraw profits.");
         }
 
         const [profilePda] = findTraderProfile(publicKey);

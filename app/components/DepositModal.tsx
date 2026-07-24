@@ -247,12 +247,10 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 <CheckCircle className="size-6 text-success" />
               </div>
               <p className="mb-1.5 text-base font-extrabold text-ink">
-                {formatUSD(parsedAmount, 0)} USDC {txState.simulated ? "deposit simulated" : "deposited"}
+                {formatUSD(parsedAmount, 0)} USDC deposited
               </p>
               <p className="mx-auto mb-5 max-w-[320px] text-[0.8125rem] leading-relaxed text-muted">
-                {txState.simulated
-                  ? "Simulated flow — the vault program is not live on devnet, so no on-chain transaction was sent."
-                  : `Your position in @${trader.handle}'s vault is live`}
+                Your position in @{trader.handle}'s vault is live
               </p>
               {txState.sig && (
                 <a

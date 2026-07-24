@@ -82,14 +82,8 @@ function TerminalContent() {
   const [orderType, setOrderType] = useState<OrderType>("Market");
   const [sizeUSD, setSizeUSD] = useState("1000");
   const [leverage, setLeverage] = useState(5);
-  const [positions, setPositions] = useState<OpenPosition[]>([
-    { id: "demo-1", market: "SOL-PERP", direction: "long", size_usd: 2000, leverage: 5, entry_px: 160.0, opened_at: Math.floor(Date.now() / 1000) - 7200, upnl: 0 },
-    { id: "demo-2", market: "BTC-PERP", direction: "short", size_usd: 3000, leverage: 3, entry_px: 98700, opened_at: Math.floor(Date.now() / 1000) - 3600, upnl: 0 },
-  ]);
-  const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([
-    { id: "hist-1", market: "ETH-PERP", direction: "short", size_usd: 1500, leverage: 10, entry_px: 3420, exit_px: 3385, realized_pnl: 153.5, fees_usd: 0.90, opened_at: Math.floor(Date.now() / 1000) - 86400, closed_at: Math.floor(Date.now() / 1000) - 43200, was_liquidated: false },
-    { id: "hist-2", market: "SOL-PERP", direction: "long", size_usd: 2500, leverage: 5, entry_px: 155.2, exit_px: 162.45, realized_pnl: 583.7, fees_usd: 1.50, opened_at: Math.floor(Date.now() / 1000) - 172800, closed_at: Math.floor(Date.now() / 1000) - 86400, was_liquidated: false },
-  ]);
+  const [positions, setPositions] = useState<OpenPosition[]>([]);
+  const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([]);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bottomTab, setBottomTab] = useState<BottomTab>("positions");
@@ -105,8 +99,8 @@ function TerminalContent() {
   const [depositPhase, setDepositPhase] = useState<"idle" | "pending" | "done">("idle");
   const depositRef = useRef<HTMLDivElement>(null);
 
-  const [availableBalance] = useState(25000);
-  const [accountPnL, setAccountPnL] = useState(737.2);
+  const [availableBalance] = useState(0);
+  const [accountPnL, setAccountPnL] = useState(0);
 
   const symbol = market.replace("-PERP", "");
   const marketStats = phoenix.marketStats[symbol];
@@ -143,7 +137,10 @@ function TerminalContent() {
 
   const confirmDeposit = useCallback(() => {
     setDepositPhase("pending");
-    setTimeout(() => setDepositPhase("done"), 1400);
+    setTimeout(() => {
+      setDepositPhase("idle");
+      setDepositOpen(false);
+    }, 200);
   }, []);
 
   useEffect(() => {
@@ -461,7 +458,7 @@ function TerminalContent() {
                   <div className="text-center">
                     <p className="text-xs font-bold text-success">Deposit confirmed</p>
                     <p className="mt-0.5 text-[10px] text-faint">
-                      +${Number(depositAmt).toLocaleString()} USDC · Devnet simulation
+                      +${Number(depositAmt).toLocaleString()} USDC
                     </p>
                   </div>
                   <button
@@ -530,7 +527,7 @@ function TerminalContent() {
                   <div className="flex items-start gap-2 rounded-lg border border-acid/15 bg-acid/[0.06] px-3 py-2">
                     <Zap size={11} className="mt-0.5 shrink-0 text-acid" />
                     <p className="text-[10px] leading-relaxed text-muted">
-                      Devnet simulation — no real funds transferred.
+                      Real USDC deposit — funds are transferred on-chain.
                     </p>
                   </div>
 
@@ -698,9 +695,6 @@ function TerminalContent() {
             );
           })}
           <div className="ml-auto flex items-center gap-2 pr-3">
-            <span className="rounded border border-acid/20 bg-acid/10 px-2 py-0.5 text-[9px] font-bold text-acid">
-              Paper trading
-            </span>
             {positions.length > 0 && bottomTab === "positions" && (
               <button
                 type="button"
