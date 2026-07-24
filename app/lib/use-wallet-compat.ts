@@ -67,7 +67,11 @@ export function useWalletCompat(): WalletCompat {
       const txBytes = tx.serialize();
       const buf = Buffer.from(txBytes);
       const result = await solWallet.signTransaction({ transaction: buf });
-      return Transaction.from(Buffer.from(result.signedTransaction)) as T;
+      const signed = Buffer.from(result.signedTransaction);
+      const isVersioned = "version" in tx;
+      return (isVersioned
+        ? VersionedTransaction.deserialize(signed)
+        : Transaction.from(signed)) as T;
     };
     return fn;
   }, [solWallet]);

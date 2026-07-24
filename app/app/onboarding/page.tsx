@@ -69,22 +69,6 @@ export default function OnboardingPage() {
         }).catch(() => {});
       }
 
-      // Save optional profile info
-      if (xHandle || discord || referral) {
-        await fetch("/api/v1/onboarding/profile", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            x_handle: xHandle || null,
-            discord: discord || null,
-            referral_code: referral || null,
-          }),
-        }).catch(() => {}); // non-critical
-      }
-
       localStorage.setItem(ONBOARDING_KEY, "true");
       setStep("done");
       setTimeout(() => router.replace("/terminal"), 1200);
@@ -112,9 +96,11 @@ export default function OnboardingPage() {
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-line px-4 py-3 sm:px-6">
         <span className="font-display text-sm font-bold text-ink uppercase tracking-wider">Arcadia</span>
-        <span className="font-mono text-[10px] text-faint">
-          Step {["role", "wallet", "profile", "done"].indexOf(step) + 1}/3
-        </span>
+        {step !== "done" && (
+          <span className="font-mono text-[10px] text-faint">
+            Step {["role", "wallet", "profile"].indexOf(step) + 1}/3
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 items-center justify-center p-4">

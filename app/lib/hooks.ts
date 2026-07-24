@@ -5,7 +5,7 @@ import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { apiFetch } from "./utils";
 
 export interface MeResponse {
-  role: "trader" | "investor";
+  role: "trader" | "investor" | "both";
   wallet: string | null;
   handle?: string;
   profile?: string;
