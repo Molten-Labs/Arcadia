@@ -52,6 +52,22 @@ interface ClosedTrade {
   was_liquidated: boolean;
 }
 
+const POSITIONS_KEY = "arcadia_positions";
+const TRADES_KEY = "arcadia_closed_trades";
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch { return fallback; }
+}
+
+function saveToStorage<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
 const MARKETS = ["BTC-PERP", "SOL-PERP", "ETH-PERP", "ARB-PERP"];
 const INTERVALS = ["1m", "5m", "15m", "1H", "4H", "1D"];
 const CHART_TOOLS = [
@@ -82,10 +98,9 @@ function TerminalContent() {
   const [orderType, setOrderType] = useState<OrderType>("Market");
   const [sizeUSD, setSizeUSD] = useState("1000");
   const [leverage, setLeverage] = useState(5);
-  const [positions, setPositions] = useState<OpenPosition[]>([]);
-  const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([]);
+  const [positions, setPositions] = useState<OpenPosition[]>(() => loadFromStorage<OpenPosition[]>(POSITIONS_KEY, []));
+  const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>(() => loadFromStorage<ClosedTrade[]>(TRADES_KEY, []));
   const [closingId, setClosingId] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [bottomTab, setBottomTab] = useState<BottomTab>("positions");
   const [interval, setInterval_] = useState("15m");
   const [marketOpen, setMarketOpen] = useState(false);
@@ -160,6 +175,9 @@ function TerminalContent() {
   const totalMarginUsed = positions.reduce((sum, p) => sum + p.size_usd, 0);
   const totalUnrealizedPnL = positions.reduce((sum, p) => sum + (p.upnl ?? 0), 0);
 
+  useEffect(() => { saveToStorage(POSITIONS_KEY, positions); }, [positions]);
+  useEffect(() => { saveToStorage(TRADES_KEY, closedTrades); }, [closedTrades]);
+
   useEffect(() => {
     const t = setInterval(() => {
       setPositions((prev) =>
@@ -186,23 +204,19 @@ function TerminalContent() {
 
   const openPosition = useCallback(() => {
     if (!connected || !currentPrice) return;
-    setSubmitting(true);
-    setTimeout(() => {
-      setPositions((prev) => [
-        {
-          id: Math.random().toString(36).slice(2, 10),
-          market,
-          direction,
-          size_usd: parseFloat(sizeUSD) || 1000,
-          leverage,
-          entry_px: currentPrice,
-          opened_at: Math.floor(Date.now() / 1000),
-          upnl: 0,
-        },
-        ...prev,
-      ]);
-      setSubmitting(false);
-    }, 700);
+    setPositions((prev) => [
+      {
+        id: Math.random().toString(36).slice(2, 10),
+        market,
+        direction,
+        size_usd: parseFloat(sizeUSD) || 1000,
+        leverage,
+        entry_px: currentPrice,
+        opened_at: Math.floor(Date.now() / 1000),
+        upnl: 0,
+      },
+      ...prev,
+    ]);
   }, [connected, currentPrice, market, direction, sizeUSD, leverage]);
 
   const closePosition = useCallback(
@@ -235,28 +249,26 @@ function TerminalContent() {
         was_liquidated: false,
       };
 
-      setTimeout(() => {
-        setPositions((p) => p.filter((x) => x.id !== id));
-        setClosedTrades((prev) => [trade, ...prev.slice(0, 49)]);
-        setClosingId(null);
+      setPositions((p) => p.filter((x) => x.id !== id));
+      setClosedTrades((prev) => [trade, ...prev.slice(0, 49)]);
+      setClosingId(null);
 
-        if (publicKey && recordTrade) {
-          const walletStr = publicKey.toBase58();
-          recordTrade({
-            profileAddress: walletStr,
-            market: trade.market,
-            direction: trade.direction,
-            sizeUsd: trade.size_usd,
-            leverageX100: Math.round(trade.leverage * 100),
-            entryPx: trade.entry_px,
-            exitPx: trade.exit_px,
-            feesUsd: trade.fees_usd,
-            wasLiquidated: false,
-            openedAt: trade.opened_at,
-            closedAt: trade.closed_at,
-          }).catch(() => {});
-        }
-      }, 1000);
+      if (publicKey && recordTrade) {
+        const walletStr = publicKey.toBase58();
+        recordTrade({
+          profileAddress: walletStr,
+          market: trade.market,
+          direction: trade.direction,
+          sizeUsd: trade.size_usd,
+          leverageX100: Math.round(trade.leverage * 100),
+          entryPx: trade.entry_px,
+          exitPx: trade.exit_px,
+          feesUsd: trade.fees_usd,
+          wasLiquidated: false,
+          openedAt: trade.opened_at,
+          closedAt: trade.closed_at,
+        }).catch(() => {});
+      }
     },
     [positions, publicKey, recordTrade, phoenix.marketStats],
   );
@@ -656,7 +668,7 @@ function TerminalContent() {
             currentPrice={currentPrice}
             oraclePrice={oraclePrice}
             onSubmit={openPosition}
-            submitting={submitting}
+            submitting={false}
             connected={connected}
             market={market}
             openDeposit={openDeposit}
