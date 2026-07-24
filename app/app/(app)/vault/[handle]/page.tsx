@@ -288,7 +288,7 @@ export default function VaultPage() {
                     <div className="rounded-lg border border-success/25 bg-success/10 p-3 text-center">
                       <CheckCircle size={16} className="mx-auto mb-2 text-success" />
                       <p className="text-xs font-bold text-success">
-                        Withdraw requested
+                        {txState.simulated ? "Withdraw simulated (devnet)" : "Withdraw requested"}
                       </p>
                       {txState.sig && (
                         <p className="mt-1 font-mono text-[0.55rem] text-faint break-all">

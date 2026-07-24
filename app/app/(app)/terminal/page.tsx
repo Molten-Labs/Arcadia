@@ -470,7 +470,7 @@ function TerminalContent() {
                   <div className="text-center">
                     <p className="text-xs font-bold text-success">Deposit confirmed</p>
                     <p className="mt-0.5 text-[10px] text-faint">
-                      +${Number(depositAmt).toLocaleString()} USDC
+                      +${Number(depositAmt).toLocaleString()} USDC · Devnet simulation
                     </p>
                   </div>
                   <button
@@ -539,7 +539,7 @@ function TerminalContent() {
                   <div className="flex items-start gap-2 rounded-lg border border-acid/15 bg-acid/[0.06] px-3 py-2">
                     <Zap size={11} className="mt-0.5 shrink-0 text-acid" />
                     <p className="text-[10px] leading-relaxed text-muted">
-                      Real USDC deposit — funds are transferred on-chain.
+                      Devnet paper trade — no real funds transferred.
                     </p>
                   </div>
 
@@ -707,6 +707,9 @@ function TerminalContent() {
             );
           })}
           <div className="ml-auto flex items-center gap-2 pr-3">
+            <span className="rounded border border-acid/20 bg-acid/10 px-2 py-0.5 text-[9px] font-bold text-acid" title="Devnet paper trading — no real on-chain execution">
+              Paper trade
+            </span>
             {positions.length > 0 && bottomTab === "positions" && (
               <button
                 type="button"

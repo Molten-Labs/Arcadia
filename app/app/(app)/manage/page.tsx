@@ -206,7 +206,9 @@ export default function ManagePage() {
                 <div className="mb-2 flex items-center gap-2">
                   <CheckCircle size={13} className="text-success" />
                   <span className="text-xs font-bold text-success">
-                    Self-fund confirmed
+                    {txState.simulated
+                      ? "Self-fund simulated (devnet)"
+                      : "Self-fund confirmed"}
                   </span>
                 </div>
                 {txState.sig && (
