@@ -11,11 +11,11 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   // Absolute URLs for OG/twitter images; set NEXT_PUBLIC_SITE_URL in prod.
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  title: { default: "Arcadia / Prove It.", template: "%s | Arcadia" },
+  title: { default: "Arcadia / Where Performance Earns Capital", template: "%s | Arcadia" },
   description: DESCRIPTION,
   applicationName: "Arcadia",
   openGraph: {
-    title: "Arcadia / Prove It.",
+    title: "Arcadia / Where Performance Earns Capital",
     description: DESCRIPTION,
     siteName: "Arcadia",
     type: "website",
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Arcadia / Prove It.",
+    title: "Arcadia / Where Performance Earns Capital",
     description: DESCRIPTION,
   },
 };
