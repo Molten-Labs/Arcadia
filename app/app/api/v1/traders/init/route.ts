@@ -4,12 +4,13 @@
  * Creates a trader profile for the authenticated wallet.
  */
 import { NextResponse } from "next/server";
+import { mintDevToken } from "@/lib/server/dev-auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { handle?: string };
-  const token = req.headers.get("authorization");
+  const bearer = req.headers.get("authorization");
 
   if (BACKEND_URL) {
     try {
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: token } : {}),
+          ...(bearer ? { Authorization: bearer } : {}),
         },
         body: JSON.stringify(body),
       });
@@ -29,10 +30,10 @@ export async function POST(req: Request) {
   }
 
   // Dev mock: use wallet from JWT, or generate one
-  const wallet = token
+  const wallet = bearer
     ? (() => {
         try {
-          const payload = token.split(".")[1];
+          const payload = bearer.split(".")[1];
           const decoded = JSON.parse(atob(payload));
           return decoded.sub as string;
         } catch {
@@ -44,5 +45,8 @@ export async function POST(req: Request) {
   const profile = wallet;
   const handle = body.handle ?? `trader_${wallet.slice(0, 8)}`;
 
-  return NextResponse.json({ profile, handle, role: "trader" });
+  // Mint a refreshed JWT with handle and profile embedded
+  const { token: freshJwt } = mintDevToken(wallet, { handle, profile });
+
+  return NextResponse.json({ profile, handle, role: "trader", jwt: freshJwt });
 }

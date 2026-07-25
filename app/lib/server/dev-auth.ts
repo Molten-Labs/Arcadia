@@ -93,12 +93,21 @@ export function verifySiwsSignature(pubkey: string, signatureB58: string, nonce:
 
 /* ── Dev session token (HS256, JWT-shaped) ──────────────────────────── */
 
-export function mintDevToken(pubkey: string): { token: string; expires_at: number } {
+export function mintDevToken(
+  pubkey: string,
+  extra?: { handle?: string; profile?: string },
+): { token: string; expires_at: number } {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
   const now = Math.floor(Date.now() / 1000);
   const expires_at = now + TOKEN_TTL_S;
   const payload = Buffer.from(
-    JSON.stringify({ sub: pubkey, iat: now, exp: expires_at }),
+    JSON.stringify({
+      sub: pubkey,
+      iat: now,
+      exp: expires_at,
+      ...(extra?.handle ? { handle: extra.handle } : {}),
+      ...(extra?.profile ? { profile: extra.profile } : {}),
+    }),
   ).toString("base64url");
   const sig = createHmac("sha256", DEV_SECRET).update(`${header}.${payload}`).digest("base64url");
   return { token: `${header}.${payload}.${sig}`, expires_at };

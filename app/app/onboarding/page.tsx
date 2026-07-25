@@ -57,7 +57,7 @@ export default function OnboardingPage() {
 
       // Initialize trader profile in the backend
       if ((role === "trader" || role === "both") && token) {
-        await fetch("/api/v1/traders/init", {
+        const res = await fetch("/api/v1/traders/init", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -66,7 +66,12 @@ export default function OnboardingPage() {
           body: JSON.stringify({
             handle: xHandle || undefined,
           }),
-        }).catch(() => {});
+        }).catch(() => null);
+        // Store refreshed JWT with handle+profile embedded
+        if (res?.ok) {
+          const body = await res.json().catch(() => ({})) as { jwt?: string };
+          if (body.jwt) localStorage.setItem("arcadia_jwt", body.jwt);
+        }
       }
 
       localStorage.setItem(ONBOARDING_KEY, "true");

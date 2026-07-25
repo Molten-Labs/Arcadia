@@ -70,7 +70,7 @@ export function useWalletCompat(): WalletCompat {
       const signed = Buffer.from(result.signedTransaction);
       const isVersioned = "version" in tx;
       return (isVersioned
-        ? VersionedTransaction.deserialize(signed)
+        ? (VersionedTransaction as any).deserialize(signed)
         : Transaction.from(signed)) as T;
     };
     return fn;

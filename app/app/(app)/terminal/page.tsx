@@ -28,6 +28,7 @@ import { TerminalTickerBar } from "@/components/pages/trader/TerminalTickerBar";
 import type { Direction, OrderType } from "@/components/pages/trader/terminal-types";
 import { PhoenixProvider, usePhoenix } from "@/lib/phoenix-context";
 import { useArcadiaVault } from "@/lib/use-arcadia-vault";
+import { useMe } from "@/lib/hooks";
 import { formatUSD } from "@/lib/types";
 import type { OpenPosition } from "@/lib/types";
 
@@ -92,6 +93,7 @@ function TerminalContent() {
   const searchParams = useSearchParams();
   const phoenix = usePhoenix();
   const { recordTrade } = useArcadiaVault();
+  const { data: me } = useMe();
 
   const [market, setMarket] = useState("SOL-PERP");
   const [direction, setDirection] = useState<Direction>("long");
@@ -254,9 +256,9 @@ function TerminalContent() {
       setClosingId(null);
 
       if (publicKey && recordTrade) {
-        const walletStr = publicKey.toBase58();
+        const profileAddr = me?.profile ?? publicKey.toBase58();
         recordTrade({
-          profileAddress: walletStr,
+          profileAddress: profileAddr,
           market: trade.market,
           direction: trade.direction,
           sizeUsd: trade.size_usd,
