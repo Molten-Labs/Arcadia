@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatK } from "./bits";
+import { usePrefersReducedMotion } from "@/components/acid/use-prefers-reduced-motion";
 
 /**
  * Half-circle SVG gauge replacing the flat AllocationBar.
@@ -19,10 +20,12 @@ export function VaultGauge({
   className?: string;
 }) {
   const [mounted, setMounted] = useState(false);
+  const reduced = usePrefersReducedMotion();
   useEffect(() => {
+    if (reduced) { setMounted(true); return; }
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
-  }, []);
+  }, [reduced]);
 
   const pct = total > 0 ? Math.min(1, aum / total) : 0;
   const left = Math.max(0, total - aum);
@@ -51,7 +54,7 @@ export function VaultGauge({
 
   /* Animate via stroke-dasharray trick */
   const arcLen = Math.PI * R; // half-circle circumference ≈ 226
-  const dashOffset = mounted ? arcLen * (1 - pct) : arcLen;
+  const dashOffset = reduced || mounted ? arcLen * (1 - pct) : arcLen;
 
   const fillColor = full ? "var(--color-danger)" : "url(#vgGrad)";
   const accentColor = full ? "var(--color-danger)" : "var(--color-acid)";
@@ -100,7 +103,7 @@ export function VaultGauge({
             style={{
               opacity: mounted ? 0.18 : 0,
               filter: "blur(4px)",
-              transition: "stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1), opacity 0.4s ease",
+              transition: reduced ? "none" : "stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1), opacity 0.4s ease",
             }}
           />
         )}
@@ -116,7 +119,7 @@ export function VaultGauge({
             strokeDasharray={arcLen}
             strokeDashoffset={dashOffset}
             style={{
-              transition: "stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1)",
+              transition: reduced ? "none" : "stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1)",
             }}
           />
         )}
@@ -131,8 +134,8 @@ export function VaultGauge({
             stroke="var(--color-void)"
             strokeWidth={1.5}
             style={{
-              opacity: mounted ? 1 : 0,
-              transition: "opacity 0.6s ease 0.5s",
+              opacity: reduced || mounted ? 1 : 0,
+              transition: reduced ? "none" : "opacity 0.6s ease 0.5s",
             }}
           />
         )}
@@ -160,10 +163,10 @@ export function VaultGauge({
           fontWeight={700}
           fontFamily="var(--font-mono, monospace)"
           fill={accentColor}
-          style={{
-            opacity: mounted ? 1 : 0,
-            transition: "opacity 0.4s ease 0.3s",
-          }}
+            style={{
+              opacity: reduced || mounted ? 1 : 0,
+              transition: reduced ? "none" : "opacity 0.4s ease 0.3s",
+            }}
         >
           {Math.round(pct * 100)}%
         </text>

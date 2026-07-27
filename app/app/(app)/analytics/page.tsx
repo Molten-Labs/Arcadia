@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
     <div className="min-h-full bg-void">
       <div className="mx-auto max-w-7xl px-4 py-8">
         <PageHeader title="Analytics">
-          <EnvChip>@{handle} — devnet simulation</EnvChip>
+          <EnvChip>@{handle}</EnvChip>
         </PageHeader>
 
         {/* Headline metrics */}

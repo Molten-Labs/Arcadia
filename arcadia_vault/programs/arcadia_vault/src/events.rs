@@ -71,3 +71,11 @@ pub struct ProfitWithdrawn {
     pub trader: Pubkey,
     pub amount_usd: u64,
 }
+
+#[event]
+pub struct ExecutionFunded {
+    pub profile: Pubkey,
+    pub execution_wallet: Pubkey,
+    pub amount_usd: u64,
+    pub ts: i64,
+}

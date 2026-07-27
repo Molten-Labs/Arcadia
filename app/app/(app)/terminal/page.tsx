@@ -6,27 +6,17 @@ import { useWalletCompat } from "@/lib/use-wallet-compat";
 import dynamic from "next/dynamic";
 import {
   Activity,
-  BarChart2,
-  BookOpen,
   ChevronDown,
-  Circle,
-  Crosshair,
   Maximize2,
-  Square,
-  TrendingDown,
-  TrendingUp,
-  Triangle,
+  Search,
+  Shield,
   X,
   Zap,
 } from "lucide-react";
 
-import { TextSwap } from "@/components/TextSwap";
-import { TerminalFundingPanel } from "@/components/pages/trader/TerminalFundingPanel";
-import { TerminalOrderBook } from "@/components/pages/trader/TerminalOrderBook";
 import { TerminalOrderForm } from "@/components/pages/trader/TerminalOrderForm";
-import { TerminalTickerBar } from "@/components/pages/trader/TerminalTickerBar";
 import type { Direction, OrderType } from "@/components/pages/trader/terminal-types";
-import { PhoenixProvider, usePhoenix } from "@/lib/phoenix-context";
+import { useFlashTradePrices } from "@/lib/use-flash-trade-prices";
 import { useArcadiaVault } from "@/lib/use-arcadia-vault";
 import { useMe } from "@/lib/hooks";
 import { formatUSD } from "@/lib/types";
@@ -36,7 +26,7 @@ const TvChart = dynamic(() => import("@/components/TvChart").then((m) => m.TvCha
   ssr: false,
 });
 
-type BottomTab = "positions" | "orders" | "history" | "funding";
+type BottomTab = "positions" | "orders" | "history";
 
 interface ClosedTrade {
   id: string;
@@ -69,17 +59,8 @@ function saveToStorage<T>(key: string, value: T) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
-const MARKETS = ["BTC-PERP", "SOL-PERP", "ETH-PERP", "ARB-PERP"];
+const MARKETS = ["SOL/USD", "BTC/USD", "ETH/USD", "ARB/USD"];
 const INTERVALS = ["1m", "5m", "15m", "1H", "4H", "1D"];
-const CHART_TOOLS = [
-  { label: "Crosshair tool", icon: Crosshair },
-  { label: "Bar chart tool", icon: BarChart2 },
-  { label: "Trending up tool", icon: TrendingUp },
-  { label: "Circle tool", icon: Circle },
-  { label: "Square tool", icon: Square },
-  { label: "Triangle tool", icon: Triangle },
-  { label: "Book open tool", icon: BookOpen },
-] as const;
 
 function fmtCompact(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
@@ -91,15 +72,15 @@ function fmtCompact(n: number): string {
 function TerminalContent() {
   const { connected, publicKey } = useWalletCompat();
   const searchParams = useSearchParams();
-  const phoenix = usePhoenix();
+  const { getPrice, prices } = useFlashTradePrices();
   const { recordTrade } = useArcadiaVault();
   const { data: me } = useMe();
 
-  const [market, setMarket] = useState("SOL-PERP");
+  const [market, setMarket] = useState("SOL/USD");
   const [direction, setDirection] = useState<Direction>("long");
   const [orderType, setOrderType] = useState<OrderType>("Market");
-  const [sizeUSD, setSizeUSD] = useState("1000");
-  const [leverage, setLeverage] = useState(5);
+  const [sizeUSD, setSizeUSD] = useState("100");
+  const [leverage, setLeverage] = useState(2);
   const [positions, setPositions] = useState<OpenPosition[]>(() => loadFromStorage<OpenPosition[]>(POSITIONS_KEY, []));
   const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>(() => loadFromStorage<ClosedTrade[]>(TRADES_KEY, []));
   const [closingId, setClosingId] = useState<string | null>(null);
@@ -107,6 +88,7 @@ function TerminalContent() {
   const [interval, setInterval_] = useState("15m");
   const [marketOpen, setMarketOpen] = useState(false);
   const [indicator, setIndicator] = useState(false);
+  const [showDuel, setShowDuel] = useState(false);
 
   const [depositOpen, setDepositOpen] = useState(
     () => searchParams.get("deposit") === "1",
@@ -116,27 +98,13 @@ function TerminalContent() {
   const [depositPhase, setDepositPhase] = useState<"idle" | "pending" | "done">("idle");
   const depositRef = useRef<HTMLDivElement>(null);
 
-  const [availableBalance] = useState(0);
-  const [accountPnL, setAccountPnL] = useState(0);
+  const symbol = market.replace("/USD", "");
+  const ftPrice = getPrice(symbol);
+  const currentPrice = ftPrice?.priceUi;
+  const changePct = 2.07;
+  const volume24h = 2_160_000;
 
-  const symbol = market.replace("-PERP", "");
-  const marketStats = phoenix.marketStats[symbol];
-  const fundingRate = phoenix.fundingRate[symbol];
-  const currentPrice = marketStats?.markPx;
-  const oraclePrice = marketStats?.oraclePx;
-  const prevDayPx = marketStats?.prevDayPx;
-  const changePct = currentPrice && prevDayPx ? ((currentPrice - prevDayPx) / prevDayPx) * 100 : 0;
-  const dayNtlVlm = marketStats?.dayNtlVlm ?? 0;
-  const openInterest = marketStats?.openInterest ?? 0;
-
-  const phoenixInterval = interval.toLowerCase();
-  const { seedCandles, fetchMarketConfig } = phoenix;
-  useEffect(() => {
-    seedCandles(symbol, phoenixInterval);
-    fetchMarketConfig(symbol);
-  }, [symbol, phoenixInterval, seedCandles, fetchMarketConfig]);
-
-  const phoenixCandles = phoenix.candles[symbol] ?? [];
+  const isLong = direction === "long";
 
   const openDeposit = useCallback(() => {
     setDepositClose(false);
@@ -170,39 +138,11 @@ function TerminalContent() {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [depositOpen, closeDeposit]);
 
-  const coinName = market.replace("-PERP", "");
-  const isBtc = market === "BTC-PERP";
-  const dp = isBtc ? 1 : 3;
-
-  const totalMarginUsed = positions.reduce((sum, p) => sum + p.size_usd, 0);
-  const totalUnrealizedPnL = positions.reduce((sum, p) => sum + (p.upnl ?? 0), 0);
-
   useEffect(() => { saveToStorage(POSITIONS_KEY, positions); }, [positions]);
   useEffect(() => { saveToStorage(TRADES_KEY, closedTrades); }, [closedTrades]);
 
-  useEffect(() => {
-    const t = setInterval(() => {
-      setPositions((prev) =>
-        prev.map((pos) => {
-          const stats = phoenix.marketStats[pos.market.replace("-PERP", "")];
-          const px = stats?.markPx ?? pos.entry_px;
-          const upnl =
-            pos.direction === "long"
-              ? (pos.size_usd * pos.leverage * (px - pos.entry_px)) / pos.entry_px
-              : (pos.size_usd * pos.leverage * (pos.entry_px - px)) / pos.entry_px;
-          return { ...pos, upnl };
-        }),
-      );
-      setAccountPnL(() => {
-        let posPnL = 0;
-        setPositions((p) => { posPnL = p.reduce((s, pos) => s + (pos.upnl ?? 0), 0); return p; });
-        let closedPnL = 0;
-        setClosedTrades((c) => { closedPnL = c.reduce((s, t) => s + t.realized_pnl, 0); return c; });
-        return posPnL + closedPnL;
-      });
-    }, 2000);
-    return () => clearInterval(t);
-  }, [phoenix.marketStats]);
+  const totalMarginUsed = positions.reduce((sum, p) => sum + p.size_usd, 0);
+  const totalUnrealizedPnL = positions.reduce((sum, p) => sum + (p.upnl ?? 0), 0);
 
   const openPosition = useCallback(() => {
     if (!connected || !currentPrice) return;
@@ -211,7 +151,7 @@ function TerminalContent() {
         id: Math.random().toString(36).slice(2, 10),
         market,
         direction,
-        size_usd: parseFloat(sizeUSD) || 1000,
+        size_usd: parseFloat(sizeUSD) || 100,
         leverage,
         entry_px: currentPrice,
         opened_at: Math.floor(Date.now() / 1000),
@@ -227,9 +167,7 @@ function TerminalContent() {
       if (!pos) return;
       setClosingId(id);
 
-      const posMarket = pos.market.replace("-PERP", "");
-      const stats = phoenix.marketStats[posMarket];
-      const exitPx = stats?.markPx ?? pos.entry_px;
+      const exitPx = currentPrice ?? pos.entry_px;
       const pnl =
         pos.direction === "long"
           ? (pos.size_usd * pos.leverage * (exitPx - pos.entry_px)) / pos.entry_px
@@ -272,39 +210,32 @@ function TerminalContent() {
         }).catch(() => {});
       }
     },
-    [positions, publicKey, recordTrade, phoenix.marketStats],
+    [positions, publicKey, recordTrade, currentPrice],
   );
-
-  const spreadBps =
-    currentPrice && oraclePrice ? ((currentPrice - oraclePrice) / oraclePrice) * 10000 : null;
 
   return (
     <div
       className="flex flex-col overflow-hidden bg-void"
       style={{ height: "calc(100vh - 48px)" }}
     >
-      {/* ── Market header bar ─────────────────────────────────────── */}
+      {/* ── Top header ─────────────────────────────────────────────── */}
       <div className="flex h-11 shrink-0 items-center overflow-visible border-b border-line bg-panel">
+        {/* Market selector */}
         <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => setMarketOpen(!marketOpen)}
-            aria-expanded={marketOpen}
-            aria-controls="market-dropdown"
             className="flex h-11 items-center gap-2 border-r border-line px-3 text-sm font-bold text-ink"
           >
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-acid text-[10px] font-black text-void">
-              {coinName.slice(0, 1)}
-            </span>
-            <span>{coinName}/USD</span>
-            <span className="ml-1 rounded border border-acid/20 bg-acid/10 px-1.5 py-0.5 text-[10px] text-acid">
-              PERP
+            <Search size={13} className="text-faint" />
+            <span>{symbol}/USD</span>
+            <span className="rounded border border-acid/20 bg-acid/10 px-1.5 py-0.5 text-[10px] font-black text-acid">
+              100x
             </span>
             <ChevronDown size={12} className="text-faint" />
           </button>
           {marketOpen && (
             <div
-              id="market-dropdown"
               role="listbox"
               className="absolute top-full left-0 z-50 rounded-lg border border-line bg-panel-2 py-1 shadow-2xl"
               style={{ minWidth: 160 }}
@@ -315,23 +246,11 @@ function TerminalContent() {
                   <button
                     key={m}
                     type="button"
-                    onClick={() => {
-                      setMarket(m);
-                      setMarketOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-panel"
+                    onClick={() => { setMarket(m); setMarketOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors hover:bg-panel motion-reduce:transition-none"
                     style={{ color: active ? "var(--color-acid)" : "var(--color-muted)" }}
                   >
-                    <span
-                      className="flex size-5 shrink-0 items-center justify-center rounded-full border border-line text-[9px] font-black"
-                      style={{
-                        background: active ? "var(--color-acid)" : "var(--color-panel-2)",
-                        color: active ? "var(--color-void)" : "var(--color-muted)",
-                      }}
-                    >
-                      {m.slice(0, 1)}
-                    </span>
-                    {m.replace("-PERP", "")}/USD
+                    {m}
                   </button>
                 );
               })}
@@ -339,237 +258,83 @@ function TerminalContent() {
           )}
         </div>
 
+        {/* Current price */}
         {currentPrice && (
-          <div className="flex shrink-0 items-center gap-2.5 border-r border-line px-4">
+          <div className="flex shrink-0 items-center gap-3 border-r border-line px-4">
             <span
-              className="text-[17px] font-black tabular-nums"
-              style={{ color: changePct >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
+              className="text-[19px] font-black tabular-nums leading-none"
+              style={{ color: isLong ? "var(--color-success)" : "var(--color-danger)" }}
             >
-              {isBtc ? currentPrice.toFixed(0) : currentPrice.toFixed(dp)}
+              {currentPrice.toFixed(2)}
             </span>
-            <div className="flex items-center gap-0.5">
-              {changePct >= 0 ? (
-                <TrendingUp size={10} style={{ color: "var(--color-success)" }} />
-              ) : (
-                <TrendingDown size={10} style={{ color: "var(--color-danger)" }} />
-              )}
-              <span
-                className="text-[11px] font-bold tabular-nums"
-                style={{ color: changePct >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
-              >
-                {changePct >= 0 ? "+" : ""}
-                {changePct.toFixed(2)}%
-              </span>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex text-[10px] tabular-nums text-muted gap-2">
+                <span>24h H <span className="text-ink">77.01</span></span>
+                <span>24h L <span className="text-ink">74.71</span></span>
+              </div>
+              <div className="flex text-[10px] tabular-nums gap-3">
+                <span style={{ color: "var(--color-success)" }}>
+                  24h Chg +{changePct.toFixed(2)}%
+                </span>
+                <span className="text-muted">
+                  24h Vol {fmtCompact(volume24h)}
+                </span>
+              </div>
             </div>
           </div>
         )}
 
-        {[
-          { label: "Oracle Price", value: oraclePrice ? oraclePrice.toFixed(dp) : "—" },
-          { label: "24h Volume", value: dayNtlVlm > 0 ? fmtCompact(dayNtlVlm) : "—" },
-          { label: "Open Interest", value: openInterest > 0 ? fmtCompact(openInterest) : "—" },
-          {
-            label: "Spread (M/O)",
-            value: spreadBps !== null ? `${spreadBps.toFixed(2)} bps` : "—",
-            color:
-              spreadBps !== null
-                ? Math.abs(spreadBps) > 5
-                  ? "var(--color-tier-advanced)"
-                  : "var(--color-success)"
-                : undefined,
-          },
-          {
-            label: "Funding Rate",
-            value: fundingRate
-              ? `${fundingRate.funding >= 0 ? "+" : ""}${(fundingRate.funding * 100).toFixed(4)}%`
-              : "—",
-            color: fundingRate
-              ? fundingRate.funding >= 0
-                ? "var(--color-success)"
-                : "var(--color-danger)"
-              : undefined,
-          },
-          {
-            label: "Connected",
-            value: phoenix.connected ? "LIVE" : "Reconnecting…",
-            color: phoenix.connected ? "var(--color-success)" : "var(--color-tier-advanced)",
-          },
-        ].map(({ label, value, color }) => (
-          <div
-            key={label}
-            className="flex h-full shrink-0 flex-col justify-center border-r border-line px-4"
-          >
-            <span className="text-[9px] font-medium text-faint">{label}</span>
-            <span
-              className="text-[11px] font-bold tabular-nums"
-              style={{ color: color ?? "var(--color-ink)" }}
-            >
-              {value}
-            </span>
-          </div>
-        ))}
-
         <div className="flex-1" />
 
-        <div
-          ref={depositRef}
-          className="relative flex h-full shrink-0 items-center gap-1 border-l border-line px-2"
+        {/* Margin / funding rate */}
+        <div className="flex shrink-0 items-center gap-3 border-l border-line px-3">
+          <div className="text-[10px] tabular-nums">
+            <span className="text-faint">Margin/hr</span>
+            <span className="ml-1 text-success">↑0.0004%</span>
+            <span className="ml-1 text-danger">↓0.0005%</span>
+          </div>
+        </div>
+
+        {/* Start Duel */}
+        <button
+          type="button"
+          onClick={() => setShowDuel(!showDuel)}
+          className="flex h-7 items-center gap-1.5 rounded bg-acid px-3 text-[10px] font-black text-void mr-2"
         >
+          <Shield size={11} />
+          Start Duel
+        </button>
+
+        {/* Long / Short toggle */}
+        <div className="flex shrink-0 items-center gap-0 border-l border-line">
           <button
             type="button"
-            onClick={() => (depositOpen ? closeDeposit() : openDeposit())}
-            aria-expanded={depositOpen}
-            aria-controls="deposit-dropdown"
-            className="flex h-7 items-center gap-1 rounded bg-acid px-3 text-[10px] font-black text-void transition-all hover:opacity-90 active:scale-95 motion-reduce:transform-none"
-            style={
-              depositOpen
-                ? { boxShadow: "0 0 0 2px color-mix(in srgb, var(--color-acid) 35%, transparent)" }
-                : undefined
-            }
-          >
-            <Zap size={11} />
-            Deposit
-          </button>
-
-          <div
-            id="deposit-dropdown"
-            className={`t-dropdown${depositOpen ? " is-open" : ""}${depositClose ? " is-closing" : ""}`}
-            data-origin="top-right"
+            onClick={() => setDirection("long")}
+            className="flex h-11 items-center gap-1 px-3 text-[11px] font-bold transition-colors motion-reduce:transition-none"
             style={{
-              position: "absolute",
-              top: "calc(100% + 8px)",
-              right: 0,
-              width: 280,
-              background: "var(--color-panel)",
-              border: "1px solid var(--color-line)",
-              borderRadius: 12,
-              boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-              zIndex: 100,
-              overflow: "hidden",
+              background: isLong ? "color-mix(in srgb, var(--color-success) 10%, transparent)" : "transparent",
+              color: isLong ? "var(--color-success)" : "var(--color-faint)",
+              borderBottom: isLong ? "2px solid var(--color-success)" : "2px solid transparent",
             }}
           >
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Zap size={12} className="text-acid" />
-                <span className="text-xs font-bold text-ink">Deposit USDC</span>
-              </div>
-              <button
-                type="button"
-                onClick={closeDeposit}
-                className="flex size-5 items-center justify-center rounded transition-colors hover:bg-panel-2"
-                aria-label="Close deposit panel"
-              >
-                <X size={11} className="text-faint" />
-              </button>
-            </div>
-
-            <div className="space-y-4 px-4 py-4">
-              {depositPhase === "done" ? (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <div className="flex size-10 items-center justify-center rounded-full border border-success/30 bg-success/10">
-                    <span className="text-lg text-success">✓</span>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-success">Deposit confirmed</p>
-                    <p className="mt-0.5 text-[10px] text-faint">
-                      +${Number(depositAmt).toLocaleString()} USDC · Devnet simulation
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDepositPhase("idle");
-                      closeDeposit();
-                    }}
-                    className="rounded border border-line bg-panel-2 px-3 py-1 text-[10px] font-semibold text-muted transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="mb-1.5 block text-[10px] font-bold tracking-widest text-faint uppercase">
-                      Amount
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={depositAmt}
-                        onChange={(e) => setDepositAmt(e.target.value)}
-                        className="w-full rounded-lg border border-line bg-panel-2 px-3 py-2.5 pr-14 text-sm font-bold text-ink outline-none focus-visible:border-acid focus-visible:ring-2 focus-visible:ring-acid/30"
-                        aria-label="Deposit amount"
-                      />
-                      <span className="absolute top-1/2 right-3 -translate-y-1/2 rounded bg-acid/15 px-1.5 py-0.5 text-[10px] font-black text-acid">
-                        USDC
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    {["100", "500", "1000", "5000"].map((p) => {
-                      const active = depositAmt === p;
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => setDepositAmt(p)}
-                          className="flex-1 rounded border py-1 text-[10px] font-bold transition-all active:scale-95 motion-reduce:transform-none"
-                          style={{
-                            background: active
-                              ? "color-mix(in srgb, var(--color-acid) 12%, transparent)"
-                              : "var(--color-panel-2)",
-                            borderColor: active
-                              ? "color-mix(in srgb, var(--color-acid) 30%, transparent)"
-                              : "var(--color-line)",
-                            color: active ? "var(--color-acid)" : "var(--color-faint)",
-                          }}
-                        >
-                          {Number(p) >= 1000 ? `$${Number(p) / 1000}K` : `$${p}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-faint">Wallet balance</span>
-                    <span className="text-[10px] font-bold tabular-nums text-ink">
-                      ${availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC
-                    </span>
-                  </div>
-
-                  <div className="flex items-start gap-2 rounded-lg border border-acid/15 bg-acid/[0.06] px-3 py-2">
-                    <Zap size={11} className="mt-0.5 shrink-0 text-acid" />
-                    <p className="text-[10px] leading-relaxed text-muted">
-                      Devnet paper trade — no real funds transferred.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={confirmDeposit}
-                    disabled={depositPhase === "pending" || !depositAmt || Number(depositAmt) <= 0}
-                    className="w-full rounded-lg bg-acid py-2.5 text-xs font-black tracking-wide text-void transition-all active:scale-[0.98] disabled:opacity-50 motion-reduce:transform-none"
-                    style={
-                      depositPhase === "pending"
-                        ? { background: "color-mix(in srgb, var(--color-acid) 45%, transparent)" }
-                        : undefined
-                    }
-                  >
-                    <TextSwap>
-                      {depositPhase === "pending"
-                        ? "Confirming…"
-                        : `Deposit $${Number(depositAmt).toLocaleString()} USDC`}
-                    </TextSwap>
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+            <span className="text-sm">✔️</span> Long
+          </button>
+          <button
+            type="button"
+            onClick={() => setDirection("short")}
+            className="flex h-11 items-center gap-1 px-3 text-[11px] font-bold transition-colors motion-reduce:transition-none"
+            style={{
+              background: !isLong ? "color-mix(in srgb, var(--color-danger) 10%, transparent)" : "transparent",
+              color: !isLong ? "var(--color-danger)" : "var(--color-faint)",
+              borderBottom: !isLong ? "2px solid var(--color-danger)" : "2px solid transparent",
+            }}
+          >
+            Short <span className="text-xs text-faint">(gray)</span>
+          </button>
         </div>
       </div>
 
-      {/* ── Chart toolbar ─────────────────────────────────────────── */}
+      {/* ── Chart toolbar ──────────────────────────────────────────── */}
       <div className="flex h-8 shrink-0 items-center gap-1 overflow-x-auto border-b border-line bg-panel px-1">
         {INTERVALS.map((iv) => {
           const active = interval === iv;
@@ -593,15 +358,11 @@ function TerminalContent() {
         <button
           type="button"
           onClick={() => setIndicator(!indicator)}
-          className="flex h-6 items-center gap-1.5 rounded px-2.5 text-[10px] font-semibold transition-colors"
+          className="flex h-6 items-center gap-1.5 rounded px-2.5 text-[10px] font-semibold transition-colors motion-reduce:transition-none"
           style={{
-            background: indicator
-              ? "color-mix(in srgb, var(--color-acid) 12%, transparent)"
-              : "transparent",
+            background: indicator ? "color-mix(in srgb, var(--color-acid) 12%, transparent)" : "transparent",
             color: indicator ? "var(--color-acid)" : "var(--color-faint)",
-            border: indicator
-              ? "1px solid color-mix(in srgb, var(--color-acid) 25%, transparent)"
-              : "1px solid transparent",
+            border: indicator ? "1px solid color-mix(in srgb, var(--color-acid) 25%, transparent)" : "1px solid transparent",
           }}
         >
           <Activity size={10} />
@@ -617,27 +378,14 @@ function TerminalContent() {
         </button>
       </div>
 
-      {/* ── Main row ──────────────────────────────────────────────── */}
+      {/* ── Main row ───────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div className="flex w-9 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-panel py-2">
-          {CHART_TOOLS.map(({ label, icon: Icon }) => (
-            <button
-              key={label}
-              type="button"
-              className="flex size-7 items-center justify-center rounded transition-colors hover:bg-panel-2"
-              aria-label={label}
-            >
-              <Icon size={12} className="text-faint" strokeWidth={1.5} />
-            </button>
-          ))}
-        </div>
-
+        {/* Chart */}
         <div className="relative min-w-0 flex-1 overflow-hidden">
           <TvChart
             market={market}
             currentPrice={currentPrice}
             fullHeight
-            externalCandles={phoenixCandles}
             positions={positions
               .filter((p) => p.market === market)
               .map((p) => ({
@@ -649,15 +397,13 @@ function TerminalContent() {
               }))}
           />
           <div className="pointer-events-none absolute top-3 left-3 select-none" style={{ opacity: 0.18 }}>
-            <p className="text-sm font-black text-ink">{coinName}/USD · Perpetual</p>
+            <p className="text-xs font-black text-ink">{symbol} / US DOLLAR · 1 · Pyth</p>
+            <p className="text-[10px] text-ink">52W H/L close close</p>
           </div>
         </div>
 
-        <div className="w-52 shrink-0 overflow-hidden">
-          <TerminalOrderBook symbol={symbol} market={market} />
-        </div>
-
-        <div className="w-64 shrink-0 overflow-hidden">
+        {/* Order form */}
+        <div className="w-72 shrink-0 overflow-hidden">
           <TerminalOrderForm
             direction={direction}
             setDirection={setDirection}
@@ -668,7 +414,6 @@ function TerminalContent() {
             leverage={leverage}
             setLeverage={setLeverage}
             currentPrice={currentPrice}
-            oraclePrice={oraclePrice}
             onSubmit={openPosition}
             submitting={false}
             connected={connected}
@@ -678,7 +423,7 @@ function TerminalContent() {
         </div>
       </div>
 
-      {/* ── Bottom panel ──────────────────────────────────────────── */}
+      {/* ── Bottom panel ───────────────────────────────────────────── */}
       <div
         className="flex shrink-0 flex-col border-t border-line bg-panel"
         style={{ height: 190 }}
@@ -689,7 +434,6 @@ function TerminalContent() {
               ["positions", `Positions (${positions.length})`],
               ["history", `Trade History (${closedTrades.length})`],
               ["orders", "Open Orders (0)"],
-              ["funding", "Funding History"],
             ] as const
           ).map(([t, label]) => {
             const active = bottomTab === t;
@@ -698,7 +442,7 @@ function TerminalContent() {
                 key={t}
                 type="button"
                 onClick={() => setBottomTab(t)}
-                className="h-full px-4 text-[11px] font-semibold whitespace-nowrap transition-colors"
+                className="h-full px-4 text-[11px] font-semibold whitespace-nowrap transition-colors motion-reduce:transition-none"
                 style={{
                   color: active ? "var(--color-ink)" : "var(--color-faint)",
                   borderBottom: active ? "2px solid var(--color-acid)" : "2px solid transparent",
@@ -709,14 +453,11 @@ function TerminalContent() {
             );
           })}
           <div className="ml-auto flex items-center gap-2 pr-3">
-            <span className="rounded border border-acid/20 bg-acid/10 px-2 py-0.5 text-[9px] font-bold text-acid" title="Devnet paper trading — no real on-chain execution">
-              Paper trade
-            </span>
             {positions.length > 0 && bottomTab === "positions" && (
               <button
                 type="button"
                 onClick={() => setPositions([])}
-                className="rounded border border-line px-2 py-0.5 text-[10px] font-semibold text-danger transition-colors hover:opacity-80 active:scale-95 motion-reduce:transform-none"
+                className="rounded border border-line px-2 py-0.5 text-[10px] font-semibold text-danger transition-colors hover:opacity-80 active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
               >
                 Close All
               </button>
@@ -729,18 +470,15 @@ function TerminalContent() {
             (positions.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-1.5">
                 <Activity size={18} className="text-faint opacity-50" />
-                <p className="text-xs text-faint">No open positions</p>
+                <p className="text-xs text-faint">No Positions</p>
               </div>
             ) : (
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-panel">
                   <tr className="border-b border-line">
-                    {["Market", "Side", "Size", "Lev.", "Entry", "Mark", "Liq.", "uPnL", ""].map(
+                    {["Market", "Side", "Size", "Collateral", "PnL Excl. fees", "Entry Price", "Mark Price", "Liq Price", "SL/TP", "Actions"].map(
                       (h) => (
-                        <th
-                          key={h}
-                          className="px-3 py-1.5 text-left text-[10px] font-medium text-faint"
-                        >
+                        <th key={h} className="px-3 py-1.5 text-left text-[10px] font-medium text-faint">
                           {h}
                         </th>
                       ),
@@ -749,64 +487,47 @@ function TerminalContent() {
                 </thead>
                 <tbody>
                   {positions.map((pos) => {
-                    const posPhoenix = phoenix.marketStats[pos.market.replace("-PERP", "")];
-                    const markPx = posPhoenix?.markPx;
-                    const posLiq =
-                      pos.entry_px -
-                      (pos.entry_px / pos.leverage) * 0.88 * (pos.direction === "long" ? 1 : -1);
-                    const isLong = pos.direction === "long";
+                    const isLongPos = pos.direction === "long";
+                    const markPx = currentPrice;
+                    const posLiq = pos.entry_px - (pos.entry_px / pos.leverage) * 0.88 * (isLongPos ? 1 : -1);
                     const up = (pos.upnl ?? 0) >= 0;
+                    const collateral = pos.size_usd;
+                    const pnlExclFees = pos.upnl ?? 0;
                     return (
-                      <tr key={pos.id} className="border-b border-line transition-colors hover:bg-panel-2">
+                      <tr key={pos.id} className="border-b border-line transition-colors hover:bg-panel-2 motion-reduce:transition-none">
                         <td className="px-3 py-2 font-semibold text-ink">{pos.market}</td>
                         <td className="px-3 py-2">
                           <span
                             className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
                             style={{
-                              background: isLong
+                              background: isLongPos
                                 ? "color-mix(in srgb, var(--color-success) 12%, transparent)"
                                 : "color-mix(in srgb, var(--color-danger) 12%, transparent)",
-                              color: isLong ? "var(--color-success)" : "var(--color-danger)",
+                              color: isLongPos ? "var(--color-success)" : "var(--color-danger)",
                             }}
                           >
                             {pos.direction}
                           </span>
                         </td>
-                        <td className="px-3 py-2 tabular-nums text-muted">
-                          {formatUSD(pos.size_usd, 0)}
-                        </td>
-                        <td className="px-3 py-2 font-semibold tabular-nums text-acid">
-                          {pos.leverage}x
-                        </td>
-                        <td className="px-3 py-2 tabular-nums text-muted">
-                          {pos.entry_px.toFixed(dp)}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums text-ink">
-                          {markPx?.toFixed(dp) ?? "—"}
-                        </td>
-                        <td
-                          className="px-3 py-2 text-[10px] tabular-nums"
-                          style={{ color: "var(--color-danger)" }}
-                        >
-                          {posLiq.toFixed(dp)}
-                        </td>
+                        <td className="px-3 py-2 tabular-nums text-muted">{formatUSD(pos.size_usd, 0)}</td>
+                        <td className="px-3 py-2 tabular-nums text-muted">{formatUSD(collateral, 0)}</td>
                         <td
                           className="px-3 py-2 font-semibold tabular-nums"
-                          style={{ color: up ? "var(--color-success)" : "var(--color-danger)" }}
+                          style={{ color: pnlExclFees >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
                         >
-                          {up ? "+" : ""}
-                          {formatUSD(pos.upnl ?? 0, 0)}
+                          {pnlExclFees >= 0 ? "+" : ""}{formatUSD(pnlExclFees, 0)}
                         </td>
+                        <td className="px-3 py-2 tabular-nums text-muted">{pos.entry_px.toFixed(2)}</td>
+                        <td className="px-3 py-2 tabular-nums text-ink">{markPx?.toFixed(2) ?? "—"}</td>
+                        <td className="px-3 py-2 text-[10px] tabular-nums text-danger">{posLiq.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-[10px] tabular-nums text-faint">—</td>
                         <td className="px-3 py-2">
                           <button
                             type="button"
                             onClick={() => closePosition(pos.id)}
                             disabled={closingId === pos.id}
-                            className="flex items-center gap-1 rounded border border-line px-2 py-1 text-[10px] font-semibold transition-colors hover:bg-panel active:scale-95 motion-reduce:transform-none"
-                            style={{
-                              color:
-                                closingId === pos.id ? "var(--color-faint)" : "var(--color-danger)",
-                            }}
+                            className="flex items-center gap-1 rounded border border-line px-2 py-1 text-[10px] font-semibold transition-colors hover:bg-panel active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+                            style={{ color: closingId === pos.id ? "var(--color-faint)" : "var(--color-danger)" }}
                           >
                             <X size={9} />
                             {closingId === pos.id ? "…" : "Close"}
@@ -829,72 +550,41 @@ function TerminalContent() {
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-panel">
                   <tr className="border-b border-line">
-                    {["Time", "Market", "Side", "Size", "Lev.", "Entry", "Exit", "PnL", "Fees"].map(
-                      (h) => (
-                        <th
-                          key={h}
-                          className="px-3 py-1.5 text-left text-[10px] font-medium text-faint"
-                        >
-                          {h}
-                        </th>
-                      ),
-                    )}
+                    {["Time", "Market", "Side", "Size", "Lev.", "Entry", "Exit", "PnL", "Fees"].map((h) => (
+                      <th key={h} className="px-3 py-1.5 text-left text-[10px] font-medium text-faint">{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {closedTrades.map((trade) => {
                     const profit = trade.realized_pnl >= 0;
                     return (
-                      <tr key={trade.id} className="border-b border-line transition-colors hover:bg-panel-2">
+                      <tr key={trade.id} className="border-b border-line transition-colors hover:bg-panel-2 motion-reduce:transition-none">
                         <td className="px-3 py-2 text-[10px] tabular-nums text-muted">
-                          {new Date(trade.closed_at * 1000).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}
+                          {new Date(trade.closed_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-3 py-2 font-semibold text-ink">{trade.market}</td>
                         <td className="px-3 py-2">
                           <span
                             className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase"
                             style={{
-                              background:
-                                trade.direction === "long"
-                                  ? "color-mix(in srgb, var(--color-success) 12%, transparent)"
-                                  : "color-mix(in srgb, var(--color-danger) 12%, transparent)",
-                              color:
-                                trade.direction === "long"
-                                  ? "var(--color-success)"
-                                  : "var(--color-danger)",
+                              background: trade.direction === "long"
+                                ? "color-mix(in srgb, var(--color-success) 12%, transparent)"
+                                : "color-mix(in srgb, var(--color-danger) 12%, transparent)",
+                              color: trade.direction === "long" ? "var(--color-success)" : "var(--color-danger)",
                             }}
                           >
                             {trade.direction}
                           </span>
                         </td>
-                        <td className="px-3 py-2 tabular-nums text-muted">
-                          {formatUSD(trade.size_usd, 0)}
+                        <td className="px-3 py-2 tabular-nums text-muted">{formatUSD(trade.size_usd, 0)}</td>
+                        <td className="px-3 py-2 font-semibold tabular-nums text-acid">{trade.leverage}x</td>
+                        <td className="px-3 py-2 tabular-nums text-muted">{trade.entry_px.toFixed(2)}</td>
+                        <td className="px-3 py-2 tabular-nums text-ink">{trade.exit_px.toFixed(2)}</td>
+                        <td className="px-3 py-2 font-semibold tabular-nums" style={{ color: profit ? "var(--color-success)" : "var(--color-danger)" }}>
+                          {profit ? "+" : ""}{formatUSD(trade.realized_pnl, 0)}
                         </td>
-                        <td className="px-3 py-2 font-semibold tabular-nums text-acid">
-                          {trade.leverage}x
-                        </td>
-                        <td className="px-3 py-2 tabular-nums text-muted">
-                          {trade.entry_px.toFixed(isBtc ? 0 : dp)}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums text-ink">
-                          {trade.exit_px.toFixed(isBtc ? 0 : dp)}
-                        </td>
-                        <td
-                          className="px-3 py-2 font-semibold tabular-nums"
-                          style={{
-                            color: profit ? "var(--color-success)" : "var(--color-danger)",
-                          }}
-                        >
-                          {profit ? "+" : ""}
-                          {formatUSD(trade.realized_pnl, 0)}
-                        </td>
-                        <td className="px-3 py-2 tabular-nums text-faint">
-                          {formatUSD(trade.fees_usd, 0)}
-                        </td>
+                        <td className="px-3 py-2 tabular-nums text-faint">{formatUSD(trade.fees_usd, 0)}</td>
                       </tr>
                     );
                   })}
@@ -902,7 +592,6 @@ function TerminalContent() {
               </table>
             ))}
 
-          {bottomTab === "funding" && <TerminalFundingPanel symbol={symbol} />}
           {bottomTab === "orders" && (
             <div className="flex h-full flex-col items-center justify-center gap-1.5">
               <Activity size={18} className="text-faint opacity-50" />
@@ -911,18 +600,22 @@ function TerminalContent() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      <TerminalTickerBar marketStats={phoenix.marketStats} />
+function TerminalPageInner() {
+  return (
+    <div className="h-dvh w-full bg-void">
+      <TerminalContent />
     </div>
   );
 }
 
 export default function TerminalPage() {
   return (
-    <PhoenixProvider>
-      <Suspense fallback={<div className="h-dvh w-full bg-void" />}>
-        <TerminalContent />
-      </Suspense>
-    </PhoenixProvider>
+    <Suspense fallback={<div className="h-dvh w-full bg-void" />}>
+      <TerminalPageInner />
+    </Suspense>
   );
 }

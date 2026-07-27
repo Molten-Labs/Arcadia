@@ -164,6 +164,21 @@ export const IDL = {
       args: [{ name: "amount", type: "u64" }],
     },
     {
+      name: "fundExecution",
+      discriminator: [220, 62, 180, 179, 158, 112, 34, 98],
+      accounts: [
+        { name: "broadcaster", signer: true },
+        { name: "admin", signer: true },
+        { name: "config" },
+        { name: "profile", writable: true },
+        { name: "baseMint" },
+        { name: "vaultToken", writable: true },
+        { name: "executionWalletAta", writable: true },
+        { name: "tokenProgram" },
+      ],
+      args: [{ name: "amount", type: "u64" }],
+    },
+    {
       name: "initializeSmoke",
       discriminator: [81, 152, 126, 223, 22, 188, 176, 110],
       accounts: [
@@ -201,7 +216,17 @@ export const IDL = {
       discriminator: [145, 143, 236, 150, 229, 40, 195, 88],
     },
   ],
-  events: [],
+  events: [
+    { name: "ProfileInitialized", discriminator: [1, 31, 122, 19, 193, 205, 23, 27] },
+    { name: "InvestorInitialized", discriminator: [16, 194, 111, 52, 41, 37, 204, 206] },
+    { name: "Deposited", discriminator: [111, 141, 26, 45, 161, 35, 100, 57] },
+    { name: "WithdrawRequested", discriminator: [114, 240, 240, 206, 93, 128, 151, 39] },
+    { name: "Withdrawn", discriminator: [20, 89, 223, 198, 194, 124, 219, 13] },
+    { name: "TradeClosed", discriminator: [65, 245, 176, 171, 79, 161, 47, 121] },
+    { name: "Settled", discriminator: [232, 210, 40, 17, 142, 124, 145, 238] },
+    { name: "ProfitWithdrawn", discriminator: [165, 15, 185, 73, 134, 218, 84, 78] },
+    { name: "ExecutionFunded", discriminator: [193, 81, 232, 20, 200, 150, 182, 224] },
+  ],
   errors: [
     { code: 6000, name: "Unauthorized",              msg: "Caller is not authorized for this action" },
     { code: 6001, name: "VaultNotActive",             msg: "Profile/vault is not active" },

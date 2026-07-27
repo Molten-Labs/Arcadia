@@ -99,7 +99,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 <TierChip tier={trader.tier} />
               </div>
               <p className="mt-0.5 font-mono text-[0.5rem] tracking-[0.2em] text-faint uppercase">
-                Fund Vault · Solana Devnet
+                Fund Vault · Solana
               </p>
             </div>
           </div>
@@ -247,12 +247,10 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 <CheckCircle className="size-6 text-success" />
               </div>
               <p className="mb-1.5 text-base font-extrabold text-ink">
-                {formatUSD(parsedAmount, 0)} USDC {txState.simulated ? "deposit simulated" : "deposited"}
+                {formatUSD(parsedAmount, 0)} USDC deposited
               </p>
               <p className="mx-auto mb-5 max-w-[320px] text-[0.8125rem] leading-relaxed text-muted">
-                {txState.simulated
-                  ? "Devnet simulation — the vault program is not live on devnet, so no on-chain transaction was sent."
-                  : `Your position in @${trader.handle}'s vault is live`}
+                Your position in @{trader.handle}'s vault is live
               </p>
               {txState.sig && (
                 <a
@@ -302,7 +300,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
           <div className="flex items-center justify-center gap-1.5 border-t border-line px-5 py-2.5">
             <span aria-hidden className="size-[5px] shrink-0 rounded-full bg-success" />
             <span className="font-mono text-[0.5rem] tracking-[0.18em] text-faint uppercase">
-              Non-custodial · Solana devnet · USDC
+              Non-custodial · Solana · USDC
             </span>
           </div>
         )}

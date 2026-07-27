@@ -161,7 +161,7 @@ export function RoleGate() {
         <span className="font-mono text-[9px] tracking-[0.1em] text-faint">
           Role can be changed anytime from Settings
         </span>
-        <span className="font-mono text-[9px] tracking-[0.1em] text-faint">Solana Devnet</span>
+        <span className="font-mono text-[9px] tracking-[0.1em] text-faint">Solana</span>
       </div>
     </div>
   );

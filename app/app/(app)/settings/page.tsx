@@ -27,7 +27,7 @@ interface Settings {
   showWallet: boolean;
   compactMode: boolean;
   reduceMotion: boolean;
-  devnetWarnings: boolean;
+
 }
 
 type ProfileKey = "displayName" | "bio" | "location" | "twitterHandle";
@@ -44,7 +44,7 @@ const DEFAULTS: Settings = {
   showWallet: true,
   compactMode: false,
   reduceMotion: false,
-  devnetWarnings: true,
+
 };
 
 const PROFILE_FIELDS: { key: ProfileKey; label: string; placeholder: string }[] = [
@@ -332,12 +332,7 @@ export default function SettingsPage() {
             label="Reduce motion"
             sub="Disable animated transitions"
           />
-          <ToggleSwitch
-            checked={view.devnetWarnings}
-            onChange={(v) => update("devnetWarnings", v)}
-            label="Show devnet warnings"
-            sub="Label all simulated actions clearly"
-          />
+
         </SectionCard>
 
         {/* Save */}

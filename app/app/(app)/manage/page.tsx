@@ -103,7 +103,7 @@ export default function ManagePage() {
       <div className="min-h-full bg-void">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <PageHeader title="Manage Vault">
-            <EnvChip live>Solana devnet</EnvChip>
+            <EnvChip live>Solana</EnvChip>
           </PageHeader>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -125,7 +125,7 @@ export default function ManagePage() {
     <div className="min-h-full bg-void">
       <div className="mx-auto max-w-7xl px-4 py-8">
         <PageHeader title="Manage Vault">
-          <EnvChip live>Solana devnet</EnvChip>
+          <EnvChip live>Solana</EnvChip>
         </PageHeader>
 
         {/* Capacity formula callout */}
@@ -206,9 +206,7 @@ export default function ManagePage() {
                 <div className="mb-2 flex items-center gap-2">
                   <CheckCircle size={13} className="text-success" />
                   <span className="text-xs font-bold text-success">
-                    {txState.simulated
-                      ? "Self-fund simulated (devnet)"
-                      : "Self-fund confirmed"}
+                    Self-fund confirmed
                   </span>
                 </div>
                 {txState.sig && (

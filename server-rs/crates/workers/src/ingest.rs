@@ -1,26 +1,16 @@
 /// Ingest worker: subscribe to Yellowstone gRPC, decode events, upsert DB.
 ///
-/// This is a stub implementation that runs a no-op loop.
-/// To enable live event ingestion, see the instructions in
+/// This is a stub — returns immediately without doing anything.
+/// To enable live event ingestion, see instructions in
 /// server-rs/crates/workers/Cargo.toml (enable the `grpc` feature and
 /// add the yellowstone deps).
 use crate::WorkerCtx;
 use anyhow::Result;
-use tokio::time::{sleep, Duration};
-use tracing::warn;
+use tracing::info;
 
 pub async fn run(_ctx: WorkerCtx) -> Result<()> {
-    warn!(
-        endpoint = "YELLOWSTONE_ENDPOINT env var",
-        "ingest worker: Yellowstone gRPC not enabled. \
-         See server-rs/crates/workers/Cargo.toml to enable --features grpc. \
-         No on-chain events will be ingested in this build."
-    );
-
-    // Keep the supervisor from restarting in a tight loop.
-    loop {
-        sleep(Duration::from_secs(3600)).await;
-    }
+    info!("ingest worker: not configured (enable --features grpc to activate)");
+    Ok(())
 }
 
 // ── gRPC implementation template ─────────────────────────────────────────────

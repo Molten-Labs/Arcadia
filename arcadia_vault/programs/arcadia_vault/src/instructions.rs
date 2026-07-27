@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod deposit;
+pub mod fund_execution;
 pub mod initialize_investor;
 pub mod initialize_profile;
 pub mod initialize_smoke;
@@ -12,6 +13,7 @@ pub mod withdraw;
 pub use admin::initialize_platform::InitializePlatform;
 pub use admin::set_capacity::SetCapacity;
 pub use deposit::Deposit;
+pub use fund_execution::FundExecution;
 pub use initialize_investor::InitializeInvestor;
 pub use initialize_profile::InitializeProfile;
 pub use initialize_smoke::InitializeSmoke;

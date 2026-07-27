@@ -128,6 +128,18 @@ pub struct DbIngestCursor {
     pub updated_at: DateTime<Utc>,
 }
 
+/// DB row mirrors execution_wallet table.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DbExecutionWallet {
+    pub profile:         String,
+    pub pubkey:          String,
+    pub encrypted_seed:  Vec<u8>,
+    pub encryption_salt: Vec<u8>,
+    pub status:          i16,
+    pub created_at:      DateTime<Utc>,
+    pub updated_at:      DateTime<Utc>,
+}
+
 /// Waitlist user.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct DbWaitlistUser {

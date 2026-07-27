@@ -10,6 +10,8 @@ pub mod price;
 pub mod score;
 pub mod supervisor;
 
+pub mod executor;
+
 use anyhow::Result;
 use sqlx::PgPool;
 
@@ -33,6 +35,12 @@ pub struct WorkerConfig {
     pub yellowstone_endpoint: String,
     /// Yellowstone auth token (requires grpc feature).
     pub yellowstone_token: String,
+    /// Sidecar URL for FlashTrade SDK bridge.
+    pub sidecar_url: String,
+    /// Master password for execution wallet seed decryption.
+    pub master_password: String,
+    /// Admin keypair path for vault transaction signing.
+    pub admin_keypair_path: String,
 }
 
 impl WorkerConfig {
@@ -48,6 +56,12 @@ impl WorkerConfig {
                 .unwrap_or_else(|_| "https://grpc.your-provider.com".into()),
             yellowstone_token: std::env::var("YELLOWSTONE_TOKEN")
                 .unwrap_or_default(),
+            sidecar_url: std::env::var("SIDECAR_URL")
+                .unwrap_or_else(|_| "http://127.0.0.1:3001".into()),
+            master_password: std::env::var("AGENT_WALLET_MASTER_PASSWORD")
+                .expect("AGENT_WALLET_MASTER_PASSWORD must be set"),
+            admin_keypair_path: std::env::var("ADMIN_KEYPAIR_PATH")
+                .unwrap_or_else(|_| "/run/secrets/admin_keypair.json".into()),
         }
     }
 }

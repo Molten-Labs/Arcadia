@@ -4,14 +4,7 @@
  * Shared Arcadia vault client — the single home for wallet-to-program wiring.
  *
  * Both `useArcadiaVault` and any transaction UI (deposit modal, manage page)
- * go through this layer. Two invariants:
- *
- * 1. An RPC failure is an error, never a fake success. `getVaultChainStatus`
- *    throws `RpcUnreachableError` when devnet can't be read; callers surface
- *    that to the user.
- * 2. Simulation is explicit. When the program/profile simply isn't live on
- *    devnet, callers may run a clearly-labelled simulated flow — with
- *    `simulated: true` and NO fabricated signature.
+ * go through this layer.
  */
 
 import type { Connection, PublicKey } from "@solana/web3.js";
@@ -40,17 +33,13 @@ export type VaultTxPhase =
 export interface VaultTxState {
   phase: VaultTxPhase;
   message: string;
-  /** Real on-chain signature. Always null for simulated flows. */
   sig: string | null;
-  /** True when the flow ran as a devnet simulation (program not live). */
-  simulated: boolean;
 }
 
 export const IDLE_TX_STATE: VaultTxState = {
   phase: "idle",
   message: "",
   sig: null,
-  simulated: false,
 };
 
 /* ── Chain status ───────────────────────────────────────────────────── */

@@ -154,7 +154,7 @@ export default function PayoutsPage() {
     <div className="min-h-full bg-void">
       <div className="mx-auto max-w-[1200px] px-5 py-7 sm:px-8">
         <PageHeader title="Payouts">
-          <EnvChip live>Solana devnet</EnvChip>
+          <EnvChip live>Solana</EnvChip>
         </PageHeader>
         <p className="-mt-3 mb-6 text-[0.8rem] text-faint">
           Get payouts on funded accounts anytime, instantly to your wallet.
@@ -317,7 +317,7 @@ export default function PayoutsPage() {
                   <div className="mb-2 flex items-center gap-2">
                     <CheckCircle size={14} className="text-success" />
                     <span className="text-xs font-bold text-success">
-                      {txState.simulated ? "Payout simulated · devnet" : "Payout submitted"}
+                      Payout submitted
                     </span>
                   </div>
                   <p className="mb-2 font-mono text-[0.6rem] text-faint">{payoutResult}</p>

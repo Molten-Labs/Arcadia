@@ -23,6 +23,7 @@ arcadia-db      = { workspace = true }
 arcadia-decode  = { workspace = true }
 arcadia-scoring = { workspace = true }
 arcadia-chain   = { workspace = true }
+arcadia-executor = { workspace = true }
 arcadia-prices  = { workspace = true }
 
 tokio        = { workspace = true }

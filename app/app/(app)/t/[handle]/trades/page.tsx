@@ -147,7 +147,7 @@ export default function TradeHistoryPage() {
           <Link
             href={`/t/${handle}`}
             aria-label="Back to profile"
-            className="grid size-8 place-items-center rounded-lg border border-line bg-panel text-faint transition-colors hover:bg-panel-2 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+            className="grid size-8 place-items-center rounded-lg border border-line bg-panel text-faint transition-colors hover:bg-panel-2 hover:text-ink motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
           >
             <ArrowLeft className="size-3.5" aria-hidden />
           </Link>
@@ -155,13 +155,13 @@ export default function TradeHistoryPage() {
             aria-label="Breadcrumb"
             className="flex items-center gap-2 font-mono text-[11px] font-bold tracking-[0.14em] text-faint uppercase"
           >
-            <Link href="/traders" className="transition-colors hover:text-acid">
+            <Link href="/traders" className="transition-colors hover:text-acid motion-reduce:transition-none">
               Marketplace
             </Link>
             <span aria-hidden className="text-line">
               /
             </span>
-            <Link href={`/t/${handle}`} className="transition-colors hover:text-acid">
+            <Link href={`/t/${handle}`} className="transition-colors hover:text-acid motion-reduce:transition-none">
               @{handle}
             </Link>
             <span aria-hidden className="text-line">
@@ -183,7 +183,7 @@ export default function TradeHistoryPage() {
           <button
             type="button"
             onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2 font-mono text-xs font-bold tracking-[0.08em] text-faint uppercase transition-colors hover:border-acid/40 hover:text-ink focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2 font-mono text-xs font-bold tracking-[0.08em] text-faint uppercase transition-colors hover:border-acid/40 hover:text-ink motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void"
           >
             <Download className="size-3.5" aria-hidden />
             Export CSV
@@ -213,7 +213,7 @@ export default function TradeHistoryPage() {
                 onClick={() => setMarketFilter(m)}
                 aria-pressed={marketFilter === m}
                 className={cn(
-                  "rounded-md px-3 py-1.5 font-mono text-[10px] font-bold tracking-[0.14em] uppercase transition-colors focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
+                  "rounded-md px-3 py-1.5 font-mono text-[10px] font-bold tracking-[0.14em] uppercase transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void",
                   marketFilter === m ? "bg-acid text-void" : "text-faint hover:text-ink",
                 )}
               >
@@ -303,7 +303,7 @@ export default function TradeHistoryPage() {
         </Panel>
 
         <p className="mt-4 text-center font-mono text-[10px] text-faint">
-          All transactions verifiable on Solana devnet via the on-chain column.
+          All transactions verifiable on Solana via the on-chain column.
         </p>
       </PageContainer>
     </div>

@@ -8,6 +8,7 @@ members = [
     "crates/chain",
     "crates/prices",
     "crates/api",
+    "crates/executor",
     "crates/workers",
     "bin",
 ]
@@ -59,6 +60,10 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 # base64 encoding/decoding
 base64 = "0.22"
 
+aes-gcm            = "0.10"
+tokio-tungstenite  = "0.24"
+futures-util       = "0.3"
+
 # NOTE: solana-sdk and yellowstone-grpc-* are intentionally NOT listed here.
 # They create dependency conflicts with ed25519-dalek v2 (which we use for SIWS).
 # Add them directly to crates/chain and crates/workers Cargo.toml files after
@@ -85,4 +90,5 @@ arcadia-scoring = { path = "crates/scoring" }
 arcadia-chain   = { path = "crates/chain" }
 arcadia-prices  = { path = "crates/prices" }
 arcadia-api     = { path = "crates/api" }
+arcadia-executor = { path = "crates/executor" }
 arcadia-workers = { path = "crates/workers" }

@@ -45,7 +45,7 @@ export function LandingNav() {
                 animation: "acid-pulse 2s infinite",
               }}
             />
-            Solana / Devnet
+            Solana
           </span>
           <AcidButton asChild size="sm">
             <Link href={LINKS.traders}>Launch App</Link>

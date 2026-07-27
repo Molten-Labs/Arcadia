@@ -21,6 +21,7 @@ pub use token::*;
 pub(crate) use instructions::admin::initialize_platform::__client_accounts_initialize_platform;
 pub(crate) use instructions::admin::set_capacity::__client_accounts_set_capacity;
 pub(crate) use instructions::deposit::__client_accounts_deposit;
+pub(crate) use instructions::fund_execution::__client_accounts_fund_execution;
 pub(crate) use instructions::initialize_investor::__client_accounts_initialize_investor;
 pub(crate) use instructions::initialize_profile::__client_accounts_initialize_profile;
 pub(crate) use instructions::initialize_smoke::__client_accounts_initialize_smoke;
@@ -110,6 +111,10 @@ pub mod arcadia_vault {
 
     pub fn trader_withdraw_profit(ctx: Context<TraderWithdrawProfit>, amount: u64) -> Result<()> {
         instructions::trader_withdraw_profit::handler(ctx, amount)
+    }
+
+    pub fn fund_execution(ctx: Context<FundExecution>, amount: u64) -> Result<()> {
+        instructions::fund_execution::handler(ctx, amount)
     }
 
     pub fn initialize_smoke(ctx: Context<InitializeSmoke>, message: String) -> Result<()> {

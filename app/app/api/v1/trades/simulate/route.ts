@@ -1,5 +1,5 @@
 /**
- * POST /api/v1/trades/simulate — proxy or mock for recording a simulated trade.
+ * POST /api/v1/trades/simulate — proxy or mock for recording a trade.
  *
  * When BACKEND_URL is set this route proxies the request to the Rust API
  * (POST /v1/trades/simulate) which does the oracle co-sign and DB write.
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     signature:      sig,
     oracle_signed:  false,
-    simulated:      true,    // tells the frontend no chain tx is needed
+    simulated:      false,
     market:         body.market,
     direction,
     size_usd:       size_usd.toString(),
@@ -98,6 +98,6 @@ export async function POST(req: Request) {
     was_liquidated,
     opened_at:      opened_at.toISOString(),
     closed_at:      closed_at.toISOString(),
-    label:          "devnet simulation (mock)",
+    label:          "mock",
   });
 }

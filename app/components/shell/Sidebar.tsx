@@ -125,12 +125,7 @@ export function Sidebar() {
               >
                 {initial}
               </span>
-              <span
-                aria-hidden
-                className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-md border border-line bg-panel px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.11em] text-ink shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-              >
-                Devnet
-              </span>
+
             </div>
           </>
         ) : null}

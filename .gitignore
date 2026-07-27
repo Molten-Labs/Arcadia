@@ -27,3 +27,6 @@ target/
 .gstack/
 .vercel
 .env*
+
+# Execution wallet architecture reference (cloned from gildore-arena)
+/docs/execution-wallet-architecture/src/

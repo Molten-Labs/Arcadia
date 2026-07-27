@@ -46,7 +46,7 @@ export function LiveDot({ className }: { className?: string }) {
   );
 }
 
-/** Mono status chip (e.g. "Solana devnet", "@nova - simulation"). */
+/** Mono status chip (e.g. "Solana", "@nova"). */
 export function EnvChip({
   children,
   live = false,

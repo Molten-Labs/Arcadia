@@ -1,10 +1,10 @@
 /// arcadia-server — Arcadia indexer / backend.
 ///
-/// Five supervised tasks run in parallel:
+/// Supervised workers:
 ///   A) ingest   — Yellowstone gRPC → decode events → Postgres (stub by default)
 ///   B) score    — hourly: TWR + metrics + score + snapshot
 ///   C) price    — refresh price cache in Redis
-///   D) oracle   — (embedded in score worker for capacity push)
+///   D) executor — execution wallet lifecycle, vault TXs, FlashTrade orchestration
 ///   E) api      — Axum HTTP server on $PORT
 ///
 /// Feature flags:
@@ -72,6 +72,7 @@ async fn main() -> Result<()> {
     let wctx_ingest = worker_ctx.clone();
     let wctx_score = worker_ctx.clone();
     let wctx_price = worker_ctx.clone();
+    let wctx_exec = worker_ctx.clone();
 
     let ingest_task = tokio::spawn(async move {
         supervise("ingest", move || {
@@ -97,6 +98,14 @@ async fn main() -> Result<()> {
         .await;
     });
 
+    let exec_task = tokio::spawn(async move {
+        supervise("executor", move || {
+            let c = wctx_exec.clone();
+            async move { arcadia_workers::executor::run(c).await }
+        })
+        .await;
+    });
+
     // ── Axum HTTP server ──────────────────────────────────────────────────
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -114,6 +123,7 @@ async fn main() -> Result<()> {
         _ = ingest_task => tracing::error!("ingest supervisor exited"),
         _ = score_task  => tracing::error!("score supervisor exited"),
         _ = price_task  => tracing::error!("price supervisor exited"),
+        _ = exec_task   => tracing::error!("executor supervisor exited"),
         _ = api_task    => tracing::error!("api task exited"),
     }
 

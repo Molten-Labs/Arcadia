@@ -588,6 +588,66 @@ pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
     Ok(count.0 + 1)
 }
 
+// ── Execution Wallet ─────────────────────────────────────────────────────────
+
+pub async fn get_execution_wallet(pool: &PgPool, profile: &str) -> Result<Option<DbExecutionWallet>> {
+    Ok(sqlx::query_as::<_, DbExecutionWallet>(
+        "SELECT * FROM execution_wallet WHERE profile = $1"
+    )
+    .bind(profile)
+    .fetch_optional(pool)
+    .await?)
+}
+
+pub async fn upsert_execution_wallet(
+    pool: &PgPool,
+    profile: &str,
+    pubkey: &str,
+    encrypted_seed: &[u8],
+    encryption_salt: &[u8],
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO execution_wallet (profile, pubkey, encrypted_seed, encryption_salt, updated_at)
+         VALUES ($1, $2, $3, $4, now())
+         ON CONFLICT (profile) DO UPDATE SET
+             pubkey = $2,
+             encrypted_seed = $3,
+             encryption_salt = $4,
+             updated_at = now()"
+    )
+    .bind(profile)
+    .bind(pubkey)
+    .bind(encrypted_seed)
+    .bind(encryption_salt)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn update_execution_wallet_status(
+    pool: &PgPool,
+    profile: &str,
+    status: i16,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE execution_wallet SET status = $1, updated_at = now() WHERE profile = $2"
+    )
+    .bind(status)
+    .bind(profile)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+pub async fn list_execution_wallets_by_status(pool: &PgPool, status: i16) -> Result<Vec<DbExecutionWallet>> {
+    Ok(sqlx::query_as::<_, DbExecutionWallet>(
+        "SELECT * FROM execution_wallet WHERE status = $1"
+    )
+    .bind(status)
+    .fetch_all(pool)
+    .await?)
+}
+
 pub async fn verify_waitlist_user(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
     Ok(sqlx::query_as::<_, DbWaitlistUser>(
         "UPDATE waitlist_users

@@ -1,15 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { Minus, Plus, Zap } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 
-import { TextSwap } from "@/components/TextSwap";
-import { formatUSD } from "@/lib/types";
 import type { Direction, OrderType } from "./terminal-types";
+import { useFlashTradePrices } from "@/lib/use-flash-trade-prices";
+
+interface Props {
+  direction: Direction;
+  setDirection: (d: Direction) => void;
+  orderType: OrderType;
+  setOrderType: (t: OrderType) => void;
+  sizeUSD: string;
+  setSizeUSD: (v: string) => void;
+  leverage: number;
+  setLeverage: (v: number) => void;
+  currentPrice?: number;
+  onSubmit: () => void;
+  submitting: boolean;
+  connected: boolean;
+  market: string;
+  openDeposit: () => void;
+}
+
+const LEVERAGE_QUICK = [25, 50, 75, 100] as const;
 
 export function TerminalOrderForm({
   direction,
-  setDirection,
   orderType,
   setOrderType,
   sizeUSD,
@@ -22,115 +39,94 @@ export function TerminalOrderForm({
   connected,
   market,
   openDeposit,
-}: {
-  direction: Direction;
-  setDirection: (d: Direction) => void;
-  orderType: OrderType;
-  setOrderType: (t: OrderType) => void;
-  sizeUSD: string;
-  setSizeUSD: (v: string) => void;
-  leverage: number;
-  setLeverage: (v: number) => void;
-  currentPrice?: number;
-  oraclePrice?: number;
-  onSubmit: () => void;
-  submitting: boolean;
-  connected: boolean;
-  market: string;
-  openDeposit: () => void;
-}) {
-  const [tpslEnabled, setTpslEnabled] = useState(false);
-  const [reduceOnly, setReduceOnly] = useState(false);
-  const [tpPrice, setTpPrice] = useState("");
-  const [slPrice, setSlPrice] = useState("");
-  const [limitPrice, setLimitPrice] = useState("");
-  const [focusPct, setFocusPct] = useState<number | null>(null);
+}: Props) {
+  const { getPrice } = useFlashTradePrices();
+  const [tpslOpen, setTpslOpen] = useState(false);
+  const [slipOpen, setSlipOpen] = useState(false);
+  const [payMode, setPayMode] = useState<"usdc" | "token">("usdc");
+  const [tokenAmt, setTokenAmt] = useState("");
+
+  const symbol = market.replace("-PERP", "").replace("/USD", "");
+  const ftPrice = getPrice(symbol);
+  const livePrice = ftPrice?.priceUi ?? currentPrice;
+
+  // When user types USDC amount, compute token receive
+  const expectedToken = useMemo(() => {
+    const amt = parseFloat(sizeUSD);
+    if (!amt || !livePrice || livePrice <= 0) return 0;
+    return amt / livePrice;
+  }, [sizeUSD, livePrice]);
+
+  // When user types token amount, compute USDC cost
+  const expectedUsdc = useMemo(() => {
+    const amt = parseFloat(tokenAmt);
+    if (!amt || !livePrice || livePrice <= 0) return 0;
+    return amt * livePrice;
+  }, [tokenAmt, livePrice]);
 
   const notional = (parseFloat(sizeUSD) || 0) * leverage;
-  const fee = notional * 0.0004;
-  const liqDist = currentPrice ? (currentPrice / leverage) * 0.88 : 0;
-  const liqPrice = currentPrice
+  const fee = notional * 0.0002;
+  const liqDist = livePrice ? (livePrice / leverage) * 0.88 : 0;
+  const liqPrice = livePrice
     ? direction === "long"
-      ? currentPrice - liqDist
-      : currentPrice + liqDist
+      ? livePrice - liqDist
+      : livePrice + liqDist
     : 0;
-
-  const MARGIN_AVAIL = 20_000;
-  const pctButtons = [10, 25, 50, 75, 100];
   const isLong = direction === "long";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden border-l border-line transition-colors duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] hover:border-white/15 motion-reduce:transition-none">
-      {/* Long / Short tabs */}
-      <div className="grid shrink-0 grid-cols-2 border-b border-line">
-        {(["long", "short"] as Direction[]).map((d) => {
-          const active = direction === d;
-          const tone = d === "long" ? "var(--color-success)" : "var(--color-danger)";
-          return (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDirection(d)}
-              className="py-2.5 text-xs font-bold capitalize transition-all"
-              style={{
-                background: active
-                  ? `color-mix(in srgb, ${tone} 10%, transparent)`
-                  : "transparent",
-                color: active ? tone : "var(--color-faint)",
-                borderBottom: active ? `2px solid ${tone}` : "2px solid transparent",
-              }}
-            >
-              {d === "long" ? "▲ Long" : "▼ Short"}
-            </button>
-          );
-        })}
+    <div className="flex h-full flex-col overflow-hidden border-l border-line bg-panel">
+      {/* Alert banner */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-warning/10 px-3 py-2">
+        <AlertTriangle size={12} className="shrink-0 text-warning" />
+        <p className="text-[10px] leading-tight text-warning/90">
+          Transaction may fail due to insufficient SOL balance
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
-        <div className="space-y-3 p-3">
-          {/* Order type */}
-          <div className="flex overflow-hidden rounded border border-line">
-            {(["Market", "Limit", "TP/SL"] as OrderType[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setOrderType(t)}
-                className="flex-1 py-1.5 text-[10px] font-semibold transition-colors active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none"
-                style={{
-                  background: orderType === t ? "var(--color-panel-2)" : "transparent",
-                  color: orderType === t ? "var(--color-ink)" : "var(--color-faint)",
-                }}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+        <div className="space-y-4 p-3">
 
-          {/* Limit price */}
-          {orderType === "Limit" && (
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <label className="text-[10px] font-medium text-faint">Limit Price</label>
-                <span className="text-[10px] text-faint">USD</span>
-              </div>
-              <div className="flex items-center overflow-hidden rounded border border-line bg-panel-2">
-                <input
-                  type="number"
-                  value={limitPrice}
-                  onChange={(e) => setLimitPrice(e.target.value)}
-                  placeholder={currentPrice?.toFixed(2) ?? "0.00"}
-                  className="flex-1 bg-transparent px-2 py-1.5 text-xs tabular-nums text-ink outline-none"
-                />
-                <span className="border-l border-line px-2 text-[10px] text-faint">USD</span>
-              </div>
-            </div>
-          )}
-
-          {/* Amount */}
+          {/* Price entry */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-[10px] font-medium text-faint">Amount</label>
-              <span className="text-[10px] text-faint">USDC</span>
+              <span className="text-[10px] font-medium text-faint">Price</span>
+              <span className="text-[10px] text-faint">USD</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-2xl font-black tabular-nums"
+                style={{ color: isLong ? "var(--color-success)" : "var(--color-danger)" }}
+              >
+                {livePrice?.toFixed(2) ?? "—"}
+              </span>
+              <span className="self-end pb-1 text-[10px] text-faint">USD</span>
+            </div>
+            <div className="mt-1.5 flex overflow-hidden rounded border border-line">
+              {(["Market", "Limit"] as OrderType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setOrderType(t)}
+                  className="flex-1 py-1 text-[10px] font-semibold transition-colors motion-reduce:transition-none"
+                  style={{
+                    background: orderType === t ? "var(--color-panel-2)" : "transparent",
+                    color: orderType === t ? "var(--color-ink)" : "var(--color-faint)",
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Amount — Pay */}
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="text-[10px] font-medium text-faint">Pay</label>
+              <span className="text-[10px] text-faint">
+                Balance: <span className="text-ink">0</span>
+              </span>
             </div>
             <div className="flex items-center overflow-hidden rounded border border-line bg-panel-2">
               <span className="pl-2 text-[10px] text-muted">$</span>
@@ -139,84 +135,75 @@ export function TerminalOrderForm({
                 value={sizeUSD}
                 onChange={(e) => {
                   setSizeUSD(e.target.value);
-                  setFocusPct(null);
+                  setPayMode("usdc");
                 }}
                 placeholder="0.00"
                 className="flex-1 bg-transparent px-2 py-2 text-xs tabular-nums text-ink outline-none"
               />
+              <span className="border-l border-line px-2 text-[10px] font-semibold text-acid">
+                USDC
+              </span>
             </div>
-            <div className="mt-1.5 flex gap-1">
-              {pctButtons.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => {
-                    setSizeUSD(((MARGIN_AVAIL * p) / 100).toFixed(0));
-                    setFocusPct(p);
-                  }}
-                  className="flex-1 rounded border py-1 text-[9px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
-                  style={{
-                    background:
-                      focusPct === p
-                        ? "color-mix(in srgb, var(--color-acid) 12%, transparent)"
-                        : "var(--color-panel-2)",
-                    color: focusPct === p ? "var(--color-acid)" : "var(--color-faint)",
-                    borderColor:
-                      focusPct === p
-                        ? "color-mix(in srgb, var(--color-acid) 40%, transparent)"
-                        : "var(--color-line)",
-                  }}
-                >
-                  {p === 100 ? "Max" : `${p}%`}
-                </button>
-              ))}
+          </div>
+
+          {/* Expected receive */}
+          <div className="rounded-lg border border-line bg-panel-2 p-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium text-faint">Expected Receive</span>
+              <span
+                className="text-[10px] font-bold"
+                style={{ color: isLong ? "var(--color-success)" : "var(--color-danger)" }}
+              >
+                {isLong ? "Long" : "Short"}
+              </span>
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-sm font-bold tabular-nums text-ink">
+                {expectedToken > 0 ? `$${(parseFloat(sizeUSD) || 0).toFixed(2)}` : "—"}
+              </span>
+              <span className="text-[11px] tabular-nums text-muted">
+                {expectedToken > 0 ? expectedToken.toFixed(4) : "0.0000"} {symbol}
+              </span>
             </div>
           </div>
 
           {/* Leverage */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-[10px] font-medium text-faint">Leverage</label>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setLeverage(Math.max(1, leverage - 1))}
-                  className="flex size-5 items-center justify-center rounded border border-line text-muted transition-colors hover:bg-panel-2 active:scale-90 motion-reduce:transform-none"
-                  aria-label="Decrease leverage"
-                >
-                  <Minus size={8} />
-                </button>
-                <span className="w-10 text-center text-xs font-bold tabular-nums text-acid">
-                  {leverage}x
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-medium text-faint">Leverage</label>
+                <span className="rounded border border-acid/20 bg-acid/[0.08] px-1.5 py-0.5 text-[9px] text-acid">
+                  Basic
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setLeverage(Math.min(50, leverage + 1))}
-                  className="flex size-5 items-center justify-center rounded border border-line text-muted transition-colors hover:bg-panel-2 active:scale-90 motion-reduce:transform-none"
-                  aria-label="Increase leverage"
-                >
-                  <Plus size={8} />
-                </button>
               </div>
+              <span className="text-xs font-bold tabular-nums text-acid">{leverage}x</span>
             </div>
             <input
               type="range"
               min={1}
-              max={50}
+              max={100}
               value={leverage}
               onChange={(e) => setLeverage(parseInt(e.target.value))}
               className="h-1 w-full rounded-full"
               style={{ accentColor: "var(--color-acid)" }}
               aria-label="Leverage"
             />
-            <div className="mt-1 flex justify-between text-[9px] text-faint">
-              {[1, 5, 10, 20, 50].map((v) => (
+            <div className="mt-1.5 flex gap-1">
+              {LEVERAGE_QUICK.map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setLeverage(v)}
-                  className="transition-colors hover:text-muted"
-                  style={{ color: leverage === v ? "var(--color-acid)" : undefined }}
+                  className="flex-1 rounded border py-1 text-[9px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+                  style={{
+                    background: leverage === v
+                      ? "color-mix(in srgb, var(--color-acid) 12%, transparent)"
+                      : "var(--color-panel-2)",
+                    color: leverage === v ? "var(--color-acid)" : "var(--color-faint)",
+                    borderColor: leverage === v
+                      ? "color-mix(in srgb, var(--color-acid) 40%, transparent)"
+                      : "var(--color-line)",
+                  }}
                 >
                   {v}x
                 </button>
@@ -224,92 +211,85 @@ export function TerminalOrderForm({
             </div>
           </div>
 
-          {/* TP / SL toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <label className="text-[10px] font-semibold text-faint">TP / SL</label>
-              <span className="rounded border border-acid/20 bg-acid/[0.08] px-1.5 py-0.5 text-[9px] text-acid">
-                Optional
-              </span>
-            </div>
+          {/* TP/SL collapsible */}
+          <div className="overflow-hidden rounded-lg border border-line">
             <button
               type="button"
-              role="switch"
-              aria-checked={tpslEnabled}
-              aria-label="Enable take-profit / stop-loss"
-              onClick={() => setTpslEnabled(!tpslEnabled)}
-              className="relative h-5 w-9 rounded-full transition-colors"
-              style={{ background: tpslEnabled ? "var(--color-acid)" : "var(--color-line)" }}
+              onClick={() => setTpslOpen(!tpslOpen)}
+              className="flex w-full items-center justify-between px-3 py-2 text-[10px] font-semibold transition-colors hover:bg-panel-2 motion-reduce:transition-none"
             >
-              <div
-                className="absolute top-0.5 size-4 rounded-full bg-white shadow transition-all"
-                style={{ left: tpslEnabled ? "calc(100% - 18px)" : "2px" }}
-              />
+              <span className="text-faint">Take Profit / Stop Loss</span>
+              {tpslOpen ? <ChevronUp size={12} className="text-faint" /> : <ChevronDown size={12} className="text-faint" />}
             </button>
+            {tpslOpen && (
+              <div className="flex gap-2 border-t border-line px-3 py-2">
+                <div className="flex-1">
+                  <label className="mb-1 block text-[9px] text-success">Take Profit</label>
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    className="w-full rounded border border-line bg-panel-2 px-2 py-1.5 text-[10px] tabular-nums text-ink outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="mb-1 block text-[9px] text-danger">Stop Loss</label>
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    className="w-full rounded border border-line bg-panel-2 px-2 py-1.5 text-[10px] tabular-nums text-ink outline-none"
+                  />
+                </div>
+              </div>
+            )}
           </div>
-          {tpslEnabled && (
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="mb-1 block text-[9px]" style={{ color: "var(--color-success)" }}>
-                  Take Profit
-                </label>
-                <input
-                  type="number"
-                  value={tpPrice}
-                  onChange={(e) => setTpPrice(e.target.value)}
-                  placeholder="Price"
-                  className="w-full rounded px-2 py-1.5 text-[10px] tabular-nums text-ink outline-none"
-                  style={{
-                    background: "color-mix(in srgb, var(--color-success) 6%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--color-success) 22%, transparent)",
-                  }}
-                />
-              </div>
-              <div className="flex-1">
-                <label className="mb-1 block text-[9px]" style={{ color: "var(--color-danger)" }}>
-                  Stop Loss
-                </label>
-                <input
-                  type="number"
-                  value={slPrice}
-                  onChange={(e) => setSlPrice(e.target.value)}
-                  placeholder="Price"
-                  className="w-full rounded px-2 py-1.5 text-[10px] tabular-nums text-ink outline-none"
-                  style={{
-                    background: "color-mix(in srgb, var(--color-danger) 6%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--color-danger) 22%, transparent)",
-                  }}
-                />
-              </div>
-            </div>
-          )}
 
-          {/* Reduce only */}
-          <div className="flex items-center justify-between">
-            <label className="text-[10px] font-medium text-faint">Reduce Only</label>
+          {/* Slippage collapsible */}
+          <div className="overflow-hidden rounded-lg border border-line">
             <button
               type="button"
-              role="switch"
-              aria-checked={reduceOnly}
-              aria-label="Reduce only"
-              onClick={() => setReduceOnly(!reduceOnly)}
-              className="relative h-5 w-9 rounded-full transition-colors"
-              style={{ background: reduceOnly ? "var(--color-acid)" : "var(--color-line)" }}
+              onClick={() => setSlipOpen(!slipOpen)}
+              className="flex w-full items-center justify-between px-3 py-2 text-[10px] font-semibold transition-colors hover:bg-panel-2 motion-reduce:transition-none"
             >
-              <div
-                className="absolute top-0.5 size-4 rounded-full bg-white shadow transition-all"
-                style={{ left: reduceOnly ? "calc(100% - 18px)" : "2px" }}
-              />
+              <span className="text-faint">Slippage Tolerance (0.8%)</span>
+              {slipOpen ? <ChevronUp size={12} className="text-faint" /> : <ChevronDown size={12} className="text-faint" />}
             </button>
+            {slipOpen && (
+              <div className="border-t border-line px-3 py-2">
+                <input
+                  type="number"
+                  defaultValue={0.8}
+                  step={0.1}
+                  className="w-full rounded border border-line bg-panel-2 px-2 py-1.5 text-[10px] tabular-nums text-ink outline-none"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Order summary */}
+          {/* Action button */}
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={!connected || submitting || !sizeUSD || parseFloat(sizeUSD) <= 0}
+            className="w-full rounded-lg bg-acid py-3 text-sm font-black tracking-wide text-void transition-[color,background-color,border-color,box-shadow,transform] active:scale-[0.98] disabled:opacity-40 motion-reduce:transition-none motion-reduce:transform-none"
+          >
+            {!connected
+              ? "Connect Wallet"
+              : submitting
+                ? "Processing…"
+                : "Deposit USDC To Account"}
+          </button>
+
+          {/* Position summary */}
           <div className="space-y-1.5 rounded-lg border border-line bg-panel-2 p-2.5">
+            <p className="text-[9px] font-black tracking-widest text-faint uppercase">Position Summary</p>
             {[
-              ["Entry", currentPrice ? currentPrice.toFixed(2) : "Market"],
-              ["Liq. Price", liqPrice > 0 ? liqPrice.toFixed(2) : "—"],
-              ["Notional", notional > 0 ? formatUSD(notional) : "—"],
-              ["Fees (est.)", fee > 0 ? formatUSD(fee) : "—"],
+              ["Collateral In", `${symbol}`],
+              ["Leverage", `${leverage.toFixed(2)}x`],
+              ["Entry Price", livePrice ? `$${livePrice.toFixed(2)}` : "—"],
+              ["Liq. Price", liqPrice > 0 ? `$${liqPrice.toFixed(2)}` : "—"],
+              ["Fees (0.02%)", fee > 0 ? `$${fee.toFixed(2)}` : "$0.00"],
+              ["Margin Fees", `${(0.00036).toFixed(4)}% /1hr`],
+              ["Available liquidity", "$2,267,027.59"],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center justify-between">
                 <span className="text-[10px] text-faint">{k}</span>
@@ -317,62 +297,7 @@ export function TerminalOrderForm({
               </div>
             ))}
           </div>
-
-          {/* Submit */}
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={!connected || submitting || !sizeUSD || parseFloat(sizeUSD) <= 0}
-            className="w-full rounded-lg py-3 text-sm font-black tracking-wide transition-all active:scale-[0.98] disabled:opacity-40 motion-reduce:transform-none"
-            style={{
-              background: isLong ? "var(--color-success)" : "var(--color-danger)",
-              color: isLong ? "var(--color-void)" : "var(--color-chrome-1)",
-              boxShadow: isLong
-                ? "0 4px 14px color-mix(in srgb, var(--color-success) 25%, transparent)"
-                : "0 4px 14px color-mix(in srgb, var(--color-danger) 25%, transparent)",
-            }}
-          >
-            <TextSwap>
-              {!connected
-                ? "Connect Wallet"
-                : submitting
-                  ? "Placing order…"
-                  : `${isLong ? "▲ Long" : "▼ Short"} ${market.replace("-PERP", "")}`}
-            </TextSwap>
-          </button>
-
-          <p className="text-center font-mono text-[0.58rem] tracking-[0.12em] text-faint uppercase">
-            Simulated fills · no real capital
-          </p>
         </div>
-      </div>
-
-      {/* Account summary */}
-      <div className="shrink-0 border-t border-line px-3 pt-2 pb-3">
-        <p className="mb-2 text-[9px] font-black tracking-widest text-faint uppercase">Account</p>
-        <div className="space-y-1">
-          {[
-            ["Available", "$20,000.00", "var(--color-ink)"],
-            ["Margin Used", "$0.00", "var(--color-ink)"],
-            ["Margin Ratio", "—", "var(--color-ink)"],
-            ["Unrealized PnL", "+$0.00", "var(--color-success)"],
-          ].map(([k, v, c]) => (
-            <div key={k} className="flex items-center justify-between">
-              <span className="text-[10px] text-faint">{k}</span>
-              <span className="text-[10px] font-semibold tabular-nums" style={{ color: c }}>
-                {v}
-              </span>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={openDeposit}
-          className="mt-2 flex w-full items-center justify-center gap-1 rounded border border-acid/30 bg-acid/[0.06] py-1.5 text-center text-[10px] font-bold text-acid transition-colors hover:bg-acid/[0.12] active:scale-[0.98] motion-reduce:transform-none"
-        >
-          <Zap size={10} />
-          Deposit USDC
-        </button>
       </div>
     </div>
   );

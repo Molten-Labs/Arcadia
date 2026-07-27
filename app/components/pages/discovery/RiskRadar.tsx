@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePrefersReducedMotion } from "@/components/acid/use-prefers-reduced-motion";
 
 export interface RadarItem {
   label: string;
@@ -32,10 +33,12 @@ function radarColor(pct: number, invert?: boolean, tone?: RadarItem["tone"]): st
  */
 export function RiskRadar({ items }: { items: RadarItem[] }) {
   const [visible, setVisible] = useState(false);
+  const reduced = usePrefersReducedMotion();
   useEffect(() => {
+    if (reduced) { setVisible(true); return; }
     const id = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(id);
-  }, []);
+  }, [reduced]);
 
   const N = items.length;
   const W = 280;
@@ -108,7 +111,7 @@ export function RiskRadar({ items }: { items: RadarItem[] }) {
         strokeLinejoin="round"
         style={{
           opacity: visible ? 1 : 0,
-          transition: "opacity 0.5s ease",
+          transition: reduced ? "none" : "opacity 0.5s ease",
         }}
       />
 
@@ -122,7 +125,7 @@ export function RiskRadar({ items }: { items: RadarItem[] }) {
         style={{
           opacity: visible ? 0.12 : 0,
           filter: "blur(3px)",
-          transition: "opacity 0.5s ease",
+          transition: reduced ? "none" : "opacity 0.5s ease",
         }}
       />
 
@@ -139,7 +142,7 @@ export function RiskRadar({ items }: { items: RadarItem[] }) {
             strokeWidth={1.5}
             style={{
               opacity: visible ? 1 : 0,
-              transition: `opacity 0.4s ease ${i * 0.06}s`,
+              transition: reduced ? "none" : `opacity 0.4s ease ${i * 0.06}s`,
             }}
           />
         );
@@ -180,7 +183,7 @@ export function RiskRadar({ items }: { items: RadarItem[] }) {
               fontWeight="700"
               style={{
                 opacity: visible ? 1 : 0,
-                transition: `opacity 0.4s ease ${i * 0.06}s`,
+                transition: reduced ? "none" : `opacity 0.4s ease ${i * 0.06}s`,
               }}
             >
               {display}

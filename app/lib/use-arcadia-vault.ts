@@ -39,8 +39,6 @@ export interface VaultOnChainState {
   positionAddress: string;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 function toTraderKey(walletOrProfile: string, fallback: PublicKey): PublicKey {
   try {
     return new PublicKey(walletOrProfile);
@@ -74,18 +72,18 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
   const resetTx = useCallback(() => setTxState(IDLE_TX_STATE), []);
 
   const progress = useCallback(
-    (phase: VaultTxState["phase"], message: string, simulated = false) => {
-      setTxState({ phase, message, sig: null, simulated });
+    (phase: VaultTxState["phase"], message: string) => {
+      setTxState({ phase, message, sig: null });
     },
     [],
   );
 
-  const succeed = useCallback((message: string, sig: string | null, simulated: boolean) => {
-    setTxState({ phase: "success", message, sig, simulated });
+  const succeed = useCallback((message: string, sig: string | null) => {
+    setTxState({ phase: "success", message, sig });
   }, []);
 
   const fail = useCallback((message: string): false => {
-    setTxState({ phase: "error", message, sig: null, simulated: false });
+    setTxState({ phase: "error", message, sig: null });
     return false;
   }, []);
 
@@ -156,20 +154,10 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
 
         if (status.kind === "vault-live") {
-          succeed(`Profile "${handle}" already exists on-chain.`, null, false);
+          succeed(`Profile "${handle}" already exists on-chain.`, null);
           return true;
         }
-
-        if (status.kind === "offline") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_400);
-          succeed(
-            `Devnet simulation — profile "${handle}" initialized. PDA: ${profAddr.toBase58().slice(0, 8)}…`,
-            null,
-            true,
-          );
-          return true;
-        }
+        if (status.kind === "offline") return fail("Platform not deployed on this cluster.");
 
         const program = makeArcadiaProgram(connection, anchorWallet);
         const [configPda] = findPlatformConfig();
@@ -191,7 +179,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           .transaction();
         const sig = await sendTransaction!(tx, connection);
 
-        succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
+        succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig);
         pushEvent({
           event_type: "ProfileInitialized",
           profile: profAddr.toBase58(),
@@ -217,18 +205,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
 
         if (status.investorExists) {
-          succeed("Investor account already initialized.", null, false);
-          return true;
-        }
-
-        if (status.kind === "offline") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_100);
-          succeed(
-            `Devnet simulation — investor account created. PDA: ${invAddr.toBase58().slice(0, 8)}…`,
-            null,
-            true,
-          );
+          succeed("Investor account already initialized.", null);
           return true;
         }
 
@@ -243,7 +220,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           })
           .transaction();
         const sig = await sendTransaction!(tx, connection);
-        succeed(`Investor account created. Signature: ${sig.slice(0, 8)}…`, sig, false);
+        succeed(`Investor account created. Signature: ${sig.slice(0, 8)}…`, sig);
         pushEvent({
           event_type: "InvestorInitialized",
           investor: publicKey.toBase58(),
@@ -269,23 +246,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
 
         const status = await statusOrFail(traderKey, publicKey);
         if (!status) return false;
-
-        if (status.kind !== "vault-live") {
-          if (!status.investorExists) {
-            progress("init-investor", "Creating investor account…", true);
-            await sleep(900);
-          }
-          progress("signing", `Confirm deposit of $${amountUsdc.toFixed(2)} in wallet…`, true);
-          await sleep(1_400);
-          progress("confirming", "Broadcasting to Solana devnet…", true);
-          await sleep(700);
-          succeed(
-            `Devnet simulation — deposit of $${amountUsdc.toFixed(2)}.`,
-            null,
-            true,
-          );
-          return true;
-        }
+        if (status.kind !== "vault-live") return fail("Vault program not found on this cluster.");
 
         const program = makeArcadiaProgram(connection, anchorWallet);
 
@@ -324,7 +285,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         succeed(
           `Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`,
           sig,
-          false,
         );
         pushEvent({
           event_type: "Deposited",
@@ -354,13 +314,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const [positionPda] = findInvestorPosition(publicKey, profilePda);
         const status = await statusOrFail(traderKey, publicKey);
         if (!status) return false;
-
-        if (status.kind !== "vault-live") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_200);
-          succeed("Devnet simulation — withdraw request submitted.", null, true);
-          return true;
-        }
+        if (status.kind !== "vault-live") return fail("Vault program not found on this cluster.");
 
         const program = makeArcadiaProgram(connection, anchorWallet);
         const sharesU64 = new BN(Math.floor(shares * 1_000_000));
@@ -375,7 +329,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           })
           .transaction();
         const sig = await sendTransaction!(tx, connection);
-        succeed(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`, sig, false);
+        succeed(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`, sig);
         return true;
       } catch (err) {
         return fail(`Withdraw request failed: ${errorMessage(err)}`);
@@ -392,13 +346,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const traderKey = toTraderKey(traderWalletOrProfile, publicKey);
         const status = await statusOrFail(traderKey, publicKey);
         if (!status) return false;
-
-        if (status.kind !== "vault-live") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_200);
-          succeed("Devnet simulation — withdrawal processed.", null, true);
-          return true;
-        }
+        if (status.kind !== "vault-live") return fail("Vault program not found on this cluster.");
 
         const [profilePda] = findTraderProfile(traderKey);
         const [positionPda] = findInvestorPosition(publicKey, profilePda);
@@ -419,7 +367,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           })
           .transaction();
         const sig = await sendTransaction!(tx, connection);
-        succeed(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`, sig, false);
+        succeed(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`, sig);
         pushEvent({
           event_type: "Withdrawn",
           profile: profilePda.toBase58(),
@@ -454,7 +402,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
       try {
         const token =
           typeof localStorage !== "undefined" ? localStorage.getItem("arcadia_jwt") : null;
-        const simRes = await fetch("/api/v1/trades/simulate", {
+        const res = await fetch("/api/v1/trades/simulate", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -473,24 +421,12 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           }),
         });
 
-        if (!simRes.ok) {
-          const errText = await simRes.text().catch(() => "unknown error");
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "unknown error");
           throw new Error(`Oracle co-sign failed: ${errText}`);
         }
 
-        const { tx_base64, simulated } = (await simRes.json()) as {
-          tx_base64?: string;
-          simulated?: boolean;
-        };
-
-        if (simulated) {
-          succeed(
-            `Trade recorded: ${params.direction.toUpperCase()} ${params.market} $${params.sizeUsd} @ ${(params.leverageX100 / 100).toFixed(1)}×`,
-            null,
-            true,
-          );
-          return true;
-        }
+        const { tx_base64 } = (await res.json()) as { tx_base64?: string };
 
         if (tx_base64) {
           progress("signing", "Confirm in wallet…");
@@ -498,11 +434,11 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           const sig = await sendTransaction!(tx, connection);
           progress("confirming", "Confirming on Solana…");
           await connection.confirmTransaction(sig, "confirmed");
-          succeed(`Trade recorded on-chain. Signature: ${sig.slice(0, 8)}…`, sig, false);
+          succeed(`Trade recorded on-chain. Signature: ${sig.slice(0, 8)}…`, sig);
           return true;
         }
 
-        succeed("Trade recorded.", null, false);
+        succeed("Trade recorded.", null);
         return true;
       } catch (err) {
         return fail(`Record trade failed: ${errorMessage(err)}`);
@@ -518,17 +454,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
       try {
         const status = await statusOrFail(publicKey, publicKey);
         if (!status) return false;
-
-        if (status.kind !== "vault-live") {
-          progress("signing", "Confirm in wallet…", true);
-          await sleep(1_200);
-          succeed(
-            `Devnet simulation — $${amountUsdc.toFixed(2)} profit withdrawn.`,
-            null,
-            true,
-          );
-          return true;
-        }
+        if (status.kind !== "vault-live") return fail("Vault program not found on this cluster.");
 
         const [profilePda] = findTraderProfile(publicKey);
         const traderToken = getAssociatedTokenAddressSync(status.baseMint, publicKey);
@@ -548,7 +474,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           })
           .transaction();
         const sig = await sendTransaction!(tx, connection);
-        succeed(`$${amountUsdc.toFixed(2)} profit withdrawn. Signature: ${sig.slice(0, 8)}…`, sig, false);
+        succeed(`$${amountUsdc.toFixed(2)} profit withdrawn. Signature: ${sig.slice(0, 8)}…`, sig);
         return true;
       } catch (err) {
         return fail(`Withdrawal failed: ${errorMessage(err)}`);
