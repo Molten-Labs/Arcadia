@@ -4,6 +4,7 @@ use crate::{
     error::ApiError,
     state::AppState,
 };
+use arcadia_db::models::DbTraderProfile;
 use arcadia_db::queries;
 use axum::{
     extract::{Path, Query, State},
@@ -19,7 +20,7 @@ use serde_json::{json, Value};
 
 pub async fn list_traders(State(ctx): State<AppState>) -> Result<Json<Value>, ApiError> {
     use arcadia_core::classify::{self, TradeSample};
-    let traders = queries::list_traders(&ctx.db).await?;
+    let traders = queries::list_traders_paginated(&ctx.db, 100).await?;
 
     let mut list: Vec<Value> = Vec::with_capacity(traders.len());
     for t in &traders {
@@ -199,11 +200,15 @@ pub async fn get_investor_account(
     let positions = queries::get_investor_positions(&ctx.db, &wallet).await?;
 
     let mut position_list: Vec<Value> = Vec::new();
+    let profile_refs: Vec<&str> = positions.iter().map(|p| p.profile.as_str()).collect();
+    let trader_profiles = queries::get_trader_profiles_batch(&ctx.db, &profile_refs).await?;
+    let handle_map: std::collections::HashMap<&str, &str> = trader_profiles
+        .iter()
+        .map(|t| (t.profile.as_str(), t.handle.as_str()))
+        .collect();
+
     for pos in &positions {
-        let handle = queries::get_trader_by_profile(&ctx.db, &pos.profile)
-            .await?
-            .map(|t| t.handle)
-            .unwrap_or_else(|| pos.profile.clone());
+        let handle = handle_map.get(pos.profile.as_str()).copied().unwrap_or(&pos.profile);
 
         position_list.push(json!({
             "profile":                 pos.profile,
@@ -238,8 +243,15 @@ pub async fn get_investor_portfolio(
     let positions = queries::get_investor_positions(&ctx.db, &wallet).await?;
 
     let mut out: Vec<Value> = Vec::new();
+    let profile_refs: Vec<&str> = positions.iter().map(|p| p.profile.as_str()).collect();
+    let trader_profiles = queries::get_trader_profiles_batch(&ctx.db, &profile_refs).await?;
+    let vault_map: std::collections::HashMap<&str, &DbTraderProfile> = trader_profiles
+        .iter()
+        .map(|t| (t.profile.as_str(), t))
+        .collect();
+
     for pos in &positions {
-        if let Some(vault) = queries::get_trader_by_profile(&ctx.db, &pos.profile).await? {
+        if let Some(vault) = vault_map.get(pos.profile.as_str()) {
             let value_usd = pos.shares * vault.nav_per_share;
             let pnl_usd   = value_usd - pos.cost_basis_usd;
             out.push(json!({
@@ -312,9 +324,9 @@ pub async fn get_score(
         .ok_or(ApiError::Unauthorized)?;
 
     let key_hash = sha256_hex(api_key);
-    let traders  = queries::list_traders(&ctx.db).await?;
-    let trader   = traders.into_iter()
-        .find(|t| t.trader == q.wallet && t.api_key_hash.as_deref() == Some(&key_hash))
+    let trader = queries::get_trader_by_wallet(&ctx.db, &q.wallet)
+        .await?
+        .filter(|t| t.api_key_hash.as_deref() == Some(&key_hash))
         .ok_or(ApiError::Unauthorized)?;
 
     let snap = queries::latest_score(&ctx.db, &trader.profile)
@@ -387,12 +399,11 @@ pub async fn trader_pnl_history(
     let days = q.days.unwrap_or(365).clamp(1, 3650);
     let since = Utc::now() - chrono::Duration::days(days as i64);
 
-    let trades = queries::get_all_trades_for_profile(&ctx.db, &t.profile).await?;
+    let trades = queries::get_trades_since(&ctx.db, &t.profile, since).await?;
 
     use std::collections::BTreeMap;
     let mut by_day: BTreeMap<chrono::NaiveDate, Decimal> = BTreeMap::new();
     for tr in &trades {
-        if tr.closed_at < since { continue; }
         let day = tr.closed_at.date_naive();
         let entry = by_day.entry(day).or_insert(Decimal::ZERO);
         *entry += tr.realized_pnl;
@@ -456,14 +467,14 @@ pub async fn get_investor_flows(
     let limit = q.limit.unwrap_or(200).clamp(1, 1000);
     let flows = queries::get_flows_for_owner(&ctx.db, &wallet, limit).await?;
 
-    let mut handles: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
-    for f in &flows {
-        if handles.contains_key(&f.profile) { continue; }
-        if let Some(t) = queries::get_trader_by_profile(&ctx.db, &f.profile).await? {
-            handles.insert(f.profile.clone(), t.handle);
-        }
-    }
+    let distinct_profiles: std::collections::BTreeSet<&str> =
+        flows.iter().map(|f| f.profile.as_str()).collect();
+    let profile_refs: Vec<&str> = distinct_profiles.into_iter().collect();
+    let trader_profiles = queries::get_trader_profiles_batch(&ctx.db, &profile_refs).await?;
+    let handles: std::collections::HashMap<String, String> = trader_profiles
+        .iter()
+        .map(|t| (t.profile.clone(), t.handle.clone()))
+        .collect();
 
     let list: Vec<Value> = flows.iter().map(|f| {
         let handle = handles.get(&f.profile).cloned().unwrap_or_else(|| f.profile.clone());
@@ -516,21 +527,17 @@ pub async fn get_investor_notifications(
 
     let mut notifications: Vec<(DateTime<Utc>, Value)> = Vec::new();
 
-    // Pre-fetch handle for each profile involved (dedupe).
-    let mut handles: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
-    for f in &flows {
-        if handles.contains_key(&f.profile) { continue; }
-        if let Some(t) = queries::get_trader_by_profile(&ctx.db, &f.profile).await? {
-            handles.insert(f.profile.clone(), t.handle);
-        }
-    }
-    for p in &held_profiles {
-        if handles.contains_key(p) { continue; }
-        if let Some(t) = queries::get_trader_by_profile(&ctx.db, p).await? {
-            handles.insert(p.clone(), t.handle);
-        }
-    }
+    // Pre-fetch handle for each profile involved (dedupe via batch).
+    let all_profiles: std::collections::BTreeSet<String> = flows.iter()
+        .map(|f| f.profile.clone())
+        .chain(held_profiles.iter().cloned())
+        .collect();
+    let profile_refs: Vec<&str> = all_profiles.iter().map(|s| s.as_str()).collect();
+    let trader_profiles = queries::get_trader_profiles_batch(&ctx.db, &profile_refs).await?;
+    let handles: std::collections::HashMap<String, String> = trader_profiles
+        .iter()
+        .map(|t| (t.profile.clone(), t.handle.clone()))
+        .collect();
 
     for f in &flows {
         let kind_label = match f.kind.as_str() {

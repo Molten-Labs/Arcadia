@@ -37,6 +37,15 @@ pub async fn list_traders(pool: &PgPool) -> Result<Vec<DbTraderProfile>> {
     .await?)
 }
 
+pub async fn list_traders_paginated(pool: &PgPool, limit: i64) -> Result<Vec<DbTraderProfile>> {
+    Ok(sqlx::query_as::<_, DbTraderProfile>(&format!(
+        "SELECT {TRADER_PROFILE_COLS} FROM trader_profile ORDER BY aum_usd DESC LIMIT $1"
+    ))
+    .bind(limit)
+    .fetch_all(pool)
+    .await?)
+}
+
 pub async fn upsert_trader_profile(
     pool: &PgPool,
     profile: &str,
@@ -120,6 +129,39 @@ pub async fn get_all_trades_for_profile(pool: &PgPool, profile: &str) -> Result<
     .bind(profile)
     .fetch_all(pool)
     .await?)
+}
+
+pub async fn get_trades_since(
+    pool: &PgPool,
+    profile: &str,
+    since: chrono::DateTime<chrono::Utc>,
+) -> Result<Vec<DbTrade>> {
+    Ok(sqlx::query_as::<_, DbTrade>(&format!(
+        "SELECT {TRADE_COLS} FROM trade WHERE profile = $1 AND closed_at >= $2 ORDER BY closed_at ASC"
+    ))
+    .bind(profile)
+    .bind(since)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn get_trader_profiles_batch(
+    pool: &PgPool,
+    profiles: &[&str],
+) -> Result<Vec<DbTraderProfile>> {
+    if profiles.is_empty() {
+        return Ok(Vec::new());
+    }
+    let params: Vec<String> = profiles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect();
+    let sql = format!(
+        "SELECT {TRADER_PROFILE_COLS} FROM trader_profile WHERE profile IN ({})",
+        params.join(",")
+    );
+    let mut query = sqlx::query_as::<_, DbTraderProfile>(&sql);
+    for p in profiles {
+        query = query.bind(p);
+    }
+    Ok(query.fetch_all(pool).await?)
 }
 
 pub async fn insert_trade(pool: &PgPool, t: &DbTrade) -> Result<()> {
@@ -227,6 +269,20 @@ pub async fn get_flows_for_profile(pool: &PgPool, profile: &str) -> Result<Vec<D
         "SELECT {FLOW_COLS} FROM flow WHERE profile = $1 ORDER BY ts ASC"
     ))
     .bind(profile)
+    .fetch_all(pool)
+    .await?)
+}
+
+pub async fn get_flows_for_profile_paginated(
+    pool: &PgPool,
+    profile: &str,
+    limit: i64,
+) -> Result<Vec<DbFlow>> {
+    Ok(sqlx::query_as::<_, DbFlow>(&format!(
+        "SELECT {FLOW_COLS} FROM flow WHERE profile = $1 ORDER BY ts DESC LIMIT $2"
+    ))
+    .bind(profile)
+    .bind(limit)
     .fetch_all(pool)
     .await?)
 }
