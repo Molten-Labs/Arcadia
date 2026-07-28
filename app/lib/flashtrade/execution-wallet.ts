@@ -31,6 +31,7 @@ export async function ensureExecutionWalletAta(
   broadcaster: Keypair,
 ): Promise<PublicKey> {
   const ata = await getAssociatedTokenAddress(mint, executionWalletAddress);
+  // @ts-expect-error - v1 Connection API (v2 types shadow)
   const ataInfo = await connection.getAccountInfo(ata);
   if (ataInfo) return ata;
 
@@ -43,8 +44,11 @@ export async function ensureExecutionWalletAta(
     ),
   );
   tx.feePayer = broadcaster.publicKey;
-  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  // @ts-expect-error - v1 Connection API (v2 types shadow)
+  const { blockhash } = await connection.getLatestBlockhash();
+  tx.recentBlockhash = blockhash;
   tx.sign(broadcaster);
+  // @ts-expect-error - v1 Connection API (v2 types shadow)
   await connection.sendTransaction(tx);
   return ata;
 }
@@ -66,6 +70,7 @@ export async function assertExecutionWalletHasGas(
   address: PublicKey,
   minimumLamports: number = 5_000_000,
 ): Promise<void> {
+  // @ts-expect-error - v1 Connection API (v2 types shadow)
   const balance = await connection.getBalance(address);
   if (balance < minimumLamports) {
     throw new Error(
