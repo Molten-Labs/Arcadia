@@ -10,6 +10,7 @@ import {
   createAssociatedTokenAccountInstruction,
   getAccount,
 } from "@solana/spl-token";
+import nacl from "tweetnacl";
 
 export function createExecutionWalletSeed(): Uint8Array {
   return randomBytes(32);
@@ -18,7 +19,8 @@ export function createExecutionWalletSeed(): Uint8Array {
 export function createExecutionWalletSignerFromSeed(
   seedBytes: Uint8Array,
 ): Keypair {
-  return Keypair.fromSeed(seedBytes);
+  const fullSecret = nacl.sign.keyPair.fromSeed(seedBytes).secretKey;
+  return Keypair.fromSecretKey(fullSecret);
 }
 
 export async function ensureExecutionWalletAta(
