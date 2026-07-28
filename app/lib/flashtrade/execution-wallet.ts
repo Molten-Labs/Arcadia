@@ -20,6 +20,7 @@ export function createExecutionWalletSignerFromSeed(
   seedBytes: Uint8Array,
 ): Keypair {
   const fullSecret = nacl.sign.keyPair.fromSeed(seedBytes).secretKey;
+  // @ts-expect-error - exists in @solana/web3.js v1 runtime (v2 types shadowed)
   return Keypair.fromSecretKey(fullSecret);
 }
 
