@@ -16,7 +16,7 @@ impl ExecutionConfig {
             rpc_url: std::env::var("SOLANA_RPC_URL")
                 .unwrap_or_else(|_| "https://api.devnet.solana.com".into()),
             master_password: std::env::var("AGENT_WALLET_MASTER_PASSWORD")
-                .expect("AGENT_WALLET_MASTER_PASSWORD must be set"),
+                .unwrap_or_default(),
             sidecar_url: std::env::var("SIDECAR_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:3001".into()),
         }
