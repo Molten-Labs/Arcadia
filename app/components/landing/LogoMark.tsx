@@ -12,7 +12,7 @@ export type LogoMarkProps = {
 export function LogoMark({ size = 26, className }: LogoMarkProps) {
   return (
     <Image
-      src="/logo.png"
+      src="/logo.svg"
       alt="Arcadia"
       width={size}
       height={size}
