@@ -293,6 +293,7 @@ export function createFlashTradeExecutionClient(
   const cluster = getDefaultCluster();
   const rpc = rpcUrl ?? getFlashTradeSolanaRpcUrl();
   const erRpcUrl = getFlashTradeErRpcUrl(cluster);
+  // @ts-expect-error — fromSeed exists at runtime (v1.98+) but TS fails to resolve the type due to duplicate @solana/web3.js in flash-sdk-v2's node_modules
   const keypair = Keypair.fromSeed(seedBytes);
   const connection = new Connection(rpc, "confirmed");
   const provider = new AnchorProvider(connection, new Wallet(keypair), {

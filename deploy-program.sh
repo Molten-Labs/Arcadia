@@ -13,7 +13,7 @@
 set -e
 
 PROGRAM_ID="FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd"
-HELIUS_RPC="${HELIUS_RPC:-https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548}"
+HELIUS_RPC="${HELIUS_RPC:-https://api.devnet.solana.com}"
 
 echo "=== Arcadia Protocol — Devnet Deploy ==="
 echo "Program ID: $PROGRAM_ID"

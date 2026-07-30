@@ -43,12 +43,14 @@ pub mod arcadia_vault {
         perf_fee_bps: u16,
         mgmt_fee_bps: u16,
         oracle_authority: Pubkey,
+        processor: Pubkey,
     ) -> Result<()> {
         instructions::admin::initialize_platform::handler(
             ctx,
             perf_fee_bps,
             mgmt_fee_bps,
             oracle_authority,
+            processor,
         )
     }
 

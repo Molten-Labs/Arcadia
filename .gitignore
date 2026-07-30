@@ -24,6 +24,7 @@ build/
 target/
 *.log
 .env
+dump.rdb
 .gstack/
 .vercel
 .env*

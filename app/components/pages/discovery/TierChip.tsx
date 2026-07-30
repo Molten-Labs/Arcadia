@@ -8,6 +8,7 @@ const TIER_KEY = {
   Established: "established",
   Advanced: "advanced",
   Elite: "elite",
+  Apex: "apex",
 } as const;
 
 export type AcidTier = (typeof TIER_KEY)[ScoreTier];
@@ -21,6 +22,7 @@ const TIER_DOT: Record<ScoreTier, string> = {
   Established: "bg-tier-established",
   Advanced: "bg-tier-advanced",
   Elite: "bg-tier-elite",
+  Apex: "bg-tier-apex",
 };
 
 /** Acid-themed tier badge (delegates to the shadcn Badge tier variants). */

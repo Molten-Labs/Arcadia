@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: "1.89.0"
+  NODE_VERSION: "20"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm run test
+
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_PROGRAM_ID: "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd"
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server-rs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - run: cargo check --workspace
+
+      - run: cargo test --workspace
+
+  anchor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: arcadia_vault
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - uses: metaplex-foundation/actions/install-solana@v1
+        with:
+          solana_version: stable
+
+      - uses: metaplex-foundation/actions/install-anchor@v1
+
+      - run: anchor build

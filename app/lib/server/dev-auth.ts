@@ -19,7 +19,7 @@ import {
 import bs58 from "bs58";
 import { buildSiwsMessage } from "../siws";
 
-const DEV_SECRET = process.env.SESSION_SECRET ?? "arcadia-dev-secret";
+const DEV_SECRET = process.env.SESSION_SECRET ?? (() => { throw new Error("SESSION_SECRET must be set in production"); })();
 const NONCE_TTL_S = 300;
 const TOKEN_TTL_S = 86_400;
 

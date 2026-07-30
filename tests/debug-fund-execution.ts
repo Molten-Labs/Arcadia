@@ -5,7 +5,8 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
-const connection = new Connection("https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548");
+const HELIUS_RPC = process.env.HELIUS_RPC || process.env.RPC_URL || "https://api.devnet.solana.com";
+const connection = new Connection(HELIUS_RPC);
 const PROGRAM_ID = new PublicKey("FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd");
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 

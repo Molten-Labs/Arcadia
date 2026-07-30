@@ -18,6 +18,7 @@ const badgeVariants = cva(
         established: "border-tier-established/40 bg-tier-established/10 text-tier-established",
         advanced: "border-tier-advanced/40 bg-tier-advanced/10 text-tier-advanced",
         elite: "border-tier-elite/40 bg-tier-elite/10 text-tier-elite",
+        apex: "border-tier-apex/40 bg-tier-apex/10 text-tier-apex",
       },
     },
     defaultVariants: {

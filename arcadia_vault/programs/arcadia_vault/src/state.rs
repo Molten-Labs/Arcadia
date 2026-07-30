@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 pub struct PlatformConfig {
     pub admin: Pubkey,
     pub oracle_authority: Pubkey,
+    pub processor: Pubkey,
     pub treasury_token: Pubkey,
     pub base_mint: Pubkey,
     pub perf_fee_bps: u16,

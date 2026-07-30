@@ -35,6 +35,7 @@
   --color-tier-established: #8B5CF6;
   --color-tier-advanced:    #FFB020;
   --color-tier-elite:       #FF2EA6;
+  --color-tier-apex:        #FFD700;
 
   /* ── shadcn semantic bridge → acid (so primitives theme out of the box) ── */
   --color-background:            #000000;
@@ -87,6 +88,7 @@
   --color-tier-established: #8B5CF6;
   --color-tier-advanced:    #FFB020;
   --color-tier-elite:       #FF2EA6;
+  --color-tier-apex:        #FFD700;
 
   /* composite helpers */
   --acid-chrome-gradient: linear-gradient(180deg,#ffffff 0%,#e9e9e9 16%,#8a8a8a 44%,#f4f4f4 58%,#b9b9b9 76%,#ffffff 100%);

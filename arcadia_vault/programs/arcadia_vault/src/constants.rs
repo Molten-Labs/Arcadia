@@ -28,7 +28,7 @@ pub const INSTANT_WITHDRAW_BPS: u16 = 500;
 pub const MAX_LEVERAGE_CEILING: u8 = 50;
 
 #[constant]
-pub const MAX_TIER_BPS: u16 = 3_500;
+pub const MAX_TIER_BPS: u16 = 4_000;
 
 #[constant]
 pub const NOT_FUNDABLE_TIER: u8 = 255;
@@ -63,6 +63,7 @@ pub fn tier_bps(score_tier: u8) -> Option<u16> {
         1 => Some(2_500),
         2 => Some(3_000),
         3 => Some(3_500),
+        4 => Some(4_000),
         NOT_FUNDABLE_TIER => Some(0),
         _ => None,
     }

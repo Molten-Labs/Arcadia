@@ -26,6 +26,7 @@ struct Fixture {
     svm: LiteSVM,
     trader: Keypair,
     attacker: Keypair,
+    config: anchor_lang::prelude::Pubkey,
     profile: anchor_lang::prelude::Pubkey,
     base_mint: anchor_lang::prelude::Pubkey,
     wrong_mint: anchor_lang::prelude::Pubkey,
@@ -33,6 +34,7 @@ struct Fixture {
     owner_token: anchor_lang::prelude::Pubkey,
     attacker_token: anchor_lang::prelude::Pubkey,
     position: anchor_lang::prelude::Pubkey,
+    investor_account: anchor_lang::prelude::Pubkey,
 }
 
 fn setup() -> Fixture {
@@ -82,6 +84,7 @@ fn setup() -> Fixture {
             base_mint,
             treasury_token,
             oracle_authority,
+            Keypair::new().pubkey(),
         )],
         &admin,
         &[&admin],
@@ -125,6 +128,7 @@ fn setup() -> Fixture {
         svm,
         trader,
         attacker,
+        config,
         profile,
         base_mint,
         wrong_mint,
@@ -132,6 +136,7 @@ fn setup() -> Fixture {
         owner_token,
         attacker_token,
         position,
+        investor_account,
     }
 }
 
@@ -233,6 +238,7 @@ fn initialize_platform_ix(
     base_mint: anchor_lang::prelude::Pubkey,
     treasury_token: anchor_lang::prelude::Pubkey,
     oracle_authority: anchor_lang::prelude::Pubkey,
+    processor: anchor_lang::prelude::Pubkey,
 ) -> Instruction {
     Instruction::new_with_bytes(
         arcadia_vault::id(),
@@ -240,6 +246,7 @@ fn initialize_platform_ix(
             perf_fee_bps: arcadia_vault::PLATFORM_PERF_FEE_BPS,
             mgmt_fee_bps: arcadia_vault::PLATFORM_MGMT_FEE_BPS,
             oracle_authority,
+            processor,
         }
         .data(),
         arcadia_vault::accounts::InitializePlatform {
@@ -343,8 +350,11 @@ fn request_withdraw_ix(
 }
 
 fn process_withdraw_ix(
+    authority: anchor_lang::prelude::Pubkey,
+    config: anchor_lang::prelude::Pubkey,
     owner: anchor_lang::prelude::Pubkey,
     profile: anchor_lang::prelude::Pubkey,
+    investor_account: anchor_lang::prelude::Pubkey,
     position: anchor_lang::prelude::Pubkey,
     base_mint: anchor_lang::prelude::Pubkey,
     vault_token: anchor_lang::prelude::Pubkey,
@@ -354,8 +364,11 @@ fn process_withdraw_ix(
         arcadia_vault::id(),
         &arcadia_vault::instruction::ProcessWithdraw {}.data(),
         arcadia_vault::accounts::ProcessWithdraw {
-            owner,
+            authority,
+            config,
             profile,
+            owner,
+            investor_account,
             position,
             base_mint,
             vault_token,
@@ -467,7 +480,10 @@ fn process_withdraw_partial_pays_floor_value_and_keeps_position_open() {
 
     let ix = process_withdraw_ix(
         trader.pubkey(),
+        fixture.config,
+        trader.pubkey(),
         fixture.profile,
+        fixture.investor_account,
         fixture.position,
         fixture.base_mint,
         fixture.vault_token,
@@ -505,7 +521,10 @@ fn process_withdraw_full_payout_closes_position() {
 
     let ix = process_withdraw_ix(
         trader.pubkey(),
+        fixture.config,
+        trader.pubkey(),
         fixture.profile,
+        fixture.investor_account,
         fixture.position,
         fixture.base_mint,
         fixture.vault_token,
@@ -537,7 +556,10 @@ fn process_withdraw_rejects_no_pending_and_before_ready() {
         &mut fixture.svm,
         &[process_withdraw_ix(
             trader.pubkey(),
+            fixture.config,
+            trader.pubkey(),
             fixture.profile,
+            fixture.investor_account,
             fixture.position,
             fixture.base_mint,
             fixture.vault_token,
@@ -552,7 +574,10 @@ fn process_withdraw_rejects_no_pending_and_before_ready() {
         &mut fixture.svm,
         &[process_withdraw_ix(
             trader.pubkey(),
+            fixture.config,
+            trader.pubkey(),
             fixture.profile,
+            fixture.investor_account,
             fixture.position,
             fixture.base_mint,
             fixture.vault_token,
@@ -577,7 +602,10 @@ fn process_withdraw_rejects_account_binding_failures() {
         &mut fixture.svm,
         &[process_withdraw_ix(
             attacker.pubkey(),
+            fixture.config,
+            trader.pubkey(),
             fixture.profile,
+            fixture.investor_account,
             fixture.position,
             fixture.base_mint,
             fixture.vault_token,
@@ -591,7 +619,10 @@ fn process_withdraw_rejects_account_binding_failures() {
         &mut fixture.svm,
         &[process_withdraw_ix(
             trader.pubkey(),
+            fixture.config,
+            trader.pubkey(),
             fixture.profile,
+            fixture.investor_account,
             anchor_lang::prelude::Pubkey::new_unique(),
             fixture.base_mint,
             fixture.vault_token,
@@ -605,7 +636,10 @@ fn process_withdraw_rejects_account_binding_failures() {
         &mut fixture.svm,
         &[process_withdraw_ix(
             trader.pubkey(),
+            fixture.config,
+            trader.pubkey(),
             fixture.profile,
+            fixture.investor_account,
             fixture.position,
             fixture.base_mint,
             fixture.vault_token,
@@ -627,7 +661,10 @@ fn process_withdraw_rejects_account_binding_failures() {
         &mut fixture.svm,
         &[process_withdraw_ix(
             trader.pubkey(),
+            fixture.config,
+            trader.pubkey(),
             fixture.profile,
+            fixture.investor_account,
             fixture.position,
             fixture.base_mint,
             fixture.vault_token,

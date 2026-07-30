@@ -54,7 +54,7 @@ import {
 } from "../app/lib/flashtrade/v2";
 
 // ── Config ─────────────────────────────────────────────────────────────────────
-const RPC_URL = process.env.RPC_URL || "https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548";
+const RPC_URL = process.env.RPC_URL || process.env.HELIUS_RPC || "https://api.devnet.solana.com";
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 const USDC_DECIMALS = 6;
 const DEPOSIT_AMOUNT = 10_000_000n; // 10 USDC

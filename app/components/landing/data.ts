@@ -128,7 +128,7 @@ export const SCORE_BREAKDOWN = [
   { label: "Track record depth", weight: 20, value: 84 },
 ] as const;
 
-type TierKey = "verified" | "established" | "advanced" | "elite";
+type TierKey = "verified" | "established" | "advanced" | "elite" | "apex";
 
 export const TIERS: {
   key: TierKey;
@@ -216,6 +216,7 @@ export const TIER_DOT: Record<TierKey, string> = {
   established: "bg-tier-established",
   advanced: "bg-tier-advanced",
   elite: "bg-tier-elite",
+  apex: "bg-tier-apex",
 };
 
 /** Map an API tier label to the Badge/tier-token key. */

@@ -83,6 +83,7 @@ fn setup(with_deposit: bool) -> Fixture {
             base_mint,
             treasury_token,
             oracle_authority.pubkey(),
+            Keypair::new().pubkey(),
         )],
         &admin,
         &[&admin],
@@ -249,6 +250,7 @@ fn initialize_platform_ix(
     base_mint: anchor_lang::prelude::Pubkey,
     treasury_token: anchor_lang::prelude::Pubkey,
     oracle_authority: anchor_lang::prelude::Pubkey,
+    processor: anchor_lang::prelude::Pubkey,
 ) -> Instruction {
     Instruction::new_with_bytes(
         arcadia_vault::id(),
@@ -256,6 +258,7 @@ fn initialize_platform_ix(
             perf_fee_bps: arcadia_vault::PLATFORM_PERF_FEE_BPS,
             mgmt_fee_bps: arcadia_vault::PLATFORM_MGMT_FEE_BPS,
             oracle_authority,
+            processor,
         }
         .data(),
         arcadia_vault::accounts::InitializePlatform {

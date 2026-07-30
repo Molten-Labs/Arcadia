@@ -49,6 +49,7 @@ const TIER_ACCENT: Record<ScoreTier, { text: string; dot: string; ring: string }
   Established: { text: "text-tier-established", dot: "bg-tier-established", ring: "border-tier-established/40 bg-tier-established/[0.07]" },
   Advanced: { text: "text-tier-advanced", dot: "bg-tier-advanced", ring: "border-tier-advanced/40 bg-tier-advanced/[0.07]" },
   Elite: { text: "text-tier-elite", dot: "bg-tier-elite", ring: "border-tier-elite/40 bg-tier-elite/[0.07]" },
+  Apex: { text: "text-tier-apex", dot: "bg-tier-apex", ring: "border-tier-apex/40 bg-tier-apex/[0.07]" },
 };
 
 export default function ReputationPage() {

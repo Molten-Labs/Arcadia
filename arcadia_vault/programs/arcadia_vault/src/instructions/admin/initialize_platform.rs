@@ -28,6 +28,7 @@ pub fn handler(
     perf_fee_bps: u16,
     mgmt_fee_bps: u16,
     oracle_authority: Pubkey,
+    processor: Pubkey,
 ) -> Result<()> {
     require!(
         is_fee_config_safe(perf_fee_bps, mgmt_fee_bps),
@@ -37,6 +38,7 @@ pub fn handler(
     let config = &mut ctx.accounts.config;
     config.admin = ctx.accounts.admin.key();
     config.oracle_authority = oracle_authority;
+    config.processor = processor;
     config.treasury_token = ctx.accounts.treasury_token.key();
     config.base_mint = ctx.accounts.base_mint.key();
     config.perf_fee_bps = perf_fee_bps;

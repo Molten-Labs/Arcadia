@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     let redis_url =
         std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".into());
     let jwt_secret =
-        std::env::var("JWT_SECRET").unwrap_or_else(|_| "change-me-in-production".into());
+        std::env::var("JWT_SECRET").expect("JWT_SECRET must be set in production");
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|s| s.parse().ok())

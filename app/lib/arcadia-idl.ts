@@ -100,6 +100,7 @@ export const IDL = {
       accounts: [
         { name: "owner", writable: true, signer: true },
         { name: "profile", writable: true },
+        { name: "investorAccount", writable: true, pda: { seeds: [{ kind: "const", value: [105, 110, 118, 101, 115, 116, 111, 114] }, { kind: "account", path: "owner" }] } },
         { name: "position", writable: true, pda: { seeds: [{ kind: "const", value: [112, 111, 115, 105, 116, 105, 111, 110] }, { kind: "account", path: "owner" }, { kind: "account", path: "profile" }] } },
         { name: "baseMint" },
         { name: "vaultToken", writable: true },

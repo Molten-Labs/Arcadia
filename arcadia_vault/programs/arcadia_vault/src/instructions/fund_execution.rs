@@ -9,7 +9,7 @@ use crate::{
 pub struct FundExecution<'info> {
     pub broadcaster: Signer<'info>,
     pub admin: Signer<'info>,
-    #[account(has_one = base_mint)]
+    #[account(has_one = admin, has_one = base_mint)]
     pub config: Account<'info, PlatformConfig>,
     #[account(
         mut,

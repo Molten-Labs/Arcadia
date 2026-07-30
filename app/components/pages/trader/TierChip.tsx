@@ -7,6 +7,7 @@ const TIER_VARIANT = {
   Established: "established",
   Advanced: "advanced",
   Elite: "elite",
+  Apex: "apex",
 } as const;
 
 /**

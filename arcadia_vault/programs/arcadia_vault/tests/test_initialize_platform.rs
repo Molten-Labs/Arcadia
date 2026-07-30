@@ -25,6 +25,7 @@ struct Fixture {
     svm: LiteSVM,
     admin: Keypair,
     oracle_authority: anchor_lang::prelude::Pubkey,
+    processor: anchor_lang::prelude::Pubkey,
     config: anchor_lang::prelude::Pubkey,
     config_bump: u8,
     base_mint: anchor_lang::prelude::Pubkey,
@@ -37,6 +38,7 @@ fn setup() -> Fixture {
     let program_id = arcadia_vault::id();
     let admin = Keypair::new();
     let oracle_authority = Keypair::new().pubkey();
+    let processor = Keypair::new().pubkey();
     let treasury_owner = Keypair::new().pubkey();
     let base_mint = anchor_lang::prelude::Pubkey::new_unique();
     let wrong_mint = anchor_lang::prelude::Pubkey::new_unique();
@@ -67,6 +69,7 @@ fn setup() -> Fixture {
         svm,
         admin,
         oracle_authority,
+        processor,
         config,
         config_bump,
         base_mint,
@@ -139,6 +142,7 @@ fn initialize_platform_ix(
     base_mint: anchor_lang::prelude::Pubkey,
     treasury_token: anchor_lang::prelude::Pubkey,
     oracle_authority: anchor_lang::prelude::Pubkey,
+    processor: anchor_lang::prelude::Pubkey,
     perf_fee_bps: u16,
     mgmt_fee_bps: u16,
 ) -> Instruction {
@@ -148,6 +152,7 @@ fn initialize_platform_ix(
             perf_fee_bps,
             mgmt_fee_bps,
             oracle_authority,
+            processor,
         }
         .data(),
         arcadia_vault::accounts::InitializePlatform {
@@ -215,6 +220,7 @@ fn initialize_platform_happy_path() {
         fixture.base_mint,
         fixture.treasury_token,
         fixture.oracle_authority,
+        fixture.processor,
         arcadia_vault::PLATFORM_PERF_FEE_BPS,
         arcadia_vault::PLATFORM_MGMT_FEE_BPS,
     );
@@ -225,6 +231,7 @@ fn initialize_platform_happy_path() {
     let config = read_config(&fixture.svm, &fixture.config);
     assert_eq!(config.admin, fixture.admin.pubkey());
     assert_eq!(config.oracle_authority, fixture.oracle_authority);
+    assert_eq!(config.processor, fixture.processor);
     assert_eq!(config.treasury_token, fixture.treasury_token);
     assert_eq!(config.base_mint, fixture.base_mint);
     assert_eq!(config.perf_fee_bps, arcadia_vault::PLATFORM_PERF_FEE_BPS);
@@ -241,6 +248,7 @@ fn initialize_platform_reinit_fails() {
         fixture.base_mint,
         fixture.treasury_token,
         fixture.oracle_authority,
+        fixture.processor,
         arcadia_vault::PLATFORM_PERF_FEE_BPS,
         arcadia_vault::PLATFORM_MGMT_FEE_BPS,
     );
@@ -283,6 +291,7 @@ fn initialize_platform_rejects_unsafe_fee_configs() {
             fixture.base_mint,
             fixture.treasury_token,
             fixture.oracle_authority,
+            Keypair::new().pubkey(),
             perf_fee_bps,
             mgmt_fee_bps,
         );
@@ -307,6 +316,7 @@ fn initialize_platform_rejects_wrong_config_pda() {
         fixture.base_mint,
         fixture.treasury_token,
         fixture.oracle_authority,
+        Keypair::new().pubkey(),
         arcadia_vault::PLATFORM_PERF_FEE_BPS,
         arcadia_vault::PLATFORM_MGMT_FEE_BPS,
     );
@@ -329,6 +339,7 @@ fn initialize_platform_rejects_treasury_mint_mismatch() {
         fixture.base_mint,
         fixture.wrong_treasury_token,
         fixture.oracle_authority,
+        Keypair::new().pubkey(),
         arcadia_vault::PLATFORM_PERF_FEE_BPS,
         arcadia_vault::PLATFORM_MGMT_FEE_BPS,
     );

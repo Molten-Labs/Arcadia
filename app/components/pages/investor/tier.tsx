@@ -10,13 +10,14 @@ import type { ScoreTier } from "@/lib/types";
  * the legacy `TierBadge` so the investor surfaces read as one system.
  */
 
-type TierVariant = "verified" | "established" | "advanced" | "elite";
+type TierVariant = "verified" | "established" | "advanced" | "elite" | "apex";
 
 const TIER_META: Record<ScoreTier, { variant: TierVariant; token: string }> = {
   Verified: { variant: "verified", token: "var(--color-tier-verified)" },
   Established: { variant: "established", token: "var(--color-tier-established)" },
   Advanced: { variant: "advanced", token: "var(--color-tier-advanced)" },
   Elite: { variant: "elite", token: "var(--color-tier-elite)" },
+  Apex: { variant: "apex", token: "var(--color-tier-apex)" },
 };
 
 /** CSS token (custom property reference) for a tier's accent color. */

@@ -61,6 +61,7 @@ fn setup() -> Fixture {
         base_mint,
         treasury_token,
         oracle_authority.pubkey(),
+        Keypair::new().pubkey(),
         arcadia_vault::PLATFORM_PERF_FEE_BPS,
         arcadia_vault::PLATFORM_MGMT_FEE_BPS,
     );
@@ -162,6 +163,7 @@ fn initialize_platform_ix(
     base_mint: anchor_lang::prelude::Pubkey,
     treasury_token: anchor_lang::prelude::Pubkey,
     oracle_authority: anchor_lang::prelude::Pubkey,
+    processor: anchor_lang::prelude::Pubkey,
     perf_fee_bps: u16,
     mgmt_fee_bps: u16,
 ) -> Instruction {
@@ -171,6 +173,7 @@ fn initialize_platform_ix(
             perf_fee_bps,
             mgmt_fee_bps,
             oracle_authority,
+            processor,
         }
         .data(),
         arcadia_vault::accounts::InitializePlatform {

@@ -6,8 +6,8 @@ use crate::{
         profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, TokenAccount,
         TokenInterface,
     },
-    withdrawal_ready_ts, ArcadiaError, InvestorPosition, TraderProfile, WithdrawRequested,
-    Withdrawn, POSITION_SEED,
+    withdrawal_ready_ts, ArcadiaError, InvestorAccount, InvestorPosition, PlatformConfig,
+    TraderProfile, WithdrawRequested, Withdrawn, INVESTOR_SEED, PLATFORM_SEED, POSITION_SEED,
 };
 
 #[derive(Accounts)]
@@ -62,15 +62,26 @@ pub fn request_withdraw_handler(ctx: Context<RequestWithdraw>, shares: u64) -> R
 
 #[derive(Accounts)]
 pub struct ProcessWithdraw<'info> {
-    #[account(mut)]
-    pub owner: Signer<'info>,
+    pub authority: Signer<'info>,
+    #[account(
+        seeds = [PLATFORM_SEED],
+        bump = config.bump
+    )]
+    pub config: Account<'info, PlatformConfig>,
     #[account(mut, has_one = base_mint, has_one = vault_token)]
     pub profile: Account<'info, TraderProfile>,
+    /// CHECK: pubkey reference for PDA derivation and authority check
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [INVESTOR_SEED, owner.key().as_ref()],
+        bump = investor_account.bump
+    )]
+    pub investor_account: Account<'info, InvestorAccount>,
     #[account(
         mut,
         seeds = [POSITION_SEED, owner.key().as_ref(), profile.key().as_ref()],
         bump = position.bump,
-        constraint = position.owner == owner.key() @ ArcadiaError::Unauthorized,
         constraint = position.profile == profile.key() @ ArcadiaError::Unauthorized
     )]
     pub position: Account<'info, InvestorPosition>,
@@ -93,6 +104,13 @@ pub struct ProcessWithdraw<'info> {
 }
 
 pub fn process_withdraw_handler(ctx: Context<ProcessWithdraw>) -> Result<()> {
+    let owner_key = ctx.accounts.owner.key();
+    let authority_key = ctx.accounts.authority.key();
+    require!(
+        authority_key == owner_key || authority_key == ctx.accounts.config.processor,
+        ArcadiaError::Unauthorized
+    );
+
     require!(
         ctx.accounts.position.pending_withdraw_shares > 0,
         ArcadiaError::NothingPending
@@ -104,7 +122,6 @@ pub fn process_withdraw_handler(ctx: Context<ProcessWithdraw>) -> Result<()> {
         ArcadiaError::NoticeNotElapsed
     );
 
-    let owner = ctx.accounts.owner.key();
     let profile_key = ctx.accounts.profile.key();
     let burn = ctx.accounts.position.pending_withdraw_shares;
     let vault_balance_before = ctx.accounts.vault_token.amount;
@@ -117,7 +134,7 @@ pub fn process_withdraw_handler(ctx: Context<ProcessWithdraw>) -> Result<()> {
     );
 
     ctx.accounts.profile.total_shares = checked_sub_u64(ctx.accounts.profile.total_shares, burn)?;
-    if owner == ctx.accounts.profile.trader {
+    if owner_key == ctx.accounts.profile.trader {
         ctx.accounts.profile.trader_shares =
             checked_sub_u64(ctx.accounts.profile.trader_shares, burn)?;
     }
@@ -164,7 +181,7 @@ pub fn process_withdraw_handler(ctx: Context<ProcessWithdraw>) -> Result<()> {
 
     emit!(Withdrawn {
         profile: profile_key,
-        owner,
+        owner: owner_key,
         shares_burned: burn,
         amount_usd: assets_out,
     });
@@ -173,6 +190,12 @@ pub fn process_withdraw_handler(ctx: Context<ProcessWithdraw>) -> Result<()> {
         ctx.accounts
             .position
             .close(ctx.accounts.owner.to_account_info())?;
+        ctx.accounts.investor_account.position_count = ctx
+            .accounts
+            .investor_account
+            .position_count
+            .checked_sub(1)
+            .ok_or(ArcadiaError::MathOverflow)?;
     }
 
     Ok(())
