@@ -28,5 +28,5 @@ target/
 .vercel
 .env*
 
-# Execution wallet architecture reference (cloned from gildore-arena)
+# Execution wallet architecture reference (cloned from ref-protocol)
 /docs/execution-wallet-architecture/src/

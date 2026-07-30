@@ -458,7 +458,7 @@ function computeScore(m: Metrics, tradeCount: number): ScoreResult {
 
   // Confidence (logistic)
   const n = tradeCount;
-  const confidence = 1 / (1 + Math.exp(-(n - 400) / 125));
+  const confidence = 1 / (1 + Math.exp(-(n - 200) / 125));
 
   // Guard factor
   const guard = (v: number, thresh: number, minOut: number, maxVal: number) =>
@@ -478,11 +478,10 @@ function computeScore(m: Metrics, tradeCount: number): ScoreResult {
 }
 
 function computeCapacity(score: number): CapacityResult {
-  if (score < 600) return { capacityUsd: 0, tier: "None", tierCode: 0 };
-  const cap = Math.min(2500 * Math.exp((score - 600) / 140), 10_000_000);
-  const tier = score >= 900 ? "Elite" : score >= 800 ? "Advanced" : score >= 700 ? "Established" : "Verified";
-  const tierCode = score >= 900 ? 3 : score >= 800 ? 2 : score >= 700 ? 1 : 0;
-  return { capacityUsd: Math.round(cap), tier, tierCode };
+  const tier = score >= 950 ? "Apex" : score >= 750 ? "Elite" : score >= 500 ? "Advanced" : score >= 250 ? "Established" : "Verified";
+  const tierCode = score >= 950 ? 4 : score >= 750 ? 3 : score >= 500 ? 2 : score >= 250 ? 1 : 0;
+  const multiplier = score >= 950 ? 10 : score >= 750 ? 5 : score >= 500 ? 3 : score >= 250 ? 2 : 1;
+  return { capacityUsd: multiplier, tier, tierCode };
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────────

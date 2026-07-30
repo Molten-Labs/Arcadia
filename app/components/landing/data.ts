@@ -136,10 +136,11 @@ export const TIERS: {
   criteria: string;
   share: string;
 }[] = [
-  { key: "verified", name: "Verified", criteria: "All scores", share: "20% profit share" },
-  { key: "established", name: "Established", criteria: "Score >= 700", share: "25%" },
-  { key: "advanced", name: "Advanced", criteria: "Score >= 800", share: "30%" },
-  { key: "elite", name: "Elite", criteria: "Score >= 900", share: "35%" },
+  { key: "verified", name: "Verified", criteria: "Score 100+", share: "20% profit share" },
+  { key: "established", name: "Established", criteria: "Score 250+", share: "25%" },
+  { key: "advanced", name: "Advanced", criteria: "Score 500+", share: "30%" },
+  { key: "elite", name: "Elite", criteria: "Score 750+", share: "35%" },
+  { key: "apex", name: "Apex", criteria: "Score 950+", share: "40%" },
 ];
 
 export const TWO_SIDES = {

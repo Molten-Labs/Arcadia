@@ -31,16 +31,27 @@ pub enum ScoreTier {
     Established = 1,
     Advanced    = 2,
     Elite       = 3,
+    Apex        = 4,
 }
 
 impl ScoreTier {
-    pub fn from_score(score: u32) -> Option<Self> {
+    pub fn from_score(score: u32) -> Self {
         match score {
-            600..=699 => Some(Self::Verified),
-            700..=799 => Some(Self::Established),
-            800..=899 => Some(Self::Advanced),
-            900..=1000 => Some(Self::Elite),
-            _ => None,
+            250..=499 => Self::Established,
+            500..=749 => Self::Advanced,
+            750..=949 => Self::Elite,
+            950..=1000 => Self::Apex,
+            _ => Self::Verified,
+        }
+    }
+
+    pub fn multiplier(&self) -> u32 {
+        match self {
+            Self::Verified    => 1,
+            Self::Established => 2,
+            Self::Advanced    => 3,
+            Self::Elite       => 5,
+            Self::Apex        => 10,
         }
     }
 
@@ -54,16 +65,18 @@ impl ScoreTier {
             Self::Established => "Established",
             Self::Advanced    => "Advanced",
             Self::Elite       => "Elite",
+            Self::Apex        => "Apex",
         }
     }
 
-    /// Profit-share percentage for the trader (20-35%).
+    /// Profit-share percentage for the trader (20-40%).
     pub fn trader_profit_share(&self) -> Decimal {
         match self {
             Self::Verified    => Decimal::new(20, 2),
             Self::Established => Decimal::new(25, 2),
             Self::Advanced    => Decimal::new(30, 2),
             Self::Elite       => Decimal::new(35, 2),
+            Self::Apex        => Decimal::new(40, 2),
         }
     }
 }

@@ -144,7 +144,7 @@ function strArrToNumArr(arr: unknown): number[] {
   return arr.map(strToNum);
 }
 
-const SCORE_TIERS: readonly ScoreTier[] = ["Verified", "Established", "Advanced", "Elite"];
+const SCORE_TIERS: readonly ScoreTier[] = ["Verified", "Established", "Advanced", "Elite", "Apex"];
 function asTier(v: unknown): ScoreTier {
   return SCORE_TIERS.includes(v as ScoreTier) ? (v as ScoreTier) : "Verified";
 }

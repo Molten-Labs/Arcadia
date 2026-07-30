@@ -1,4 +1,4 @@
-export type ScoreTier = "Verified" | "Established" | "Advanced" | "Elite";
+export type ScoreTier = "Verified" | "Established" | "Advanced" | "Elite" | "Apex";
 export type Confidence = "low" | "med" | "high";
 export type VaultStatus = "active" | "paused" | "closed";
 
@@ -212,18 +212,20 @@ export interface AuthToken {
 }
 
 export function tierFromScore(score: number): ScoreTier {
-  if (score >= 900) return "Elite";
-  if (score >= 800) return "Advanced";
-  if (score >= 700) return "Established";
+  if (score >= 950) return "Apex";
+  if (score >= 750) return "Elite";
+  if (score >= 500) return "Advanced";
+  if (score >= 250) return "Established";
   return "Verified";
 }
 
 export function tierColor(tier: ScoreTier): string {
   const map: Record<ScoreTier, string> = {
-    Verified: "#5fb89a",
-    Established: "#5a9bd8",
-    Advanced: "#9b7fd8",
-    Elite: "#d8a93a",
+    Verified: "#2dd4bf",
+    Established: "#60a5fa",
+    Advanced: "#a78bfa",
+    Elite: "#f59e0b",
+    Apex: "#f97316",
   };
   return map[tier];
 }

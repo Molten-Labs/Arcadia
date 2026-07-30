@@ -1,6 +1,6 @@
 # Arcadia Execution Wallet Adaptation
 
-## Source: Gildore Arena
+## Source: ref-protocol
 
 Pattern copied from `convex/flashtrade.ts:ensureExecutionWalletRecord`, `convex/flashtradeStore.ts`, `convex/schema.ts`, and `lib/server/execution-wallet-crypto.ts`.
 
@@ -99,15 +99,15 @@ deposit  →  delegate  →  trade  →  withdraw
 
 The one-shot `deposit` endpoint bundles everything (init ledger, init basket, fund ledger) into one transaction.
 
-### Comparison: Gildore vs. Arcadia
+### Comparison: ref-protocol vs. Arcadia
 
-| Step | Gildore (3 TXs) | Arcadia (2 TXs for open) |
+| Step | ref-protocol (3 TXs) | Arcadia (2 TXs for open) |
 |---|---|---|
 | Vault → execution wallet | `consume_ticker` (TX 1) | `fund_execution` (TX 1a, atomic bundle) |
 | Execution wallet → FlashTrade ledger | `depositToFlashTradeLedger` (TX 2) | `flash.deposit` (TX 1b, same atomic TX) |
 | Open position | `openFlashTradePosition` (TX 3) | `flash.open_position` (TX 2) |
 
-**Gildore risk:** TX 1 succeeds (vault drained), TX 2 fails → funds stuck in execution wallet with no position. Requires manual recovery.
+**ref-protocol risk:** TX 1 succeeds (vault drained), TX 2 fails → funds stuck in execution wallet with no position. Requires manual recovery.
 
 **Arcadia improvement:** vault transfer + FlashTrade deposit in one atomic TX. Either both succeed or neither happens.
 
@@ -142,7 +142,7 @@ TX 2 (separate, after TX 1 confirms):
 - Execution wallet keypair signs both ix 1 and ix 2
 - Broadcaster pays fees and co-signs
 
-### Close — Two TXs (same as Gildore)
+### Close — Two TXs (same as ref-protocol)
 
 ```
 TX 1: flash.close_position(position → ledger)
@@ -258,7 +258,7 @@ All virtual markets use USDC as collateral for both long and short positions. Th
 
 ---
 
-## Crypto (unchanged from gildore)
+## Crypto (unchanged from ref-protocol)
 
 ```typescript
 // encrypt
@@ -299,7 +299,7 @@ No ticker/register_ticker needed. The amount is passed as an arg per-trade, boun
 
 ---
 
-## Server Keys (unchanged from gildore)
+## Server Keys (unchanged from ref-protocol)
 
 | Env | Purpose |
 |---|---|

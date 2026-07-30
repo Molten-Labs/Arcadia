@@ -40,12 +40,12 @@ function genEquityCurve(days: number, start: number, end: number): EquityPoint[]
 
 function genScoreHistory(days: number, endScore: number): ScorePoint[] {
   const pts: ScorePoint[] = [];
-  let score = endScore - 60 - Math.random() * 40;
+  let score = Math.max(100, endScore - 60 - Math.random() * 40);
   for (let i = 0; i <= days; i++) {
     const t = i / days;
-    const trend = (endScore - 60 - Math.random() * 40) + 100 * t;
+    const trend = score + (endScore - score) * t;
     const noise = (Math.random() - 0.4) * 8;
-    score = Math.min(1000, Math.max(500, trend + noise));
+    score = Math.min(1000, Math.max(100, trend + noise));
     pts.push({ ts: now - (days - i) * 86400, score: Math.round(score) });
   }
   pts[pts.length - 1].score = endScore;
@@ -127,8 +127,8 @@ export const MOCK_TRADERS: TraderProfile[] = [
     handle: "nova",
     wallet: "7xQ3mBkZvYrFp9nCqWsLtUi8hDaE2oX5yJ6gNvR4kMb",
     profile: "ArcVlt1NovaXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    score: 912,
-    tier: "Elite",
+    score: 975,
+    tier: "Apex",
     confidence: "high",
     ci: { lo: 895, point: 912, hi: 928 },
     metrics: {
@@ -146,7 +146,7 @@ export const MOCK_TRADERS: TraderProfile[] = [
     },
     equity_curve: genEquityCurve(90, 1.0, 2.12),
     trades: genTrades(20, "ArcVlt1NovaXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-    capacity: { total: 912000, used: 387000 },
+    capacity: { total: 250000, used: 387000 },
     aum: 387000,
     investors_count: 34,
     trader_self_funded: 25000,
@@ -162,7 +162,7 @@ export const MOCK_TRADERS: TraderProfile[] = [
     wallet: "4mBp9aXqRvTs3nLwZoCuJe5kHiDf8yG1bN7sAqF2xKp",
     profile: "ArcVlt2VegaYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     score: 841,
-    tier: "Advanced",
+    tier: "Elite",
     confidence: "high",
     ci: { lo: 822, point: 841, hi: 859 },
     metrics: {
@@ -180,7 +180,7 @@ export const MOCK_TRADERS: TraderProfile[] = [
     },
     equity_curve: genEquityCurve(90, 1.0, 1.64),
     trades: genTrades(15, "ArcVlt2VegaYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-    capacity: { total: 841000, used: 742000 },
+    capacity: { total: 250000, used: 742000 },
     aum: 742000,
     investors_count: 67,
     trader_self_funded: 50000,
@@ -195,8 +195,8 @@ export const MOCK_TRADERS: TraderProfile[] = [
     handle: "atlas",
     wallet: "9kLr7mZqDvYf3sBwNpTuHe6aJiCg4oX8yR2nFcW5tPm",
     profile: "ArcVlt3AtlasZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    score: 773,
-    tier: "Established",
+    score: 640,
+    tier: "Advanced",
     confidence: "med",
     ci: { lo: 748, point: 773, hi: 797 },
     metrics: {
@@ -214,7 +214,7 @@ export const MOCK_TRADERS: TraderProfile[] = [
     },
     equity_curve: genEquityCurve(90, 1.0, 1.38),
     trades: genTrades(12, "ArcVlt3AtlasZxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-    capacity: { total: 773000, used: 198000 },
+    capacity: { total: 45000, used: 198000 },
     aum: 198000,
     investors_count: 21,
     trader_self_funded: 15000,
@@ -229,8 +229,8 @@ export const MOCK_TRADERS: TraderProfile[] = [
     handle: "lyra",
     wallet: "2pKs6dXnBvYr4aLwMqZuCe7hJiEg9tN3oP5yF8cQ1mT",
     profile: "ArcVlt4LyraWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    score: 634,
-    tier: "Verified",
+    score: 380,
+    tier: "Established",
     confidence: "low",
     ci: { lo: 598, point: 634, hi: 668 },
     metrics: {
@@ -248,7 +248,7 @@ export const MOCK_TRADERS: TraderProfile[] = [
     },
     equity_curve: genEquityCurve(90, 1.0, 1.18),
     trades: genTrades(8, "ArcVlt4LyraWxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-    capacity: { total: 634000, used: 34000 },
+    capacity: { total: 10000, used: 34000 },
     aum: 34000,
     investors_count: 8,
     trader_self_funded: 5000,
@@ -263,8 +263,8 @@ export const MOCK_TRADERS: TraderProfile[] = [
     handle: "orion",
     wallet: "5fNq8bXmCvYs2hLwPrZoJe4kHiDg3oT6yA9nBcW7uQp",
     profile: "ArcVlt5OrionVxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    score: 887,
-    tier: "Advanced",
+    score: 180,
+    tier: "Verified",
     confidence: "high",
     ci: { lo: 870, point: 887, hi: 903 },
     metrics: {
@@ -282,7 +282,7 @@ export const MOCK_TRADERS: TraderProfile[] = [
     },
     equity_curve: genEquityCurve(90, 1.0, 1.89),
     trades: genTrades(25, "ArcVlt5OrionVxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"),
-    capacity: { total: 887000, used: 621000 },
+    capacity: { total: 40000, used: 621000 },
     aum: 621000,
     investors_count: 54,
     trader_self_funded: 40000,
@@ -302,7 +302,7 @@ export const MOCK_TRADERS_LIST: TraderListItem[] = MOCK_TRADERS.map((t) => ({
   score: t.score,
   tier: t.tier,
   confidence: t.confidence,
-  capacity_usd: t.score * 1000,
+  capacity_usd: t.trader_self_funded * (t.tier === "Apex" ? 10 : t.tier === "Elite" ? 5 : t.tier === "Advanced" ? 3 : t.tier === "Established" ? 2 : 1),
   aum: t.aum,
   return_30d: t.metrics.return_30d,
   max_dd: t.metrics.max_dd,
@@ -388,7 +388,7 @@ export function getVaultByProfile(profile: string): VaultInfo | undefined {
     aum: trader.aum,
     hwm: nav + 50_000,
     status: "active",
-    capacity_usd: trader.score * 1000,
+    capacity_usd: trader.trader_self_funded * (trader.tier === "Apex" ? 10 : trader.tier === "Elite" ? 5 : trader.tier === "Advanced" ? 3 : trader.tier === "Established" ? 2 : 1),
     trader_shares: Math.floor((trader.trader_self_funded / trader.aum) * (trader.aum / navFrom1e6(nav))),
     deposits_open: trader.deposits_open,
     trader_claimable: Math.floor(trader.aum * 0.02),

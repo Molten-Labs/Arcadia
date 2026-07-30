@@ -19,7 +19,7 @@ const W_DOWNSIDE_DEV: f64 = 0.10;
 const W_MEAN_RETURN: f64 = 0.05;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PRIOR_MU: f64 = 400.0;
+const PRIOR_MU: f64 = 200.0;
 const CI_BASE: f64  = 125.0;
 const LIQ_RATE_FLOOR: f64 = 0.05;
 const MAX_DD_FLOOR: f64   = 0.30;

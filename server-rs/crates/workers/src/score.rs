@@ -24,14 +24,14 @@ async fn tick(ctx: &WorkerCtx) -> Result<()> {
     info!(count = traders.len(), "score worker: processing traders");
 
     for trader in &traders {
-        if let Err(e) = score_one(ctx, &trader.profile).await {
+        if let Err(e) = score_one(ctx, &trader.profile, trader.trader_shares).await {
             error!(profile = trader.profile, "scoring failed: {e:#}");
         }
     }
     Ok(())
 }
 
-async fn score_one(ctx: &WorkerCtx, profile: &str) -> Result<()> {
+async fn score_one(ctx: &WorkerCtx, profile: &str, trader_shares: Decimal) -> Result<()> {
     // 1. Fetch equity curve and all trades from DB
     let curve  = queries::get_equity_curve(&ctx.db, profile).await?;
     let trades = queries::get_vault_trades(&ctx.db, profile, 10_000, None).await?;
@@ -71,28 +71,22 @@ async fn score_one(ctx: &WorkerCtx, profile: &str) -> Result<()> {
     let s = score::compute(&m, core_trades.len() as u32);
     let c = capacity::compute(s.score);
 
-    // 4. Determine tier string
-    let tier = arcadia_core::ScoreTier::from_score(s.score)
-        .map(|t| t.to_string());
-
-    let tier_u8: u8 = match s.score {
-        900.. => 3,
-        800.. => 2,
-        700.. => 1,
-        600.. => 0,
-        _     => 0,
-    };
+    // 4. Determine tier string + capacity from multiplier
+    let tier_name = arcadia_core::ScoreTier::from_score(s.score).to_string();
+    let capacity_usd = trader_shares * Decimal::from(c.multiplier);
+    let tier_u8 = c.tier_u8;
 
     // 5. Write score_snapshot to DB
+    let final_score = s.score.max(100);
     let snap = DbScoreSnapshot {
         profile:        profile.to_string(),
         computed_at:    Utc::now(),
-        score:          s.score as i32,
-        tier:           tier.clone(),
+        score:          final_score as i32,
+        tier:           Some(tier_name.clone()),
         confidence:     Decimal::try_from(s.confidence).unwrap_or_default(),
         ci_low:         Decimal::try_from(s.ci_low).unwrap_or_default(),
         ci_high:        Decimal::try_from(s.ci_high).unwrap_or_default(),
-        capacity_usd:   c.capacity_usd,
+        capacity_usd,
         sortino:        Decimal::try_from(m.sortino).unwrap_or_default(),
         calmar:         Decimal::try_from(m.calmar).unwrap_or_default(),
         max_dd:         Decimal::try_from(m.max_dd).unwrap_or_default(),
@@ -107,14 +101,14 @@ async fn score_one(ctx: &WorkerCtx, profile: &str) -> Result<()> {
     queries::insert_score_snapshot(&ctx.db, &snap).await?;
 
     // 6. Update capacity + deposits_open in the DB.
-    //    deposits_open = true only when score >= 600 (reputation gate).
+    //    deposits_open is true for everyone (all tiers start open).
     //    No onchain push needed for MVP; the onchain cap is enforced
     //    separately when a capacity has been explicitly set via set_capacity.
-    let deposits_open = s.score >= 600;
+    let deposits_open = true;
     if let Err(e) = crate::oracle::update_capacity_in_db(
         ctx,
         profile,
-        c.capacity_usd,
+        capacity_usd,
         tier_u8,
         deposits_open,
     ).await {
@@ -123,9 +117,9 @@ async fn score_one(ctx: &WorkerCtx, profile: &str) -> Result<()> {
 
     info!(
         profile,
-        score = s.score,
-        tier  = snap.tier.as_deref().unwrap_or("none"),
-        cap   = %c.capacity_usd,
+        score = final_score,
+        tier  = &tier_name,
+        cap   = %capacity_usd,
         deposits_open,
         "scored"
     );

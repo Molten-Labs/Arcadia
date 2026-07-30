@@ -421,7 +421,7 @@ pub async fn leaderboard_by_score(pool: &PgPool, limit: i64) -> Result<Vec<(Stri
              WHERE profile = tp.profile
              ORDER BY computed_at DESC LIMIT 1
          ) ss ON true
-         WHERE ss.score >= 600
+         WHERE ss.score >= 100
          ORDER BY ss.score DESC LIMIT $1",
     )
     .bind(limit)

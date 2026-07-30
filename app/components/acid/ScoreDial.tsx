@@ -11,6 +11,7 @@ const TIER_COLOR = {
   established: "var(--color-tier-established)",
   advanced: "var(--color-tier-advanced)",
   elite: "var(--color-tier-elite)",
+  apex: "var(--color-tier-apex)",
 } as const;
 
 export type ScoreTier = keyof typeof TIER_COLOR;

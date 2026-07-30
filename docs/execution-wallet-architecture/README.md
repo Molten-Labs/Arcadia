@@ -33,7 +33,7 @@ store in Convex DB: { encryptedPrivateKey, encryptionSalt, executionWalletAddres
 ```
 convex/agentVault.ts → prepareFundAgentVault
   ↓
-lib/solana/gildore-vault.ts:deposit (discriminator 3)
+lib/solana/ref-protocol-vault.ts:deposit (discriminator 3)
   ↓
 User wallet → vault PDA user_state_vault_ATA
 ```
@@ -47,7 +47,7 @@ User wallet → vault PDA user_state_vault_ATA
 ```
 convex/agentVault.ts → prepareRegisterTicker
   ↓
-lib/solana/gildore-vault.ts:register_ticker (discriminator 4)
+lib/solana/ref-protocol-vault.ts:register_ticker (discriminator 4)
   ↓
 Vault sets: ticker.amountToSpend = X
 ```
@@ -274,9 +274,9 @@ export async function closePosition(client) {
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `lib/solana/gildore-vault.ts` | 922 | Vault PDA client: PDAs, account decoding, tx preparation |
+| `lib/solana/ref-protocol-vault.ts` | 922 | Vault PDA client: PDAs, account decoding, tx preparation |
 | `lib/solana/execution-wallet.ts` | 392 | Execution wallet: seed→keypair, ATA creation, gas check, venue tx signing |
-| `lib/solana/server-gildore-vault.ts` | 977 | Server vault ops: fund, ticker, withdraw, consume, close, sweep |
+| `lib/solana/server-ref-protocol-vault.ts` | 977 | Server vault ops: fund, ticker, withdraw, consume, close, sweep |
 | `lib/solana/token-wallet.ts` | 240 | Token transfers from execution wallet |
 | `lib/server/execution-wallet-crypto.ts` | 88 | AES-256-GCM seed encryption/decryption |
 | `convex/agentVault.ts` | 218 | Convex vault action wrappers |
@@ -296,9 +296,9 @@ When porting to `server-rs/`:
 
 | TS File | Rust Target | Key Structs/Traits |
 |---------|-------------|-------------------|
-| `gildore-vault.ts` | `crates/vault-client/` | `VaultClient`, `UserState`, `TickerState` |
+| `ref-protocol-vault.ts` | `crates/vault-client/` | `VaultClient`, `UserState`, `TickerState` |
 | `execution-wallet.ts` | `crates/execution-wallet/` | `ExecutionWallet`, `Keypair` from `solana_sdk` |
-| `server-gildore-vault.ts` | `crates/execution-wallet/` | `consume_ticker`, `close_trade` signing logic |
+| `server-ref-protocol-vault.ts` | `crates/execution-wallet/` | `consume_ticker`, `close_trade` signing logic |
 | `token-wallet.ts` | `crates/execution-wallet/` | SPL token transfer instructions |
 | `execution-wallet-crypto.ts` | `crates/crypto/` | AES-256-GCM with PBKDF2 |
 | `flashtrade/v2.ts` | `crates/trading/` | SDK-agnostic `TradeExecutor` trait |
