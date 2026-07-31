@@ -19,14 +19,25 @@ import {
 import bs58 from "bs58";
 import { buildSiwsMessage } from "../siws";
 
-const DEV_SECRET = process.env.SESSION_SECRET ?? (() => { throw new Error("SESSION_SECRET must be set in production"); })();
 const NONCE_TTL_S = 300;
 const TOKEN_TTL_S = 86_400;
+
+/** Lazy so builds (which import this module) don't require the env var; only
+ *  request-time use does. In production the real Rust backend handles auth, so
+ *  this only throws if dev-auth is actually exercised without a secret. */
+function devSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production");
+  }
+  return "arcadia-dev-secret";
+}
 
 /* ── Nonce: `${exp}.${rand}.${mac}` (stateless, HMAC-bound) ─────────── */
 
 function nonceMac(exp: string, rand: string): string {
-  return createHmac("sha256", DEV_SECRET).update(`${exp}.${rand}`).digest("base64url");
+  return createHmac("sha256", devSecret()).update(`${exp}.${rand}`).digest("base64url");
 }
 
 export function mintNonce(): { nonce: string; expires_at: number } {
@@ -109,6 +120,6 @@ export function mintDevToken(
       ...(extra?.profile ? { profile: extra.profile } : {}),
     }),
   ).toString("base64url");
-  const sig = createHmac("sha256", DEV_SECRET).update(`${header}.${payload}`).digest("base64url");
+  const sig = createHmac("sha256", devSecret()).update(`${header}.${payload}`).digest("base64url");
   return { token: `${header}.${payload}.${sig}`, expires_at };
 }
