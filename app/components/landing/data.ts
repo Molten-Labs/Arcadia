@@ -11,13 +11,14 @@ export const LINKS = {
   leaderboard: "/leaderboard",
   terminal: "/terminal",
   waitlist: "/waitlist",
-  docs: "#",
+  docs: "https://arcadia-7fb42599.mintlify.site/introduction",
 } as const;
 
 export const NAV_LINKS = [
   { label: "Traders", href: LINKS.traders },
   { label: "Leaderboard", href: LINKS.leaderboard },
   { label: "Demo", href: LINKS.terminal },
+  { label: "Docs", href: LINKS.docs },
 ] as const;
 
 /** Trust-strip marquee tokens. `icon` keys map to marks in TrustStrip. */
