@@ -27,6 +27,7 @@ export const IDL = {
         { name: "perfFeeBps", type: "u16" },
         { name: "mgmtFeeBps", type: "u16" },
         { name: "oracleAuthority", type: "pubkey" },
+        { name: "processor", type: "pubkey" },
       ],
     },
     {
@@ -98,8 +99,10 @@ export const IDL = {
       name: "processWithdraw",
       discriminator: [166, 189, 47, 170, 19, 135, 210, 19],
       accounts: [
-        { name: "owner", writable: true, signer: true },
+        { name: "authority", signer: true },
+        { name: "config", pda: { seeds: [{ kind: "const", value: [112, 108, 97, 116, 102, 111, 114, 109] }] } },
         { name: "profile", writable: true },
+        { name: "owner" },
         { name: "investorAccount", writable: true, pda: { seeds: [{ kind: "const", value: [105, 110, 118, 101, 115, 116, 111, 114] }, { kind: "account", path: "owner" }] } },
         { name: "position", writable: true, pda: { seeds: [{ kind: "const", value: [112, 111, 115, 105, 116, 105, 111, 110] }, { kind: "account", path: "owner" }, { kind: "account", path: "profile" }] } },
         { name: "baseMint" },
@@ -261,6 +264,7 @@ export const IDL = {
         fields: [
           { name: "admin",            type: "pubkey" },
           { name: "oracleAuthority",  type: "pubkey" },
+          { name: "processor",        type: "pubkey" },
           { name: "treasuryToken",    type: "pubkey" },
           { name: "baseMint",         type: "pubkey" },
           { name: "perfFeeBps",       type: "u16" },

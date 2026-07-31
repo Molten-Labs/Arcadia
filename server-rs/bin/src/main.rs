@@ -73,6 +73,7 @@ async fn main() -> Result<()> {
     let wctx_score = worker_ctx.clone();
     let wctx_price = worker_ctx.clone();
     let wctx_exec = worker_ctx.clone();
+    let wctx_withdraw = worker_ctx.clone();
 
     let ingest_task = tokio::spawn(async move {
         supervise("ingest", move || {
@@ -106,6 +107,14 @@ async fn main() -> Result<()> {
         .await;
     });
 
+    let withdraw_task = tokio::spawn(async move {
+        supervise("withdraw", move || {
+            let c = wctx_withdraw.clone();
+            async move { arcadia_workers::withdraw_processor::run(c).await }
+        })
+        .await;
+    });
+
     // ── Axum HTTP server ──────────────────────────────────────────────────
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -120,11 +129,12 @@ async fn main() -> Result<()> {
 
     // Wait for any task to finish (they shouldn't unless there's a fatal error)
     tokio::select! {
-        _ = ingest_task => tracing::error!("ingest supervisor exited"),
-        _ = score_task  => tracing::error!("score supervisor exited"),
-        _ = price_task  => tracing::error!("price supervisor exited"),
-        _ = exec_task   => tracing::error!("executor supervisor exited"),
-        _ = api_task    => tracing::error!("api task exited"),
+        _ = ingest_task  => tracing::error!("ingest supervisor exited"),
+        _ = score_task   => tracing::error!("score supervisor exited"),
+        _ = price_task   => tracing::error!("price supervisor exited"),
+        _ = exec_task    => tracing::error!("executor supervisor exited"),
+        _ = withdraw_task => tracing::error!("withdraw supervisor exited"),
+        _ = api_task     => tracing::error!("api task exited"),
     }
 
     Ok(())

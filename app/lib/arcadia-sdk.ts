@@ -60,6 +60,7 @@ export function findInvestorPosition(
 export interface PlatformConfigData {
   admin: PublicKey;
   oracleAuthority: PublicKey;
+  processor: PublicKey;
   treasuryToken: PublicKey;
   baseMint: PublicKey;
   perfFeeBps: number;
@@ -189,6 +190,7 @@ export function decodePlatformConfig(data: Buffer): PlatformConfigData {
   return {
     admin: r.pubkey(),
     oracleAuthority: r.pubkey(),
+    processor: r.pubkey(),
     treasuryToken: r.pubkey(),
     baseMint: r.pubkey(),
     perfFeeBps: r.u16(),

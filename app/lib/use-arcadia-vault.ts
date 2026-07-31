@@ -348,7 +348,9 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         if (!status) return false;
         if (status.kind !== "vault-live") return fail("Vault program not found on this cluster.");
 
+        const [configPda] = findPlatformConfig();
         const [profilePda] = findTraderProfile(traderKey);
+        const [investorPda] = findInvestorAccount(publicKey);
         const [positionPda] = findInvestorPosition(publicKey, profilePda);
         const ownerToken = getAssociatedTokenAddressSync(status.baseMint, publicKey);
         const program = makeArcadiaProgram(connection, anchorWallet);
@@ -357,8 +359,11 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const tx = await program.methods
           .processWithdraw()
           .accountsPartial({
-            owner: publicKey,
+            authority: publicKey,
+            config: configPda,
             profile: profilePda,
+            owner: publicKey,
+            investorAccount: investorPda,
             position: positionPda,
             baseMint: status.baseMint,
             vaultToken: status.vaultToken,

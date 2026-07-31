@@ -11,8 +11,8 @@ pub mod score;
 pub mod supervisor;
 
 pub mod executor;
+pub mod withdraw_processor;
 
-use anyhow::Result;
 use sqlx::PgPool;
 
 /// Shared worker context (subset of AppCtx without the HTTP server).
