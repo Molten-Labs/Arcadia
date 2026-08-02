@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { fontVariables } from "@/lib/fonts";
-import { Providers } from "@/components/providers";
 
 const DESCRIPTION =
   "Arcadia turns real on-chain trading history into verified reputation. " +
@@ -37,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={fontVariables}>
       <body className="bg-void font-sans text-ink antialiased">
-        <Providers>{children}</Providers>
+        {children}
         <SpeedInsights />
       </body>
     </html>
