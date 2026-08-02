@@ -250,7 +250,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 {formatUSD(parsedAmount, 0)} USDC deposited
               </p>
               <p className="mx-auto mb-5 max-w-[320px] text-[0.8125rem] leading-relaxed text-muted">
-                Your position in @{trader.handle}'s vault is live
+                Your position in @{trader.handle}&apos;s vault is live
               </p>
               {txState.sig && (
                 <a

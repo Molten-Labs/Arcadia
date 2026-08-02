@@ -17,7 +17,7 @@ import {
   StatTile,
 } from "@/components/pages/trader/trader-ui";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiFetch } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 import { useMe } from "@/lib/hooks";
 import type { ScoreTier, ScorePoint, DailyPnL, TraderProfile, TraderClassification } from "@/lib/types";
 import { ClassificationBadgeSet } from "@/components/pages/trader/trader-ui";

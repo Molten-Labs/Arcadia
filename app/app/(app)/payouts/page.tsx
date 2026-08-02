@@ -24,7 +24,8 @@ import {
   Panel,
   StatTile,
 } from "@/components/pages/trader/trader-ui";
-import { apiFetch, cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useMe } from "@/lib/hooks";
 import { formatUSD, type TraderProfile, type VaultInfo } from "@/lib/types";
 import { useArcadiaVault } from "@/lib/use-arcadia-vault";

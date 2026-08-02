@@ -24,6 +24,7 @@ import {
   type VaultChainStatus,
   type VaultTxState,
 } from "./vault-client";
+import { getStoredToken } from "./storage";
 
 export type { VaultTxPhase, VaultTxState } from "./vault-client";
 
@@ -405,8 +406,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
       if (!publicKey) return fail("Connect your wallet first.");
       progress("checking", `Recording trade: ${params.direction.toUpperCase()} ${params.market}…`);
       try {
-        const token =
-          typeof localStorage !== "undefined" ? localStorage.getItem("arcadia_jwt") : null;
+        const token = getStoredToken();
         const res = await fetch("/api/v1/trades/simulate", {
           method: "POST",
           headers: {

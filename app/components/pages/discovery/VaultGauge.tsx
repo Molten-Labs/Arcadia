@@ -22,10 +22,9 @@ export function VaultGauge({
   const [mounted, setMounted] = useState(false);
   const reduced = usePrefersReducedMotion();
   useEffect(() => {
-    if (reduced) { setMounted(true); return; }
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
-  }, [reduced]);
+  }, []);
 
   const pct = total > 0 ? Math.min(1, aum / total) : 0;
   const left = Math.max(0, total - aum);

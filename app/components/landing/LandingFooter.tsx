@@ -1,27 +1,13 @@
-import { Fragment } from "react";
 import Link from "next/link";
-import { Sparkle } from "lucide-react";
 
-import { Marquee } from "@/components/acid";
 import { Container } from "./bits";
 import { LogoMark } from "./LogoMark";
-import { FOOTER_PHRASES, LINKS, NAV_LINKS } from "./data";
+import { LINKS, NAV_LINKS } from "./data";
 
-/** Landing footer: closing marquee + brand row + links. */
+/** Landing footer: brand row + links + copyright. */
 export function LandingFooter() {
   return (
     <footer aria-label="Footer">
-      <div className="border-y border-white/10 bg-onyx" aria-hidden>
-        <Marquee speed={38} className="py-4">
-          {FOOTER_PHRASES.map((phrase) => (
-            <Fragment key={phrase}>
-              <span className="px-8 font-mono text-[0.95rem] tracking-[0.1em] text-faint uppercase">{phrase}</span>
-              <Sparkle className="size-3 fill-current text-pink" />
-            </Fragment>
-          ))}
-        </Marquee>
-      </div>
-
       <div className="bg-void py-[clamp(3rem,7vw,5rem)]">
         <Container>
           <div className="flex flex-wrap items-center justify-between gap-6">

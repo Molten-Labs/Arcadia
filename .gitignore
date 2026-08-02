@@ -31,3 +31,7 @@ dump.rdb
 
 # Execution wallet architecture reference (cloned from ref-protocol)
 /docs/execution-wallet-architecture/src/
+
+# Local agent tooling (not part of the product)
+/.agents/
+/.claude/

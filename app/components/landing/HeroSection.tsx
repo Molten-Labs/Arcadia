@@ -1,22 +1,19 @@
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight, Circle, MoveRight, Zap } from "lucide-react";
+import { ArrowRight, Circle, Zap } from "lucide-react";
 
-import { AcidButton, ChromeText, Marquee, Reveal } from "@/components/acid";
+import { AcidButton, ChromeText, Reveal } from "@/components/acid";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Container } from "./bits";
 import { ORB_GRADIENT } from "./LogoMark";
-import { LINKS, SLASH_PHRASES } from "./data";
+import { LINKS } from "./data";
 
 // "PROVE" is one unbreakable word ~5.7x the font-size wide; its min-content
 // sets the copy column's width at every breakpoint. Sized so it always fits
 // the column (16vw starved the card column to 8px slivers at 1440px, and a
 // 4.2rem floor clipped the whole copy column on phones).
 const HUGE = "font-display text-[clamp(3.4rem,14.5vw,6.5rem)] lg:text-[clamp(5.5rem,8.75vw,10rem)] leading-[0.82] font-extrabold tracking-[-0.05em] uppercase";
-
-const acidGlow =
-  "0 0 34px color-mix(in srgb, var(--color-acid) 60%, transparent), 0 0 70px color-mix(in srgb, var(--color-acid) 30%, transparent)";
 
 function Avatar({ letter }: { letter: string }) {
   return (
@@ -50,20 +47,15 @@ function HeroTile({
   index,
   label,
   className,
-  floatDelay,
   children,
 }: {
   index: string;
   label: string;
   className?: string;
-  floatDelay?: string;
   children: ReactNode;
 }) {
   return (
-    <div
-      className={cn("hero-float", className)}
-      style={floatDelay ? { animationDelay: floatDelay } : undefined}
-    >
+    <div className={cn(className)}>
       <div className="group acid-int acid-sheen relative flex h-full flex-col rounded-xl border border-white/10 bg-panel/80 p-5 backdrop-blur-[6px]">
         <span
           aria-hidden
@@ -113,20 +105,11 @@ export function HeroSection() {
 
             <Reveal delay={80}>
               <h1 aria-label="Prove it." className="relative my-8">
-                <ChromeText as="span" aberration className={`block origin-left ${HUGE}`}>
+                <ChromeText as="span" className={`block origin-left ${HUGE}`}>
                   PROVE
                 </ChromeText>
-                <span
-                  className={`block origin-left text-acid ${HUGE}`}
-                  style={{ textShadow: acidGlow }}
-                >
-                  IT
-                  <span
-                    className="text-pink"
-                    style={{ textShadow: "0 0 30px color-mix(in srgb, var(--color-pink) 70%, transparent)" }}
-                  >
-                    .
-                  </span>
+                <span className={`block origin-left text-ink ${HUGE}`}>
+                  IT<span className="text-acid">.</span>
                 </span>
               </h1>
             </Reveal>
@@ -178,7 +161,7 @@ export function HeroSection() {
               />
               <div className="relative grid gap-4 sm:grid-cols-2">
                 {/* Trader */}
-                <HeroTile index="01" label="Trader" floatDelay="0s">
+                <HeroTile index="01" label="Trader">
                   <div className="mb-3.5 flex items-center gap-3">
                     <Avatar letter="N" />
                     <div className="min-w-0">
@@ -202,7 +185,7 @@ export function HeroSection() {
                 </HeroTile>
 
                 {/* Vault */}
-                <HeroTile index="02" label="Allocation vault / @nova" className="sm:translate-y-5" floatDelay="-3s">
+                <HeroTile index="02" label="Allocation vault / @nova" className="sm:translate-y-5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="font-mono text-[1.7rem] font-bold text-ink tabular-nums">$387K</span>
                     <span className="rounded-full border border-acid/25 bg-acid/[0.05] px-2.5 py-1 font-mono text-[0.62rem] tracking-[0.08em] whitespace-nowrap text-acid uppercase">
@@ -219,19 +202,19 @@ export function HeroSection() {
                 </HeroTile>
 
                 {/* Payout */}
-                <HeroTile index="03" label="Profit split / Solana" floatDelay="-1.5s">
+                <HeroTile index="03" label="Profit split / Solana">
                   <p className="font-mono text-[1.7rem] font-bold text-success tabular-nums">+$6,810</p>
                   <p className="mt-1.5 font-mono text-[0.7rem] leading-relaxed text-faint">
                     performance share above high-water mark / settles in 1.8s
                   </p>
-                  <span className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg border border-cyan/25 bg-cyan/[0.06] px-2.5 py-1.5 font-mono text-[0.7rem] text-cyan">
+                  <span className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg border border-line bg-panel-2 px-2.5 py-1.5 font-mono text-[0.7rem] text-muted">
                     <Zap className="size-3.5 shrink-0" aria-hidden />
                     <span className="truncate">4PqRtLv9Xw...M3kN</span>
                   </span>
                 </HeroTile>
 
                 {/* Reputation inputs */}
-                <HeroTile index="04" label="Reputation inputs" className="sm:translate-y-5" floatDelay="-4.5s">
+                <HeroTile index="04" label="Reputation inputs" className="sm:translate-y-5">
                   <div className="flex flex-col gap-2.5">
                     {[
                       { label: "Risk-adj return", value: 91 },
@@ -254,23 +237,13 @@ export function HeroSection() {
         </div>
       </Container>
 
-      {/* Diagonal acid marquee band */}
-      <div className="mt-[clamp(3rem,9vh,7rem)]">
-        <div
-          className="relative -mx-[7%] w-[114%] -rotate-[4deg] bg-acid text-void"
-          style={{ boxShadow: "0 0 40px color-mix(in srgb, var(--color-acid) 35%, transparent)" }}
-        >
-          <Marquee speed={26} pauseOnHover={false} className="py-4">
-            {SLASH_PHRASES.map((phrase) => (
-              <Fragment key={phrase}>
-                <span className="flex items-center px-5 font-display text-[clamp(1.1rem,2.4vw,1.9rem)] font-extrabold tracking-[-0.02em] uppercase">
-                  {phrase}
-                </span>
-                <MoveRight aria-hidden className="mx-1 size-5 opacity-50" />
-              </Fragment>
-            ))}
-          </Marquee>
-        </div>
+      {/* Quiet capability strip (was a rotated marquee band) */}
+      <div className="mt-[clamp(3rem,9vh,7rem)] border-t border-line">
+        <Container className="flex flex-wrap items-center justify-between gap-x-8 gap-y-2 py-5 font-mono text-[0.68rem] tracking-[0.14em] text-faint uppercase">
+          <span>Verified on-chain history</span>
+          <span className="text-acid">Score 0–1000</span>
+          <span>Capital to the proven</span>
+        </Container>
       </div>
     </section>
   );

@@ -62,7 +62,7 @@ export const PROBLEMS = [
   },
   {
     tag: "FOR INVESTORS",
-    accent: "cyan" as const,
+    accent: "acid" as const,
     heading: "Everyone claims alpha. Nobody can verify it.",
     body: "Investors want exposure to skilled traders, but the internet is full of claims. Without a verified record and safe structure, backing a trader is guesswork.",
     points: [
@@ -158,7 +158,7 @@ export const TWO_SIDES = {
   },
   investors: {
     intro: "Back traders based on proof, not promises.",
-    accent: "cyan" as const,
+    accent: "acid" as const,
     steps: [
       { n: "1", title: "Browse verified traders", body: "Compare by score, record, tier, strategy, and vault size." },
       { n: "2", title: "Choose who to back", body: "Deposit into a vault, not a stranger's wallet." },
@@ -204,7 +204,7 @@ export const DUAL_CTA = [
     cta: { label: "Try the demo", href: LINKS.terminal, variant: "acid" as const },
   },
   {
-    accent: "cyan" as const,
+    accent: "acid" as const,
     heading: "Get early access.",
     body: "Arcadia is in private beta. Join the waitlist and be first to know when vaults open.",
     cta: { label: "Join waitlist", href: LINKS.waitlist, variant: "chrome" as const },

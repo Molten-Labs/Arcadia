@@ -21,6 +21,9 @@ interface Props {
   connected: boolean;
   market: string;
   openDeposit: () => void;
+  seed: string;
+  setSeed: (v: string) => void;
+  execStatus: "idle" | "no-seed" | "connecting" | "error" | "live";
 }
 
 const LEVERAGE_QUICK = [25, 50, 75, 100] as const;
@@ -39,6 +42,9 @@ export function TerminalOrderForm({
   connected,
   market,
   openDeposit,
+  seed,
+  setSeed,
+  execStatus,
 }: Props) {
   const { getPrice } = useFlashTradePrices();
   const [tpslOpen, setTpslOpen] = useState(false);
@@ -76,11 +82,37 @@ export function TerminalOrderForm({
 
   return (
     <div className="flex h-full flex-col overflow-hidden border-l border-line bg-panel">
+      {/* Execution seed / status */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2">
+        {seed ? (
+          <>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--color-success)" }} />
+            <span className="truncate text-[10px] tabular-nums text-ink">
+              {seed.slice(0, 6)}…{seed.slice(-4)} · {execStatus}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="shrink-0 text-[10px] font-semibold text-faint">Flash seed</span>
+            <input
+              type="password"
+              value={seed}
+              onChange={(e) => setSeed(e.target.value)}
+              placeholder="devnet seed (base58, tab-only)"
+              className="min-w-0 flex-1 bg-transparent text-[10px] tabular-nums text-ink outline-none placeholder:text-faint/60"
+              spellCheck={false}
+            />
+          </>
+        )}
+      </div>
+
       {/* Alert banner */}
       <div className="flex shrink-0 items-center gap-2 border-b border-line bg-warning/10 px-3 py-2">
         <AlertTriangle size={12} className="shrink-0 text-warning" />
         <p className="text-[10px] leading-tight text-warning/90">
-          Transaction may fail due to insufficient SOL balance
+          {execStatus === "error"
+            ? "Order failed. The execution sidecar is unreachable."
+            : "Real devnet positions. The seed is held in this tab only and never stored."}
         </p>
       </div>
 
@@ -276,7 +308,7 @@ export function TerminalOrderForm({
               ? "Connect Wallet"
               : submitting
                 ? "Processing…"
-                : "Deposit USDC To Account"}
+                : `${direction === "long" ? "Long" : "Short"} ${market}`}
           </button>
 
           {/* Position summary */}
@@ -288,8 +320,6 @@ export function TerminalOrderForm({
               ["Entry Price", livePrice ? `$${livePrice.toFixed(2)}` : "—"],
               ["Liq. Price", liqPrice > 0 ? `$${liqPrice.toFixed(2)}` : "—"],
               ["Fees (0.02%)", fee > 0 ? `$${fee.toFixed(2)}` : "$0.00"],
-              ["Margin Fees", `${(0.00036).toFixed(4)}% /1hr`],
-              ["Available liquidity", "$2,267,027.59"],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center justify-between">
                 <span className="text-[10px] text-faint">{k}</span>

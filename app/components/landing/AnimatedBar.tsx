@@ -15,8 +15,7 @@ export type AnimatedBarProps = {
   className?: string;
 };
 
-const DEFAULT_FILL =
-  "linear-gradient(90deg, var(--color-acid), var(--color-cyan))";
+const DEFAULT_FILL = "var(--color-acid)";
 
 /**
  * Horizontal progress bar that grows from 0 to `pct` the first time it scrolls

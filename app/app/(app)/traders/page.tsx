@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bookmark, BookmarkCheck, Filter, Search } from "lucide-react";
 
-import { apiFetch, cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { TraderListItem } from "@/lib/types";
 import { Reveal } from "@/components/acid";
 import { Input } from "@/components/ui/input";

@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 
-import { apiFetch, cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/lib/types";
 import { Reveal } from "@/components/acid";
 import {

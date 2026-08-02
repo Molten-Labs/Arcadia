@@ -1,12 +1,10 @@
-import { LineChart, ShieldCheck, XCircle } from "lucide-react";
+import { LineChart, XCircle } from "lucide-react";
 
 import { CountUp, Reveal } from "@/components/acid";
 import { AnimatedBar } from "./AnimatedBar";
 import { Container, Kicker, SectionHeading } from "./bits";
 import { GateConnector } from "./GateConnector";
 import { HOW_STEPS, PROBLEMS, WEEK_TRACK } from "./data";
-
-const TAG_ICON = { acid: LineChart, cyan: ShieldCheck } as const;
 
 const ghostStroke = {
   color: "transparent",
@@ -34,15 +32,14 @@ export function FlowSection() {
 
         <div className="mt-[clamp(2.5rem,6vw,4rem)] grid gap-6 md:grid-cols-2">
           {PROBLEMS.map((panel, i) => {
-            const Icon = TAG_ICON[panel.accent];
-            const accentClass = panel.accent === "acid" ? "text-acid" : "text-cyan";
+            const accentClass = "text-acid";
             return (
               <Reveal key={panel.tag} delay={i * 80}>
-                <div className="group acid-int h-full rounded-[22px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[clamp(1.5rem,3vw,2.4rem)]">
+                <div className="group h-full rounded-[22px] border border-white/10 bg-onyx/70 p-[clamp(1.5rem,3vw,2.4rem)] transition-colors duration-300 hover:border-acid/30 motion-reduce:transition-none">
                   <span
                     className={`mb-4 inline-flex items-center gap-2.5 font-mono text-[0.7rem] tracking-[0.2em] uppercase ${accentClass}`}
                   >
-                    <Icon
+                    <LineChart
                       aria-hidden
                       className="size-4 transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
                     />
@@ -85,7 +82,7 @@ export function FlowSection() {
               delay={(i % 2) * 80}
               className={step.wide ? "md:col-span-2" : undefined}
             >
-              <div className="group acid-int relative h-full overflow-hidden rounded-[20px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[clamp(1.4rem,2.6vw,1.9rem)]">
+              <div className="group relative h-full overflow-hidden rounded-[20px] border border-white/10 bg-onyx/70 p-[clamp(1.4rem,2.6vw,1.9rem)] transition-colors duration-300 hover:border-acid/25 motion-reduce:transition-none">
                 <span
                   aria-hidden
                   className="pointer-events-none absolute -top-8 right-0 font-display text-[8rem] leading-none font-extrabold opacity-70 transition-opacity duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] select-none group-hover:opacity-100 motion-reduce:transition-none"

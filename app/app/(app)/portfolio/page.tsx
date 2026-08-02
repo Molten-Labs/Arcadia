@@ -26,7 +26,7 @@ import {
   StatTile,
 } from "@/components/pages/investor/surfaces";
 import { DepositsBadge, TierChip } from "@/components/pages/investor/tier";
-import { apiFetch } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 import { formatUSD } from "@/lib/types";
 import type { PortfolioItem, TraderProfile } from "@/lib/types";
 

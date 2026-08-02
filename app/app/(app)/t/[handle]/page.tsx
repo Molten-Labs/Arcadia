@@ -14,7 +14,8 @@ import {
   TrendingDown,
 } from "lucide-react";
 
-import { apiFetch, cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { formatUSD, type TradeRecord, type TraderProfile, type ScorePoint, type DailyPnL, type LeaderboardEntry, type TraderClassification } from "@/lib/types";
 import { useRole } from "@/lib/role-context";
 import { EquityChart } from "@/components/EquityChart";

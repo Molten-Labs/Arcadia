@@ -34,34 +34,6 @@ function withAlpha(hex: string, alpha: number): string {
   return `${hex}${a}`;
 }
 
-const SEED_PRICES: Record<string, number> = {
-  "SOL-PERP": 152.4,
-  "BTC-PERP": 67420,
-  "ETH-PERP": 3488,
-  "ARB-PERP": 1.22,
-};
-
-function generateCandles(market: string, basePrice: number, count = 150): CandlestickData[] {
-  const now = Math.floor(Date.now() / 1000);
-  const intervalSecs = 900;
-  const candles: CandlestickData[] = [];
-  let price = basePrice * (0.88 + (market.charCodeAt(0) % 7) * 0.004);
-  const volatility = basePrice * 0.006;
-
-  for (let i = count - 1; i >= 0; i--) {
-    const time = (now - i * intervalSecs) as Time;
-    const open = price;
-    const drift = (Math.random() - 0.47) * volatility;
-    const close = Math.max(open + drift, basePrice * 0.5);
-    const wick = volatility * 0.4;
-    const high = Math.max(open, close) + Math.random() * wick;
-    const low = Math.min(open, close) - Math.random() * wick;
-    candles.push({ time, open, high, low, close });
-    price = close;
-  }
-  return candles;
-}
-
 export interface PositionMarker {
   id: string;
   direction: "long" | "short";
@@ -86,6 +58,8 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
   const priceLinesRef = useRef<Map<string, IPriceLine>>(new Map());
 
   const candles = useMemo(() => {
+    // Real candles only. With no feed this stays empty so the terminal never
+    // draws fabricated history — the page's loading state covers the gap.
     if (externalCandles && externalCandles.length > 0) {
       // setData asserts on non-ascending times: normalize ms -> s, sort,
       // and drop duplicate timestamps (keep the latest update for a bucket).
@@ -96,8 +70,8 @@ export function TvChart({ market, currentPrice, height = 360, fullHeight = false
       }
       return [...bySecond.values()].sort((a, b) => (a.time as number) - (b.time as number));
     }
-    return generateCandles(market, SEED_PRICES[market] ?? 100);
-  }, [market, externalCandles]);
+    return [];
+  }, [externalCandles]);
 
   useEffect(() => {
     const container = containerRef.current;

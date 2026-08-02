@@ -35,10 +35,9 @@ export function RiskRadar({ items }: { items: RadarItem[] }) {
   const [visible, setVisible] = useState(false);
   const reduced = usePrefersReducedMotion();
   useEffect(() => {
-    if (reduced) { setVisible(true); return; }
     const id = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(id);
-  }, [reduced]);
+  }, []);
 
   const N = items.length;
   const W = 280;

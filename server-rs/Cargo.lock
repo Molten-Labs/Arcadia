@@ -281,6 +281,7 @@ dependencies = [
  "borsh",
  "bs58",
  "chrono",
+ "curve25519-dalek",
  "ed25519-dalek",
  "redis",
  "reqwest",

@@ -9,35 +9,45 @@ use anyhow::Result;
 use ed25519_dalek::Signer;
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
+use std::sync::OnceLock;
 use tracing::{error, info};
 
 const POLL_INTERVAL_SECS: u64 = 30;
+const CONFIRM_POLLS: u32 = 15;
+const CONFIRM_POLL_DELAY_SECS: u64 = 2;
 
 // ── Well-known Solana program IDs ────────────────────────────────────────────
 
-fn spl_token_id() -> [u8; 32] {
-    bs58::decode("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-        .into_vec()
-        .unwrap()
-        .try_into()
-        .unwrap()
+static SPL_TOKEN_ID: OnceLock<[u8; 32]> = OnceLock::new();
+fn spl_token_id() -> &'static [u8; 32] {
+    SPL_TOKEN_ID.get_or_init(|| {
+        bs58::decode("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+            .into_vec()
+            .expect("valid base58")
+            .try_into()
+            .expect("32-byte program id")
+    })
 }
 
-fn associated_token_program_id() -> [u8; 32] {
-    bs58::decode("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
-        .into_vec()
-        .unwrap()
-        .try_into()
-        .unwrap()
+static ASSOCIATED_TOKEN_PROGRAM_ID: OnceLock<[u8; 32]> = OnceLock::new();
+fn associated_token_program_id() -> &'static [u8; 32] {
+    ASSOCIATED_TOKEN_PROGRAM_ID.get_or_init(|| {
+        bs58::decode("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
+            .into_vec()
+            .expect("valid base58")
+            .try_into()
+            .expect("32-byte program id")
+    })
 }
 
 // ── Entry ────────────────────────────────────────────────────────────────────
 
 pub async fn run(ctx: WorkerCtx) -> Result<()> {
-    let rpc_url =
-        std::env::var("SOLANA_RPC").unwrap_or_else(|_| "https://api.devnet.solana.com".into());
+    let rpc_url = std::env::var("SOLANA_RPC_URL")
+        .unwrap_or_else(|_| "https://api.devnet.solana.com".into());
     let processor = load_processor()?;
     let program_id = bs58::decode(&ctx.cfg.program_id).into_vec()?;
+    let client = reqwest::Client::new();
 
     info!(
         "withdraw-processor: started processor={}",
@@ -45,7 +55,7 @@ pub async fn run(ctx: WorkerCtx) -> Result<()> {
     );
 
     loop {
-        if let Err(e) = process_ready(&ctx.db, &rpc_url, &processor, &program_id).await {
+        if let Err(e) = process_ready(&ctx.db, &client, &rpc_url, &processor, &program_id).await {
             error!("withdraw-processor: poll error: {e:#}");
         }
         tokio::time::sleep(std::time::Duration::from_secs(POLL_INTERVAL_SECS)).await;
@@ -67,6 +77,7 @@ fn load_processor() -> Result<ed25519_dalek::SigningKey> {
 
 async fn process_ready(
     db: &PgPool,
+    client: &reqwest::Client,
     rpc_url: &str,
     processor: &ed25519_dalek::SigningKey,
     program_id: &[u8],
@@ -84,7 +95,7 @@ async fn process_ready(
     .await?;
 
     for (owner, profile) in &rows {
-        match execute_one(rpc_url, processor, program_id, owner, profile).await {
+        match execute_one(client, rpc_url, processor, program_id, owner, profile).await {
             Ok(sig) => {
                 info!("processed owner={owner} profile={profile} sig={sig}");
                 let _ = sqlx::query(
@@ -165,6 +176,7 @@ fn make_transaction(signatures: &[[u8; 64]], message: &[u8]) -> Vec<u8> {
 // ── Execution ────────────────────────────────────────────────────────────────
 
 async fn execute_one(
+    client: &reqwest::Client,
     rpc_url: &str,
     processor: &ed25519_dalek::SigningKey,
     program_id: &[u8],
@@ -175,22 +187,22 @@ async fn execute_one(
     let profile_bytes = bs58::decode(profile).into_vec()?;
 
     // Derive PDAs
-    let config_pda = find_pda(&[b"platform"], program_id);
-    let investor_pda = find_pda(&[b"investor", &owner_bytes], program_id);
-    let position_pda = find_pda(&[b"position", &owner_bytes, &profile_bytes], program_id);
-    let vault_pda = find_pda(&[b"profile", &profile_bytes], program_id);
+    let config_pda = find_pda(&[b"platform"], program_id)?;
+    let investor_pda = find_pda(&[b"investor", &owner_bytes], program_id)?;
+    let position_pda = find_pda(&[b"position", &owner_bytes, &profile_bytes], program_id)?;
+    let vault_pda = find_pda(&[b"profile", &profile_bytes], program_id)?;
 
     // Recent blockhash
-    let blockhash = rpc_get_blockhash(rpc_url).await?;
+    let blockhash = rpc_get_blockhash(client, rpc_url).await?;
 
     // Fetch config account to learn base_mint
     // Layout: admin(32) + oracle_auth(32) + processor(32) = 96
-    let config_data = rpc_get_account_data(rpc_url, &config_pda).await?;
+    let config_data = rpc_get_account_data(client, rpc_url, &config_pda).await?;
     if config_data.len() < 128 {
         anyhow::bail!("config account too small ({} bytes)", config_data.len());
     }
     let base_mint: [u8; 32] = config_data[96..128].try_into()?;
-    let owner_ata = find_associated_token_address(&owner_bytes, &base_mint);
+    let owner_ata = find_associated_token_address(&owner_bytes, &base_mint)?;
 
     // Account keys:
     //   0 = authority   (processor, signer)
@@ -235,43 +247,52 @@ async fn execute_one(
     let tx = make_transaction(&[sig], &message);
     let tx_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &tx);
 
-    rpc_send_transaction(rpc_url, &tx_b64).await
+    // Confirm the transaction landed before letting the caller clear the row.
+    let sig = rpc_send_transaction(client, rpc_url, &tx_b64).await?;
+    rpc_confirm_transaction(client, rpc_url, &sig).await?;
+    Ok(sig)
 }
 
 // ── PDA derivation ───────────────────────────────────────────────────────────
 
-fn find_pda(seeds: &[&[u8]], program_id: &[u8]) -> [u8; 32] {
+fn find_pda(seeds: &[&[u8]], program_id: &[u8]) -> Result<[u8; 32]> {
     for bump in (0..=255u8).rev() {
         let mut hasher = Sha256::new();
         for seed in seeds {
             hasher.update(seed);
         }
-        hasher.update(&[bump]);
+        hasher.update([bump]);
         hasher.update(program_id);
         let hash: [u8; 32] = hasher.finalize().into();
-        // A valid PDA must not be on the ed25519 curve (no collision).
-        // Practically impossible to collide, so any non-zero result is fine.
-        if hash.iter().any(|&b| b != 0) {
-            return hash;
+        // A valid PDA must NOT be a point on the ed25519 curve. Mirror
+        // Solana's `Pubkey::is_on_curve` and the SDK's `findProgramAddress`.
+        if !is_on_curve(&hash) {
+            return Ok(hash);
         }
     }
-    panic!("unable to find valid PDA");
+    anyhow::bail!("unable to find a viable PDA bump seed")
 }
 
-fn find_associated_token_address(wallet: &[u8], mint: &[u8]) -> [u8; 32] {
-    let seeds = [wallet, &spl_token_id(), mint];
-    let ata_prog = &associated_token_program_id();
-    find_pda(&seeds, ata_prog)
+fn is_on_curve(bytes: &[u8; 32]) -> bool {
+    curve25519_dalek::edwards::CompressedEdwardsY::from_slice(bytes)
+        .ok()
+        .and_then(|point| point.decompress())
+        .is_some()
+}
+
+fn find_associated_token_address(wallet: &[u8], mint: &[u8]) -> Result<[u8; 32]> {
+    let seeds = [wallet, spl_token_id(), mint];
+    find_pda(&seeds, associated_token_program_id())
 }
 
 // ── RPC helpers ──────────────────────────────────────────────────────────────
 
-async fn rpc_get_blockhash(rpc_url: &str) -> Result<[u8; 32]> {
+async fn rpc_get_blockhash(client: &reqwest::Client, rpc_url: &str) -> Result<[u8; 32]> {
     let body = serde_json::json!({
         "jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash",
         "params": [{ "commitment": "confirmed" }]
     });
-    let resp: serde_json::Value = reqwest::Client::new()
+    let resp: serde_json::Value = client
         .post(rpc_url)
         .json(&body)
         .send()
@@ -282,10 +303,10 @@ async fn rpc_get_blockhash(rpc_url: &str) -> Result<[u8; 32]> {
         .as_str()
         .ok_or_else(|| anyhow::anyhow!("missing blockhash"))?;
     let bytes = bs58::decode(bh).into_vec()?;
-    Ok(bytes.try_into().map_err(|_| anyhow::anyhow!("bad blockhash"))?)
+    bytes.try_into().map_err(|_| anyhow::anyhow!("bad blockhash"))
 }
 
-async fn rpc_get_account_data(rpc_url: &str, pubkey: &[u8; 32]) -> Result<Vec<u8>> {
+async fn rpc_get_account_data(client: &reqwest::Client, rpc_url: &str, pubkey: &[u8; 32]) -> Result<Vec<u8>> {
     let body = serde_json::json!({
         "jsonrpc": "2.0", "id": 1, "method": "getAccountInfo",
         "params": [
@@ -293,7 +314,7 @@ async fn rpc_get_account_data(rpc_url: &str, pubkey: &[u8; 32]) -> Result<Vec<u8
             { "commitment": "confirmed", "encoding": "base64" }
         ]
     });
-    let resp: serde_json::Value = reqwest::Client::new()
+    let resp: serde_json::Value = client
         .post(rpc_url)
         .json(&body)
         .send()
@@ -306,7 +327,7 @@ async fn rpc_get_account_data(rpc_url: &str, pubkey: &[u8; 32]) -> Result<Vec<u8
     Ok(base64::Engine::decode(&base64::engine::general_purpose::STANDARD, data_b64)?)
 }
 
-async fn rpc_send_transaction(rpc_url: &str, tx_b64: &str) -> Result<String> {
+async fn rpc_send_transaction(client: &reqwest::Client, rpc_url: &str, tx_b64: &str) -> Result<String> {
     let body = serde_json::json!({
         "jsonrpc": "2.0", "id": 1, "method": "sendTransaction",
         "params": [
@@ -314,7 +335,7 @@ async fn rpc_send_transaction(rpc_url: &str, tx_b64: &str) -> Result<String> {
             { "skipPreflight": true, "encoding": "base64", "maxRetries": 3 }
         ]
     });
-    let resp: serde_json::Value = reqwest::Client::new()
+    let resp: serde_json::Value = client
         .post(rpc_url)
         .json(&body)
         .send()
@@ -328,4 +349,33 @@ async fn rpc_send_transaction(rpc_url: &str, tx_b64: &str) -> Result<String> {
         .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("missing signature in RPC response"))
+}
+
+async fn rpc_confirm_transaction(client: &reqwest::Client, rpc_url: &str, sig: &str) -> Result<()> {
+    let body = serde_json::json!({
+        "jsonrpc": "2.0", "id": 1, "method": "getSignatureStatuses",
+        "params": [[sig], { "searchTransactionHistory": false }]
+    });
+    for _ in 0..CONFIRM_POLLS {
+        let resp: serde_json::Value = client
+            .post(rpc_url)
+            .json(&body)
+            .send()
+            .await?
+            .json()
+            .await?;
+        if let Some(status) = resp["result"]["value"][0].as_object() {
+            if let Some(err) = status.get("err") {
+                if !err.is_null() {
+                    anyhow::bail!("transaction failed: {err}");
+                }
+            }
+            match status.get("confirmationStatus").and_then(|v| v.as_str()) {
+                Some("confirmed") | Some("finalized") => return Ok(()),
+                _ => {}
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(CONFIRM_POLL_DELAY_SECS)).await;
+    }
+    anyhow::bail!("transaction {sig} not confirmed after {CONFIRM_POLLS} polls")
 }

@@ -19,6 +19,7 @@ COPY server-rs/crates/chain/Cargo.toml   ./crates/chain/
 COPY server-rs/crates/core/Cargo.toml    ./crates/core/
 COPY server-rs/crates/db/Cargo.toml      ./crates/db/
 COPY server-rs/crates/decode/Cargo.toml  ./crates/decode/
+COPY server-rs/crates/executor/Cargo.toml ./crates/executor/
 COPY server-rs/crates/prices/Cargo.toml  ./crates/prices/
 COPY server-rs/crates/scoring/Cargo.toml ./crates/scoring/
 COPY server-rs/crates/workers/Cargo.toml ./crates/workers/
@@ -31,11 +32,12 @@ RUN mkdir -p \
       crates/core/src \
       crates/db/src \
       crates/decode/src \
+      crates/executor/src \
       crates/prices/src \
       crates/scoring/src \
       crates/workers/src \
   && echo 'fn main() {}' > bin/src/main.rs \
-  && for crate in api chain core db decode prices scoring workers; do \
+  && for crate in api chain core db decode executor prices scoring workers; do \
        echo 'pub fn _stub() {}' > crates/$crate/src/lib.rs; \
      done
 

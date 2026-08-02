@@ -12,45 +12,28 @@
  *
  * The stored session is exposed via useSyncExternalStore (single source of
  * truth: localStorage), and only counts as authenticated while the stored
- * token is valid. apiFetch (utils.ts) reads the same token for Authorization.
+ * token is valid. apiFetch (lib/api.ts) reads the same token for Authorization.
  */
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { usePrivy, useToken } from "@privy-io/react-auth";
 import { useWalletCompat } from "./use-wallet-compat";
+import { getStoredToken, setStoredToken, subscribeToStorageChanges } from "./storage";
 
-const TOKEN_KEY = "arcadia_jwt";
 const AUTH_EVENT = "arcadia-auth-change";
-
-interface StoredSession {
-  token: string;
-}
 
 /* ── localStorage-backed session store ──────────────────────────────── */
 
-let cachedToken: string | null = null;
-
 function getSessionSnapshot(): string | null {
-  const token = localStorage.getItem(TOKEN_KEY);
-  cachedToken = token;
-  return token;
+  return getStoredToken();
 }
 
 function subscribeSession(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(AUTH_EVENT, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(AUTH_EVENT, onChange);
-  };
+  return subscribeToStorageChanges(AUTH_EVENT, onChange);
 }
 
 function writeToken(token: string | null) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
+  setStoredToken(token);
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 

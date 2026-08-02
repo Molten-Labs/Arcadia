@@ -9,17 +9,8 @@ import { useMemo } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets, useSignMessage } from "@privy-io/react-auth/solana";
 import { Connection, PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
-
-const RPC_ENDPOINT =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
-
-let _connection: Connection | null = null;
-function getConnection(): Connection {
-  if (!_connection) {
-    _connection = new Connection(RPC_ENDPOINT, "confirmed");
-  }
-  return _connection;
-}
+import bs58 from "bs58";
+import { getConnection } from "./rpc";
 
 export interface AnchorWallet {
   publicKey: PublicKey;
@@ -70,7 +61,8 @@ export function useWalletCompat(): WalletCompat {
       const signed = Buffer.from(result.signedTransaction);
       const isVersioned = "version" in tx;
       return (isVersioned
-        ? (VersionedTransaction as any).deserialize(signed)
+        // @ts-expect-error — VersionedTransaction.deserialize is not typed in @solana/web3.js v1
+        ? VersionedTransaction.deserialize(signed)
         : Transaction.from(signed)) as T;
     };
     return fn;
@@ -91,7 +83,7 @@ export function useWalletCompat(): WalletCompat {
       });
       const sig = typeof result.signature === "string"
         ? result.signature
-        : Buffer.from(result.signature).toString("hex");
+        : bs58.encode(result.signature);
       await conn.confirmTransaction(sig, "confirmed");
       return sig;
     };

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { apiFetch } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 import { formatUSD, type TraderListItem } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";

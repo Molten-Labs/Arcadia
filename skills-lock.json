@@ -19,6 +19,18 @@
       "skillPath": "skills/brandkit/SKILL.md",
       "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
     },
+    "code-refactor-review": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-refactor-review/SKILL.md",
+      "computedHash": "34c6d4ab2fc595584982a608c1ce3f127347d6424340e37112a6514d574f338c"
+    },
+    "create-draft-pr": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/create-draft-pr/SKILL.md",
+      "computedHash": "c34789875cf4aa397d38c62cea6a89872c6c3a57a9f5163f59cea572f8115836"
+    },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
@@ -48,6 +60,18 @@
       "sourceType": "github",
       "skillPath": "skills/output-skill/SKILL.md",
       "computedHash": "26bd29ce4c5e02c7666b2d503609bf466bd32290822e91f0e984147048dbb924"
+    },
+    "ga": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ga/SKILL.md",
+      "computedHash": "eed1b8d93bffe4ec646a4e3f1dcf0ab4f1bd2f86971f6a8d0fd8465e3e2f8e2f"
+    },
+    "ga-pr": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ga-pr/SKILL.md",
+      "computedHash": "074cd389373046933f319951e68db75c2cba28522c72047f27c8f73192dce9b3"
     },
     "gpt-taste": {
       "source": "Leonxlnx/taste-skill",
@@ -109,6 +133,18 @@
       "skillPath": "skills/pick-ui-library/SKILL.md",
       "computedHash": "f8d4d2cf4677bf54b14f35f62a741add93541bfcb67863315a40164365161b49"
     },
+    "pit-of-success": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pit-of-success/SKILL.md",
+      "computedHash": "54c6bf75bb782b5892a3468d481fb6decdf6d20b7190c03566efffeadcc76696"
+    },
+    "prepare-branch-context": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/prepare-branch-context/SKILL.md",
+      "computedHash": "8f03524941a6ad812bd0318615071992d0743c3a1b2be553a8598d35adbade58"
+    },
     "prototype": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
@@ -144,6 +180,18 @@
       "sourceType": "github",
       "skillPath": "skills/text-to-lottie/SKILL.md",
       "computedHash": "4cd924abfa684018fa84c8b02068a7f490ad5828b9823906054e747776a19bfb"
+    },
+    "ux-flow-plan": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ux-flow-plan/SKILL.md",
+      "computedHash": "b0a2e49cb08061b008591c2725eb353724623c7cf2c0135e3ad23b1f1c9cc3df"
+    },
+    "zero-tech-debt": {
+      "source": "jnsahaj/skills",
+      "sourceType": "github",
+      "skillPath": "skills/zero-tech-debt/SKILL.md",
+      "computedHash": "59567dcf7aa66db3b7d32e943b495e20161ba06f6aa084e7a4c126ee044667d5"
     }
   }
 }

@@ -6,6 +6,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { ArrowRight, Check, Loader2, Wallet, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getStoredToken, setStoredToken } from "@/lib/storage";
 
 type OnboardingStep = "role" | "wallet" | "profile" | "done";
 type Role = "trader" | "investor" | "both" | null;
@@ -53,7 +54,7 @@ export default function OnboardingPage() {
         localStorage.setItem(ROLE_KEY, role);
       }
 
-      const token = localStorage.getItem("arcadia_jwt");
+      const token = getStoredToken();
 
       // Initialize trader profile in the backend
       if ((role === "trader" || role === "both") && token) {
@@ -70,7 +71,7 @@ export default function OnboardingPage() {
         // Store refreshed JWT with handle+profile embedded
         if (res?.ok) {
           const body = await res.json().catch(() => ({})) as { jwt?: string };
-          if (body.jwt) localStorage.setItem("arcadia_jwt", body.jwt);
+          if (body.jwt) setStoredToken(body.jwt);
         }
       }
 

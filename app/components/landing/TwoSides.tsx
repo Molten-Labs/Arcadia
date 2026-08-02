@@ -15,9 +15,9 @@ const SIDES = [
 function Flow({ side }: { side: "traders" | "investors" }) {
   const data = TWO_SIDES[side];
   const chipClass =
-    data.accent === "acid"
-      ? "bg-acid text-void shadow-[0_0_16px_color-mix(in_srgb,var(--color-acid)_40%,transparent)]"
-      : "bg-cyan text-void shadow-[0_0_16px_color-mix(in_srgb,var(--color-cyan)_40%,transparent)]";
+    side === "traders"
+      ? "bg-acid text-void"
+      : "border border-acid/40 text-acid";
 
   return (
     <div>
@@ -26,7 +26,7 @@ function Flow({ side }: { side: "traders" | "investors" }) {
         {data.steps.map((step) => (
           <div
             key={step.n}
-            className="group acid-int rounded-[18px] border border-white/10 bg-gradient-to-br from-panel/90 to-void/85 p-[1.375rem]"
+            className="group rounded-[18px] border border-white/10 bg-onyx/70 p-[1.375rem] transition-colors duration-300 hover:border-acid/25 motion-reduce:transition-none"
           >
             <span className={`mb-3.5 grid h-[34px] w-[34px] place-items-center rounded-[10px] font-mono font-bold transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:transform-none ${chipClass}`}>
               {step.n}

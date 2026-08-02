@@ -15,13 +15,6 @@ import { IDL } from "./arcadia-idl";
 
 export const PROGRAM_ID = new PublicKey("FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd");
 
-export const HELIUS_RPC =
-  process.env.NEXT_PUBLIC_HELIUS_RPC ?? "https://api.devnet.solana.com";
-
-export function getConnection(): Connection {
-  return new Connection(HELIUS_RPC, "confirmed");
-}
-
 // ── PDA helpers ──────────────────────────────────────────────────────────────
 
 export function findPlatformConfig(): [PublicKey, number] {

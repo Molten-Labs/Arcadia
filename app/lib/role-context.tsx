@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useWalletCompat } from "@/lib/use-wallet-compat";
+import { subscribeToStorageChanges } from "@/lib/storage";
 
 export type ArcadiaRole = "trader" | "investor" | null;
 
@@ -41,12 +42,7 @@ function getRoleSnapshot(): ArcadiaRole {
 }
 
 function subscribeRole(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  window.addEventListener(ROLE_EVENT, onChange);
-  return () => {
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener(ROLE_EVENT, onChange);
-  };
+  return subscribeToStorageChanges(ROLE_EVENT, onChange);
 }
 
 export function RoleProvider({ children }: { children: ReactNode }) {

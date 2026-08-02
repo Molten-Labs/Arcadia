@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiFetch } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 import { formatUSD, type TraderProfile, type DailyPnL } from "@/lib/types";
 
 const FALLBACK_HANDLE = "nova";

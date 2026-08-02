@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useWalletCompat } from "@/lib/use-wallet-compat";
-import { apiFetch } from "./utils";
+import { apiFetch } from "./api";
 
 export interface MeResponse {
   role: "trader" | "investor" | "both";

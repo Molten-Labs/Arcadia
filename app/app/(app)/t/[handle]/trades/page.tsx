@@ -6,7 +6,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Download } from "lucide-react";
 
-import { apiFetch, cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { formatUSD, type TraderProfile } from "@/lib/types";
 import { ErrorState } from "@/components/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";

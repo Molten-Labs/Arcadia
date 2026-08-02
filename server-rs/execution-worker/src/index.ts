@@ -99,6 +99,40 @@ app.post("/trade/close", async (req, res) => {
   }
 });
 
+// ── POST /trade/snapshot ─────────────────────────────────────────────────────
+// Body: { seedBase58, market, direction? }
+//
+// Reads the live on-chain FlashTrade position so the terminal can render real
+// entry/size/PnL/liquidation data for the execution wallet. Returns null when
+// no position is open.
+app.post("/trade/snapshot", async (req, res) => {
+  try {
+    const { seedBase58, market, direction = "long" } = req.body;
+    if (!seedBase58 || !market) {
+      return res.status(400).json({ error: "missing required fields: seedBase58, market" });
+    }
+
+    const seed = bs58.decode(seedBase58);
+    const {
+      createFlashTradeExecutionClient,
+      resolveFlashTradeMarket,
+      readFlashTradePositionSnapshot,
+    } = await import("../../app/lib/flashtrade/v2.js");
+
+    const client = createFlashTradeExecutionClient(seed);
+    const resolved = resolveFlashTradeMarket({ targetSymbol: market, direction, allowManualFallback: true });
+    const snapshot = await readFlashTradePositionSnapshot({
+      executionClient: client,
+      resolvedMarket: resolved,
+    });
+
+    res.json({ success: true, position: snapshot });
+  } catch (err: any) {
+    console.error("/trade/snapshot error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /health ───────────────────────────────────────────────────────────────
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
