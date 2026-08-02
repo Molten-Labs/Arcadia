@@ -7,6 +7,7 @@ import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { ArrowRight, Check, Loader2, Wallet, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getStoredToken, setStoredToken } from "@/lib/storage";
+import { Providers } from "@/components/providers";
 
 type OnboardingStep = "role" | "wallet" | "profile" | "done";
 type Role = "trader" | "investor" | "both" | null;
@@ -15,6 +16,14 @@ const ROLE_KEY = "arcadia_role";
 const ONBOARDING_KEY = "arcadia_onboarding_completed";
 
 export default function OnboardingPage() {
+  return (
+    <Providers>
+      <OnboardingInner />
+    </Providers>
+  );
+}
+
+function OnboardingInner() {
   const router = useRouter();
   const privy = usePrivy();
   const { connected, publicKey } = useWalletCompat();

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 
 import { apiFetch } from "@/lib/api";
 import { formatUSD, type TraderListItem } from "@/lib/types";
@@ -40,7 +40,21 @@ function AvatarCell({ handle }: { handle: string }) {
  * fallback), shows the top six by score, and links each row into the app. Query
  * shape + routes preserved from the legacy landing.
  */
+const landingQueryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: 1 },
+  },
+});
+
 export function LiveLeaderboard() {
+  return (
+    <QueryClientProvider client={landingQueryClient}>
+      <LiveLeaderboardInner />
+    </QueryClientProvider>
+  );
+}
+
+function LiveLeaderboardInner() {
   const { data, isLoading } = useQuery<TraderListItem[]>({
     queryKey: ["traders"],
     queryFn: () => apiFetch<TraderListItem[]>("/traders"),
