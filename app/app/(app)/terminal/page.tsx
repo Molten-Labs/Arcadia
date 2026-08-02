@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation";
 import { useWalletCompat } from "@/lib/use-wallet-compat";
 import dynamic from "next/dynamic";
-import { Activity, ChevronDown, Maximize2, Search, Shield, X } from "lucide-react";
+import { Activity, ChevronDown, Maximize2, Search, X } from "lucide-react";
 
 import { TerminalOrderForm } from "@/components/pages/trader/TerminalOrderForm";
 import type { Direction, OrderType } from "@/components/pages/trader/terminal-types";
@@ -66,6 +66,16 @@ interface LivePosition {
   liq: number;
 }
 
+interface PaperPosition {
+  id: string;
+  market: string;
+  direction: Direction;
+  sizeUsd: number;
+  leverage: number;
+  entryPx: number;
+  openedAt: number;
+}
+
 function mapLivePosition(p: FlashPosition): LivePosition {
   return {
     mt_id: p.venuePositionKey,
@@ -93,10 +103,10 @@ function TerminalContent() {
   const [sizeUSD, setSizeUSD] = useState("100");
   const [leverage, setLeverage] = useState(2);
   const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([]);
+  const [paperPosition, setPaperPosition] = useState<PaperPosition | null>(null);
   const [bottomTab, setBottomTab] = useState<BottomTab>("positions");
   const [interval, setInterval_] = useState("15m");
   const [marketOpen, setMarketOpen] = useState(false);
-  const [showDuel, setShowDuel] = useState(false);
 
   const [depositOpen, setDepositOpen] = useState(
     () => searchParams.get("deposit") === "1",
@@ -124,10 +134,40 @@ function TerminalContent() {
   const fundingRate = snap?.fundingRatePercent ?? 0;
 
   // Live Flash position → display row (one position per account/market).
-  const livePosition = useMemo<LivePosition | null>(
+  const realLive = useMemo<LivePosition | null>(
     () => (position ? mapLivePosition(position) : null),
     [position],
   );
+
+  // Paper (demo) position, no devnet seed pasted. PnL/liquidation are computed
+  // live against the current mark so the terminal behaves like a real position.
+  const paperLive = useMemo<LivePosition | null>(() => {
+    const p = paperPosition;
+    if (!p) return null;
+    const entry = p.entryPx;
+    const mark = currentPrice ?? entry;
+    const notional = p.sizeUsd * p.leverage;
+    const pnlFrac =
+      p.direction === "long" ? (mark - entry) / entry : (entry - mark) / entry;
+    const upnl = notional * pnlFrac;
+    const liq =
+      p.direction === "long"
+        ? entry * (1 - 1 / p.leverage)
+        : entry * (1 + 1 / p.leverage);
+    return {
+      mt_id: p.id,
+      market: p.market,
+      direction: p.direction,
+      size_usd: p.sizeUsd,
+      leverage: p.leverage,
+      entry_px: entry,
+      opened_at: p.openedAt,
+      upnl,
+      liq,
+    };
+  }, [paperPosition, currentPrice]);
+
+  const livePosition = realLive ?? paperLive;
 
   const liveMarker: PositionMarker | null = livePosition
     ? {
@@ -177,15 +217,60 @@ function TerminalContent() {
   }, [depositOpen, closeDeposit]);
 
   // Real open: send to the Flash sidecar, then pull the on-chain position.
+// Open: paper (demo, no seed) → local position at live price; real → Flash sidecar.
   const openPosition = useCallback(async () => {
+    if (!seed.trim()) {
+      if (!currentPrice) return;
+      setPaperPosition({
+        id: `paper-${Date.now()}`,
+        market: `${symbol}/USD`,
+        direction,
+        sizeUsd: parseFloat(sizeUSD) || 100,
+        leverage,
+        entryPx: currentPrice,
+        openedAt: Math.floor(Date.now() / 1000),
+      });
+      return;
+    }
     const r = await open(market, direction, parseFloat(sizeUSD) || 100);
     if (r.ok) await refresh(market, direction);
-  }, [open, refresh, market, direction, sizeUSD]);
+  }, [seed, open, refresh, market, direction, sizeUSD, symbol, leverage, currentPrice]);
 
   // Real close: close on-chain via the sidecar, then record the realized trade.
   const closePosition = useCallback(
     async (id: string) => {
       if (!livePosition || livePosition.mt_id !== id) return;
+
+      // Paper (demo) close: settle locally against the live mark.
+      if (paperPosition && paperPosition.id === id) {
+        const entry = livePosition.entry_px;
+        const exit = currentPrice ?? entry;
+        const notional = livePosition.size_usd * livePosition.leverage;
+        const pnlFrac =
+          livePosition.direction === "long"
+            ? (exit - entry) / entry
+            : (entry - exit) / entry;
+        const pnl = notional * pnlFrac;
+        const fees = notional * 0.0002;
+        const trade: ClosedTrade = {
+          id: `paper-${Date.now()}`,
+          market: `${symbol}/USD`,
+          direction: livePosition.direction,
+          size_usd: livePosition.size_usd,
+          leverage: livePosition.leverage,
+          entry_px: entry,
+          exit_px: exit,
+          realized_pnl: pnl - fees,
+          fees_usd: fees,
+          opened_at: livePosition.opened_at,
+          closed_at: Math.floor(Date.now() / 1000),
+          was_liquidated: false,
+        };
+        setClosedTrades((prev) => [trade, ...prev.slice(0, 49)]);
+        setPaperPosition(null);
+        return;
+      }
+
       const side = livePosition.direction;
       const exitPx = currentPrice ?? livePosition.entry_px;
       const fees = livePosition.size_usd * 0.0002;
@@ -228,7 +313,7 @@ function TerminalContent() {
         }).catch(() => {});
       }
     },
-    [livePosition, currentPrice, symbol, market, close, publicKey, recordTrade, me],
+    [livePosition, currentPrice, paperPosition, symbol, market, close, publicKey, recordTrade, me],
   );
 
   return (
@@ -314,16 +399,6 @@ function TerminalContent() {
             </span>
           </div>
         </div>
-
-        {/* Start Duel */}
-        <button
-          type="button"
-          onClick={() => setShowDuel(!showDuel)}
-          className="flex h-7 items-center gap-1.5 rounded bg-acid px-3 text-[10px] font-black text-void mr-2"
-        >
-          <Shield size={11} />
-          Start Duel
-        </button>
 
         {/* Long / Short toggle */}
         <div className="flex shrink-0 items-center gap-0 border-l border-line">
@@ -468,11 +543,7 @@ function TerminalContent() {
             (!livePosition ? (
               <div className="flex h-full flex-col items-center justify-center gap-1.5">
                 <Activity size={18} className="text-faint opacity-50" />
-                <p className="text-xs text-faint">
-                  {execStatus === "no-seed"
-                    ? "Paste a Flash devnet seed to open a real position"
-                    : "No open position"}
-                </p>
+                <p className="text-xs text-faint">No open position</p>
               </div>
             ) : (
               <PositionTable position={livePosition} currentPrice={currentPrice} onClose={() => void closePosition(livePosition.mt_id)} />

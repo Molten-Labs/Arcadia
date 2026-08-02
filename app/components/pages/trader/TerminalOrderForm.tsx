@@ -112,7 +112,9 @@ export function TerminalOrderForm({
         <p className="text-[10px] leading-tight text-warning/90">
           {execStatus === "error"
             ? "Order failed. The execution sidecar is unreachable."
-            : "Real devnet positions. The seed is held in this tab only and never stored."}
+            : seed
+              ? "Real devnet positions. The seed is held in this tab only and never stored."
+              : "Demo mode — simulated position at live prices. Paste a devnet seed for real Flash execution."}
         </p>
       </div>
 
