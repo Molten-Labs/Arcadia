@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::transfer_checked;
-pub use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface, TransferChecked};
+use anchor_spl::token::transfer_checked;
+pub use anchor_spl::token::{Mint, Token, TokenAccount, TransferChecked};
 
 use crate::PROFILE_SEED;
 

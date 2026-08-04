@@ -379,7 +379,7 @@ fn set_capacity_rejects_invalid_tier() {
         fixture.config,
         fixture.profile,
         42_000_000_000,
-        4,
+        5,
     );
 
     assert!(tx_fails(

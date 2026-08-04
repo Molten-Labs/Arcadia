@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    nav_bearing_assets, realized_pnl, token::profile_signer_seeds,
-    token::transfer_checked_accounts, token::transfer_checked_accounts_with_signer, token::Mint,
-    token::TokenAccount, token::TokenInterface, trade_notional_cap, ArcadiaError, PlatformConfig,
+    nav_bearing_assets, realized_pnl,     token::profile_signer_seeds, token::transfer_checked_accounts,
+    token::transfer_checked_accounts_with_signer, token::Mint, token::Token,
+    token::TokenAccount, trade_notional_cap, ArcadiaError, PlatformConfig,
     TradeClosed, TraderProfile, MAX_NOTIONAL_BPS, PROFILE_STATUS_ACTIVE,
 };
 
@@ -21,23 +21,23 @@ pub struct RecordTrade<'info> {
         constraint = profile.status == PROFILE_STATUS_ACTIVE @ ArcadiaError::VaultNotActive
     )]
     pub profile: Account<'info, TraderProfile>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = profile,
         token::token_program = token_program
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = treasury_authority,
         token::token_program = token_program
     )]
-    pub treasury_token: InterfaceAccount<'info, TokenAccount>,
+    pub treasury_token: Account<'info, TokenAccount>,
     pub treasury_authority: Signer<'info>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token>,
 }
 
 #[allow(clippy::too_many_arguments)]

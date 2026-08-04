@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    is_fee_config_safe, token::Mint, token::TokenAccount, ArcadiaError, PlatformConfig,
-    PLATFORM_SEED,
+    is_fee_config_safe, token::Mint, token::Token, token::TokenAccount, ArcadiaError,
+    PlatformConfig, PLATFORM_SEED,
 };
 
 #[derive(Accounts)]
@@ -17,9 +17,9 @@ pub struct InitializePlatform<'info> {
         bump
     )]
     pub config: Account<'info, PlatformConfig>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(token::mint = base_mint)]
-    pub treasury_token: InterfaceAccount<'info, TokenAccount>,
+    pub treasury_token: Account<'info, TokenAccount>,
     pub system_program: Program<'info, System>,
 }
 

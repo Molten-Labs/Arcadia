@@ -3,8 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     checked_add_u64, checked_sub_u64, fee_from_bps, nav_per_share, profit_assets, tier_bps,
     token::{
-        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, TokenAccount,
-        TokenInterface,
+        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, Token, TokenAccount,
     },
     ArcadiaError, PlatformConfig, Settled, TraderProfile,
 };
@@ -16,7 +15,7 @@ pub struct Settle<'info> {
     pub config: Account<'info, PlatformConfig>,
     #[account(mut, has_one = base_mint, has_one = vault_token)]
     pub profile: Account<'info, TraderProfile>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = base_mint,
@@ -24,14 +23,14 @@ pub struct Settle<'info> {
         token::token_program = token_program,
         constraint = vault_token.key() != treasury_token.key() @ ArcadiaError::TokenConservationFailed
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(
         mut,
         token::mint = base_mint,
         token::token_program = token_program
     )]
-    pub treasury_token: InterfaceAccount<'info, TokenAccount>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub treasury_token: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(ctx: Context<Settle>) -> Result<()> {

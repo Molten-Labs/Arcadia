@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    token::{profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, TokenAccount, TokenInterface},
+    nav_bearing_assets,
+    token::{
+        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, Token, TokenAccount,
+    },
     ArcadiaError, ExecutionFunded, PlatformConfig, TraderProfile, PROFILE_STATUS_ACTIVE,
 };
 
@@ -18,26 +21,27 @@ pub struct FundExecution<'info> {
         constraint = profile.status == PROFILE_STATUS_ACTIVE @ ArcadiaError::VaultNotActive
     )]
     pub profile: Account<'info, TraderProfile>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = profile,
         token::token_program = token_program
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     /// CHECK: execution wallet ATA — validated by token program on transfer
     #[account(mut)]
     pub execution_wallet_ata: UncheckedAccount<'info>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(ctx: Context<FundExecution>, amount: u64) -> Result<()> {
     require!(amount > 0, ArcadiaError::ZeroAmount);
-    require!(
-        amount <= ctx.accounts.vault_token.amount,
-        ArcadiaError::InsufficientFunds
-    );
+    let fundable = nav_bearing_assets(
+        ctx.accounts.vault_token.amount,
+        ctx.accounts.profile.trader_claimable,
+    )?;
+    require!(amount <= fundable, ArcadiaError::InsufficientFunds);
 
     let vault_balance_before = ctx.accounts.vault_token.amount;
 
@@ -61,11 +65,7 @@ pub fn handler(ctx: Context<FundExecution>, amount: u64) -> Result<()> {
     let vault_delta = vault_balance_before
         .checked_sub(ctx.accounts.vault_token.amount)
         .ok_or(ArcadiaError::TokenConservationFailed)?;
-    require_eq!(
-        vault_delta,
-        amount,
-        ArcadiaError::TokenConservationFailed
-    );
+    require_eq!(vault_delta, amount, ArcadiaError::TokenConservationFailed);
 
     emit!(ExecutionFunded {
         profile: ctx.accounts.profile.key(),

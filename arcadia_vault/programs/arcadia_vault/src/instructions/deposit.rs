@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    checked_add_u64, shares_for_deposit,
-    token::{transfer_checked_accounts, Mint, TokenAccount, TokenInterface},
+    checked_add_u64, nav_bearing_assets, shares_for_deposit,
+    token::{transfer_checked_accounts, Mint, Token, TokenAccount},
     ArcadiaError, Deposited, InvestorAccount, InvestorPosition, TraderProfile, INVESTOR_SEED,
     POSITION_SEED, PROFILE_STATUS_ACTIVE,
 };
@@ -33,22 +33,22 @@ pub struct Deposit<'info> {
         bump
     )]
     pub position: Account<'info, InvestorPosition>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = profile,
         token::token_program = token_program
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = depositor,
         token::token_program = token_program
     )]
-    pub depositor_token: InterfaceAccount<'info, TokenAccount>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub depositor_token: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -71,7 +71,9 @@ pub fn handler(ctx: Context<Deposit>, amount: u64) -> Result<()> {
             ctx.accounts.profile.capacity_cap_usd > 0,
             ArcadiaError::CapacityNotSet
         );
-        let assets_after = checked_add_u64(total_assets_before, amount)?;
+        let capacity_base =
+            nav_bearing_assets(total_assets_before, ctx.accounts.profile.trader_claimable)?;
+        let assets_after = checked_add_u64(capacity_base, amount)?;
         require!(
             assets_after <= ctx.accounts.profile.capacity_cap_usd,
             ArcadiaError::CapacityExceeded

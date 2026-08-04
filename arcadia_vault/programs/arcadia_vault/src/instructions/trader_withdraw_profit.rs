@@ -3,8 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     checked_sub_u64, nav_bearing_assets,
     token::{
-        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, TokenAccount,
-        TokenInterface,
+        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, Token, TokenAccount,
     },
     ArcadiaError, ProfitWithdrawn, TraderProfile,
 };
@@ -14,7 +13,7 @@ pub struct TraderWithdrawProfit<'info> {
     pub trader: Signer<'info>,
     #[account(mut, has_one = trader, has_one = base_mint, has_one = vault_token)]
     pub profile: Account<'info, TraderProfile>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = base_mint,
@@ -22,15 +21,15 @@ pub struct TraderWithdrawProfit<'info> {
         token::token_program = token_program,
         constraint = vault_token.key() != trader_token.key() @ ArcadiaError::TokenConservationFailed
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = trader,
         token::token_program = token_program
     )]
-    pub trader_token: InterfaceAccount<'info, TokenAccount>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub trader_token: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn handler(ctx: Context<TraderWithdrawProfit>, amount: u64) -> Result<()> {

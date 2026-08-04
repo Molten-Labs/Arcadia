@@ -3,8 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     assets_for_shares, checked_add_u64, checked_sub_u64, nav_bearing_assets,
     token::{
-        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, TokenAccount,
-        TokenInterface,
+        profile_signer_seeds, transfer_checked_accounts_with_signer, Mint, Token, TokenAccount,
     },
     withdrawal_ready_ts, ArcadiaError, InvestorAccount, InvestorPosition, PlatformConfig,
     TraderProfile, WithdrawRequested, Withdrawn, INVESTOR_SEED, PLATFORM_SEED, POSITION_SEED,
@@ -18,7 +17,7 @@ pub struct RequestWithdraw<'info> {
         constraint = vault_token.mint == profile.base_mint @ ArcadiaError::Unauthorized
     )]
     pub profile: Account<'info, TraderProfile>,
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(
         mut,
         seeds = [POSITION_SEED, owner.key().as_ref(), profile.key().as_ref()],
@@ -85,22 +84,22 @@ pub struct ProcessWithdraw<'info> {
         constraint = position.profile == profile.key() @ ArcadiaError::Unauthorized
     )]
     pub position: Account<'info, InvestorPosition>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = profile,
         token::token_program = token_program
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     #[account(
         mut,
         token::mint = base_mint,
         token::authority = owner,
         token::token_program = token_program
     )]
-    pub owner_token: InterfaceAccount<'info, TokenAccount>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub owner_token: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
 }
 
 pub fn process_withdraw_handler(ctx: Context<ProcessWithdraw>) -> Result<()> {

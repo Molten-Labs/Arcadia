@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    token::Mint, token::TokenAccount, token::TokenInterface, ArcadiaError, PlatformConfig,
+    token::Mint, token::Token, token::TokenAccount, ArcadiaError, PlatformConfig,
     ProfileInitialized, TraderProfile, MAX_LEVERAGE_CEILING, NOT_FUNDABLE_TIER, PROFILE_SEED,
     PROFILE_STATUS_ACTIVE, SHARE_SCALE,
 };
@@ -20,7 +20,7 @@ pub struct InitializeProfile<'info> {
         bump
     )]
     pub profile: Account<'info, TraderProfile>,
-    pub base_mint: InterfaceAccount<'info, Mint>,
+    pub base_mint: Account<'info, Mint>,
     #[account(
         init,
         payer = trader,
@@ -28,9 +28,9 @@ pub struct InitializeProfile<'info> {
         token::authority = profile,
         token::token_program = token_program
     )]
-    pub vault_token: InterfaceAccount<'info, TokenAccount>,
+    pub vault_token: Account<'info, TokenAccount>,
     pub system_program: Program<'info, System>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
 }
 
