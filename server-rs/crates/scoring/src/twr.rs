@@ -12,11 +12,20 @@ use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 
+const HALF_LIFE_DAYS: f64 = 180.0;
+
 #[derive(Debug, Clone)]
 pub struct FlowPoint {
     pub date: NaiveDate,
     pub nav_before_flow: Decimal,
     pub nav_after_flow: Decimal,
+}
+
+#[derive(Debug, Clone)]
+pub struct WeightedReturn {
+    pub date: NaiveDate,
+    pub value: f64,
+    pub weight: f64,
 }
 
 /// Build a daily TWR equity index from daily NAV observations and flow points.
@@ -101,6 +110,44 @@ pub fn daily_returns(curve: &[(NaiveDate, Decimal)]) -> Vec<f64> {
         .collect()
 }
 
+
+/// Returns daily returns with exponentially decaying weights.
+///
+/// The most recent return has weight 1.0. Older returns decay according to
+/// the configured half-life.
+pub fn weighted_daily_returns(
+    curve: &[(NaiveDate, Decimal)],
+) -> Vec<WeightedReturn> {
+    if curve.len() < 2 {
+        return Vec::new();
+    }
+
+    let newest = curve.last().unwrap().0;
+
+    curve
+        .windows(2)
+        .filter_map(|w| {
+            let prev = w[0].1;
+            let curr = w[1].1;
+
+            if prev.is_zero() {
+                return None;
+            }
+
+            let age_days = (newest - w[1].0).num_days() as f64;
+            let weight = 2f64.powf(-age_days / HALF_LIFE_DAYS);
+
+            Some(WeightedReturn {
+                date: w[1].0,
+                value: ((curr - prev) / prev).try_into().unwrap_or(0.0),
+                weight,
+            })
+        })
+        .collect()
+}
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,7 +159,61 @@ mod tests {
             (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), dec!(1.0)),
             (NaiveDate::from_ymd_opt(2026, 1, 2).unwrap(), dec!(1.1)),
         ];
+
         let r = daily_returns(&curve);
+
+        assert_eq!(r.len(), 1);
         assert!((r[0] - 0.1).abs() < 1e-9);
     }
+
+    #[test]
+    fn weighted_returns_newest_has_weight_one() {
+        let curve = vec![
+            (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), dec!(1.0)),
+            (NaiveDate::from_ymd_opt(2026, 1, 2).unwrap(), dec!(1.1)),
+        ];
+
+        let weighted = weighted_daily_returns(&curve);
+
+        assert_eq!(weighted.len(), 1);
+        assert!((weighted[0].weight - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn older_returns_have_smaller_weight() {
+        let curve = vec![
+            (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), dec!(1.00)),
+            (NaiveDate::from_ymd_opt(2026, 1, 2).unwrap(), dec!(1.05)),
+            (NaiveDate::from_ymd_opt(2026, 4, 1).unwrap(), dec!(1.10)),
+            (NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(), dec!(1.15)),
+        ];
+
+        let weighted = weighted_daily_returns(&curve);
+
+        assert_eq!(weighted.len(), 3);
+
+        // Weights should increase as we get closer to the newest return.
+        assert!(weighted[0].weight < weighted[1].weight);
+        assert!(weighted[1].weight < weighted[2].weight);
+
+        // The newest return always has full weight.
+        assert!((weighted[2].weight - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn return_values_are_unchanged() {
+        let curve = vec![
+            (NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(), dec!(1.00)),
+            (NaiveDate::from_ymd_opt(2026, 1, 2).unwrap(), dec!(1.10)),
+            (NaiveDate::from_ymd_opt(2026, 1, 3).unwrap(), dec!(1.21)),
+        ];
+
+        let weighted = weighted_daily_returns(&curve);
+
+        assert!((weighted[0].value - 0.10).abs() < 1e-9);
+        assert!((weighted[1].value - 0.10).abs() < 1e-9);
+    }
+
+
 }
+

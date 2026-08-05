@@ -2,7 +2,11 @@
 ///
 /// All money intermediates use f64 — these are offchain scoring values, not
 /// user-facing dollar figures. Money columns in the DB stay as rust_decimal.
-use crate::twr::daily_returns;
+use crate::twr::{
+    daily_returns,
+    weighted_daily_returns,
+    WeightedReturn,
+};
 use arcadia_core::types::Trade;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
@@ -61,11 +65,65 @@ impl Metrics {
     }
 }
 
+
+fn weighted_mean(returns: &[WeightedReturn]) -> f64 {
+    let total_weight: f64 = returns.iter().map(|r| r.weight).sum();
+
+    if total_weight == 0.0 {
+        return 0.0;
+    }
+
+    returns
+        .iter()
+        .map(|r| r.value * r.weight)
+        .sum::<f64>()
+        / total_weight
+}
+
+fn weighted_variance(
+    returns: &[WeightedReturn],
+    mean: f64,
+) -> f64 {
+    let total_weight: f64 = returns.iter().map(|r| r.weight).sum();
+
+    if total_weight == 0.0 {
+        return 0.0;
+    }
+
+    returns
+        .iter()
+        .map(|r| r.weight * (r.value - mean).powi(2))
+        .sum::<f64>()
+        / total_weight
+}
+
+fn weighted_downside_variance(
+    returns: &[WeightedReturn],
+) -> f64 {
+    let downside: Vec<&WeightedReturn> = returns
+        .iter()
+        .filter(|r| r.value < RISK_FREE)
+        .collect();
+
+    if downside.is_empty() {
+        return 0.0;
+    }
+
+    let total_weight: f64 = downside.iter().map(|r| r.weight).sum();
+
+    downside
+        .iter()
+        .map(|r| r.weight * (r.value - RISK_FREE).powi(2))
+        .sum::<f64>()
+        / total_weight
+}
+
 pub fn compute(
     equity_curve: &[(NaiveDate, Decimal)],
     trades: &[Trade],
 ) -> Metrics {
     let returns = daily_returns(equity_curve);
+    let weighted_returns = weighted_daily_returns(equity_curve);
     let n = returns.len();
     let days = equity_curve.len();
 
@@ -73,25 +131,22 @@ pub fn compute(
         return Metrics::zero();
     }
 
-    let mean_ret = returns.iter().sum::<f64>() / n as f64;
+    let mean_ret = weighted_mean(&weighted_returns);
     let ann_ret  = (1.0 + mean_ret).powf(ANNUALISATION) - 1.0;
 
     // ── Total std dev & Sharpe ──────────────────────────────────────────────
-    let variance = returns.iter().map(|&r| (r - mean_ret).powi(2)).sum::<f64>() / n as f64;
+    let variance = weighted_variance(&weighted_returns, mean_ret);
     let daily_std = variance.sqrt();
     let ann_vol = daily_std * ANNUALISATION.sqrt();
     let sharpe = if daily_std < 1e-10 { 0.0 } else { mean_ret / daily_std * ANNUALISATION.sqrt() };
 
     // ── Sortino ────────────────────────────────────────────────────────────
-    let downside: Vec<f64> = returns
-        .iter()
-        .filter(|&&r| r < RISK_FREE)
-        .map(|&r| (r - RISK_FREE).powi(2))
-        .collect();
-    let downside_dev = if downside.is_empty() {
+    let downside_var = weighted_downside_variance(&weighted_returns);
+
+    let downside_dev = if downside_var < 1e-10 {
         1e-10
     } else {
-        (downside.iter().sum::<f64>() / downside.len() as f64).sqrt() * ANNUALISATION.sqrt()
+        downside_var.sqrt() * ANNUALISATION.sqrt()
     };
     let sortino = (ann_ret - RISK_FREE) / downside_dev;
 
@@ -153,11 +208,37 @@ fn clamp(v: f64, lo: f64, hi: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+    use crate::twr::WeightedReturn;
+    use chrono::NaiveDate;
 
     #[test]
     fn zero_trades_gives_zero() {
         let m = compute(&[], &[]);
         assert_eq!(m.trade_count, 0);
+    }
+    #[test]
+    fn weighted_mean_favors_recent_returns() {
+        let returns = vec![
+            WeightedReturn {
+                date: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap(),
+                value: -0.10,
+                weight: 0.25,
+            },
+            WeightedReturn {
+                date: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap(),
+                value: 0.10,
+                weight: 1.00,
+            },
+        ];
+
+        let arithmetic_mean =
+            returns.iter().map(|r| r.value).sum::<f64>() / returns.len() as f64;
+
+        let weighted = weighted_mean(&returns);
+
+        assert_eq!(arithmetic_mean, 0.0);
+        assert!(weighted > arithmetic_mean);
     }
 }
