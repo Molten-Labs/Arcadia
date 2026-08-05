@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "skills": {
+    "add-x-tweet": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/add-x-tweet/SKILL.md",
+      "computedHash": "8c8da25f1134f021daace5c537b933ec47e5e9f7c1e068c043f57666b7f6fe64"
+    },
+    "bklit-playground": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bklit-playground/SKILL.md",
+      "computedHash": "0ef6bb543bcb471fb57727216a28020d3da266f5d21be0b27b1163aa0e6f3588"
+    },
+    "bklit-ship": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bklit-ship/SKILL.md",
+      "computedHash": "08ebf48f1b79f567a0a93606cfc77ea2a7dc13009f23e9d1bf51b656faeb89b5"
+    },
+    "bklit-studio": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bklit-studio/SKILL.md",
+      "computedHash": "caba1f2d3b6e6588095df0f604289d7bb2f8eb84942b8436ffa4cdd97df8cf1a"
+    },
+    "bklit-studio-chart-performance": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/bklit-studio-chart-performance/SKILL.md",
+      "computedHash": "093d2ee09ed0a6ca307e2091ccc393896c49c8b0d614cc119b1222ba49dce988"
+    },
+    "bklit-ui": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": "skills/bklit-ui/SKILL.md",
+      "computedHash": "ace89f8b9a6d5d8f0367307f886cb9654065356db537df7b57b3d849aa503534"
+    },
+    "pr-open": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/pr-open/SKILL.md",
+      "computedHash": "90e2abbb893c87e951d1f3952d87c51e2c23c9d64423129f9b038ffc070cdb55"
+    },
+    "solana-audit": {
+      "source": "Berektassuly/solana-audit-skill",
+      "sourceType": "github",
+      "skillPath": "skill/SKILL.md",
+      "computedHash": "d22436234c718f6b9d55737c36115251f04a340b5643fc69e13d806325ecca65"
+    },
+    "solana-dev": {
+      "source": "solana-foundation/solana-dev-skill",
+      "sourceType": "github",
+      "skillPath": "skills/solana-dev/SKILL.md",
+      "computedHash": "a64f6667d9d9c7dbd29b2bbff727c6c67d6db0099b29cfbcb9ce791a7ab1b0c4"
+    },
+    "turborepo": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/turborepo/SKILL.md",
+      "computedHash": "65c73e2cbc0a64c52f8af30421789d59ba06365c27818beaf3e0f75ab72a28e0"
+    },
+    "unit-tests": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/unit-tests/SKILL.md",
+      "computedHash": "f304a5182f12945cc697ada0e81c0e349c6b1ea53876b094071f180294cbaa41"
+    },
+    "wiki-llms-txt": {
+      "source": "bklit/bklit-ui",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/wiki-llms-text/SKILL.md",
+      "computedHash": "34cc980ec4dce21191b75d15bfd40818306f878dd37fd558a6e65d7883b7dd9d"
+    }
+  }
+}

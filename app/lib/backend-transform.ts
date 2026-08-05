@@ -88,6 +88,7 @@ interface RawTraderProfile {
   daysActive?: Numeric;
   trade_count?: Numeric;
   style_tags?: string[];
+  is_owner?: boolean;
 }
 
 interface RawVaultInfo {
@@ -271,6 +272,7 @@ export function transformTraderProfile(
     style_tags: raw.style_tags ?? f.style_tags ?? [],
     max_leverage: f.max_leverage ?? 0,
     bio: f.bio ?? undefined,
+    is_owner: raw.is_owner ?? false,
   };
 }
 

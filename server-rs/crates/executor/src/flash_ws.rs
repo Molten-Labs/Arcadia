@@ -11,6 +11,7 @@ pub struct PositionMetrics {
     pub market_symbol: Option<String>,
     pub side_ui: Option<String>,
     pub entry_price_ui: Option<String>,
+    pub exit_price_ui: Option<String>,
     pub size_amount_ui: Option<String>,
     pub size_usd_ui: Option<String>,
     pub collateral_amount_ui: Option<String>,

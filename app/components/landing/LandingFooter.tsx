@@ -14,7 +14,7 @@ export function LandingFooter() {
             <Link
               href={LINKS.home}
               aria-label="Arcadia home"
-              className="flex items-center gap-2.5 font-display text-xl font-extrabold tracking-[-0.03em] text-ink uppercase"
+              className="flex items-center gap-2.5 font-display text-xl font-bold tracking-[-0.03em] text-ink uppercase"
             >
               <LogoMark />
               Arcadia

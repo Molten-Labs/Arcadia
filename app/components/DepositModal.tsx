@@ -95,7 +95,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
             <TraderAvatar handle={trader.handle} tier={trader.tier} size={38} />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold text-ink">@{trader.handle}</span>
+                <span className="text-sm font-bold text-ink">@{trader.handle}</span>
                 <TierChip tier={trader.tier} />
               </div>
               <p className="mt-0.5 font-mono text-[0.5rem] tracking-[0.2em] text-faint uppercase">
@@ -118,7 +118,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
           {stats.map((s, i) => (
             <div key={s.label} className={cn("px-3 py-3 text-center", i < 2 && "border-r border-line")}>
               <p className="mb-1 font-mono text-[0.5rem] tracking-[0.2em] text-faint uppercase">{s.label}</p>
-              <p className={cn("font-mono text-sm font-extrabold tracking-tight tabular-nums", s.className)}>{s.value}</p>
+              <p className={cn("font-mono text-sm font-bold tracking-tight tabular-nums", s.className)}>{s.value}</p>
             </div>
           ))}
         </div>
@@ -144,7 +144,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                   min="1"
                   autoFocus
                   aria-label="Deposit amount in USDC"
-                  className="w-full rounded-lg border border-line bg-void py-3 pr-3.5 pl-7 font-mono text-[1.625rem] font-extrabold tracking-tight text-ink outline-none transition-colors focus-visible:border-acid/60 focus-visible:ring-2 focus-visible:ring-acid/30"
+                  className="w-full rounded-lg border border-line bg-void py-3 pr-3.5 pl-7 font-mono text-[1.625rem] font-bold tracking-tight text-ink outline-none transition-colors focus-visible:border-acid/60 focus-visible:ring-2 focus-visible:ring-acid/30"
                 />
               </div>
 
@@ -180,7 +180,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
                 onClick={handlePrimary}
                 disabled={isConnected && !isValid}
                 className={cn(
-                  "w-full rounded-lg py-3 text-[0.9375rem] font-extrabold tracking-tight transition-all focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] motion-reduce:transform-none",
+                  "w-full rounded-lg py-3 text-[0.9375rem] font-bold tracking-tight transition-all focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void active:scale-[0.98] motion-reduce:transform-none",
                   !isConnected || isValid
                     ? "bg-acid text-void shadow-[0_0_28px_rgba(204,255,0,0.28)] hover:bg-acid/90"
                     : "cursor-not-allowed bg-panel-2 text-faint",
@@ -246,7 +246,7 @@ export function DepositModal({ trader, onClose }: DepositModalProps) {
               <div className="mx-auto mb-4 flex size-[52px] items-center justify-center rounded-full border border-success/30 bg-success/10">
                 <CheckCircle className="size-6 text-success" />
               </div>
-              <p className="mb-1.5 text-base font-extrabold text-ink">
+              <p className="mb-1.5 text-base font-bold text-ink">
                 {formatUSD(parsedAmount, 0)} USDC deposited
               </p>
               <p className="mx-auto mb-5 max-w-[320px] text-[0.8125rem] leading-relaxed text-muted">

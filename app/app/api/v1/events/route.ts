@@ -4,8 +4,9 @@
  * When the frontend executes Anchor transactions (deposit, withdraw, initialize profile),
  * it pushes the decoded event data here so the backend's scoring engine has it.
  *
- * With BACKEND_URL set, this proxies to POST /v1/events on the Rust API.
- * Without BACKEND_URL, it returns a mock acceptance response.
+ * Proxies to POST /v1/events on the Rust API. There is no mock fallback: without
+ * BACKEND_URL this returns 503. (The ingest worker also reads the chain directly,
+ * so these pushes are a best-effort supplement, not the source of truth.)
  */
 import { NextResponse } from "next/server";
 
@@ -14,7 +15,14 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "";
 export async function POST(req: Request) {
   const authHeader = req.headers.get("authorization") ?? "";
 
-  if (BACKEND_URL) {
+  if (!BACKEND_URL) {
+    return NextResponse.json(
+      { error: "Backend not configured" },
+      { status: 503 },
+    );
+  }
+
+  try {
     const body = await req.text();
     const upstream = await fetch(`${BACKEND_URL}/v1/events`, {
       method: "POST",
@@ -26,14 +34,7 @@ export async function POST(req: Request) {
     });
     const data = await upstream.json();
     return NextResponse.json(data, { status: upstream.status });
+  } catch {
+    return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
   }
-
-  // Mock acceptance
-  const body = await req.json().catch(() => ({})) as { events?: unknown[] };
-  const count = body.events?.length ?? 0;
-
-  return NextResponse.json({
-    accepted: count,
-    errors: [],
-  });
 }

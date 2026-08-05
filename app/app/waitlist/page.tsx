@@ -45,7 +45,7 @@ export default function WaitlistPage() {
             <div>
               <Reveal><Kicker>private beta</Kicker></Reveal>
               <Reveal delay={80}>
-                <h1 className="mt-5 font-display text-[clamp(2.5rem,8vw,5rem)] leading-[0.9] font-extrabold tracking-[-0.04em] text-ink uppercase">
+                <h1 className="mt-5 font-display text-[clamp(2.5rem,8vw,5rem)] leading-[0.9] font-bold tracking-[-0.04em] text-ink uppercase">
                   turn trading<br /><span className="text-acid">into capital.</span>
                 </h1>
               </Reveal>
@@ -73,7 +73,7 @@ export default function WaitlistPage() {
 
             <Reveal delay={240}>
               <div className="rounded-2xl border border-line bg-panel p-5 sm:p-6">
-                <p className="mb-4 font-display text-lg font-extrabold text-ink">join the waitlist</p>
+                <p className="mb-4 font-display text-lg font-bold text-ink">join the waitlist</p>
                 <WaitlistForm source="waitlist-page" />
               </div>
             </Reveal>

@@ -69,7 +69,10 @@ pub struct ProcessWithdraw<'info> {
     pub config: Account<'info, PlatformConfig>,
     #[account(mut, has_one = base_mint, has_one = vault_token)]
     pub profile: Account<'info, TraderProfile>,
-    /// CHECK: pubkey reference for PDA derivation and authority check
+    /// CHECK: pubkey reference for PDA derivation and authority check;
+    /// writable because it receives the closed position's rent when the
+    /// position is fully withdrawn.
+    #[account(mut)]
     pub owner: UncheckedAccount<'info>,
     #[account(
         mut,

@@ -89,7 +89,7 @@ export function PnLHeatmap({ data }: Props) {
           <div className="text-xs">
             <span className="font-medium" style={{ color: "var(--color-faint)" }}>Year P&L </span>
             <span
-              className="font-black tnum"
+              className="font-bold tnum"
               style={{ color: totalPnl >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
             >
               {formatPnl(totalPnl)}
@@ -127,7 +127,7 @@ export function PnLHeatmap({ data }: Props) {
         >
           <span className="font-mono" style={{ color: "var(--color-faint)" }}>{hovered.date}</span>
           <span
-            className="font-black tnum"
+            className="font-bold tnum"
             style={{ color: (hovered.pnl ?? 0) >= 0 ? "var(--color-success)" : "var(--color-danger)" }}
           >
             {hovered.pnl != null && hovered.pnl !== 0 ? formatPnl(hovered.pnl) : "No trades"}

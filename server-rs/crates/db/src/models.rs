@@ -120,12 +120,45 @@ pub struct DbScoreSnapshot {
     pub days_active: i32,
 }
 
-/// Slot-cursor row (tracks resume position for ingest worker).
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct DbIngestCursor {
-    pub id: i32,
-    pub last_slot: i64,
-    pub updated_at: DateTime<Utc>,
+/// Append-only execution event row (mirrors execution_event table).
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DbExecutionEvent {
+    pub id:               i64,
+    pub profile:          String,
+    pub venue:            String,
+    pub execution_wallet: String,
+    pub market:           String,
+    pub position_id:      String,
+    pub fill_signature:   String,
+    pub event_type:       String,
+    pub payload:          serde_json::Value,
+    pub recorded_at:      DateTime<Utc>,
+}
+
+/// A trade with execution provenance (superset of DbTrade for the pipeline).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DbFill {
+    pub signature:       String,
+    pub event_index:     i32,
+    pub slot:            i64,
+    pub profile:         String,
+    pub trader:          String,
+    pub market:          String,
+    pub direction:       i16,
+    pub size_usd:        Decimal,
+    pub leverage_x:      Decimal,
+    pub entry_px:        Decimal,
+    pub exit_px:         Decimal,
+    pub realized_pnl:    Decimal,
+    pub fees_usd:        Decimal,
+    pub was_liquidated:  bool,
+    pub opened_at:       DateTime<Utc>,
+    pub closed_at:       DateTime<Utc>,
+    pub venue:           String,
+    pub execution_wallet: String,
+    pub position_id:     String,
+    pub fill_signature:  String,
+    pub source:          String,
 }
 
 /// DB row mirrors execution_wallet table.

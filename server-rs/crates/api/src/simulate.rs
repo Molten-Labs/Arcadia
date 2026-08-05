@@ -81,6 +81,11 @@ pub async fn handler(
     headers: HeaderMap,
     Json(body): Json<SimTradeReq>,
 ) -> Result<Json<Value>, ApiError> {
+    // ── 0. Pipeline-authoritative gate ──────────────────────────────────────
+    if ctx.execution_only {
+        return Err(ApiError::Forbidden);
+    }
+
     // ── 1. Auth ───────────────────────────────────────────────────────────────
     let wallet = extract_wallet(&headers, &ctx.jwt_secret)?;
 

@@ -75,13 +75,11 @@ pub struct ScoreResult {
     pub ci_low: f64,
     /// 95% confidence interval upper bound
     pub ci_high: f64,
-    /// Raw quality composite before C × G adjustments ∈ [0, 1000]
-    pub quality_raw: f64,
 }
 
 pub fn compute(m: &Metrics, trade_count: u32) -> ScoreResult {
     if trade_count == 0 {
-        return ScoreResult { score: 0, confidence: 0.0, ci_low: 0.0, ci_high: 0.0, quality_raw: 0.0 };
+        return ScoreResult { score: 0, confidence: 0.0, ci_low: 0.0, ci_high: 0.0 };
     }
 
     // ── Normalize each metric → [0, 100] ─────────────────────────────────
@@ -106,12 +104,28 @@ pub fn compute(m: &Metrics, trade_count: u32) -> ScoreResult {
 
     // ── C: Confidence (logistic, prior μ=400, σ=125) ──────────────────────
     let n = trade_count as f64;
-    let confidence = 1.0 / (1.0 + (-(n - PRIOR_MU) / CI_BASE).exp());
+    let confidence_logistic = 1.0 / (1.0 + (-(n - PRIOR_MU) / CI_BASE).exp());
+    // Track-record duration folds into Confidence: a top tier must require
+    // spread-out calendar time, not brute-forced trade count. Logistic ramp
+    // centred at ~6 months; fresh (≤1 month) traders get ~no confidence.
+    let c_duration = 1.0 / (1.0 + (-(m.months_active - 6.0) / 1.5).exp());
+    let confidence = confidence_logistic * c_duration;
 
-    // ── G: Guard factor ────────────────────────────────────────────────────
+    // ── G: Guard factor (multiplicative) ───────────────────────────────────
     let g_liq = guard_factor(m.liq_rate, LIQ_RATE_FLOOR, 0.0, 1.0);
     let g_dd  = guard_factor(m.max_dd,   MAX_DD_FLOOR,   0.0, 1.0);
-    let g = g_liq.min(g_dd);
+    // Wash is an integrity signal: it scales the whole score down
+    // proportionally. Clean trader (0 signals) → 1.0; every signal fired
+    // linearly erodes G toward a floor; all hypotheses → near-zero.
+    let g_wash = match m.wash_total {
+        0 => 1.0,
+        total => {
+            let fired = m.wash_fired as f64;
+            let severity = (fired / total as f64).clamp(0.0, 1.0);
+            1.0 - severity
+        }
+    };
+    let g = g_liq * g_dd * g_wash;
 
     // ── Final score ────────────────────────────────────────────────────────
     let raw = q * confidence * g;
@@ -122,7 +136,7 @@ pub fn compute(m: &Metrics, trade_count: u32) -> ScoreResult {
     let ci_low  = (raw - ci_half).max(0.0);
     let ci_high = (raw + ci_half).min(1000.0);
 
-    ScoreResult { score, confidence, ci_low, ci_high, quality_raw: q }
+    ScoreResult { score, confidence, ci_low, ci_high }
 }
 
 /// Guard factor: 1.0 when v ≤ threshold, linearly decays to 0 at max_val.
@@ -144,6 +158,7 @@ mod tests {
             mean_return: 0.0015, downside_deviation: 0.15,
             liq_rate: 0.01, pct_profitable: 0.62, avg_leverage: 3.0,
             trade_count: 120, days_active: 180,
+            wash_fired: 0, wash_total: 4, months_active: 12.0,
         }
     }
 
@@ -178,5 +193,27 @@ mod tests {
         m.max_dd = 0.0;
         let s = compute(&m, 500);
         assert!(s.score > 0);
+    }
+
+    #[test]
+    fn wash_penalizes_score() {
+        let mut clean = good_metrics();
+        clean.wash_fired = 0;
+        let mut washed = good_metrics();
+        washed.wash_fired = 4; // all hypotheses fired
+        let s_clean = compute(&clean, 500);
+        let s_washed = compute(&washed, 500);
+        assert!(s_washed.score < s_clean.score, "wash must reduce score");
+    }
+
+    #[test]
+    fn duration_ramps_confidence() {
+        let mut fresh = good_metrics();
+        fresh.months_active = 0.5;
+        let mut mature = good_metrics();
+        mature.months_active = 18.0;
+        let s_fresh = compute(&fresh, 500);
+        let s_mature = compute(&mature, 500);
+        assert!(s_mature.score > s_fresh.score, "longer track record must score higher");
     }
 }

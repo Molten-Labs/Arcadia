@@ -185,9 +185,9 @@ export function ShareCard({ data, profileUrl }: ShareCardProps) {
               width: 30, height: 30, borderRadius: 8, flexShrink: 0,
               background: `linear-gradient(135deg, ${p.acid}, ${tc})`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: DISPLAY, fontSize: 15, fontWeight: 800, color: p.base,
+              fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: p.base,
             }}>A</div>
-            <span style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 800, color: p.ink, letterSpacing: "-0.025em" }}>
+            <span style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, color: p.ink, letterSpacing: "-0.025em" }}>
               arcadia
             </span>
           </div>
@@ -206,7 +206,7 @@ export function ShareCard({ data, profileUrl }: ShareCardProps) {
             background: `${tc}20`,
             border: `1.5px solid ${tc}40`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontFamily: DISPLAY, fontSize: 16, fontWeight: 800, color: tc,
+            fontFamily: DISPLAY, fontSize: 16, fontWeight: 700, color: tc,
           }}>{initials}</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
             <span style={{ fontFamily: MONO, fontSize: 18, fontWeight: 700, color: p.ink, letterSpacing: "-0.01em" }}>
@@ -222,7 +222,7 @@ export function ShareCard({ data, profileUrl }: ShareCardProps) {
         <div style={{
           fontFamily: DISPLAY,
           fontSize: 152,
-          fontWeight: 800,
+          fontWeight: 700,
           lineHeight: 0.88,
           letterSpacing: "-0.04em",
           color: p.ink,

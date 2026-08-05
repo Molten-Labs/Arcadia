@@ -59,9 +59,11 @@ export default function VaultPage() {
   const { data: classification } = useQuery<TraderClassification>({
     queryKey: ["classification", handle],
     queryFn: () => apiFetch(`/traders/${handle}/classification`),
-    enabled: !!handle,
+    enabled: !!handle && !!trader?.is_owner,
     staleTime: 120_000,
   });
+
+  const canSeeTrades = trader?.is_owner ?? false;
 
   const loading = traderLoading || vaultLoading;
 
@@ -135,7 +137,7 @@ export default function VaultPage() {
               <TraderAvatar handle={trader.handle} tier={trader.tier} size={56} />
               <div>
                 <div className="mb-1 flex flex-wrap items-center gap-2.5">
-                  <h1 className="font-display text-xl font-extrabold tracking-tight text-ink uppercase">
+                  <h1 className="font-display text-xl font-bold tracking-tight text-ink uppercase">
                     @{trader.handle}
                   </h1>
                   <TierChip tier={trader.tier} />
@@ -207,6 +209,7 @@ export default function VaultPage() {
               </div>
             </div>
 
+            {canSeeTrades ? (
             <div className="p-5">
               <div className="mb-4 flex items-center justify-between">
                 <PanelLabel>Trades ({trader.trades.length})</PanelLabel>
@@ -265,6 +268,7 @@ export default function VaultPage() {
                 </Table>
               )}
             </div>
+          ) : null}
           </div>
 
           {/* Right: withdraw + details */}

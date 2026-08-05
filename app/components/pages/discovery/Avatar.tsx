@@ -27,7 +27,7 @@ export function Avatar({
     <span
       aria-hidden
       className={cn(
-        "grid shrink-0 place-items-center rounded-xl font-display font-extrabold text-void",
+        "grid shrink-0 place-items-center rounded-xl font-display font-bold text-void",
         className,
       )}
       style={{

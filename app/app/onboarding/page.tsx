@@ -123,7 +123,7 @@ function OnboardingInner() {
           {/* ── Step 1: Role ─────────────────────────────────────────── */}
           {step === "role" && (
             <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-300">
-              <h1 className="mb-1 text-2xl font-black text-ink">Welcome to Arcadia</h1>
+              <h1 className="mb-1 text-2xl font-bold text-ink">Welcome to Arcadia</h1>
               <p className="mb-6 text-sm text-muted">Choose how you want to use the platform.</p>
               <div className="flex flex-col gap-2.5">
                 {roleOptions.map((opt) => (
@@ -147,7 +147,7 @@ function OnboardingInner() {
           {/* ── Step 2: Wallet (skip if already connected) ──────────── */}
           {step === "wallet" && !connected && (
             <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-300">
-              <h1 className="mb-1 text-2xl font-black text-ink">Connect a Wallet</h1>
+              <h1 className="mb-1 text-2xl font-bold text-ink">Connect a Wallet</h1>
               <p className="mb-6 text-sm text-muted">
                 Link a Solana wallet to use Arcadia. You can also do this later.
               </p>
@@ -185,7 +185,7 @@ function OnboardingInner() {
           {/* ── Step 3: Optional profile info ───────────────────────── */}
           {step === "profile" && (
             <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-300">
-              <h1 className="mb-1 text-2xl font-black text-ink">Almost done</h1>
+              <h1 className="mb-1 text-2xl font-bold text-ink">Almost done</h1>
               <p className="mb-6 text-sm text-muted">Add optional profile info (you can do this later).</p>
 
               <div className="space-y-3.5">
@@ -254,7 +254,7 @@ function OnboardingInner() {
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border border-success/30 bg-success/10">
                 <Check className="size-7 text-success" />
               </div>
-              <h1 className="text-xl font-black text-ink">You're all set!</h1>
+              <h1 className="text-xl font-bold text-ink">You're all set!</h1>
               <p className="mt-1 text-sm text-muted">Redirecting to the dashboard…</p>
             </div>
           )}

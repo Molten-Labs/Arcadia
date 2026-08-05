@@ -9,7 +9,7 @@ export function SideBadge({ direction }: { direction: "long" | "short" }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded px-1.5 py-0.5 font-mono text-[9px] font-extrabold tracking-[0.12em] uppercase",
+        "inline-flex rounded px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.12em] uppercase",
         long ? "bg-success/15 text-success" : "bg-danger/15 text-danger",
       )}
     >

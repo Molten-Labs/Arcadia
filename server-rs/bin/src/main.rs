@@ -59,6 +59,10 @@ async fn main() -> Result<()> {
     let admin_key = std::env::var("ADMIN_KEY")
         .unwrap_or_default();
 
+    let execution_only = std::env::var("EXECUTION_ONLY")
+        .map(|v| v != "0" && !v.eq_ignore_ascii_case("false"))
+        .unwrap_or(true);
+
     let api_state = AppState {
         db,
         redis,
@@ -66,10 +70,12 @@ async fn main() -> Result<()> {
         public_url,
         admin_key,
         cfg: ApiConfig::from_env(),
+        execution_only,
     };
 
     // ── Workers ───────────────────────────────────────────────────────────
     let wctx_ingest = worker_ctx.clone();
+    let wctx_sidecar = worker_ctx.clone();
     let wctx_score = worker_ctx.clone();
     let wctx_price = worker_ctx.clone();
     let wctx_exec = worker_ctx.clone();
@@ -79,6 +85,14 @@ async fn main() -> Result<()> {
         supervise("ingest", move || {
             let c = wctx_ingest.clone();
             async move { arcadia_workers::ingest::run(c).await }
+        })
+        .await;
+    });
+
+    let sidecar_task = tokio::spawn(async move {
+        supervise("sidecar", move || {
+            let c = wctx_sidecar.clone();
+            async move { arcadia_workers::sidecar::run(c).await }
         })
         .await;
     });
@@ -130,6 +144,7 @@ async fn main() -> Result<()> {
     // Wait for any task to finish (they shouldn't unless there's a fatal error)
     tokio::select! {
         _ = ingest_task  => tracing::error!("ingest supervisor exited"),
+        _ = sidecar_task => tracing::error!("sidecar supervisor exited"),
         _ = score_task   => tracing::error!("score supervisor exited"),
         _ = price_task   => tracing::error!("price supervisor exited"),
         _ = exec_task    => tracing::error!("executor supervisor exited"),

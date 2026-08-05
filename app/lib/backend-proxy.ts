@@ -6,10 +6,9 @@
  *
  * Failure semantics:
  *   - BACKEND_URL not set  → returns { kind: "not-configured" }
- *     (callers fall back to mock data — local dev mode)
+ *     (callers respond 503 — there is no mock fallback)
  *   - fetch throws/errors  → returns { kind: "error", message }
- *     (callers return an empty response, NOT mock data — production must
- *      surface real state even if it's empty)
+ *     (callers return 502 / empty response, never mock data)
  *   - success              → returns { kind: "ok", data, status, ok }
  *     (callers use real data, even if it's an empty array)
  */
@@ -70,14 +69,4 @@ export async function proxyToBackend(
 
 export function hasBackend(): boolean {
   return Boolean(BACKEND_URL);
-}
-
-/**
- * Helper for route handlers: returns true when the backend is NOT configured
- * (local dev mode) so callers can fall back to mock data. When the backend IS
- * configured but errored, callers should surface the empty/error state
- * instead of substituting mock data.
- */
-export function shouldUseMockFallback(result: ProxyResult): boolean {
-  return result.kind === "not-configured";
 }

@@ -65,7 +65,7 @@ export function GateConnector() {
             — Arcadia Layer —
           </p>
           <p
-            className="font-display font-extrabold tracking-[-0.03em] text-ink uppercase"
+            className="font-display font-bold tracking-[-0.03em] text-ink uppercase"
             style={{ fontSize: "clamp(1.1rem,2.6vw,1.9rem)", transform: "scaleX(1.05)", transformOrigin: "center" }}
           >
             Proof replaces trust.

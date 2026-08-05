@@ -24,7 +24,7 @@ export function TheScore() {
             <div className="relative grid min-h-[340px] place-items-center">
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 grid place-items-center font-display text-[clamp(6rem,20vw,15rem)] font-extrabold tracking-[-0.05em] uppercase select-none"
+                className="pointer-events-none absolute inset-0 grid place-items-center font-display text-[clamp(6rem,20vw,15rem)] font-bold tracking-[-0.05em] uppercase select-none"
                 style={ghostWord}
               >
                 PROVEN
@@ -32,7 +32,7 @@ export function TheScore() {
               <div className="relative z-10 text-center">
                 <ChromeText
                   as="div"
-                  className="font-display text-[clamp(7rem,24vw,17rem)] leading-[0.8] font-extrabold tracking-[-0.05em]"
+                  className="font-display text-[clamp(7rem,24vw,17rem)] leading-[0.8] font-bold tracking-[-0.05em]"
                 >
                   <CountUp value={912} />
                 </ChromeText>

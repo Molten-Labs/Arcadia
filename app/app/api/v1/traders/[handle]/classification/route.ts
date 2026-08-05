@@ -6,7 +6,10 @@ export async function GET(
   { params }: { params: Promise<{ handle: string }> },
 ) {
   const { handle } = await params;
-  const result = await proxyToBackend(`/v1/traders/${handle}/classification`);
+  const authHeader = req.headers.get("authorization");
+  const result = await proxyToBackend(`/v1/traders/${handle}/classification`, {
+    authHeader,
+  });
   if (result.kind === "ok") {
     return NextResponse.json(result.data, { status: result.status });
   }

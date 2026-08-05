@@ -9,6 +9,7 @@ export interface MeResponse {
   wallet: string | null;
   handle?: string;
   profile?: string;
+  execution_only?: boolean;
 }
 
 export function useMe() {

@@ -17,7 +17,7 @@ import {
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatUSD, type TradeRecord, type TraderProfile, type ScorePoint, type DailyPnL, type LeaderboardEntry, type TraderClassification } from "@/lib/types";
-import { useRole } from "@/lib/role-context";
+import { useWatchlist } from "@/components/pages/discovery/use-watchlist";
 import { EquityChart } from "@/components/EquityChart";
 import { ScoreHistoryChart } from "@/components/ScoreHistoryChart";
 import { PnLHeatmap } from "@/components/PnLHeatmap";
@@ -51,7 +51,6 @@ import { StatusPill } from "@/components/pages/discovery/StatusPill";
 import { AllocationBar } from "@/components/pages/discovery/AllocationBar";
 import { RiskRadar } from "@/components/pages/discovery/RiskRadar";
 import { SideBadge, SolscanAccountLink, SolscanTxLink } from "@/components/pages/discovery/trade-cells";
-import { useWatchlist } from "@/components/pages/discovery/use-watchlist";
 
 /* -- Panel header used across profile sections -- */
 function PanelHead({
@@ -281,8 +280,6 @@ function DrawdownTimeline({ trader }: { trader: TraderProfile }) {
 export default function TraderProfilePage() {
   const params = useParams();
   const handle = params?.handle as string;
-  const { role } = useRole();
-  const isInvestor = role === "investor";
   const { watchlist, toggle } = useWatchlist();
   const [showShare, setShowShare] = useState(false);
   const [showDeposit, setShowDeposit] = useState(false);
@@ -313,9 +310,11 @@ export default function TraderProfilePage() {
   const { data: classification } = useQuery<TraderClassification>({
     queryKey: ["classification", handle],
     queryFn: () => apiFetch(`/traders/${handle}/classification`),
-    enabled: !!handle,
+    enabled: !!handle && !!trader?.is_owner,
     staleTime: 120_000,
   });
+
+  const canSeeTrades = trader?.is_owner ?? false;
 
   /* Derive rank from the leaderboard if the trader is ranked there */
   const rank = (() => {
@@ -412,7 +411,7 @@ export default function TraderProfilePage() {
                     <div className="flex items-center gap-2">
                       <ChromeText
                         as="h1"
-                        className="font-display text-[clamp(1.9rem,5vw,3rem)] leading-none font-extrabold tracking-[-0.03em] uppercase"
+                        className="font-display text-[clamp(1.9rem,5vw,3rem)] leading-none font-bold tracking-[-0.03em] uppercase"
                       >
                         @{trader.handle}
                       </ChromeText>
@@ -530,10 +529,10 @@ export default function TraderProfilePage() {
               <div className="overflow-x-auto pb-1">
                 <TabsList className="w-max">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="trades">Trades</TabsTrigger>
+                  {canSeeTrades ? <TabsTrigger value="trades">Trades</TabsTrigger> : null}
                   <TabsTrigger value="dd">Due Diligence</TabsTrigger>
                   <TabsTrigger value="score">Score History</TabsTrigger>
-                  <TabsTrigger value="heatmap">P&amp;L Heatmap</TabsTrigger>
+                  {canSeeTrades ? <TabsTrigger value="heatmap">P&amp;L Heatmap</TabsTrigger> : null}
                 </TabsList>
               </div>
 
@@ -561,7 +560,7 @@ export default function TraderProfilePage() {
                   </div>
                 </Panel>
 
-                {!isInvestor ? (
+                {canSeeTrades ? (
                   <Panel className="overflow-hidden">
                     <PanelHead
                       label="Recent Trades"
@@ -581,12 +580,14 @@ export default function TraderProfilePage() {
               </TabsContent>
 
               {/* Trades */}
+              {canSeeTrades ? (
               <TabsContent value="trades">
                 <Panel className="overflow-hidden">
                   <PanelHead label={`All Trades // ${trader.trade_count} records`} />
                   <AllTradesTable trades={trader.trades} />
                 </Panel>
               </TabsContent>
+              ) : null}
 
               {/* Due Diligence */}
               <TabsContent value="dd">
@@ -610,6 +611,7 @@ export default function TraderProfilePage() {
               </TabsContent>
 
               {/* P&L Heatmap */}
+              {canSeeTrades ? (
               <TabsContent value="heatmap">
                 <Panel className="p-5">
                   <MonoLabel>Daily P&amp;L Heatmap</MonoLabel>
@@ -622,6 +624,7 @@ export default function TraderProfilePage() {
                   </div>
                 </Panel>
               </TabsContent>
+              ) : null}
             </Tabs>
           </div>
 

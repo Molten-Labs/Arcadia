@@ -40,7 +40,7 @@ export function SectionHeading({
   return (
     <Tag
       className={cn(
-        "origin-left font-display text-[clamp(2.1rem,6vw,4.4rem)] leading-[0.98] font-extrabold tracking-[-0.03em] text-ink uppercase",
+        "origin-left font-display text-[clamp(2.1rem,6vw,4.4rem)] leading-[0.98] font-bold tracking-[-0.03em] text-ink uppercase",
         className
       )}
       style={{ transform: "scaleX(1.05)" }}

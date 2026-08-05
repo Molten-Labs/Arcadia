@@ -83,6 +83,8 @@ export interface TraderProfile {
   style_tags: string[];
   max_leverage: number;
   bio?: string;
+  /** True when the requesting wallet owns this profile. Gates private strategy data in the UI. */
+  is_owner?: boolean;
 }
 
 export interface VaultInfo {

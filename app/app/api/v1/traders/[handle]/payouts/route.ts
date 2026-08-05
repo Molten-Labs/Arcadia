@@ -6,6 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ handle: string }> },
 ) {
   const { handle } = await params;
+  const authHeader = req.headers.get("authorization");
   const url = new URL(req.url);
   const limit = url.searchParams.get("limit") ?? "";
 
@@ -13,7 +14,7 @@ export async function GET(
     ? `/v1/traders/${handle}/payouts?limit=${encodeURIComponent(limit)}`
     : `/v1/traders/${handle}/payouts`;
 
-  const result = await proxyToBackend(path);
+  const result = await proxyToBackend(path, { authHeader });
   if (result.kind === "ok") {
     const data = Array.isArray(result.data) ? result.data : [];
     return NextResponse.json(data, { status: result.status });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { proxyToBackend, shouldUseMockFallback } from "@/lib/backend-proxy";
+import { proxyToBackend } from "@/lib/backend-proxy";
 import { transformPortfolio } from "@/lib/backend-transform";
 
 export async function GET(
@@ -17,31 +17,8 @@ export async function GET(
     );
     return NextResponse.json(transformed);
   }
-  if (shouldUseMockFallback(result)) {
-    return NextResponse.json([
-      {
-        profile: "ArcVlt1NovaXKJH3fZpJGJPmoLdWCqJrNnUjPrDDzEa",
-        trader_handle: "nova",
-        shares: 1200,
-        value_usd: 7080,
-        cost_basis_usd: 6000,
-        pnl_usd: 1080,
-        roi_pct: 18.0,
-      },
-      {
-        profile: "ArcVlt2VegaYKJH3fZpJGJPmoLdWCqJrNnUjPrDDzEb",
-        trader_handle: "vega",
-        shares: 800,
-        value_usd: 6460,
-        cost_basis_usd: 6000,
-        pnl_usd: 460,
-        roi_pct: 7.67,
-      },
-    ]);
-  }
-  // backend configured but returned non-OK — return empty portfolio
   return NextResponse.json(
-    [],
-    { status: result.kind === "error" ? result.status : 502 },
+    { error: "Backend unavailable", details: result.kind === "error" ? result.message : undefined },
+    { status: result.kind === "error" ? result.status : 503 },
   );
 }

@@ -169,6 +169,12 @@
       "skillPath": "skills/solana/SKILL.md",
       "computedHash": "e7b3c7e1538860c1cf88f1f733d26ed62b223469322022b4168d54c69818d38b"
     },
+    "solana-dev": {
+      "source": "solana-foundation/solana-dev-skill",
+      "sourceType": "github",
+      "skillPath": "skills/solana-dev/SKILL.md",
+      "computedHash": "a64f6667d9d9c7dbd29b2bbff727c6c67d6db0099b29cfbcb9ce791a7ab1b0c4"
+    },
     "stitch-design-taste": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",

@@ -58,7 +58,9 @@ export default function TradeHistoryPage() {
     );
   }
 
-  if (error || !trader) {
+  // Trade history is private to the profile owner. Logged-out visitors and
+  // non-owners get a 404-equivalent screen rather than an expose.
+  if (error || !trader || !trader.is_owner) {
     return (
       <div className="flex min-h-full items-center justify-center bg-void">
         <ErrorState message="Trader not found" onRetry={() => refetch()} />
@@ -174,7 +176,7 @@ export default function TradeHistoryPage() {
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-ink">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
               {`@${trader.handle} // Full Trade History`}
             </h1>
             <p className="mt-1 font-mono text-sm text-faint tabular-nums">

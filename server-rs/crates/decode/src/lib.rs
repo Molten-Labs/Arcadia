@@ -38,6 +38,7 @@ cached_disc!(disc_withdrawn,            "Withdrawn");
 cached_disc!(disc_trade_closed,         "TradeClosed");
 cached_disc!(disc_settled,              "Settled");
 cached_disc!(disc_profit_withdrawn,     "ProfitWithdrawn");
+cached_disc!(disc_execution_funded,     "ExecutionFunded");
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,7 @@ pub fn decode_event(data: &[u8]) -> Result<Option<ArcadiaEvent>> {
     try_decode!(disc_withdrawn,            RawWithdrawn,           Withdrawn);
     try_decode!(disc_settled,             RawSettled,              Settled);
     try_decode!(disc_profit_withdrawn,    RawProfitWithdrawn,      ProfitWithdrawn);
+    try_decode!(disc_execution_funded,    RawExecutionFunded,      ExecutionFunded);
 
     Ok(None)
 }
@@ -157,6 +159,14 @@ struct RawProfitWithdrawn {
     profile:    [u8; 32],
     trader:     [u8; 32],
     amount_usd: u64,
+}
+
+#[derive(BorshDeserialize)]
+struct RawExecutionFunded {
+    profile:          [u8; 32],
+    execution_wallet: [u8; 32],
+    amount_usd:       u64,
+    ts:               i64,
 }
 
 // ── Raw → domain type conversions ─────────────────────────────────────────────
@@ -274,6 +284,17 @@ impl From<RawProfitWithdrawn> for ProfitWithdrawn {
     }
 }
 
+impl From<RawExecutionFunded> for ExecutionFunded {
+    fn from(r: RawExecutionFunded) -> Self {
+        Self {
+            profile:          pubkey_to_b58(&r.profile),
+            execution_wallet: pubkey_to_b58(&r.execution_wallet),
+            amount_usd:       minor_to_dec(r.amount_usd),
+            ts:               ts_to_dt(r.ts),
+        }
+    }
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -292,5 +313,21 @@ mod tests {
         let data = [0u8; 16]; // all-zero discriminator → not recognized
         let result = decode_event(&data).unwrap();
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn decodes_real_devnet_deposit_log() {
+        // Base64 payload captured from a live devnet arcadia_vault tx.
+        let b64 = "wVHoFMiWtuBxfBcdfeFGTQnBFp2P87uu8H4vSGMOtYUJLpxp2klatJ5UZjIkQGAovAr8cwOvh2BVDiDrNDudbVHmV3BVOr8uQEtMAAAAAAC1fGdqAAAAAA==";
+        let line = format!("Program data: {b64}");
+        let event = decode_log_line(&line).unwrap().expect("should decode to an Arcadia event");
+        match event {
+            ArcadiaEvent::ExecutionFunded(e) => {
+                assert_eq!(e.profile.len(), 44); // base58 pubkey
+                assert_eq!(e.execution_wallet.len(), 44);
+                assert!(!e.amount_usd.is_zero());
+            }
+            other => panic!("expected ExecutionFunded, got {other:?}"),
+        }
     }
 }

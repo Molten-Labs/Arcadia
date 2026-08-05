@@ -14,6 +14,7 @@ pub enum ArcadiaEvent {
     TradeClosed(TradeClosed),
     Settled(Settled),
     ProfitWithdrawn(ProfitWithdrawn),
+    ExecutionFunded(ExecutionFunded),
 }
 
 // ── Event structs (decoded from borsh, onchain minor-unit values converted) ───
@@ -95,4 +96,12 @@ pub struct ProfitWithdrawn {
     pub profile: String,
     pub trader: String,
     pub amount_usd: Decimal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionFunded {
+    pub profile: String,
+    pub execution_wallet: String,
+    pub amount_usd: Decimal,
+    pub ts: DateTime<Utc>,
 }

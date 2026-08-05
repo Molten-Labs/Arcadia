@@ -162,7 +162,7 @@ export default function ReputationPage() {
                 }`}
               >
                 <span
-                  className={`font-mono text-[0.65rem] font-black tabular-nums ${
+                  className={`font-mono text-[0.65rem] font-bold tabular-nums ${
                     score >= m.score ? "text-acid" : "text-faint"
                   }`}
                 >
@@ -214,7 +214,7 @@ export default function ReputationPage() {
                               {s.weight}% weight
                             </span>
                           </div>
-                          <span className="font-mono text-xs font-black tabular-nums text-acid">
+                          <span className="font-mono text-xs font-bold tabular-nums text-acid">
                             {pts} pts
                           </span>
                         </div>
@@ -231,7 +231,7 @@ export default function ReputationPage() {
                 </div>
                 <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
                   <span className="text-xs font-medium text-faint">Total Score</span>
-                  <span className="font-mono text-xl font-black tabular-nums text-acid">
+                  <span className="font-mono text-xl font-bold tabular-nums text-acid">
                     {score}
                   </span>
                 </div>

@@ -4,8 +4,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation";
 import { useWalletCompat } from "@/lib/use-wallet-compat";
 import dynamic from "next/dynamic";
-import { Activity, ChevronDown, Maximize2, Search, X } from "lucide-react";
+import { Activity, ChevronDown, Maximize2, Search, X, Trash2, Minus, Circle } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { TerminalOrderForm } from "@/components/pages/trader/TerminalOrderForm";
 import type { Direction, OrderType } from "@/components/pages/trader/terminal-types";
 import { useFlashTradePrices } from "@/lib/use-flash-trade-prices";
@@ -15,6 +16,7 @@ import { useArcadiaVault } from "@/lib/use-arcadia-vault";
 import { useMe } from "@/lib/hooks";
 import { formatUSD } from "@/lib/types";
 import type { PositionMarker } from "@/components/TvChart";
+import type { ChartTool } from "@/components/TvChart";
 import type { FlashPosition } from "@/lib/use-flash-execution";
 
 const TvChart = dynamic(() => import("@/components/TvChart").then((m) => m.TvChart), {
@@ -107,6 +109,89 @@ function TerminalContent() {
   const [bottomTab, setBottomTab] = useState<BottomTab>("positions");
   const [interval, setInterval_] = useState("15m");
   const [marketOpen, setMarketOpen] = useState(false);
+
+  // Chart toolbar state
+  const [showVolume, setShowVolume] = useState(false);
+  const [showMA, setShowMA] = useState(false);
+  const [showEMA, setShowEMA] = useState(false);
+  const [tool, setTool] = useState<ChartTool>("crosshair");
+  const [clearKey, setClearKey] = useState(0);
+  const chartWrapRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Resizable / collapsible panels (persisted).
+  const [bottomH, setBottomH] = useState(() => {
+    const saved = typeof window !== "undefined" ? Number(localStorage.getItem("arcadia.terminal.bottomH")) : NaN;
+    return Number.isFinite(saved) && saved > 0 ? saved : 190;
+  });
+  const [bottomOpen, setBottomOpen] = useState(
+    () => typeof window === "undefined" || localStorage.getItem("arcadia.terminal.bottomOpen") !== "0",
+  );
+  const [orderW, setOrderW] = useState(() => {
+    const saved = typeof window !== "undefined" ? Number(localStorage.getItem("arcadia.terminal.orderW")) : NaN;
+    return Number.isFinite(saved) && saved >= 200 ? saved : 288;
+  });
+  const [orderOpen, setOrderOpen] = useState(
+    () => typeof window === "undefined" || localStorage.getItem("arcadia.terminal.orderOpen") !== "0",
+  );
+  const bottomDrag = useRef<{ startY: number; startH: number } | null>(null);
+  const orderDrag = useRef<{ startX: number; startW: number } | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("arcadia.terminal.bottomH", String(bottomH));
+    localStorage.setItem("arcadia.terminal.bottomOpen", bottomOpen ? "1" : "0");
+    localStorage.setItem("arcadia.terminal.orderW", String(orderW));
+    localStorage.setItem("arcadia.terminal.orderOpen", orderOpen ? "1" : "0");
+  }, [bottomH, bottomOpen, orderW, orderOpen]);
+
+  const startBottomResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    bottomDrag.current = { startY: e.clientY, startH: bottomH };
+    const onMove = (ev: PointerEvent) => {
+      const d = bottomDrag.current;
+      if (!d) return;
+      const next = d.startH + (d.startY - ev.clientY);
+      setBottomH(Math.min(Math.max(64, next), Math.round(window.innerHeight * 0.7)));
+    };
+    const onUp = () => {
+      bottomDrag.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [bottomH]);
+
+  const startOrderResize = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    orderDrag.current = { startX: e.clientX, startW: orderW };
+    const onMove = (ev: PointerEvent) => {
+      const d = orderDrag.current;
+      if (!d) return;
+      const next = d.startW + (ev.clientX - d.startX);
+      setOrderW(Math.min(Math.max(200, next), 440));
+    };
+    const onUp = () => {
+      orderDrag.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [orderW]);
+
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = chartWrapRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void el.requestFullscreen();
+  }, []);
 
   const [depositOpen, setDepositOpen] = useState(
     () => searchParams.get("deposit") === "1",
@@ -296,7 +381,7 @@ function TerminalContent() {
       };
       setClosedTrades((prev) => [trade, ...prev.slice(0, 49)]);
 
-      if (publicKey && recordTrade) {
+      if (publicKey && recordTrade && !me?.execution_only) {
         const profileAddr = me?.profile ?? publicKey.toBase58();
         recordTrade({
           profileAddress: profileAddr,
@@ -333,7 +418,7 @@ function TerminalContent() {
             <Search size={13} className="text-faint" />
             <span>{symbol}/USD</span>
             <span
-              className="rounded border border-acid/20 bg-acid/10 px-1.5 py-0.5 text-[10px] font-black text-acid"
+              className="rounded border border-acid/20 bg-acid/10 px-1.5 py-0.5 text-[10px] font-bold text-acid"
               title="Real venue feed"
             >
               {phoenix.status === "live" ? "LIVE" : phoenix.status === "stale" ? "STALE" : "…"}
@@ -368,7 +453,7 @@ function TerminalContent() {
         {currentPrice != null && (
           <div className="flex shrink-0 items-center gap-3 border-r border-line px-4">
             <span
-              className="text-[19px] font-black tabular-nums leading-none"
+              className="text-[19px] font-bold tabular-nums leading-none"
               style={{ color: isLong ? "var(--color-success)" : "var(--color-danger)" }}
             >
               {currentPrice.toFixed(2)}
@@ -449,13 +534,94 @@ function TerminalContent() {
             </button>
           );
         })}
+
         <div className="mx-1 h-4 w-px shrink-0 bg-line" />
+
+        {/* Indicators */}
         <button
           type="button"
-          className="flex h-6 w-7 items-center justify-center rounded hover:bg-panel-2"
-          aria-label="Fullscreen chart"
+          onClick={() => { setShowVolume(v => !v); }}
+          className="h-6 rounded px-2 text-[10px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+          style={{
+            background: showVolume ? "var(--color-acid)" : "transparent",
+            color: showVolume ? "var(--color-void)" : "var(--color-faint)",
+          }}
+          title="Volume"
         >
-          <Maximize2 size={11} className="text-faint" />
+          Vol
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowMA(v => !v); }}
+          className="h-6 rounded px-2 text-[10px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+          style={{
+            background: showMA ? "var(--color-acid)" : "transparent",
+            color: showMA ? "var(--color-void)" : "var(--color-faint)",
+          }}
+          title="Moving average (MA 20)"
+        >
+          MA
+        </button>
+        <button
+          type="button"
+          onClick={() => { setShowEMA(v => !v); }}
+          className="h-6 rounded px-2 text-[10px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+          style={{
+            background: showEMA ? "var(--color-acid)" : "transparent",
+            color: showEMA ? "var(--color-void)" : "var(--color-faint)",
+          }}
+          title="Exponential moving average (EMA 20)"
+        >
+          EMA
+        </button>
+
+        <div className="mx-1 h-4 w-px shrink-0 bg-line" />
+
+        {/* Drawing tools */}
+        <button
+          type="button"
+          onClick={() => { setTool(t => (t === "crosshair" ? "hline" : "crosshair")); }}
+          className="flex h-6 items-center gap-1 rounded px-2 text-[10px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+          style={{
+            background: tool === "hline" ? "var(--color-acid)" : "transparent",
+            color: tool === "hline" ? "var(--color-void)" : "var(--color-faint)",
+          }}
+          title="Horizontal line tool (click chart)"
+        >
+          <Minus size={10} />
+          H-Line
+        </button>
+        <button
+          type="button"
+          onClick={() => { setTool(t => (t === "crosshair" ? "marker" : "crosshair")); }}
+          className="flex h-6 items-center gap-1 rounded px-2 text-[10px] font-bold transition-colors active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+          style={{
+            background: tool === "marker" ? "var(--color-acid)" : "transparent",
+            color: tool === "marker" ? "var(--color-void)" : "var(--color-faint)",
+          }}
+          title="Marker tool (click a candle)"
+        >
+          <Circle size={10} />
+          Mark
+        </button>
+        <button
+          type="button"
+          onClick={() => setClearKey(k => k + 1)}
+          className="flex h-6 items-center gap-1 rounded px-2 text-[10px] font-bold text-faint transition-colors hover:text-danger active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+          title="Clear all drawings"
+        >
+          <Trash2 size={10} />
+        </button>
+
+        <div className="mx-1 h-4 w-px shrink-0 bg-line" />
+
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="flex h-6 w-7 items-center justify-center rounded hover:bg-panel-2"
+          aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen chart"}
+        >
+          {isFullscreen ? <Maximize2 size={11} className="text-acid" /> : <Maximize2 size={11} className="text-faint" />}
         </button>
         <div className="flex-1" />
       </div>
@@ -463,55 +629,91 @@ function TerminalContent() {
       {/* ── Main row ───────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Chart */}
-        <div className="relative min-w-0 flex-1 overflow-hidden">
+        <div ref={chartWrapRef} className="relative min-w-0 flex-1 overflow-hidden">
           <TvChart
             market={market}
             currentPrice={currentPrice}
             fullHeight
             externalCandles={phoenix.candles}
             positions={liveMarker ? [liveMarker] : []}
+            accountPnl={livePosition?.upnl}
+            showVolume={showVolume}
+            showMA={showMA}
+            showEMA={showEMA}
+            tool={tool}
+            clearKey={clearKey}
           />
           <div className="pointer-events-none absolute top-3 left-3 select-none" style={{ opacity: 0.35 }}>
-            <p className="text-xs font-black text-ink">{symbol} / US DOLLAR</p>
+            <p className="text-xs font-bold text-ink">{symbol} / US DOLLAR</p>
             <p className="text-[10px] text-ink">Phoenix mark · live</p>
           </div>
         </div>
 
         {/* Order form */}
-        <div className="w-72 shrink-0 overflow-hidden">
-          <TerminalOrderForm
-            direction={direction}
-            setDirection={setDirection}
-            orderType={orderType}
-            setOrderType={setOrderType}
-            sizeUSD={sizeUSD}
-            setSizeUSD={setSizeUSD}
-            leverage={leverage}
-            setLeverage={setLeverage}
-            currentPrice={currentPrice}
-            onSubmit={() => void openPosition()}
-            submitting={execStatus === "connecting"}
-            connected={connected}
-            market={market}
-            openDeposit={openDeposit}
-            seed={seed}
-            setSeed={setSeed}
-            execStatus={execStatus}
-          />
-        </div>
+        {orderOpen ? (
+          <div
+            className="flex shrink-0 overflow-hidden"
+            style={{ width: orderW }}
+          >
+            <div
+              onPointerDown={startOrderResize}
+              className="group relative w-1.5 shrink-0 cursor-ew-resize select-none"
+              title="Drag to resize"
+            >
+              <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-line transition-colors group-hover:bg-acid/50" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <TerminalOrderForm
+                direction={direction}
+                setDirection={setDirection}
+                orderType={orderType}
+                setOrderType={setOrderType}
+                sizeUSD={sizeUSD}
+                setSizeUSD={setSizeUSD}
+                leverage={leverage}
+                setLeverage={setLeverage}
+                currentPrice={currentPrice}
+                onSubmit={() => void openPosition()}
+                submitting={execStatus === "connecting"}
+                connected={connected}
+                market={market}
+                openDeposit={openDeposit}
+                seed={seed}
+                setSeed={setSeed}
+                execStatus={execStatus}
+              />
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOrderOpen(true)}
+            className="flex w-7 shrink-0 items-center justify-center border-l border-line bg-panel text-faint transition-colors hover:text-ink"
+            title="Show order panel"
+          >
+            <ChevronDown size={12} className="-rotate-90" />
+          </button>
+        )}
       </div>
 
       {/* ── Bottom panel ───────────────────────────────────────────── */}
       <div
         className="flex shrink-0 flex-col border-t border-line bg-panel"
-        style={{ height: 190 }}
+        style={{ height: bottomOpen ? bottomH : 40 }}
       >
+        <div
+          onPointerDown={startBottomResize}
+          className="group relative h-1.5 shrink-0 cursor-ns-resize select-none"
+          title="Drag to resize"
+        >
+          <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line transition-colors group-hover:bg-acid/50" />
+        </div>
         <div className="flex h-8 shrink-0 items-center border-b border-line">
           {(["positions", "history", "orders"] as const).map((t) => (
             <button
               key={t}
               type="button"
-              onClick={() => setBottomTab(t)}
+              onClick={() => { setBottomTab(t); setBottomOpen(true); }}
               className="h-full px-4 text-[11px] font-semibold whitespace-nowrap transition-colors motion-reduce:transition-none"
               style={{
                 color: bottomTab === t ? "var(--color-ink)" : "var(--color-faint)",
@@ -535,9 +737,19 @@ function TerminalContent() {
                 Close Position
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setBottomOpen((o) => !o)}
+              className="flex h-6 w-6 items-center justify-center rounded text-faint transition-colors hover:bg-panel-2 hover:text-ink active:scale-95 motion-reduce:transition-none motion-reduce:transform-none"
+              title={bottomOpen ? "Collapse panel" : "Expand panel"}
+              aria-label={bottomOpen ? "Collapse panel" : "Expand panel"}
+            >
+              <ChevronDown size={13} className={cn("transition-transform motion-reduce:transition-none", bottomOpen ? "" : "rotate-180")} />
+            </button>
           </div>
         </div>
 
+        {bottomOpen && (
         <div className="flex-1 overflow-y-auto">
           {bottomTab === "positions" &&
             (!livePosition ? (
@@ -608,6 +820,7 @@ function TerminalContent() {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

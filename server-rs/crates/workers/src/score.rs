@@ -33,38 +33,50 @@ async fn tick(ctx: &WorkerCtx) -> Result<()> {
 
 async fn score_one(ctx: &WorkerCtx, profile: &str, trader_shares: Decimal) -> Result<()> {
     // 1. Fetch equity curve and all trades from DB
-    let curve  = queries::get_equity_curve(&ctx.db, profile).await?;
+    let mut curve  = queries::get_equity_curve(&ctx.db, profile).await?;
     let trades = queries::get_vault_trades(&ctx.db, profile, 10_000, None).await?;
 
-    if curve.len() < 2 || trades.is_empty() {
-        tracing::debug!(profile, "not enough data for scoring — skipping");
+    if trades.is_empty() {
+        tracing::debug!(profile, "no trades — skipping");
         return Ok(());
+    }
+
+    // 1b. Seed the equity curve from trades when the DB has none (fresh
+    //     execution-pipeline profile). Without ≥2 points the engine silently
+    //     skips every profile — the F-2 starvation bug.
+    if curve.len() < 2 {
+        let core: Vec<arcadia_core::types::Trade> = trades.iter().map(to_core_trade).collect();
+        let seeded = metrics::derive_equity_curve(&core);
+        for (day, twr_nav) in &seeded {
+            let ep = arcadia_db::models::DbEquityPoint {
+                profile: profile.to_string(),
+                day: *day,
+                twr_nav: *twr_nav,
+                aum_usd: Decimal::ZERO,
+            };
+            if let Err(e) = queries::upsert_equity_point(&ctx.db, &ep).await {
+                tracing::error!(profile, day = %day, "equity seed upsert failed: {e:#}");
+            }
+        }
+        if seeded.is_empty() {
+            tracing::debug!(profile, "no equity points derivable — skipping");
+            return Ok(());
+        }
+        curve = seeded.iter().map(|&(day, twr_nav)| {
+            arcadia_db::models::DbEquityPoint {
+                profile: profile.to_string(),
+                day,
+                twr_nav,
+                aum_usd: Decimal::ZERO,
+            }
+        }).collect();
     }
 
     // 2. Convert DB rows to scoring-engine types
     let equity_pairs: Vec<(chrono::NaiveDate, Decimal)> =
         curve.iter().map(|ep| (ep.day, ep.twr_nav)).collect();
 
-    let core_trades: Vec<arcadia_core::types::Trade> = trades.iter().map(|t| {
-        arcadia_core::types::Trade {
-            signature:     t.signature.clone(),
-            event_index:   t.event_index,
-            slot:          t.slot,
-            profile:       t.profile.clone(),
-            trader:        t.trader.clone(),
-            market:        t.market.clone(),
-            direction:     t.direction,
-            size_usd:      t.size_usd,
-            leverage_x:    t.leverage_x,
-            entry_px:      t.entry_px,
-            exit_px:       t.exit_px,
-            realized_pnl:  t.realized_pnl,
-            fees_usd:      t.fees_usd,
-            was_liquidated: t.was_liquidated,
-            opened_at:     t.opened_at,
-            closed_at:     t.closed_at,
-        }
-    }).collect();
+    let core_trades: Vec<arcadia_core::types::Trade> = trades.iter().map(to_core_trade).collect();
 
     // 3. Run the scoring engine
     let m = metrics::compute(&equity_pairs, &core_trades);
@@ -125,4 +137,25 @@ async fn score_one(ctx: &WorkerCtx, profile: &str, trader_shares: Decimal) -> Re
     );
 
     Ok(())
+}
+
+fn to_core_trade(t: &arcadia_db::models::DbTrade) -> arcadia_core::types::Trade {
+    arcadia_core::types::Trade {
+        signature:     t.signature.clone(),
+        event_index:   t.event_index,
+        slot:          t.slot,
+        profile:       t.profile.clone(),
+        trader:        t.trader.clone(),
+        market:        t.market.clone(),
+        direction:     t.direction,
+        size_usd:      t.size_usd,
+        leverage_x:    t.leverage_x,
+        entry_px:      t.entry_px,
+        exit_px:       t.exit_px,
+        realized_pnl:  t.realized_pnl,
+        fees_usd:      t.fees_usd,
+        was_liquidated: t.was_liquidated,
+        opened_at:     t.opened_at,
+        closed_at:     t.closed_at,
+    }
 }

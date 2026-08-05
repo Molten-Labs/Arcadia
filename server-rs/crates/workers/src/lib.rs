@@ -8,6 +8,7 @@ pub mod ingest;
 pub mod oracle;
 pub mod price;
 pub mod score;
+pub mod sidecar;
 pub mod supervisor;
 
 pub mod executor;
@@ -31,6 +32,8 @@ pub struct WorkerConfig {
     pub price_interval_secs: u64,
     /// Program ID to subscribe to via Yellowstone.
     pub program_id: String,
+    /// JSON-RPC endpoint for chain polling (SOLANA_RPC_URL).
+    pub rpc_url: String,
     /// Yellowstone gRPC endpoint (requires grpc feature).
     pub yellowstone_endpoint: String,
     /// Yellowstone auth token (requires grpc feature).
@@ -52,6 +55,8 @@ impl WorkerConfig {
                 .ok().and_then(|s| s.parse().ok()).unwrap_or(5),
             program_id: std::env::var("PROGRAM_ID")
                 .unwrap_or_else(|_| "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd".into()),
+            rpc_url: std::env::var("SOLANA_RPC_URL")
+                .unwrap_or_else(|_| "https://api.devnet.solana.com".into()),
             yellowstone_endpoint: std::env::var("YELLOWSTONE_ENDPOINT")
                 .unwrap_or_else(|_| "https://grpc.your-provider.com".into()),
             yellowstone_token: std::env::var("YELLOWSTONE_TOKEN")

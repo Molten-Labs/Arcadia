@@ -27,6 +27,12 @@ pub async fn handler(
     headers: HeaderMap,
     Json(body): Json<EventsReq>,
 ) -> Result<Json<Value>, ApiError> {
+    // Pipeline-authoritative gate: capital-flow events are written by the
+    // execution pipeline only.
+    if ctx.execution_only {
+        return Err(ApiError::Forbidden);
+    }
+
     let wallet = extract_wallet(&headers, &ctx.jwt_secret)?;
 
     let mut accepted = 0usize;
@@ -124,7 +130,8 @@ async fn process_event(ctx: &AppState, event: &ArcadiaEvent, authed_wallet: &str
 
         ArcadiaEvent::Settled(..) |
         ArcadiaEvent::WithdrawRequested(..) |
-        ArcadiaEvent::ProfitWithdrawn(..) => {
+        ArcadiaEvent::ProfitWithdrawn(..) |
+        ArcadiaEvent::ExecutionFunded(..) => {
             // These are derived state changes tracked by the scoring worker
         }
     }

@@ -135,7 +135,7 @@ export function ScoreDial({
       <div className="absolute inset-0 grid place-items-center text-center">
         <div className="flex flex-col items-center">
           <span
-            className="acid-chrome font-display leading-none font-extrabold tracking-tight"
+            className="acid-chrome font-display leading-none font-bold tracking-tight"
             style={{ fontSize: size * 0.28 }}
           >
             <CountUp value={value} />

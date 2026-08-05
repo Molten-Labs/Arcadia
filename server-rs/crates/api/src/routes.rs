@@ -13,7 +13,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 // ── GET /v1/traders ───────────────────────────────────────────────────────────
@@ -71,6 +71,7 @@ pub async fn list_traders(State(ctx): State<AppState>) -> Result<Json<Value>, Ap
 pub async fn get_trader(
     State(ctx): State<AppState>,
     Path(handle): Path<String>,
+    headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
     let t = queries::get_trader_by_handle(&ctx.db, &handle)
         .await?
@@ -78,24 +79,32 @@ pub async fn get_trader(
 
     let snap   = queries::latest_score(&ctx.db, &t.profile).await?;
     let curve  = queries::get_equity_curve(&ctx.db, &t.profile).await?;
-    let trades = queries::get_vault_trades(&ctx.db, &t.profile, 50, None).await?;
+
+    // Privacy: per-trade strategy data is only served to the profile's own
+    // trader. Everyone else (anonymous or investors) gets aggregates only.
+    let is_owner = maybe_wallet(&headers, &ctx.jwt_secret).as_deref() == Some(&t.trader);
 
     let equity_curve: Vec<Value> = curve.iter().map(|ep| json!({
         "day": ep.day.to_string(),
         "nav": ep.twr_nav,
     })).collect();
 
-    let trade_list: Vec<Value> = trades.iter().map(|tr| json!({
-        "market":         tr.market,
-        "direction":      tr.direction,
-        "size_usd":       tr.size_usd.to_string(),
-        "leverage_x":     tr.leverage_x,
-        "realized_pnl":   tr.realized_pnl.to_string(),
-        "fees_usd":       tr.fees_usd.to_string(),
-        "was_liquidated": tr.was_liquidated,
-        "opened_at":      tr.opened_at,
-        "closed_at":      tr.closed_at,
-    })).collect();
+    let trade_list: Vec<Value> = if is_owner {
+        let trades = queries::get_vault_trades(&ctx.db, &t.profile, 50, None).await?;
+        trades.iter().map(|tr| json!({
+            "market":         tr.market,
+            "direction":      tr.direction,
+            "size_usd":       tr.size_usd.to_string(),
+            "leverage_x":     tr.leverage_x,
+            "realized_pnl":   tr.realized_pnl.to_string(),
+            "fees_usd":       tr.fees_usd.to_string(),
+            "was_liquidated": tr.was_liquidated,
+            "opened_at":      tr.opened_at,
+            "closed_at":      tr.closed_at,
+        })).collect()
+    } else {
+        Vec::new()
+    };
 
     Ok(Json(json!({
         "wallet":    t.trader,
@@ -110,8 +119,8 @@ pub async fn get_trader(
             "max_dd":         snap.as_ref().map(|s| s.max_dd).unwrap_or(Decimal::ZERO),
             "liq_rate":       snap.as_ref().map(|s| s.liq_rate).unwrap_or(Decimal::ZERO),
             "pct_profitable": snap.as_ref().map(|s| s.pct_profitable).unwrap_or(Decimal::ZERO),
-            "avg_leverage":   snap.as_ref().map(|s| s.avg_leverage).unwrap_or(Decimal::ZERO),
         },
+        "is_owner":           is_owner,
         "equity_curve":       equity_curve,
         "trades":             trade_list,
         "capacity": {
@@ -121,7 +130,7 @@ pub async fn get_trader(
         "aum_usd":            t.aum_usd.to_string(),
         "investors_count":    t.investors_count,
         "days_active":        curve.len() as i32,
-        "trade_count":        trades.len() as i32,
+        "trade_count":        queries::count_vault_trades(&ctx.db, &t.profile).await? as i32,
         "trader_self_funded": t.trader_self_funded,
         "deposits_open":      t.deposits_open,
     })))
@@ -161,8 +170,18 @@ pub struct TradesPagination {
 pub async fn get_vault_trades(
     State(ctx): State<AppState>,
     Path(profile): Path<String>,
+    headers: HeaderMap,
     Query(p): Query<TradesPagination>,
 ) -> Result<Json<Value>, ApiError> {
+    let trader = queries::get_trader_by_profile(&ctx.db, &profile)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+
+    // Per-trade strategy data is trader-only.
+    if maybe_wallet(&headers, &ctx.jwt_secret).as_deref() != Some(&trader.trader) {
+        return Ok(Json(json!([])));
+    }
+
     let limit  = p.limit.unwrap_or(50).min(200);
     let trades = queries::get_vault_trades(&ctx.db, &profile, limit, p.before).await?;
     let list: Vec<Value> = trades.iter().map(|tr| json!({
@@ -566,21 +585,19 @@ pub async fn get_investor_notifications(
     }
 
     // Vault trade settlements for held positions (per-profile, last N).
+    // Privacy: no per-trade strategy detail (market/direction) is surfaced —
+    // investors see only that a position was closed and the net PnL.
     for profile in &held_profiles {
         let handle = handles.get(profile).cloned().unwrap_or_default();
         let trades =
             queries::get_vault_trades(&ctx.db, profile, limit, None).await?;
         for tr in &trades {
-            let dir = if tr.direction == 0 { "long" } else { "short" };
             let pnl = tr.realized_pnl;
-            let verb = if pnl.is_zero() { "closed" }
-                       else if pnl.is_sign_negative() { "loss" }
-                       else { "win" };
             notifications.push((
                 tr.closed_at,
                 json!({
                     "kind":   "trade",
-                    "title":  format!("@{} closed {} {} {}", handle, dir, tr.market, verb),
+                    "title":  format!("@{} closed a position", handle),
                     "detail": format!("{}${} USDC", if pnl.is_sign_negative() { "-" } else { "+" }, pnl.abs()),
                     "ts":     tr.closed_at,
                 }),
@@ -606,17 +623,19 @@ pub async fn me(
     // Check if this wallet belongs to a trader
     if let Some(trader) = queries::get_trader_by_wallet(&ctx.db, &wallet).await? {
         return Ok(Json(json!({
-            "role":    "trader",
-            "wallet":  wallet,
-            "handle":  trader.handle,
-            "profile": trader.profile,
+            "role":          "trader",
+            "wallet":        wallet,
+            "handle":        trader.handle,
+            "profile":       trader.profile,
+            "execution_only": ctx.execution_only,
         })));
     }
 
     // Default to investor
     Ok(Json(json!({
-        "role":   "investor",
-        "wallet": wallet,
+        "role":           "investor",
+        "wallet":         wallet,
+        "execution_only": ctx.execution_only,
     })))
 }
 
@@ -625,10 +644,16 @@ pub async fn me(
 pub async fn get_trader_classification(
     State(ctx): State<AppState>,
     Path(handle): Path<String>,
+    headers: HeaderMap,
 ) -> Result<Json<Value>, ApiError> {
     let t = queries::get_trader_by_handle(&ctx.db, &handle)
         .await?
         .ok_or(ApiError::NotFound)?;
+
+    // Classifier evidence leaks behavioral strategy signals — trader-only.
+    if maybe_wallet(&headers, &ctx.jwt_secret).as_deref() != Some(&t.trader) {
+        return Err(ApiError::NotFound);
+    }
 
     let trades = queries::get_all_trades_for_profile(&ctx.db, &t.profile).await?;
 
@@ -664,11 +689,17 @@ pub struct PayoutsQuery {
 pub async fn get_trader_payouts(
     State(ctx): State<AppState>,
     Path(handle): Path<String>,
+    headers: HeaderMap,
     Query(q): Query<PayoutsQuery>,
 ) -> Result<Json<Value>, ApiError> {
     let t = queries::get_trader_by_handle(&ctx.db, &handle)
         .await?
         .ok_or(ApiError::NotFound)?;
+
+    // Payout timing/magnitude is trader-only.
+    if maybe_wallet(&headers, &ctx.jwt_secret).as_deref() != Some(&t.trader) {
+        return Err(ApiError::NotFound);
+    }
 
     let limit = q.limit.unwrap_or(50).clamp(1, 500);
     let flows = queries::get_flows_for_profile_and_trader(&ctx.db, &t.profile, limit).await?;
@@ -960,6 +991,18 @@ fn extract_wallet(headers: &HeaderMap, secret: &str) -> Result<String, ApiError>
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or(ApiError::Unauthorized)?;
     verify_jwt(bearer, secret)
+}
+
+/// Extract the authenticated wallet if a valid bearer token is present, else
+/// `None`. Used for optional-ownership checks on publicly reachable routes so a
+/// logged-out visitor is treated as a guest, not an auth error.
+fn maybe_wallet(headers: &HeaderMap, secret: &str) -> Option<String> {
+    let bearer = headers
+        .get("authorization")?
+        .to_str()
+        .ok()?
+        .strip_prefix("Bearer ")?;
+    verify_jwt(bearer, secret).ok()
 }
 
 fn sha256_hex(s: &str) -> String {

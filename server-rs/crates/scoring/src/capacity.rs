@@ -19,7 +19,7 @@ pub fn compute(score: u32) -> CapacityResult {
         250..=499   => CapacityResult { multiplier: 2,  tier_u8: 1 },
         500..=749   => CapacityResult { multiplier: 3,  tier_u8: 2 },
         750..=949   => CapacityResult { multiplier: 5,  tier_u8: 3 },
-        950..=1000  => CapacityResult { multiplier: 10, tier_u8: 4 },
+        950..=u32::MAX => CapacityResult { multiplier: 10, tier_u8: 4 },
         _           => CapacityResult { multiplier: 1,  tier_u8: 0 },
     }
 }
@@ -67,5 +67,20 @@ mod tests {
     fn score_250_boundary() {
         assert_eq!(compute(249).multiplier, 1);
         assert_eq!(compute(250).multiplier, 2);
+    }
+
+    #[test]
+    fn score_above_1000_clamps_to_apex() {
+        assert_eq!(compute(1001).multiplier, 10);
+        assert_eq!(compute(1001).tier_u8, 4);
+        assert_eq!(compute(u32::MAX).multiplier, 10);
+    }
+
+    #[test]
+    fn score_zero_and_max_u32_stay_in_range() {
+        assert_eq!(compute(0).multiplier, 1);
+        assert_eq!(compute(0).tier_u8, 0);
+        assert_eq!(compute(949).multiplier, 5);
+        assert_eq!(compute(950).multiplier, 10);
     }
 }

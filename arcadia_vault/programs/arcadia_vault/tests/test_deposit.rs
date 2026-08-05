@@ -863,6 +863,127 @@ fn deposit_rejects_account_binding_failures() {
 }
 
 #[test]
+fn investor_holds_positions_in_two_profiles_simultaneously() {
+    let mut fixture = setup();
+    let investor = fixture.investor.insecure_clone();
+
+    // trader 1 self-funds its vault; investor can then join profile 1.
+    trader_self_fund(&mut fixture, 2_000_000_000);
+    send_tx(
+        &mut fixture.svm,
+        &[set_capacity_ix(
+            fixture.oracle_authority.pubkey(),
+            fixture.config,
+            fixture.profile,
+            10_000_000_000,
+            2,
+        )],
+        &fixture.oracle_authority,
+        &[&fixture.oracle_authority],
+    );
+
+    // second trader + profile on the same platform.
+    let trader2 = Keypair::new();
+    let vault2 = Keypair::new();
+    let trader2_token = anchor_lang::prelude::Pubkey::new_unique();
+    let (profile2, _) = profile_pda(&trader2.pubkey());
+    fixture.svm.airdrop(&trader2.pubkey(), LAMPORTS_PER_SOL).unwrap();
+    set_token_account(
+        &mut fixture.svm,
+        trader2_token,
+        fixture.base_mint,
+        trader2.pubkey(),
+        10_000_000_000,
+    );
+    send_tx(
+        &mut fixture.svm,
+        &[initialize_profile_ix(
+            trader2.pubkey(),
+            fixture.config,
+            profile2,
+            fixture.base_mint,
+            vault2.pubkey(),
+            5,
+        )],
+        &trader2,
+        &[&trader2, &vault2],
+    );
+    send_tx(
+        &mut fixture.svm,
+        &[set_capacity_ix(
+            fixture.oracle_authority.pubkey(),
+            fixture.config,
+            profile2,
+            10_000_000_000,
+            2,
+        )],
+        &fixture.oracle_authority,
+        &[&fixture.oracle_authority],
+    );
+    let trader2_investor = initialize_investor_for(&mut fixture, &trader2);
+    let (pos2_self, _) = position_pda(&trader2.pubkey(), &profile2);
+    send_tx(
+        &mut fixture.svm,
+        &[deposit_ix(
+            trader2.pubkey(),
+            trader2_investor,
+            profile2,
+            pos2_self,
+            fixture.base_mint,
+            vault2.pubkey(),
+            trader2_token,
+            1_000_000_000,
+        )],
+        &trader2,
+        &[&trader2],
+    );
+
+    // investor joins both profiles with a single investor_account.
+    let investor_account = initialize_investor_for(&mut fixture, &investor);
+    let (pos1, _) = position_pda(&investor.pubkey(), &fixture.profile);
+    let (pos2, _) = position_pda(&investor.pubkey(), &profile2);
+    send_tx(
+        &mut fixture.svm,
+        &[deposit_ix(
+            investor.pubkey(),
+            investor_account,
+            fixture.profile,
+            pos1,
+            fixture.base_mint,
+            fixture.vault_token,
+            fixture.investor_token,
+            500_000_000,
+        )],
+        &investor,
+        &[&investor],
+    );
+    send_tx(
+        &mut fixture.svm,
+        &[deposit_ix(
+            investor.pubkey(),
+            investor_account,
+            profile2,
+            pos2,
+            fixture.base_mint,
+            vault2.pubkey(),
+            fixture.investor_token,
+            700_000_000,
+        )],
+        &investor,
+        &[&investor],
+    );
+
+    let investor_state = read_investor(&fixture.svm, &investor_account);
+    assert_eq!(investor_state.position_count, 2);
+    assert_eq!(investor_state.total_deposited_usd, 1_200_000_000);
+
+    assert_eq!(read_position(&fixture.svm, &pos1).shares, 500_000_000);
+    assert_eq!(read_position(&fixture.svm, &pos2).shares, 700_000_000);
+    assert_eq!(read_profile(&fixture.svm, &fixture.profile).total_shares, 2_500_000_000);
+    assert_eq!(read_profile(&fixture.svm, &profile2).total_shares, 1_700_000_000);
+}
+
+#[test]
 fn zz_cu_summary() {
     let results = CU_RESULTS.lock().unwrap();
     if results.is_empty() {

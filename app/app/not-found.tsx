@@ -23,7 +23,7 @@ export default function NotFound() {
       <div className="relative z-10 px-6 text-center">
         <p
           aria-hidden
-          className="mb-6 font-display font-extrabold leading-none tracking-[-0.06em] text-transparent select-none"
+          className="mb-6 font-display font-bold leading-none tracking-[-0.06em] text-transparent select-none"
           style={{
             fontSize: "clamp(5rem, 20vw, 12rem)",
             WebkitTextStroke: "2px var(--color-line)",

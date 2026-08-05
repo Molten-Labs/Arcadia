@@ -197,7 +197,7 @@ body {
   background: var(--color-acid);
   color: var(--color-void);
   font-size: 9px;
-  font-weight: 800;
+  font-weight: 700;
   font-family: var(--font-mono);
   transform-origin: center;
   transform: scale(1);

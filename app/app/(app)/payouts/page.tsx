@@ -165,7 +165,7 @@ export default function PayoutsPage() {
         <div className="mb-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
           <Panel className="group acid-int p-4">
             <MicroLabel className="mb-2">Sub-Account Profit</MicroLabel>
-            <p className="font-mono text-2xl font-black tracking-tight tabular-nums text-success">
+            <p className="font-mono text-2xl font-bold tracking-tight tabular-nums text-success">
               +{formatUSD(subAccountProfit)}
             </p>
             <p className="mt-1 text-[0.7rem] text-faint">All-time sub-account gains</p>
@@ -177,7 +177,7 @@ export default function PayoutsPage() {
           />
           <Panel className="group acid-int p-5">
             <MicroLabel className="mb-3.5">Payout Status</MicroLabel>
-            <p className="font-mono text-2xl font-black tracking-tight tabular-nums text-ink">
+            <p className="font-mono text-2xl font-bold tracking-tight tabular-nums text-ink">
               {vault?.status ?? "—"}
             </p>
             <p className="mt-1 text-[0.7rem] text-faint">
@@ -202,7 +202,7 @@ export default function PayoutsPage() {
               {i > 0 && <div className="h-7 w-px shrink-0 bg-white/10" />}
               <div>
                 <MicroLabel className="mb-0.5 text-[0.5rem]">{item.label}</MicroLabel>
-                <p className={cn("font-mono text-sm font-extrabold tracking-tight", item.tone)}>
+                <p className={cn("font-mono text-sm font-bold tracking-tight", item.tone)}>
                   {item.value}
                 </p>
               </div>
@@ -218,7 +218,7 @@ export default function PayoutsPage() {
             <Panel className="p-5">
               <p className="mb-3.5 text-[0.7rem] text-faint">
                 Profit above HWM:{" "}
-                <span className="font-mono font-extrabold text-success">
+                <span className="font-mono font-bold text-success">
                   {formatUSD(maxWithdrawable)}
                 </span>
               </p>

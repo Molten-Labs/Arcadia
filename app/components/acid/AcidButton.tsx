@@ -59,7 +59,3 @@ export function AcidButton({
   );
 }
 
-/** Convenience wrapper: `<AcidButton variant="chrome" />`. */
-export function ChromeButton(props: Omit<AcidButtonProps, "variant">) {
-  return <AcidButton variant="chrome" {...props} />;
-}

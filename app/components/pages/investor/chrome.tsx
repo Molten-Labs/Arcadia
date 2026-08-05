@@ -75,7 +75,7 @@ export function PageHeader({
     <div className={cn("mb-8 flex flex-wrap items-end justify-between gap-4", className)}>
       <div>
         {kicker ? <Kicker className="mb-3">{kicker}</Kicker> : null}
-        <h1 className="origin-left font-display text-3xl font-extrabold tracking-[-0.03em] text-ink uppercase sm:text-4xl">
+        <h1 className="origin-left font-display text-3xl font-bold tracking-[-0.03em] text-ink uppercase sm:text-4xl">
           {title}
         </h1>
         {subtitle ? <p className="mt-2 text-sm text-muted">{subtitle}</p> : null}
@@ -92,7 +92,7 @@ export function ConnectGate({ title, description }: { title: string; description
       <div className="mb-6 flex size-16 items-center justify-center rounded-2xl border border-acid/25 bg-acid/[0.06] shadow-[0_0_30px_rgba(204,255,0,0.12)]">
         <Zap className="size-6 text-acid" aria-hidden />
       </div>
-      <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink uppercase">{title}</h2>
+      <h2 className="font-display text-2xl font-bold tracking-tight text-ink uppercase">{title}</h2>
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">{description}</p>
     </div>
   );

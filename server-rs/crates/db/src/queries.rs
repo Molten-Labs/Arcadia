@@ -67,24 +67,6 @@ pub async fn upsert_trader_profile(
     Ok(())
 }
 
-pub async fn update_trader_scores(
-    pool: &PgPool,
-    profile: &str,
-    score_tier: &str,
-    aum_usd: Decimal,
-) -> Result<()> {
-    sqlx::query(
-        "UPDATE trader_profile SET score_tier = $2, aum_usd = $3, updated_at = now()
-         WHERE profile = $1",
-    )
-    .bind(profile)
-    .bind(score_tier)
-    .bind(aum_usd)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
-
 // ── Trades ────────────────────────────────────────────────────────────────────
 
 const TRADE_COLS: &str = "signature, event_index, slot, profile, trader, market,
@@ -129,6 +111,15 @@ pub async fn get_all_trades_for_profile(pool: &PgPool, profile: &str) -> Result<
     .bind(profile)
     .fetch_all(pool)
     .await?)
+}
+
+/// Count of closed trades for a profile. Cheap aggregate used on public surfaces
+/// without exposing the per-trade rows themselves.
+pub async fn count_vault_trades(pool: &PgPool, profile: &str) -> Result<i64> {
+    Ok(sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM trade WHERE profile = $1")
+        .bind(profile)
+        .fetch_one(pool)
+        .await?)
 }
 
 pub async fn get_trades_since(
@@ -194,10 +185,97 @@ pub async fn insert_trade(pool: &PgPool, t: &DbTrade) -> Result<()> {
     Ok(())
 }
 
-// ── Flows ─────────────────────────────────────────────────────────────────────
+/// Insert an append-only execution event. Conflicts are ignored (idempotent).
+pub async fn insert_execution_event(pool: &PgPool, e: &DbExecutionEvent) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO execution_event (
+             profile, venue, execution_wallet, market, position_id,
+             fill_signature, event_type, payload, recorded_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         ON CONFLICT (venue, position_id, event_type) DO NOTHING",
+    )
+    .bind(&e.profile)
+    .bind(&e.venue)
+    .bind(&e.execution_wallet)
+    .bind(&e.market)
+    .bind(&e.position_id)
+    .bind(&e.fill_signature)
+    .bind(&e.event_type)
+    .bind(&e.payload)
+    .bind(e.recorded_at)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
 
-const FLOW_COLS: &str = "signature, event_index, slot, profile, owner, is_trader,
-    kind, amount_usd, shares, nav_per_share, ts";
+/// Record a canonical trade from the execution pipeline, together with its
+/// provenance, in a single transaction. This is the ONLY path that writes
+/// authoritative trades to the scoring cache.
+pub async fn record_fill(pool: &PgPool, f: &DbFill) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    sqlx::query(
+        "INSERT INTO trade (
+             signature, event_index, slot, profile, trader, market,
+             direction, size_usd, leverage_x, entry_px, exit_px,
+             realized_pnl, fees_usd, was_liquidated, opened_at, closed_at,
+             venue, execution_wallet, position_id, fill_signature, source
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
+                   $17,$18,$19,$20,'execution')
+         ON CONFLICT (signature, event_index) DO NOTHING",
+    )
+    .bind(&f.signature)
+    .bind(f.event_index)
+    .bind(f.slot)
+    .bind(&f.profile)
+    .bind(&f.trader)
+    .bind(&f.market)
+    .bind(f.direction)
+    .bind(f.size_usd)
+    .bind(f.leverage_x)
+    .bind(f.entry_px)
+    .bind(f.exit_px)
+    .bind(f.realized_pnl)
+    .bind(f.fees_usd)
+    .bind(f.was_liquidated)
+    .bind(f.opened_at)
+    .bind(f.closed_at)
+    .bind(&f.venue)
+    .bind(&f.execution_wallet)
+    .bind(&f.position_id)
+    .bind(&f.fill_signature)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO execution_event (
+             profile, venue, execution_wallet, market, position_id,
+             fill_signature, event_type, payload, recorded_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,'close',$7,now())
+         ON CONFLICT (venue, position_id, event_type) DO NOTHING",
+    )
+    .bind(&f.profile)
+    .bind(&f.venue)
+    .bind(&f.execution_wallet)
+    .bind(&f.market)
+    .bind(&f.position_id)
+    .bind(&f.fill_signature)
+    .bind(serde_json::json!({
+        "signature": f.signature,
+        "market": f.market,
+        "direction": f.direction,
+        "size_usd": f.size_usd.to_string(),
+        "realized_pnl": f.realized_pnl.to_string(),
+        "closed_at": f.closed_at.to_string(),
+    }))
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(())
+}
+
+// ── Flows ─────────────────────────────────────────────────────────────────────
 
 pub async fn upsert_investor_account(
     pool: &PgPool,
@@ -262,29 +340,6 @@ pub async fn insert_flow(pool: &PgPool, f: &DbFlow) -> Result<()> {
     .execute(pool)
     .await?;
     Ok(())
-}
-
-pub async fn get_flows_for_profile(pool: &PgPool, profile: &str) -> Result<Vec<DbFlow>> {
-    Ok(sqlx::query_as::<_, DbFlow>(&format!(
-        "SELECT {FLOW_COLS} FROM flow WHERE profile = $1 ORDER BY ts ASC"
-    ))
-    .bind(profile)
-    .fetch_all(pool)
-    .await?)
-}
-
-pub async fn get_flows_for_profile_paginated(
-    pool: &PgPool,
-    profile: &str,
-    limit: i64,
-) -> Result<Vec<DbFlow>> {
-    Ok(sqlx::query_as::<_, DbFlow>(&format!(
-        "SELECT {FLOW_COLS} FROM flow WHERE profile = $1 ORDER BY ts DESC LIMIT $2"
-    ))
-    .bind(profile)
-    .bind(limit)
-    .fetch_all(pool)
-    .await?)
 }
 
 // ── Equity points ─────────────────────────────────────────────────────────────
@@ -547,18 +602,6 @@ pub async fn set_deposits_open(pool: &PgPool, profile: &str, open: bool) -> Resu
     Ok(())
 }
 
-pub async fn toggle_deposits_open(pool: &PgPool, profile: &str) -> Result<bool> {
-    let row: Option<(bool,)> = sqlx::query_as(
-        "UPDATE trader_profile SET deposits_open = NOT deposits_open, updated_at = now()
-         WHERE profile = $1
-         RETURNING deposits_open",
-    )
-    .bind(profile)
-    .fetch_optional(pool)
-    .await?;
-    row.map(|r| r.0).ok_or_else(|| anyhow::anyhow!("profile not found"))
-}
-
 pub async fn get_flows_for_owner(
     pool: &PgPool,
     owner: &str,
@@ -653,31 +696,6 @@ pub async fn get_execution_wallet(pool: &PgPool, profile: &str) -> Result<Option
     .bind(profile)
     .fetch_optional(pool)
     .await?)
-}
-
-pub async fn upsert_execution_wallet(
-    pool: &PgPool,
-    profile: &str,
-    pubkey: &str,
-    encrypted_seed: &[u8],
-    encryption_salt: &[u8],
-) -> Result<()> {
-    sqlx::query(
-        "INSERT INTO execution_wallet (profile, pubkey, encrypted_seed, encryption_salt, updated_at)
-         VALUES ($1, $2, $3, $4, now())
-         ON CONFLICT (profile) DO UPDATE SET
-             pubkey = $2,
-             encrypted_seed = $3,
-             encryption_salt = $4,
-             updated_at = now()"
-    )
-    .bind(profile)
-    .bind(pubkey)
-    .bind(encrypted_seed)
-    .bind(encryption_salt)
-    .execute(pool)
-    .await?;
-    Ok(())
 }
 
 pub async fn update_execution_wallet_status(

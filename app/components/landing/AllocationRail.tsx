@@ -17,7 +17,7 @@ export function AllocationRail() {
           <Reveal>
             <div>
               <Kicker>The Allocation Rail</Kicker>
-              <h2 className="mt-3.5 mb-5 origin-left font-display text-[clamp(1.9rem,4.6vw,3.4rem)] leading-[1] font-extrabold tracking-[-0.03em] text-ink uppercase" style={{ transform: "scaleX(1.05)" }}>
+              <h2 className="mt-3.5 mb-5 origin-left font-display text-[clamp(1.9rem,4.6vw,3.4rem)] leading-[1] font-bold tracking-[-0.03em] text-ink uppercase" style={{ transform: "scaleX(1.05)" }}>
                 Investors don&apos;t send money to traders.
               </h2>
               <p className="max-w-[62ch] text-[clamp(1.02rem,1.6vw,1.22rem)] leading-[1.55] text-muted">

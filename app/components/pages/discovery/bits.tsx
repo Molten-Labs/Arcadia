@@ -59,7 +59,7 @@ export function SectionTitle({
   return (
     <Tag
       className={cn(
-        "origin-left font-display text-[clamp(1.75rem,4vw,2.6rem)] leading-[0.98] font-extrabold tracking-[-0.03em] text-ink uppercase",
+        "origin-left font-display text-[clamp(1.75rem,4vw,2.6rem)] leading-[0.98] font-bold tracking-[-0.03em] text-ink uppercase",
         className,
       )}
       style={{ transform: "scaleX(1.04)" }}

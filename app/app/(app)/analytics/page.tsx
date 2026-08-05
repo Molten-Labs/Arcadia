@@ -2,7 +2,7 @@
 
 import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 import { EquityChart } from "@/components/EquityChart";
 import { PnLHeatmap } from "@/components/PnLHeatmap";
@@ -14,18 +14,9 @@ import {
   StatTile,
 } from "@/components/pages/trader/trader-ui";
 import { RiskRadar } from "@/components/pages/discovery/RiskRadar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
-import { formatUSD, type TraderProfile, type DailyPnL } from "@/lib/types";
+import { type TraderProfile, type DailyPnL } from "@/lib/types";
 
 const FALLBACK_HANDLE = "nova";
 
@@ -65,7 +56,6 @@ export default function AnalyticsPage() {
   }
 
   const metrics = trader?.metrics;
-  const trades = trader?.trades ?? [];
   const equityCurve = trader?.equity_curve ?? [];
   const handle = trader?.handle ?? FALLBACK_HANDLE;
 
@@ -175,91 +165,11 @@ export default function AnalyticsPage() {
           </Panel>
         </div>
 
-        {/* Trades / heatmap */}
-        <Tabs defaultValue="trades">
-          <TabsList>
-            <TabsTrigger value="trades">Trade History</TabsTrigger>
-            <TabsTrigger value="heatmap">P&amp;L Heatmap</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="trades">
-            <Panel className="overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 bg-panel-2 px-4 py-3">
-                <MicroLabel>Trade History</MicroLabel>
-                <span className="rounded border border-white/10 bg-panel px-2 py-1 font-mono text-[0.6rem] text-faint">
-                  {trades.length} trades
-                </span>
-              </div>
-              {trades.length === 0 ? (
-                <p className="py-16 text-center text-sm text-faint">No trade history available</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {["Market", "Side", "Size", "Lev", "Entry", "Exit", "PnL", "Closed", "On-chain"].map(
-                        (h) => (
-                          <TableHead key={h}>{h}</TableHead>
-                        ),
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {trades.map((t) => (
-                      <TableRow key={t.id} className="group">
-                        <TableCell className="font-bold text-ink">{t.market}</TableCell>
-                        <TableCell
-                          className={`text-[0.65rem] font-black tracking-wider uppercase ${
-                            t.direction === "long" ? "text-success" : "text-danger"
-                          }`}
-                        >
-                          {t.direction}
-                        </TableCell>
-                        <TableCell className="tabular-nums">{formatUSD(t.size_usd, 0)}</TableCell>
-                        <TableCell className="tabular-nums">{t.leverage}x</TableCell>
-                        <TableCell className="tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
-                          {t.entry_px < 10 ? t.entry_px.toFixed(4) : t.entry_px.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="tabular-nums text-muted transition-colors group-hover:text-ink motion-reduce:transition-none">
-                          {t.exit_px < 10 ? t.exit_px.toFixed(4) : t.exit_px.toFixed(2)}
-                        </TableCell>
-                        <TableCell className={`font-bold tabular-nums ${pnlTone(t.realized_pnl)}`}>
-                          {t.realized_pnl >= 0 ? "+" : ""}
-                          {formatUSD(t.realized_pnl, 0)}
-                        </TableCell>
-                        <TableCell className="tabular-nums text-faint">
-                          {new Date(t.closed_at * 1000).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          {t.sig ? (
-                            <a
-                              href={`https://solscan.io/tx/${t.sig}?cluster=devnet`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 font-mono text-[0.6rem] text-cyan transition-opacity hover:opacity-70"
-                              title={t.sig}
-                            >
-                              <span>{t.sig.slice(0, 6)}…</span>
-                              <ExternalLink size={10} />
-                            </a>
-                          ) : (
-                            <span className="text-faint">—</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </Panel>
-          </TabsContent>
-
-          <TabsContent value="heatmap">
-            <Panel className="group acid-int p-5">
-              <MicroLabel className="mb-5">Daily P&amp;L Heatmap</MicroLabel>
-              <PnLHeatmap data={dailyPnl ?? []} />
-            </Panel>
-          </TabsContent>
-        </Tabs>
+        {/* P&L heatmap */}
+        <Panel className="group acid-int p-5">
+          <MicroLabel className="mb-5">Daily P&amp;L Heatmap</MicroLabel>
+          <PnLHeatmap data={dailyPnl ?? []} />
+        </Panel>
       </div>
     </div>
   );

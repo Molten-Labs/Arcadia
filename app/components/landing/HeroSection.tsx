@@ -13,13 +13,13 @@ import { LINKS } from "./data";
 // sets the copy column's width at every breakpoint. Sized so it always fits
 // the column (16vw starved the card column to 8px slivers at 1440px, and a
 // 4.2rem floor clipped the whole copy column on phones).
-const HUGE = "font-display text-[clamp(3.4rem,14.5vw,6.5rem)] lg:text-[clamp(5.5rem,8.75vw,10rem)] leading-[0.82] font-extrabold tracking-[-0.05em] uppercase";
+const HUGE = "font-display text-[clamp(3.4rem,14.5vw,6.5rem)] lg:text-[clamp(5.5rem,8.75vw,10rem)] leading-[0.82] font-bold tracking-[-0.05em] uppercase";
 
 function Avatar({ letter }: { letter: string }) {
   return (
     <span
       aria-hidden
-      className="grid h-10 w-10 place-items-center rounded-xl font-display text-base font-extrabold text-void transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:-rotate-6 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
+      className="grid h-10 w-10 place-items-center rounded-xl font-display text-base font-bold text-void transition-transform duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:-rotate-6 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
       style={{
         background: ORB_GRADIENT,
         boxShadow: "0 0 14px color-mix(in srgb, var(--color-acid) 40%, transparent)",

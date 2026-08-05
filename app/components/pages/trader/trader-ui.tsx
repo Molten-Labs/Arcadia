@@ -88,7 +88,7 @@ export function PageHeader({
       <div className="flex items-center gap-2.5">
         {icon && <span className="text-acid">{icon}</span>}
         <h1
-          className="origin-left font-display text-2xl leading-none font-extrabold tracking-tight text-ink uppercase"
+          className="origin-left font-display text-2xl leading-none font-bold tracking-tight text-ink uppercase"
           style={{ transform: "scaleX(1.04)" }}
         >
           {title}

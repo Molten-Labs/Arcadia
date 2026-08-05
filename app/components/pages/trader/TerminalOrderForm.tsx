@@ -129,7 +129,7 @@ export function TerminalOrderForm({
             </div>
             <div className="flex items-center gap-2">
               <span
-                className="text-2xl font-black tabular-nums"
+                className="text-2xl font-bold tabular-nums"
                 style={{ color: isLong ? "var(--color-success)" : "var(--color-danger)" }}
               >
                 {livePrice?.toFixed(2) ?? "—"}
@@ -304,7 +304,7 @@ export function TerminalOrderForm({
             type="button"
             onClick={onSubmit}
             disabled={!connected || submitting || !sizeUSD || parseFloat(sizeUSD) <= 0}
-            className="w-full rounded-lg bg-acid py-3 text-sm font-black tracking-wide text-void transition-[color,background-color,border-color,box-shadow,transform] active:scale-[0.98] disabled:opacity-40 motion-reduce:transition-none motion-reduce:transform-none"
+            className="w-full rounded-lg bg-acid py-3 text-sm font-bold tracking-wide text-void transition-[color,background-color,border-color,box-shadow,transform] active:scale-[0.98] disabled:opacity-40 motion-reduce:transition-none motion-reduce:transform-none"
           >
             {!connected
               ? "Connect Wallet"
@@ -315,7 +315,7 @@ export function TerminalOrderForm({
 
           {/* Position summary */}
           <div className="space-y-1.5 rounded-lg border border-line bg-panel-2 p-2.5">
-            <p className="text-[9px] font-black tracking-widest text-faint uppercase">Position Summary</p>
+            <p className="text-[9px] font-bold tracking-widest text-faint uppercase">Position Summary</p>
             {[
               ["Collateral In", `${symbol}`],
               ["Leverage", `${leverage.toFixed(2)}x`],

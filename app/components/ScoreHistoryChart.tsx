@@ -41,7 +41,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
       <p className="font-mono text-[10px] mb-1" style={{ color: "var(--color-faint)" }}>
         {label ? new Date(label * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
       </p>
-      <p className="font-black text-base tnum" style={{ color }}>
+      <p className="font-bold text-base tnum" style={{ color }}>
         {score}
       </p>
       <p className="text-[10px] font-bold" style={{ color }}>{tier}</p>
