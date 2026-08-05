@@ -4,6 +4,7 @@
 /// user-facing dollar figures. Money columns in the DB stay as rust_decimal.
 use crate::twr::{
     daily_returns,
+    exponential_weight,
     weighted_daily_returns,
     WeightedReturn,
 };
@@ -118,6 +119,38 @@ fn weighted_downside_variance(
         / total_weight
 }
 
+fn weighted_liquidation_rate(trades: &[Trade]) -> f64 {
+    if trades.is_empty() {
+        return 0.0;
+    }
+
+    let newest = trades
+        .iter()
+        .map(|t| t.closed_at)
+        .max()
+        .unwrap();
+
+    let mut weighted_liquidations = 0.0;
+    let mut total_weight = 0.0;
+
+    for trade in trades {
+        let age_days = (newest - trade.closed_at).num_days() as f64;
+        let weight = exponential_weight(age_days);
+
+        total_weight += weight;
+
+        if trade.was_liquidated {
+            weighted_liquidations += weight;
+        }
+    }
+
+    if total_weight == 0.0 {
+        0.0
+    } else {
+        weighted_liquidations / total_weight
+    }
+}
+
 pub fn compute(
     equity_curve: &[(NaiveDate, Decimal)],
     trades: &[Trade],
@@ -178,7 +211,7 @@ pub fn compute(
 
     // ── Trade-level metrics ───────────────────────────────────────────────
     let tc = trades.len();
-    let liq_count = trades.iter().filter(|t| t.was_liquidated).count();
+    let liq_rate = weighted_liquidation_rate(trades);
     let profitable = trades.iter().filter(|t| t.realized_pnl > Decimal::ZERO).count();
     let avg_lev: f64 = trades.iter()
         .map(|t| t.leverage_x.try_into().unwrap_or(0.0_f64))
@@ -194,7 +227,7 @@ pub fn compute(
         volatility:        ann_vol.min(10.0),
         mean_return:       mean_ret,
         downside_deviation: downside_dev.min(10.0),
-        liq_rate:          liq_count as f64 / tc as f64,
+        liq_rate,
         pct_profitable:    profitable as f64 / tc as f64,
         avg_leverage:      avg_lev,
         trade_count:       tc,
@@ -240,5 +273,59 @@ mod tests {
 
         assert_eq!(arithmetic_mean, 0.0);
         assert!(weighted > arithmetic_mean);
+    }
+
+    #[test]
+    fn weighted_liquidation_rate_favors_recent_liquidations() {
+        use chrono::{Duration, Utc};
+
+        let newest = Utc::now();
+
+        let trades = vec![
+            // Old liquidation
+            Trade {
+                signature: String::new(),
+                event_index: 0,
+                slot: 0,
+                profile: String::new(),
+                trader: String::new(),
+                market: String::new(),
+                direction: 1,
+                size_usd: Decimal::ONE,
+                leverage_x: Decimal::ONE,
+                entry_px: Decimal::ONE,
+                exit_px: Decimal::ONE,
+                realized_pnl: Decimal::ZERO,
+                fees_usd: Decimal::ZERO,
+                was_liquidated: true,
+                opened_at: newest - Duration::days(365),
+                closed_at: newest - Duration::days(365),
+            },
+            // Recent non-liquidated trade
+            Trade {
+                signature: String::new(),
+                event_index: 1,
+                slot: 1,
+                profile: String::new(),
+                trader: String::new(),
+                market: String::new(),
+                direction: 1,
+                size_usd: Decimal::ONE,
+                leverage_x: Decimal::ONE,
+                entry_px: Decimal::ONE,
+                exit_px: Decimal::ONE,
+                realized_pnl: Decimal::ONE,
+                fees_usd: Decimal::ZERO,
+                was_liquidated: false,
+                opened_at: newest,
+                closed_at: newest,
+            },
+        ];
+
+        let weighted = weighted_liquidation_rate(&trades);
+
+        // Simple liquidation rate would be exactly 0.5.
+        // Since the liquidation is much older, the weighted rate should be lower.
+        assert!(weighted < 0.5);
     }
 }

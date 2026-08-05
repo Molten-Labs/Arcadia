@@ -14,6 +14,11 @@ use rust_decimal_macros::dec;
 
 const HALF_LIFE_DAYS: f64 = 180.0;
 
+pub(crate) fn exponential_weight(age_days: f64) -> f64 {
+    2f64.powf(-age_days / HALF_LIFE_DAYS)
+}
+
+
 #[derive(Debug, Clone)]
 pub struct FlowPoint {
     pub date: NaiveDate,
@@ -135,7 +140,7 @@ pub fn weighted_daily_returns(
             }
 
             let age_days = (newest - w[1].0).num_days() as f64;
-            let weight = 2f64.powf(-age_days / HALF_LIFE_DAYS);
+            let weight = exponential_weight(age_days);
 
             Some(WeightedReturn {
                 date: w[1].0,
