@@ -151,6 +151,24 @@ fn weighted_liquidation_rate(trades: &[Trade]) -> f64 {
     }
 }
 
+
+fn weighted_ulcer_index(drawdowns: &[(f64, f64)]) -> f64 {
+    let mut weighted_sum = 0.0;
+    let mut total_weight = 0.0;
+
+    for &(drawdown, weight) in drawdowns {
+        weighted_sum += drawdown.powi(2) * weight;
+        total_weight += weight;
+    }
+
+    if total_weight == 0.0 {
+        return 0.0;
+    }
+
+    (weighted_sum / total_weight).sqrt()
+}
+
+
 pub fn compute(
     equity_curve: &[(NaiveDate, Decimal)],
     trades: &[Trade],
@@ -188,8 +206,9 @@ pub fn compute(
     let mut max_dd = 0.0_f64;
     let mut dd_sq_sum = 0.0_f64;
     let mut nav = 1.0_f64;
+    let mut weighted_drawdowns = Vec::with_capacity(n);
 
-    for &r in &returns {
+    for (i, &r) in returns.iter().enumerate() {
         nav *= 1.0 + r;
         if nav > peak {
             peak = nav;
@@ -199,8 +218,11 @@ pub fn compute(
             max_dd = dd;
         }
         dd_sq_sum += dd * dd;
+
+        let weight = weighted_returns[i].weight;
+        weighted_drawdowns.push((dd, weight));
     }
-    let ulcer = (dd_sq_sum / n as f64).sqrt();
+    let ulcer = weighted_ulcer_index(&weighted_drawdowns);
 
     // ── Calmar ────────────────────────────────────────────────────────────
     let calmar = if max_dd < 1e-10 {
