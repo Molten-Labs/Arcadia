@@ -29,13 +29,25 @@ const CI_BASE: f64 = 125.0;
 const LIQ_RATE_FLOOR: f64 = 0.05;
 const MAX_DD_FLOOR: f64   = 0.30;
 
+
+
+fn logistic_normalize(
+    value: f64,
+    midpoint: f64,
+    steepness: f64,
+) -> f64 {
+    let score = 1.0 / (1.0 + (-steepness * (value - midpoint)).exp());
+    score * 100.0
+}
 // ── MetricNormalizer curves (ported from Reputation Engine) ──────────────────
 // All return values in [0, 100]; higher is always better.
 
 fn norm_sharpe(v: f64) -> f64 {
-    if v <= 0.0 { return 0.0; }
-    if v >= 3.0 { return 100.0; }
-    v / 3.0 * 100.0
+    if v <= 0.0 {
+        return 0.0;
+    }
+
+    logistic_normalize(v, 1.0, 2.0)
 }
 
 fn norm_sortino(v: f64) -> f64 {
@@ -217,5 +229,16 @@ mod tests {
             s_long.confidence > s_short.confidence,
             "expected longer trading history to have higher confidence"
         );
+    }
+
+    #[test]
+    fn print_sharpe_normalization_curve() {
+        for sharpe in [-1.0, 0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0] {
+            println!(
+                "Sharpe {:>4.1} -> {:>6.2}",
+                sharpe,
+                norm_sharpe(sharpe),
+            );
+        }
     }
 }
