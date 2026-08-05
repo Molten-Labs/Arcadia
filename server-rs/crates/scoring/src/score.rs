@@ -19,8 +19,13 @@ const W_DOWNSIDE_DEV: f64 = 0.10;
 const W_MEAN_RETURN: f64 = 0.05;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PRIOR_MU: f64 = 200.0;
-const CI_BASE: f64  = 125.0;
+const TRADE_MIDPOINT: f64 = 200.0;
+const TRADE_SCALE: f64 = 125.0;
+
+const DAYS_MIDPOINT: f64 = 180.0;
+const DAYS_SCALE: f64 = 90.0;
+
+const CI_BASE: f64 = 125.0;
 const LIQ_RATE_FLOOR: f64 = 0.05;
 const MAX_DD_FLOOR: f64   = 0.30;
 
@@ -79,6 +84,10 @@ pub struct ScoreResult {
     pub quality_raw: f64,
 }
 
+fn logistic(x: f64, midpoint: f64, scale: f64) -> f64 {
+    1.0 / (1.0 + (-(x - midpoint) / scale).exp())
+}
+
 pub fn compute(m: &Metrics, trade_count: u32) -> ScoreResult {
     if trade_count == 0 {
         return ScoreResult { score: 0, confidence: 0.0, ci_low: 0.0, ci_high: 0.0, quality_raw: 0.0 };
@@ -106,7 +115,20 @@ pub fn compute(m: &Metrics, trade_count: u32) -> ScoreResult {
 
     // ── C: Confidence (logistic, prior μ=400, σ=125) ──────────────────────
     let n = trade_count as f64;
-    let confidence = 1.0 / (1.0 + (-(n - PRIOR_MU) / CI_BASE).exp());
+
+    let trade_confidence = logistic(
+        n,
+        TRADE_MIDPOINT,
+        TRADE_SCALE,
+    );
+
+    let days_confidence = logistic(
+        m.days_active as f64,
+        DAYS_MIDPOINT,
+        DAYS_SCALE,
+    );
+
+    let confidence = (trade_confidence * days_confidence).sqrt();
 
     // ── G: Guard factor ────────────────────────────────────────────────────
     let g_liq = guard_factor(m.liq_rate, LIQ_RATE_FLOOR, 0.0, 1.0);
@@ -178,5 +200,22 @@ mod tests {
         m.max_dd = 0.0;
         let s = compute(&m, 500);
         assert!(s.score > 0);
+    }
+
+    #[test]
+    fn confidence_increases_with_days_active() {
+        let mut short_history = good_metrics();
+        short_history.days_active = 10;
+
+        let mut long_history = good_metrics();
+        long_history.days_active = 365;
+
+        let s_short = compute(&short_history, 500);
+        let s_long = compute(&long_history, 500);
+
+        assert!(
+            s_long.confidence > s_short.confidence,
+            "expected longer trading history to have higher confidence"
+        );
     }
 }
