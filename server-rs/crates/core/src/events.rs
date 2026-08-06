@@ -51,6 +51,7 @@ pub struct WithdrawRequested {
     pub profile: String,
     pub owner: String,
     pub shares: Decimal,
+    pub nav_per_share: Decimal,
     pub withdraw_ready_ts: DateTime<Utc>,
 }
 
@@ -60,6 +61,7 @@ pub struct Withdrawn {
     pub owner: String,
     pub shares_burned: Decimal,
     pub amount_usd: Decimal,
+    pub nav_per_share: Decimal,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

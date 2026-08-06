@@ -7,6 +7,7 @@ use anyhow::{anyhow, Result};
 use arcadia_core::events::*;
 use base64::{engine::general_purpose, Engine as _};
 use borsh::BorshDeserialize;
+use rust_decimal::Decimal;
 use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
 
@@ -226,6 +227,7 @@ impl From<RawWithdrawRequested> for WithdrawRequested {
             profile:          pubkey_to_b58(&r.profile),
             owner:            pubkey_to_b58(&r.owner),
             shares:           minor_to_dec(r.shares),
+            nav_per_share:    Decimal::ZERO,
             withdraw_ready_ts: ts_to_dt(r.withdraw_ready_ts),
         }
     }
@@ -238,6 +240,7 @@ impl From<RawWithdrawn> for Withdrawn {
             owner:         pubkey_to_b58(&r.owner),
             shares_burned: minor_to_dec(r.shares_burned),
             amount_usd:    minor_to_dec(r.amount_usd),
+            nav_per_share: Decimal::ZERO,
         }
     }
 }

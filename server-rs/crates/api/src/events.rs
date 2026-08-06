@@ -118,7 +118,7 @@ async fn process_event(ctx: &AppState, event: &ArcadiaEvent, authed_wallet: &str
                     kind:            "withdraw".into(),
                     amount_usd:      e.amount_usd,
                     shares:          e.shares_burned,
-                    nav_per_share:   Decimal::ZERO,
+                    nav_per_share:   e.nav_per_share,
                     ts:              chrono::Utc::now(),
                 },
             ).await?;
@@ -128,8 +128,29 @@ async fn process_event(ctx: &AppState, event: &ArcadiaEvent, authed_wallet: &str
             // Trades are already recorded via /v1/trades/simulate — skip
         }
 
+        ArcadiaEvent::WithdrawRequested(e) => {
+            if e.owner != authed_wallet {
+                return Err(ApiError::Forbidden);
+            }
+            queries::insert_flow(
+                &ctx.db,
+                &arcadia_db::models::DbFlow {
+                    signature:       "frontend".into(),
+                    event_index:     0,
+                    slot:            0,
+                    profile:         e.profile.clone(),
+                    owner:           e.owner.clone(),
+                    is_trader:       false,
+                    kind:            "withdraw_request".into(),
+                    amount_usd:      Decimal::ZERO,
+                    shares:          e.shares,
+                    nav_per_share:   e.nav_per_share,
+                    ts:              e.withdraw_ready_ts,
+                },
+            ).await?;
+        }
+
         ArcadiaEvent::Settled(..) |
-        ArcadiaEvent::WithdrawRequested(..) |
         ArcadiaEvent::ProfitWithdrawn(..) |
         ArcadiaEvent::ExecutionFunded(..) => {
             // These are derived state changes tracked by the scoring worker
