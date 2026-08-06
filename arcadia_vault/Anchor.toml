@@ -14,7 +14,7 @@ cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [rpc.devnet]
-url = "https://api.devnet.solana.com"
+url = "https://devnet.helius-rpc.com/?api-key=649881b9-dbd1-4a90-98bd-bd38240af548"
 
 [scripts]
 test = "cargo test -- --test-threads=1 --nocapture"
