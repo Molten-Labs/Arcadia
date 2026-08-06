@@ -9,11 +9,22 @@
  *   PROFILE   = b"profile"
  *   INVESTOR  = b"investor"
  *   POSITION  = b"position"
+ *
+ * Cluster selection: set NEXT_PUBLIC_ARCADIA_PROGRAM_ID to the mainnet
+ * program ID before building. Without it the devnet ID is used.
  */
 import { Connection, PublicKey } from "@solana/web3.js";
 import { IDL } from "./arcadia-idl";
 
-export const PROGRAM_ID = new PublicKey("FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd");
+const DEVNET_PROGRAM_ID = "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd";
+
+export function getProgramId(): PublicKey {
+  const env = process.env.NEXT_PUBLIC_ARCADIA_PROGRAM_ID?.trim();
+  if (env) return new PublicKey(env);
+  return new PublicKey(DEVNET_PROGRAM_ID);
+}
+
+const PROGRAM_ID = getProgramId();
 
 // ── PDA helpers ──────────────────────────────────────────────────────────────
 

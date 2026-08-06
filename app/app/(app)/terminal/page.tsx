@@ -68,16 +68,6 @@ interface LivePosition {
   liq: number;
 }
 
-interface PaperPosition {
-  id: string;
-  market: string;
-  direction: Direction;
-  sizeUsd: number;
-  leverage: number;
-  entryPx: number;
-  openedAt: number;
-}
-
 function mapLivePosition(p: FlashPosition): LivePosition {
   return {
     mt_id: p.venuePositionKey,
@@ -105,7 +95,6 @@ function TerminalContent() {
   const [sizeUSD, setSizeUSD] = useState("100");
   const [leverage, setLeverage] = useState(2);
   const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([]);
-  const [paperPosition, setPaperPosition] = useState<PaperPosition | null>(null);
   const [bottomTab, setBottomTab] = useState<BottomTab>("positions");
   const [interval, setInterval_] = useState("15m");
   const [marketOpen, setMarketOpen] = useState(false);
@@ -205,8 +194,9 @@ function TerminalContent() {
 
   // Real market data (Phoenix: order book, candles, funding, mark, tape).
   const phoenix = usePhoenixMarketData(symbol, interval);
-  // Real Flash execution (sidecar proxy).
-  const { seed, setSeed, status: execStatus, position, open, close, refresh } = useFlashExecution();
+  // Real Flash execution (trader-pays, client-side).
+  const { executionWallet, status: execStatus, position, open, close, refresh } =
+    useFlashExecution();
 
   const ftPrice = getPrice(symbol);
   const markPrice = phoenix.snapshot?.markPrice ?? phoenix.snapshot?.lastPrice ?? ftPrice?.priceUi;
@@ -219,40 +209,10 @@ function TerminalContent() {
   const fundingRate = snap?.fundingRatePercent ?? 0;
 
   // Live Flash position → display row (one position per account/market).
-  const realLive = useMemo<LivePosition | null>(
+  const livePosition = useMemo<LivePosition | null>(
     () => (position ? mapLivePosition(position) : null),
     [position],
   );
-
-  // Paper (demo) position, no devnet seed pasted. PnL/liquidation are computed
-  // live against the current mark so the terminal behaves like a real position.
-  const paperLive = useMemo<LivePosition | null>(() => {
-    const p = paperPosition;
-    if (!p) return null;
-    const entry = p.entryPx;
-    const mark = currentPrice ?? entry;
-    const notional = p.sizeUsd * p.leverage;
-    const pnlFrac =
-      p.direction === "long" ? (mark - entry) / entry : (entry - mark) / entry;
-    const upnl = notional * pnlFrac;
-    const liq =
-      p.direction === "long"
-        ? entry * (1 - 1 / p.leverage)
-        : entry * (1 + 1 / p.leverage);
-    return {
-      mt_id: p.id,
-      market: p.market,
-      direction: p.direction,
-      size_usd: p.sizeUsd,
-      leverage: p.leverage,
-      entry_px: entry,
-      opened_at: p.openedAt,
-      upnl,
-      liq,
-    };
-  }, [paperPosition, currentPrice]);
-
-  const livePosition = realLive ?? paperLive;
 
   const liveMarker: PositionMarker | null = livePosition
     ? {
@@ -301,60 +261,16 @@ function TerminalContent() {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [depositOpen, closeDeposit]);
 
-  // Real open: send to the Flash sidecar, then pull the on-chain position.
-// Open: paper (demo, no seed) → local position at live price; real → Flash sidecar.
+  // Real open: identity-signed setup + deposit, then ER position open.
   const openPosition = useCallback(async () => {
-    if (!seed.trim()) {
-      if (!currentPrice) return;
-      setPaperPosition({
-        id: `paper-${Date.now()}`,
-        market: `${symbol}/USD`,
-        direction,
-        sizeUsd: parseFloat(sizeUSD) || 100,
-        leverage,
-        entryPx: currentPrice,
-        openedAt: Math.floor(Date.now() / 1000),
-      });
-      return;
-    }
     const r = await open(market, direction, parseFloat(sizeUSD) || 100);
     if (r.ok) await refresh(market, direction);
-  }, [seed, open, refresh, market, direction, sizeUSD, symbol, leverage, currentPrice]);
+  }, [open, refresh, market, direction, sizeUSD]);
 
-  // Real close: close on-chain via the sidecar, then record the realized trade.
+  // Real close: close the on-chain position, then record the realized trade.
   const closePosition = useCallback(
     async (id: string) => {
       if (!livePosition || livePosition.mt_id !== id) return;
-
-      // Paper (demo) close: settle locally against the live mark.
-      if (paperPosition && paperPosition.id === id) {
-        const entry = livePosition.entry_px;
-        const exit = currentPrice ?? entry;
-        const notional = livePosition.size_usd * livePosition.leverage;
-        const pnlFrac =
-          livePosition.direction === "long"
-            ? (exit - entry) / entry
-            : (entry - exit) / entry;
-        const pnl = notional * pnlFrac;
-        const fees = notional * 0.0002;
-        const trade: ClosedTrade = {
-          id: `paper-${Date.now()}`,
-          market: `${symbol}/USD`,
-          direction: livePosition.direction,
-          size_usd: livePosition.size_usd,
-          leverage: livePosition.leverage,
-          entry_px: entry,
-          exit_px: exit,
-          realized_pnl: pnl - fees,
-          fees_usd: fees,
-          opened_at: livePosition.opened_at,
-          closed_at: Math.floor(Date.now() / 1000),
-          was_liquidated: false,
-        };
-        setClosedTrades((prev) => [trade, ...prev.slice(0, 49)]);
-        setPaperPosition(null);
-        return;
-      }
 
       const side = livePosition.direction;
       const exitPx = currentPrice ?? livePosition.entry_px;
@@ -381,10 +297,11 @@ function TerminalContent() {
       };
       setClosedTrades((prev) => [trade, ...prev.slice(0, 49)]);
 
-      if (publicKey && recordTrade && !me?.execution_only) {
-        const profileAddr = me?.profile ?? publicKey.toBase58();
+      // Reputation greps the execution wallet (the actual Flash trader), not
+      // the identity that merely pays the fees.
+      if (executionWallet && recordTrade && !me?.execution_only) {
         recordTrade({
-          profileAddress: profileAddr,
+          profileAddress: executionWallet,
           market: trade.market,
           direction: trade.direction,
           sizeUsd: trade.size_usd,
@@ -398,7 +315,7 @@ function TerminalContent() {
         }).catch(() => {});
       }
     },
-    [livePosition, currentPrice, paperPosition, symbol, market, close, publicKey, recordTrade, me],
+    [livePosition, currentPrice, symbol, market, close, executionWallet, recordTrade, me],
   );
 
   return (
@@ -678,8 +595,8 @@ function TerminalContent() {
                 connected={connected}
                 market={market}
                 openDeposit={openDeposit}
-                seed={seed}
-                setSeed={setSeed}
+                identityAddress={publicKey?.toBase58() ?? null}
+                executionWallet={executionWallet}
                 execStatus={execStatus}
               />
             </div>

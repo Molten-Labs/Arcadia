@@ -24,7 +24,7 @@
   /* ── Text (readable on pure black) ── */
   --color-ink:     #F4F4F8;
   --color-muted:   #A0A0B4;
-  --color-faint:   #5C6470;
+  --color-faint:   #8A8FA0;
 
   /* ── Status ── */
   --color-success: #34E29B;
@@ -81,7 +81,7 @@
   --color-cyan:     #00F0FF;
   --color-ink:      #F4F4F8;
   --color-muted:    #A0A0B4;
-  --color-faint:    #5C6470;
+  --color-faint:    #8A8FA0;
   --color-success:  #34E29B;
   --color-danger:   #FF3B6B;
   --color-tier-verified:    #00F0FF;

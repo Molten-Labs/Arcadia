@@ -89,10 +89,28 @@ pub async fn handler(
     // ── 1. Auth ───────────────────────────────────────────────────────────────
     let wallet = extract_wallet(&headers, &ctx.jwt_secret)?;
 
-    // ── 2. Verify the caller owns the vault ───────────────────────────────────
-    let profile = queries::get_trader_by_profile(&ctx.db, &body.profile)
+    // ── 2. Verify the caller owns the profile ────────────────────────────────
+    // Trader-pays Flash trades key the reputation on the derived execution
+    // wallet. It is not an on-chain vault PDA, so auto-register it as a trader
+    // profile owned by the authenticated identity on first recorded trade.
+    // Scores/trades then grep from the execution wallet, never the identity.
+    let profile = match queries::get_trader_by_profile(&ctx.db, &body.profile)
         .await?
-        .ok_or(ApiError::NotFound)?;
+    {
+        Some(p) => p,
+        None => {
+            if !is_plausible_address(&body.profile) {
+                return Err(ApiError::BadRequest("profile must be a base58 address".into()));
+            }
+            let prefix: String = body.profile.chars().take(8).collect();
+            let handle = format!("exec-{prefix}");
+            queries::upsert_trader_profile(&ctx.db, &body.profile, &wallet, &handle, Utc::now())
+                .await?;
+            queries::get_trader_by_profile(&ctx.db, &body.profile)
+                .await?
+                .ok_or(ApiError::NotFound)?
+        }
+    };
 
     if profile.trader != wallet {
         return Err(ApiError::Forbidden);
@@ -281,4 +299,11 @@ fn extract_wallet(headers: &HeaderMap, secret: &str) -> Result<String, ApiError>
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or(ApiError::Unauthorized)?;
     verify_jwt(bearer, secret)
+}
+
+/// Loose sanity check that a string looks like a base58 Solana address.
+fn is_plausible_address(s: &str) -> bool {
+    const ALPHABET: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    (32..=44).contains(&s.len())
+        && s.bytes().all(|b| ALPHABET.contains(&b))
 }

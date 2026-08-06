@@ -179,9 +179,13 @@ export default function ManagePage() {
             />
 
             {capacityLeft <= 0 ? (
-              <div className="w-full rounded-lg border border-white/10 bg-panel-2 py-2 text-center text-sm font-semibold text-faint">
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-lg border border-line bg-panel-2 py-2 text-center text-sm font-semibold text-muted"
+              >
                 Vault at capacity
-              </div>
+              </button>
             ) : (
               <Button
                 onClick={handleSelfFund}
@@ -214,7 +218,7 @@ export default function ManagePage() {
                     href={`https://solscan.io/tx/${txState.sig}?cluster=devnet`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 font-mono text-[0.65rem] text-cyan transition-opacity hover:opacity-70"
+                    className="flex items-center gap-1 font-mono text-xs text-acid transition-opacity hover:opacity-70"
                   >
                     <span>
                       {txState.sig.slice(0, 8)}…{txState.sig.slice(-6)}
@@ -249,7 +253,7 @@ export default function ManagePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-ink">Accept Deposits</p>
-                <p className="text-[0.65rem] text-faint">
+                <p className="text-xs text-faint">
                   Open / close your vault to investors
                 </p>
               </div>
@@ -265,7 +269,7 @@ export default function ManagePage() {
                 }`}
               >
                 <span
-                  className={`absolute top-[2px] size-5 rounded-full transition-all duration-300 ${
+                  className={`absolute top-[2px] size-5 rounded-full transition-transform duration-300 ${
                     depositsOpen ? "bg-void" : "bg-white"
                   }`}
                   style={{ left: depositsOpen ? "calc(100% - 22px)" : "2px" }}

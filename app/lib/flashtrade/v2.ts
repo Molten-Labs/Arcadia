@@ -50,11 +50,25 @@ type AppMarketSymbol = keyof typeof APP_MARKET_TO_TARGET_SYMBOL;
 
 type FlashTradePoolCluster = Cluster;
 
+/**
+ * Per-target LONG lock-custody override, mirroring the SDK's
+ * `resolveCollateralSymbol`: Flash locks JitoSOL as the collateral custody for
+ * SOL/WSOL longs. The market PDA, lock custody, and collateral custody must all
+ * resolve to JitoSOL, so market resolution must apply the same override.
+ */
+const LONG_COLLATERAL_OVERRIDES: Record<string, string> = {
+  SOL: "JitoSOL",
+  WSOL: "JitoSOL",
+};
+
 export type FlashTradeResolvedMarket = {
   appMarketSymbol: string | null;
   targetSymbol: string;
   poolConfig: PoolConfig;
+  /** Funding/collateral token the trader deposits and funds positions with (USDC). */
   collateralSymbol: string;
+  /** The market's lock/collateral custody symbol (JitoSOL for SOL longs). */
+  lockSymbol: string;
   market: PublicKey;
   poolName: string;
   side: typeof Side.Long | typeof Side.Short;
@@ -228,19 +242,32 @@ function resolveMarketFromPool(args: {
   );
   if (!targetCustody) return null;
 
+  // The app funds every market with the pool's USDC. The market's lock custody
+  // is derived the same way the SDK's openPosition does: longs apply the
+  // per-target override (SOL/WSOL → JitoSOL), everything else locks USDC.
+  const fundingSymbol = args.poolConfig.tokens.some((token) => token.symbol === "USDC")
+    ? "USDC"
+    : args.targetSymbol;
+  const lockSymbol = isVariant(args.side, "long")
+    ? (LONG_COLLATERAL_OVERRIDES[args.targetSymbol] ?? fundingSymbol)
+    : fundingSymbol;
+
+  const lockToken = args.poolConfig.getTokenFromSymbol(lockSymbol);
+  if (!lockToken) return null;
+  const lockCustody = args.poolConfig.custodies.find((custody) =>
+    custody.mintKey.equals(lockToken.mintKey),
+  );
+  if (!lockCustody) return null;
+
   const market = args.poolConfig.markets.find(
     (candidate) =>
       candidate.targetCustody.equals(targetCustody.custodyAccount) &&
+      candidate.collateralCustody.equals(lockCustody.custodyAccount) &&
       isVariant(candidate.side, "long") === isVariant(args.side, "long"),
   );
   if (!market) return null;
 
-  const collateralCustody = args.poolConfig.custodies.find((custody) =>
-    custody.custodyAccount.equals(market.collateralCustody),
-  );
-  if (!collateralCustody) return null;
-
-  return { market, collateralSymbol: collateralCustody.symbol };
+  return { market, collateralSymbol: fundingSymbol, lockSymbol };
 }
 
 export function resolveFlashTradeMarket(args: {
@@ -275,6 +302,7 @@ export function resolveFlashTradeMarket(args: {
       targetSymbol,
       poolConfig,
       collateralSymbol: resolved.collateralSymbol,
+      lockSymbol: resolved.lockSymbol,
       market: resolved.market.marketAccount,
       poolName: poolConfig.poolName,
       side,
@@ -293,7 +321,6 @@ export function createFlashTradeExecutionClient(
   const cluster = getDefaultCluster();
   const rpc = rpcUrl ?? getFlashTradeSolanaRpcUrl();
   const erRpcUrl = getFlashTradeErRpcUrl(cluster);
-  // @ts-expect-error — fromSeed exists at runtime (v1.98+) but TS fails to resolve the type due to duplicate @solana/web3.js in flash-sdk-v2's node_modules
   const keypair = Keypair.fromSeed(seedBytes);
   const connection = new Connection(rpc, "confirmed");
   const provider = new AnchorProvider(connection, new Wallet(keypair), {
@@ -312,6 +339,17 @@ export function createFlashTradeExecutionClient(
   );
 
   return { cluster, keypair, client } satisfies FlashTradeExecutionClient;
+}
+
+// flash-sdk-v2 ships its own nested @solana/web3.js, so its `Keypair` is a
+// distinct nominal type from ours. Convert to the SDK's expected signer type
+// for ER transactions (same ed25519 key, different type wrapper).
+type SdkErKeypair = Parameters<
+  NonNullable<FlashPerpetualsClient["sendAndConfirmErTransaction"]>
+>[1][number];
+
+function toSdkKeypair(keypair: Keypair): SdkErKeypair {
+  return keypair as unknown as SdkErKeypair;
 }
 
 async function sendIfNeeded(
@@ -486,7 +524,9 @@ export async function openFlashTradePosition(args: {
     {
       market: args.resolvedMarket.market,
       targetSymbol: args.resolvedMarket.targetSymbol,
-      collateralSymbol: fundSymbol,
+      // collateralSymbol → lockCustody (JitoSOL for SOL long), receivingSymbol →
+      // receivingCustody (the token the trader provides = USDC).
+      collateralSymbol: args.resolvedMarket.lockSymbol,
       receivingSymbol: fundSymbol,
       amountIn: args.collateralAmount,
       leverage: leverageBps,
@@ -507,8 +547,8 @@ export async function openFlashTradePosition(args: {
 
   const instructionResult = await args.executionClient.client.openPosition(
     args.resolvedMarket.targetSymbol,
-    args.resolvedMarket.collateralSymbol, // lockSymbol (XAUT)
-    fundSymbol,                           // collateralSymbol (USDC)
+    args.resolvedMarket.lockSymbol, // lockSymbol (JitoSOL for SOL long)
+    fundSymbol,                     // collateralSymbol (USDC)
     args.resolvedMarket.side,
     args.resolvedMarket.poolConfig,
     price,
@@ -519,7 +559,7 @@ export async function openFlashTradePosition(args: {
   const openResult =
     await args.executionClient.client.sendAndConfirmErTransaction(
       instructionResult.instructions,
-      [args.executionClient.keypair],
+      [toSdkKeypair(args.executionClient.keypair)],
     );
 
   return { signature: openResult.signature, quote, sizeAmount: quote.sizeAmount };
@@ -559,7 +599,7 @@ export async function readFlashTradePositionSnapshot(args: {
       owner: args.executionClient.keypair.publicKey,
       market: args.resolvedMarket.market,
       targetSymbol: args.resolvedMarket.targetSymbol,
-      collateralSymbol: args.resolvedMarket.collateralSymbol,
+      collateralSymbol: args.resolvedMarket.lockSymbol,
     },
   ) as unknown as {
     entryOraclePrice: { price: BN; exponent: number };
@@ -612,7 +652,7 @@ export async function closeFlashTradePositionV2(args: {
   });
   const instructionResult = await args.executionClient.client.closePosition(
     args.resolvedMarket.targetSymbol,
-    args.resolvedMarket.collateralSymbol,
+    args.resolvedMarket.lockSymbol,
     args.resolvedMarket.side,
     args.resolvedMarket.poolConfig,
     price,
@@ -620,7 +660,7 @@ export async function closeFlashTradePositionV2(args: {
   const closeResult =
     await args.executionClient.client.sendAndConfirmErTransaction(
       instructionResult.instructions,
-      [args.executionClient.keypair],
+      [toSdkKeypair(args.executionClient.keypair)],
     );
   return { signature: closeResult.signature };
 }

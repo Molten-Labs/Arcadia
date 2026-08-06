@@ -1,7 +1,9 @@
 /**
  * Arcadia Vault — Anchor IDL (hand-generated from source)
- * Program ID: FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd
+ * Program ID is cluster-aware — see getArcadiaIdl().
  */
+import { getProgramId } from "./arcadia-sdk";
+
 export const IDL = {
   address: "FPoAMRkM3kXfuvFn1iC2cM8B554KfnaPjibjLH31CHtd",
   metadata: {
@@ -340,3 +342,13 @@ export type ArcadiaIdl = DeepMutable<typeof IDL>;
 
 /** The IDL value cast to its mutable type, for `new Program(ARCADIA_IDL, …)`. */
 export const ARCADIA_IDL = IDL as ArcadiaIdl;
+
+/**
+ * Return the IDL with the address set to the currently-configured
+ * program ID (reads NEXT_PUBLIC_ARCADIA_PROGRAM_ID, falls back to devnet).
+ * Use this for `new Program(getArcadiaIdl(), provider)` so the address
+ * is always correct for the active cluster.
+ */
+export function getArcadiaIdl(): ArcadiaIdl {
+  return { ...IDL, address: getProgramId().toBase58() } as ArcadiaIdl;
+}

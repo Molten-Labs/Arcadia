@@ -1,20 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { BN } from "@coral-xyz/anchor";
+import { useWalletCompat } from "@/lib/use-wallet-compat";
+import {
+  closeFlashTradePositionV2,
+  createFlashTradeExecutionClient,
+  openFlashTradePosition,
+  readFlashTradePositionSnapshot,
+  resolveFlashTradeMarket,
+  type FlashTradeExecutionClient,
+} from "@/lib/flashtrade/v2";
+import {
+  deriveExecutionKeypair,
+  traderSetupAndDeposit,
+  type IdentitySigner,
+} from "@/lib/flashtrade/trader-pays";
 
 /**
- * Real Flash Trade execution for the terminal, driven through the execution
- * sidecar proxy (/api/v1/execution/*).
+ * Real Flash Trade execution for the terminal, client-side and trader-pays.
  *
- * The devnet-only signing seed lives in React state for the tab session only;
- * it is never written to localStorage, cookies, or any store. All on-chain
- * reads (open/close/snapshot) are real. When the sidecar is unreachable the
- * hook reports an error; it never fabricates a successful fill.
+ * The trader's connected Privy Solana wallet is the identity. Signing the
+ * domain message "arcadia-flash-v1" (no popup for embedded wallets) derives a
+ * deterministic execution wallet that signs the fee-sponsored MagicBlock ER
+ * txs but never holds SOL. All base-chain setup + deposit is batched into one
+ * identity-signed transaction; the identity pays fees + rent.
  */
 
 export type Direction = "long" | "short";
 
-export type ExecutionStatus = "idle" | "no-seed" | "connecting" | "error" | "live";
+export type ExecutionStatus = "idle" | "connecting" | "error" | "live";
 
 export type FlashPosition = {
   marketSymbol: string;
@@ -34,8 +49,9 @@ export type FlashPosition = {
 type ExecutionError = { message: string } | null;
 
 export interface UseFlashExecution {
-  seed: string;
-  setSeed: (seed: string) => void;
+  connected: boolean;
+  /** Derived execution wallet (base58) once known, else null. */
+  executionWallet: string | null;
   status: ExecutionStatus;
   error: ExecutionError;
   position: FlashPosition | null;
@@ -44,106 +60,138 @@ export interface UseFlashExecution {
   refresh: (market: string, direction: Direction) => Promise<FlashPosition | null>;
 }
 
-async function post(path: string, body: unknown): Promise<Record<string, unknown> | null> {
-  try {
-    const res = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({ error: `Upstream ${res.status}` }));
-    return data as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+const ARCADIA_FLASH_DOMAIN = new TextEncoder().encode("arcadia-flash-v1");
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function marketToTargetSymbol(market: string): string {
+  return market.replace("/USD", "").replace("-PERP", "").trim();
 }
 
 export function useFlashExecution(): UseFlashExecution {
-  const [seed, setSeed] = useState("");
+  const { publicKey, connected, signMessage, signTransaction } = useWalletCompat();
   const [status, setStatus] = useState<ExecutionStatus>("idle");
   const [error, setError] = useState<ExecutionError>(null);
   const [position, setPosition] = useState<FlashPosition | null>(null);
-  const seedRef = useRef(seed);
-  useEffect(() => {
-    seedRef.current = seed;
-  }, [seed]);
+  const [executionWallet, setExecutionWallet] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      seedRef.current = "";
-      setSeed("");
-    };
-  }, []);
+  const clientRef = useRef<{ identity: string; client: FlashTradeExecutionClient } | null>(null);
 
-  const refresh = useCallback(async (m: string, side: Direction) => {
-    const s = seedRef.current.trim();
-    if (!s) {
-      setStatus("no-seed");
-      setPosition(null);
-      return null;
-    }
-    setStatus("connecting");
-    const data = await post("/api/v1/execution/snapshot", {
-      seedBase58: s,
-      market: m,
-      direction: side,
-    });
-    if (!data || data.error) {
-      setStatus("error");
-      setError({ message: (data?.error as string) ?? "Could not reach execution sidecar." });
-      return null;
-    }
-    setError(null);
-    const snap = (data.position ?? null) as FlashPosition | null;
-    setPosition(snap);
-    setStatus(snap ? "live" : "idle");
-    return snap;
-  }, []);
+  const identitySigner = useMemo<IdentitySigner | null>(() => {
+    if (!publicKey || !signTransaction) return null;
+    return { publicKey, signTransaction };
+  }, [publicKey, signTransaction]);
 
-  const open = useCallback(async (m: string, side: Direction, amountUsd: number) => {
-    const s = seedRef.current.trim();
-    if (!s) {
-      setStatus("no-seed");
-      return { ok: false, error: "Paste a devnet execution seed first." };
+  const ensureClient = useCallback(async (): Promise<FlashTradeExecutionClient> => {
+    if (!publicKey || !signMessage) {
+      throw new Error("Connect your wallet to trade on Flash.");
     }
-    setStatus("connecting");
-    const data = await post("/api/v1/execution/open", {
-      seedBase58: s,
-      market: m,
-      direction: side,
-      amount: amountUsd,
-    });
-    if (!data || data.error) {
-      setStatus("error");
-      setError({ message: (data?.error as string) ?? "Opening the position failed." });
-      return { ok: false, error: (data?.error as string) ?? "Open failed." };
-    }
-    setError(null);
-    setStatus("live");
-    return { ok: true };
-  }, []);
+    const id = publicKey.toBase58();
+    const cached = clientRef.current;
+    if (cached?.identity === id) return cached.client;
 
-  const close = useCallback(async (m: string, _side: Direction) => {
-    const s = seedRef.current.trim();
-    if (!s) {
-      setStatus("no-seed");
-      return { ok: false, error: "Paste a devnet execution seed first." };
-    }
-    setStatus("connecting");
-    const data = await post("/api/v1/execution/close", {
-      seedBase58: s,
-      market: m,
-    });
-    if (!data || data.error) {
-      setStatus("error");
-      setError({ message: (data?.error as string) ?? "Closing the position failed." });
-      return { ok: false, error: (data?.error as string) ?? "Close failed." };
-    }
-    setError(null);
-    setPosition(null);
-    setStatus("idle");
-    return { ok: true, signature: (data.signature as string) ?? undefined };
-  }, []);
+    const signature = await signMessage(ARCADIA_FLASH_DOMAIN);
+    const keypair = deriveExecutionKeypair(signature);
+    const client = createFlashTradeExecutionClient(keypair.secretKey.slice(0, 32));
+    clientRef.current = { identity: id, client };
+    setExecutionWallet(keypair.publicKey.toBase58());
+    return client;
+  }, [publicKey, signMessage]);
 
-  return { seed, setSeed, status, error, position, open, close, refresh };
+  const open = useCallback(
+    async (market: string, side: Direction, amountUsd: number) => {
+      if (!identitySigner) {
+        setStatus("idle");
+        return { ok: false, error: "Connect your wallet first." };
+      }
+      setStatus("connecting");
+      try {
+        const executionClient = await ensureClient();
+        const targetSymbol = marketToTargetSymbol(market);
+        const resolvedMarket = resolveFlashTradeMarket({ targetSymbol, direction: side });
+        const amount = new BN(Math.round(amountUsd * 1_000_000));
+
+        // Trader-pays: setup + deposit batched into one identity-signed tx.
+        await traderSetupAndDeposit({
+          executionClient,
+          resolvedMarket,
+          amount,
+          identitySigner,
+        });
+
+        await openFlashTradePosition({
+          executionClient,
+          resolvedMarket,
+          collateralAmount: amount,
+          leverage: 2,
+          slippagePercentage: "0.5",
+        });
+
+        setError(null);
+        setStatus("live");
+        return { ok: true };
+      } catch (err) {
+        setStatus("error");
+        setError({ message: errorMessage(err) });
+        return { ok: false, error: errorMessage(err) };
+      }
+    },
+    [identitySigner, ensureClient],
+  );
+
+  const close = useCallback(
+    async (market: string, side: Direction) => {
+      if (!identitySigner) {
+        setStatus("idle");
+        return { ok: false, error: "Connect your wallet first." };
+      }
+      setStatus("connecting");
+      try {
+        const executionClient = await ensureClient();
+        const targetSymbol = marketToTargetSymbol(market);
+        const resolvedMarket = resolveFlashTradeMarket({ targetSymbol, direction: side });
+        const result = await closeFlashTradePositionV2({ executionClient, resolvedMarket });
+        setPosition(null);
+        setStatus("idle");
+        setError(null);
+        return { ok: true, signature: result.signature };
+      } catch (err) {
+        setStatus("error");
+        setError({ message: errorMessage(err) });
+        return { ok: false, error: errorMessage(err) };
+      }
+    },
+    [identitySigner, ensureClient],
+  );
+
+  const refresh = useCallback(
+    async (market: string, side: Direction) => {
+      if (!identitySigner) {
+        setPosition(null);
+        setStatus("idle");
+        return null;
+      }
+      setStatus("connecting");
+      try {
+        const executionClient = await ensureClient();
+        const targetSymbol = marketToTargetSymbol(market);
+        const resolvedMarket = resolveFlashTradeMarket({ targetSymbol, direction: side });
+        const snapshot = await readFlashTradePositionSnapshot({ executionClient, resolvedMarket });
+        const pos = snapshot ? ({ ...snapshot } satisfies FlashPosition) : null;
+        setPosition(pos);
+        setStatus(pos ? "live" : "idle");
+        setError(null);
+        return pos;
+      } catch (err) {
+        setStatus("error");
+        setError({ message: errorMessage(err) });
+        return null;
+      }
+    },
+    [identitySigner, ensureClient],
+  );
+
+  return { connected, executionWallet, status, error, position, open, close, refresh };
 }

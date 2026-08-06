@@ -61,7 +61,6 @@ export function useWalletCompat(): WalletCompat {
       const signed = Buffer.from(result.signedTransaction);
       const isVersioned = "version" in tx;
       return (isVersioned
-        // @ts-expect-error — VersionedTransaction.deserialize is not typed in @solana/web3.js v1
         ? VersionedTransaction.deserialize(signed)
         : Transaction.from(signed)) as T;
     };
@@ -71,10 +70,9 @@ export function useWalletCompat(): WalletCompat {
   const sendTransaction = useMemo(() => {
     if (!solWallet) return undefined;
     return async (
-      tx: Transaction | VersionedTransaction,
-      connection?: Connection,
-      _options?: { signers?: { publicKey: PublicKey; secretKey: Uint8Array }[] },
-    ): Promise<string> => {
+    tx: Transaction | VersionedTransaction,
+    connection?: Connection,
+  ): Promise<string> => {
       const conn = connection ?? getConnection();
       const txBytes = Buffer.from(tx.serialize());
       const result = await solWallet.signAndSendTransaction({

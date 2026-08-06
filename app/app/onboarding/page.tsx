@@ -44,11 +44,8 @@ function OnboardingInner() {
   }, [router]);
 
   // Step 2: auto-skip if wallet already connected.
-  useEffect(() => {
-    if (step === "wallet" && connected && publicKey) {
-      setStep("profile");
-    }
-  }, [step, connected, publicKey]);
+  const effectiveStep =
+    step === "wallet" && connected && publicKey ? "profile" : step;
 
   const handleRoleSelect = useCallback((r: Role) => {
     setRole(r);
@@ -111,9 +108,9 @@ function OnboardingInner() {
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-line px-4 py-3 sm:px-6">
         <span className="font-display text-sm font-bold text-ink uppercase tracking-wider">Arcadia</span>
-        {step !== "done" && (
+        {effectiveStep !== "done" && (
           <span className="font-mono text-[10px] text-faint">
-            Step {["role", "wallet", "profile"].indexOf(step) + 1}/3
+            Step {["role", "wallet", "profile"].indexOf(effectiveStep) + 1}/3
           </span>
         )}
       </div>
@@ -121,7 +118,7 @@ function OnboardingInner() {
       <div className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-sm">
           {/* ── Step 1: Role ─────────────────────────────────────────── */}
-          {step === "role" && (
+          {effectiveStep === "role" && (
             <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-300">
               <h1 className="mb-1 text-2xl font-bold text-ink">Welcome to Arcadia</h1>
               <p className="mb-6 text-sm text-muted">Choose how you want to use the platform.</p>
@@ -145,7 +142,7 @@ function OnboardingInner() {
           )}
 
           {/* ── Step 2: Wallet (skip if already connected) ──────────── */}
-          {step === "wallet" && !connected && (
+          {effectiveStep === "wallet" && !connected && (
             <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-300">
               <h1 className="mb-1 text-2xl font-bold text-ink">Connect a Wallet</h1>
               <p className="mb-6 text-sm text-muted">
@@ -170,7 +167,7 @@ function OnboardingInner() {
           )}
 
           {/* Step 2 already has wallet — brief confirmation then auto-advance */}
-          {step === "wallet" && connected && publicKey && (
+          {effectiveStep === "wallet" && connected && publicKey && (
             <div className="text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
               <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full border border-acid/30 bg-acid/10">
                 <Check className="size-6 text-acid" />
@@ -183,7 +180,7 @@ function OnboardingInner() {
           )}
 
           {/* ── Step 3: Optional profile info ───────────────────────── */}
-          {step === "profile" && (
+          {effectiveStep === "profile" && (
             <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-4 motion-safe:duration-300">
               <h1 className="mb-1 text-2xl font-bold text-ink">Almost done</h1>
               <p className="mb-6 text-sm text-muted">Add optional profile info (you can do this later).</p>
@@ -249,12 +246,12 @@ function OnboardingInner() {
           )}
 
           {/* ── Done ────────────────────────────────────────────────── */}
-          {step === "done" && (
+          {effectiveStep === "done" && (
             <div className="text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
               <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full border border-success/30 bg-success/10">
                 <Check className="size-7 text-success" />
               </div>
-              <h1 className="text-xl font-bold text-ink">You're all set!</h1>
+              <h1 className="text-xl font-bold text-ink">You&apos;re all set!</h1>
               <p className="mt-1 text-sm text-muted">Redirecting to the dashboard…</p>
             </div>
           )}

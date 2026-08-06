@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, type FormEvent } from "react";
-import { CheckCircle, Loader2, Copy } from "lucide-react";
+import { AlertTriangle, CheckCircle, Loader2, Copy } from "lucide-react";
 
 const ROLE_OPTIONS = ["trader", "investor", "both"] as const;
 const EXP_OPTIONS = ["", "beginner", "<1", "1-3", "3+"] as const;
@@ -23,13 +23,11 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState<SuccessState | null>(null);
 
-  const [refCode, setRefCode] = useState("");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const [refCode, setRefCode] = useState(() => {
+    if (typeof window === "undefined") return "";
     const ref = new URLSearchParams(window.location.search).get("ref");
-    if (ref) setRefCode(ref.toUpperCase());
-  }, []);
+    return ref ? ref.toUpperCase() : "";
+  });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -78,14 +76,14 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-3.5">
       <div>
-        <label htmlFor="wl-email" className="mb-1.5 block font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">Email *</label>
+        <label htmlFor="wl-email" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-muted uppercase">Email *</label>
         <input id="wl-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           className="h-11 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
       </div>
 
       <div>
-        <p className="mb-1.5 font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">I am a... *</p>
+        <p className="mb-1.5 font-mono text-xs tracking-[0.12em] text-muted uppercase">I am a... *</p>
         <div className="flex gap-2">
           {ROLE_OPTIONS.map((r) => {
             const active = role === r;
@@ -106,7 +104,7 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
       </div>
 
       <div>
-        <label htmlFor="wl-exp" className="mb-1.5 block font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">Experience</label>
+        <label htmlFor="wl-exp" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-muted uppercase">Experience</label>
         <select id="wl-exp" value={experience} onChange={(e) => setExperience(e.target.value)}
           className="h-11 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none focus:border-acid/50 focus:ring-1 focus:ring-acid/30">
           <option value="">Select...</option>
@@ -118,12 +116,12 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="wl-twitter" className="mb-1.5 block font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">X (optional)</label>
+          <label htmlFor="wl-twitter" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-muted uppercase">X (optional)</label>
           <input id="wl-twitter" type="text" value={twitter} onChange={(e) => setTwitter(e.target.value)} placeholder="@handle"
             className="h-11 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
         </div>
         <div>
-          <label htmlFor="wl-wallet" className="mb-1.5 block font-mono text-[0.65rem] tracking-[0.12em] text-faint uppercase">Wallet (optional)</label>
+          <label htmlFor="wl-wallet" className="mb-1.5 block font-mono text-xs tracking-[0.12em] text-muted uppercase">Wallet (optional)</label>
           <input id="wl-wallet" type="text" value={wallet} onChange={(e) => setWallet(e.target.value)} placeholder="Solana address"
             className="h-11 w-full rounded-xl border border-line bg-panel-2 px-4 font-mono text-sm text-ink outline-none placeholder:text-faint focus:border-acid/50 focus:ring-1 focus:ring-acid/30" />
         </div>
@@ -136,8 +134,13 @@ export function WaitlistForm({ source = "waitlist-page" }: { source?: string }) 
         {status === "loading" ? <><Loader2 className="size-4 animate-spin" /> Signing up...</> : "Join waitlist"}
       </button>
 
-      {status === "error" && message ? <p className="text-center text-sm text-danger">{message}</p> : null}
-      <p className="text-center font-mono text-[0.6rem] tracking-[0.08em] text-faint">No spam. Unsubscribe anytime.</p>
+      {status === "error" && message ? (
+        <div className="flex items-start gap-2 rounded-lg border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+          <span>{message}</span>
+        </div>
+      ) : null}
+      <p className="text-center font-mono text-xs tracking-[0.08em] text-muted">No spam. Unsubscribe anytime.</p>
     </form>
   );
 }

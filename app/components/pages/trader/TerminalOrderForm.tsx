@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, Copy, Sparkles } from "lucide-react";
 
 import type { Direction, OrderType } from "./terminal-types";
 import { useFlashTradePrices } from "@/lib/use-flash-trade-prices";
+import { useFaucet } from "@/lib/use-faucet";
 
 interface Props {
   direction: Direction;
@@ -21,9 +22,9 @@ interface Props {
   connected: boolean;
   market: string;
   openDeposit: () => void;
-  seed: string;
-  setSeed: (v: string) => void;
-  execStatus: "idle" | "no-seed" | "connecting" | "error" | "live";
+  identityAddress: string | null;
+  executionWallet: string | null;
+  execStatus: "idle" | "connecting" | "error" | "live";
 }
 
 const LEVERAGE_QUICK = [25, 50, 75, 100] as const;
@@ -42,11 +43,12 @@ export function TerminalOrderForm({
   connected,
   market,
   openDeposit,
-  seed,
-  setSeed,
+  identityAddress,
+  executionWallet,
   execStatus,
 }: Props) {
   const { getPrice } = useFlashTradePrices();
+  const { state: faucetState, message: faucetMessage, fund } = useFaucet();
   const [tpslOpen, setTpslOpen] = useState(false);
   const [slipOpen, setSlipOpen] = useState(false);
   const [payMode, setPayMode] = useState<"usdc" | "token">("usdc");
@@ -80,41 +82,83 @@ export function TerminalOrderForm({
     : 0;
   const isLong = direction === "long";
 
+  const handleGetFunds = useCallback(async () => {
+    if (identityAddress) await fund(identityAddress);
+  }, [fund, identityAddress]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (connected && !submitting && sizeUSD && parseFloat(sizeUSD) > 0) {
+          onSubmit();
+        }
+      }
+    },
+    [connected, submitting, sizeUSD, onSubmit],
+  );
+
   return (
-    <div className="flex h-full flex-col overflow-hidden border-l border-line bg-panel">
-      {/* Execution seed / status */}
+    <div
+      className="flex h-full flex-col overflow-hidden border-l border-line bg-panel"
+      onKeyDown={handleKeyDown}
+    >
+      {/* Execution wallet / status */}
       <div className="flex shrink-0 items-center gap-2 border-b border-line px-3 py-2">
-        {seed ? (
+        {executionWallet ? (
           <>
             <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: "var(--color-success)" }} />
             <span className="truncate text-[10px] tabular-nums text-ink">
-              {seed.slice(0, 6)}…{seed.slice(-4)} · {execStatus}
+              {executionWallet.slice(0, 8)}…{executionWallet.slice(-6)}
+            </span>
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard.writeText(executionWallet); }}
+              className="shrink-0 rounded p-0.5 text-faint transition-colors hover:text-ink"
+              title="Copy execution wallet address"
+              aria-label="Copy execution wallet address"
+            >
+              <Copy size={9} />
+            </button>
+            <span className="shrink-0 text-[10px] tabular-nums text-faint">
+              · {execStatus}
             </span>
           </>
         ) : (
           <>
-            <span className="shrink-0 text-[10px] font-semibold text-faint">Flash seed</span>
-            <input
-              type="password"
-              value={seed}
-              onChange={(e) => setSeed(e.target.value)}
-              placeholder="devnet seed (base58, tab-only)"
-              className="min-w-0 flex-1 bg-transparent text-[10px] tabular-nums text-ink outline-none placeholder:text-faint/60"
-              spellCheck={false}
-            />
+            <span className="shrink-0 text-[10px] font-semibold text-faint">Execution</span>
+            <span className="truncate text-[10px] tabular-nums text-faint">
+              {connected ? "derived from your wallet on first trade" : "not connected"}
+            </span>
           </>
         )}
+            <button
+              type="button"
+              onClick={() => void handleGetFunds()}
+              disabled={faucetState === "funding" || !identityAddress}
+              className="ml-auto flex shrink-0 items-center gap-1 rounded border border-line bg-panel-2 px-1.5 py-0.5 text-[10px] font-bold text-muted transition-colors hover:text-ink disabled:opacity-50"
+              title="Mint devnet USDC + SOL into your wallet"
+            >
+              <Sparkles size={9} />
+              {faucetState === "funding" ? "Funding…" : "Get test funds"}
+            </button>
       </div>
 
+      {faucetMessage && (
+        <div className="shrink-0 border-b border-line px-3 py-1 text-[9px] tabular-nums" style={{ color: faucetState === "error" ? "var(--color-danger)" : "var(--color-muted)" }}>
+          {faucetMessage}
+        </div>
+      )}
+
       {/* Alert banner */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-warning/10 px-3 py-2">
-        <AlertTriangle size={12} className="shrink-0 text-warning" />
-        <p className="text-[10px] leading-tight text-warning/90">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-panel-2 px-3 py-2">
+        <AlertTriangle size={12} className="shrink-0 text-muted" />
+        <p className="text-[10px] leading-tight text-muted">
           {execStatus === "error"
-            ? "Order failed. The execution sidecar is unreachable."
-            : seed
-              ? "Real devnet positions. The seed is held in this tab only and never stored."
-              : "Demo mode — simulated position at live prices. Paste a devnet seed for real Flash execution."}
+            ? "Order failed. Your wallet pays fees — check you hold SOL + USDC on devnet."
+            : connected
+              ? "Real devnet positions. Your wallet pays fees; the execution wallet never needs funding."
+              : "Demo mode — simulated position at live prices. Connect your wallet for real Flash execution."}
         </p>
       </div>
 
@@ -204,12 +248,7 @@ export function TerminalOrderForm({
           {/* Leverage */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-medium text-faint">Leverage</label>
-                <span className="rounded border border-acid/20 bg-acid/[0.08] px-1.5 py-0.5 text-[9px] text-acid">
-                  Basic
-                </span>
-              </div>
+              <label className="text-[10px] font-medium text-faint">Leverage</label>
               <span className="text-xs font-bold tabular-nums text-acid">{leverage}x</span>
             </div>
             <input
@@ -304,7 +343,7 @@ export function TerminalOrderForm({
             type="button"
             onClick={onSubmit}
             disabled={!connected || submitting || !sizeUSD || parseFloat(sizeUSD) <= 0}
-            className="w-full rounded-lg bg-acid py-3 text-sm font-bold tracking-wide text-void transition-[color,background-color,border-color,box-shadow,transform] active:scale-[0.98] disabled:opacity-40 motion-reduce:transition-none motion-reduce:transform-none"
+            className="w-full rounded-lg bg-acid py-3 text-sm font-bold tracking-wide text-ink transition-colors active:scale-[0.98] disabled:opacity-40 motion-reduce:transition-none motion-reduce:transform-none"
           >
             {!connected
               ? "Connect Wallet"
@@ -317,7 +356,7 @@ export function TerminalOrderForm({
           <div className="space-y-1.5 rounded-lg border border-line bg-panel-2 p-2.5">
             <p className="text-[9px] font-bold tracking-widest text-faint uppercase">Position Summary</p>
             {[
-              ["Collateral In", `${symbol}`],
+              ["Funding Token", "USDC"],
               ["Leverage", `${leverage.toFixed(2)}x`],
               ["Entry Price", livePrice ? `$${livePrice.toFixed(2)}` : "—"],
               ["Liq. Price", liqPrice > 0 ? `$${liqPrice.toFixed(2)}` : "—"],
