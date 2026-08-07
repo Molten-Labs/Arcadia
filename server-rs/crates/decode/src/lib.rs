@@ -6,7 +6,7 @@
 use anyhow::{anyhow, Result};
 use arcadia_core::events::*;
 use base64::{engine::general_purpose, Engine as _};
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use rust_decimal::Decimal;
 use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
@@ -102,7 +102,7 @@ struct RawInvestorInitialized {
     ts:       i64,
 }
 
-#[derive(BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize)]
 struct RawDeposited {
     profile:       [u8; 32],
     depositor:     [u8; 32],
@@ -331,6 +331,37 @@ mod tests {
                 assert!(!e.amount_usd.is_zero());
             }
             other => panic!("expected ExecutionFunded, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn round_trips_deposit_payload() {
+        // A deposit emits a DB row on ingest, so its decode contract matters
+        // most: serialize the raw borsh layout the program emits, decode it
+        // back, and check the domain mapping (minor units → Decimal).
+        let raw = RawDeposited {
+            profile:       [7u8; 32],
+            depositor:     [9u8; 32],
+            is_trader:     true,
+            amount_usd:    123_456_789,    // $123.456789
+            shares_minted: 5_000_000,      // 5.0 shares
+            nav_per_share: 1_010_000,      // $1.01
+            ts:            1_700_000_000,
+        };
+        let mut payload = disc("Deposited").to_vec();
+        payload.extend_from_slice(&borsh::to_vec(&raw).unwrap());
+        let event = decode_event(&payload).unwrap().expect("should decode");
+        match event {
+            ArcadiaEvent::Deposited(e) => {
+                assert_eq!(e.profile, pubkey_to_b58(&[7u8; 32]));
+                assert_eq!(e.depositor, pubkey_to_b58(&[9u8; 32]));
+                assert!(e.is_trader);
+                assert_eq!(e.amount_usd, Decimal::new(123_456_789, 6));
+                assert_eq!(e.shares_minted, Decimal::new(5_000_000, 6));
+                assert_eq!(e.nav_per_share, Decimal::new(1_010_000, 6));
+                assert_eq!(e.ts.timestamp(), 1_700_000_000);
+            }
+            other => panic!("expected Deposited, got {other:?}"),
         }
     }
 }

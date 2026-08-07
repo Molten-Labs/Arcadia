@@ -148,10 +148,20 @@ pub struct PrivyRes {
 }
 
 #[derive(Deserialize)]
-struct PrivyUser {
-    id:        String,
+pub struct PrivyUser {
+    id:             String,
     #[serde(default)]
     linked_accounts: Vec<PrivyLinkedAccount>,
+}
+
+impl PrivyUser {
+    /// First email linked account that Privy has verified ownership of.
+    pub fn verified_email(&self) -> Option<&str> {
+        self.linked_accounts.iter().find_map(|a| match a {
+            PrivyLinkedAccount::Email { email, verified_at: Some(_) } => Some(email.as_str()),
+            _ => None,
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -159,19 +169,22 @@ struct PrivyUser {
 enum PrivyLinkedAccount {
     #[serde(rename = "solana_wallet")]
     SolanaWallet { address: String },
+    #[serde(rename = "email")]
+    Email {
+        email:               String,
+        #[serde(default)]
+        verified_at:         Option<String>,
+    },
     #[serde(other)]
     Other,
 }
 
-/// POST /v1/auth/privy
-pub async fn privy_verify(
-    State(ctx): State<AppState>,
-    Json(body): Json<PrivyReq>,
-) -> Result<Json<PrivyRes>, ApiError> {
+/// Verify a Privy access token and return the linked Privy user.
+pub async fn verify_privy_token(token: &str) -> Result<PrivyUser, ApiError> {
     let client = reqwest::Client::new();
     let resp = client
         .get("https://api.privy.io/v1/users/me")
-        .bearer_auth(&body.token)
+        .bearer_auth(token)
         .send()
         .await
         .map_err(|e| ApiError::Internal(anyhow::anyhow!("privy verify request: {e}")))?;
@@ -180,17 +193,24 @@ pub async fn privy_verify(
         return Err(ApiError::Unauthorized);
     }
 
-    let user: PrivyUser = resp
-        .json()
+    resp.json()
         .await
-        .map_err(|e| ApiError::Internal(anyhow::anyhow!("privy decode: {e}")))?;
+        .map_err(|e| ApiError::Internal(anyhow::anyhow!("privy decode: {e}")))
+}
+
+/// POST /v1/auth/privy
+pub async fn privy_verify(
+    State(ctx): State<AppState>,
+    Json(body): Json<PrivyReq>,
+) -> Result<Json<PrivyRes>, ApiError> {
+    let user = verify_privy_token(&body.token).await?;
 
     // Extract first linked Solana wallet
     let wallet = user
         .linked_accounts
-        .into_iter()
+        .iter()
         .find_map(|a| match a {
-            PrivyLinkedAccount::SolanaWallet { address } => Some(address),
+            PrivyLinkedAccount::SolanaWallet { address } => Some(address.clone()),
             _ => None,
         })
         .ok_or_else(|| ApiError::BadRequest("no solana wallet linked in privy".into()))?;

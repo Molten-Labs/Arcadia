@@ -763,6 +763,8 @@ pub struct WaitlistSignupBody {
     #[serde(default)]
     ref_code:   String,
     #[serde(default)]
+    privy_token: Option<String>,
+    #[serde(default)]
     utm_source:   String,
     #[serde(default)]
     utm_medium:   String,
@@ -797,18 +799,40 @@ pub async fn post_waitlist(
         Some(body.ref_code.to_uppercase())
     } else { None };
 
-    let result = queries::insert_waitlist_user(
+    // Privy email proof (optional): a valid Privy access token whose verified
+    // email matches the submitted address proves ownership. Privy sends and
+    // verifies the OTP itself; we only check its /users/me result. Verified
+    // signups count toward the referrer's referral_count.
+    let mut email_verified = false;
+    if let Some(token) = body.privy_token.as_deref().filter(|t| !t.is_empty()) {
+        if let Ok(privy) = crate::auth::verify_privy_token(token).await {
+            if privy.verified_email().map(str::to_lowercase).as_deref() == Some(email.as_str()) {
+                email_verified = true;
+            }
+        }
+    }
+
+    let mut result = queries::insert_waitlist_user(
         &ctx.db, &email, &body.name, &body.role, &body.experience,
         &body.twitter, &body.discord, &body.wallet,
-        referred_by.as_deref(), "landing",
+        referred_by.as_deref(), email_verified, "landing",
         &body.utm_source, &body.utm_medium, &body.utm_campaign, &body.utm_term,
         &ip_hash, &user_agent,
     ).await?;
 
+    // Duplicate email, now proven via Privy → activate the existing row.
+    if result.is_none() && email_verified {
+        result = queries::verify_waitlist_email(&ctx.db, &email).await?;
+    }
+
     let user = result.ok_or_else(|| ApiError::BadRequest("Email already registered".into()))?;
 
-    // Mark verified immediately — no email verification step
-    queries::verify_waitlist_user(&ctx.db, &email).await?;
+    // Credit the referrer once, and only for a verified signup.
+    if email_verified {
+        if let Some(code) = referred_by.as_deref() {
+            queries::credit_referral(&ctx.db, code).await?;
+        }
+    }
 
     // Compute queue position
     let position = queries::get_waitlist_position(&ctx.db, user.id).await?;
@@ -826,13 +850,91 @@ pub async fn post_waitlist(
 
     tracing::info!("[waitlist] {email} joined — position {position} (ref: {})", user.referral_code);
 
+    let (tier, fee_discount_pct, benefits) = referral_tier(user.referral_count);
+
     Ok(Json(json!({
         "ok": true,
         "message": "You're on the waitlist!",
         "email": email,
         "position": position,
         "referral_code": user.referral_code,
+        "email_verified": user.email_verified,
+        "referral_count": user.referral_count,
+        "tier": tier,
+        "fee_discount_pct": fee_discount_pct,
+        "benefits": benefits,
         "jwt": jwt,
+    })))
+}
+
+/// Verified-referral reward tiers. Queue influence is capped in
+/// `get_waitlist_position`; fee discounts apply to live platform fees only.
+fn referral_tier(count: i64) -> (String, i64, Vec<&'static str>) {
+    if count >= 5 {
+        (
+            "Arcadian III".into(), 20,
+            vec![
+                "Wave-1 onboarding priority",
+                "Early allocation slot",
+                "20% platform-fee discount",
+            ],
+        )
+    } else if count >= 3 {
+        (
+            "Arcadian II".into(), 10,
+            vec!["Wave-1 onboarding priority", "10% platform-fee discount"],
+        )
+    } else if count >= 1 {
+        ("Arcadian".into(), 0, vec!["Wave-1 onboarding priority"])
+    } else {
+        ("None".into(), 0, vec![])
+    }
+}
+
+/// POST /v1/waitlist/verify — activate a joined waitlist row by proving the
+/// email via Privy (Privy sends and verifies the OTP). Credits the referrer
+/// exactly once (guarded by `verify_waitlist_email`).
+#[derive(Deserialize)]
+pub struct WaitlistVerifyBody {
+    email:       String,
+    privy_token: String,
+}
+
+pub async fn post_waitlist_verify(
+    State(ctx): State<AppState>,
+    Json(body): Json<WaitlistVerifyBody>,
+) -> Result<Json<Value>, ApiError> {
+    let email = body.email.trim().to_lowercase();
+    let privy = crate::auth::verify_privy_token(&body.privy_token)
+        .await
+        .map_err(|_| ApiError::Unauthorized)?;
+    if privy.verified_email().map(str::to_lowercase).as_deref() != Some(email.as_str()) {
+        return Err(ApiError::BadRequest(
+            "Privy email does not match the submitted address".into(),
+        ));
+    }
+
+    let user = queries::verify_waitlist_email(&ctx.db, &email)
+        .await?
+        .ok_or_else(|| ApiError::BadRequest("Email not on the waitlist or already verified".into()))?;
+
+    if let Some(code) = user.referred_by.as_deref() {
+        queries::credit_referral(&ctx.db, code).await?;
+    }
+
+    let position = queries::get_waitlist_position(&ctx.db, user.id).await?;
+    let (tier, fee_discount_pct, benefits) = referral_tier(user.referral_count);
+
+    tracing::info!("[waitlist] {email} email verified via privy");
+    Ok(Json(json!({
+        "ok": true,
+        "email": email,
+        "email_verified": true,
+        "position": position,
+        "referral_count": user.referral_count,
+        "tier": tier,
+        "fee_discount_pct": fee_discount_pct,
+        "benefits": benefits,
     })))
 }
 
@@ -856,6 +958,7 @@ pub async fn get_waitlist_me(
     let user = queries::get_waitlist_user_by_email(&ctx.db, &email)
         .await?.ok_or(ApiError::NotFound)?;
     let position = queries::get_waitlist_position(&ctx.db, uid).await?;
+    let (tier, fee_discount_pct, benefits) = referral_tier(user.referral_count);
     Ok(Json(json!({
         "id": user.id, "email": user.email,
         "email_verified": user.email_verified,
@@ -864,6 +967,10 @@ pub async fn get_waitlist_me(
         "twitter": user.twitter, "discord": user.discord, "wallet": user.wallet,
         "status": user.status,
         "referral_code": user.referral_code,
+        "referral_count": user.referral_count,
+        "tier": tier,
+        "fee_discount_pct": fee_discount_pct,
+        "benefits": benefits,
         "position": position,
         "created_at": user.created_at, "verified_at": user.verified_at,
     })))

@@ -7,6 +7,9 @@ version.workspace = true
 name = "arcadia-server"
 path = "src/main.rs"
 
+[features]
+grpc = ["arcadia-workers/grpc"]
+
 [dependencies]
 arcadia-core    = { workspace = true }
 arcadia-db      = { workspace = true }

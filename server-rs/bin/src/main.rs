@@ -84,7 +84,16 @@ async fn main() -> Result<()> {
     let ingest_task = tokio::spawn(async move {
         supervise("ingest", move || {
             let c = wctx_ingest.clone();
-            async move { arcadia_workers::ingest::run(c).await }
+            async move {
+                #[cfg(feature = "grpc")]
+                {
+                    arcadia_workers::ingest_grpc::run(c).await
+                }
+                #[cfg(not(feature = "grpc"))]
+                {
+                    arcadia_workers::ingest::run(c).await
+                }
+            }
         })
         .await;
     });

@@ -37,21 +37,20 @@ Enables:
 ## `--features grpc` — Yellowstone gRPC ingest
 
 Enables:
-- `arcadia-workers/ingest`: subscribes to Yellowstone gRPC stream, decodes `TradeClosed`/`CapacityUpdated`/`DepositCompleted`/`WithdrawCompleted` events, upserts DB.
+- `arcadia-workers/ingest_grpc`: subscribes to Yellowstone gRPC stream
+  (transactions filtered by program id + slots at CONFIRMED), buffers
+  per-slot, and flushes in ascending order once a slot reaches
+  CONFIRMED. Reconnects with exponential backoff and resumes from the
+  last persisted slot watermark.
 
 **To enable:**
-1. Open `server-rs/crates/workers/Cargo.toml` and add:
-   ```toml
-   [features]
-   grpc = ["dep:yellowstone-grpc-client", "dep:yellowstone-grpc-proto"]
-
-   [dependencies]
-   yellowstone-grpc-client = { version = "...", optional = true }
-   yellowstone-grpc-proto  = { version = "...", optional = true }
+1. Build with `--features grpc`:
+   ```sh
+   cargo run -p arcadia-server --features grpc
    ```
-   > Find a version of yellowstone compatible with your chosen `solana-sdk` version.
-2. Uncomment the gRPC implementation block in `crates/workers/src/ingest.rs`.
-3. Set env vars: `YELLOWSTONE_ENDPOINT`, `YELLOWSTONE_TOKEN`.
+2. Set env vars: `YELLOWSTONE_ENDPOINT`, `YELLOWSTONE_TOKEN`.
+3. The poll loop (`ingest.rs`) is disabled; the gRPC worker is the
+   sole ingest path when this feature is on.
 
 ## `--features full` — Both
 

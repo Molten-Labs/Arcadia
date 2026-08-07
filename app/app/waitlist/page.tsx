@@ -4,6 +4,7 @@ import { ArrowLeft, BarChart3, Shield, TrendingUp, Zap } from "lucide-react";
 import { DriftBlobs, NoiseOverlay, Reveal } from "@/components/acid";
 import { Container, Kicker, SectionHeading } from "@/components/landing/bits";
 import { WaitlistForm } from "@/components/waitlist/WaitlistForm";
+import { WaitlistProviders } from "@/components/waitlist/WaitlistProviders";
 
 const BENEFITS = [
   { icon: BarChart3, title: "verify your track record", desc: "your history becomes a portable score. investors see it, not your word for it." },
@@ -74,7 +75,9 @@ export default function WaitlistPage() {
             <Reveal delay={240}>
               <div className="rounded-2xl border border-line bg-panel p-5 sm:p-6">
                 <p className="mb-4 font-display text-lg font-bold text-ink">join the waitlist</p>
-                <WaitlistForm source="waitlist-page" />
+                <WaitlistProviders>
+                  <WaitlistForm source="waitlist-page" />
+                </WaitlistProviders>
               </div>
             </Reveal>
           </div>

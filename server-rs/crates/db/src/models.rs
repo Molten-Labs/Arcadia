@@ -188,6 +188,7 @@ pub struct DbWaitlistUser {
     pub status:         String,
     pub referral_code:  String,
     pub referred_by:    Option<String>,
+    pub referral_count: i64,
     pub source:         String,
     pub utm_source:     String,
     pub utm_medium:     String,

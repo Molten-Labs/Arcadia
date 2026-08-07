@@ -5,6 +5,8 @@
 ///   D) Oracle signer  — co-sign sim-trade record_trade with real prices
 ///   E) Price worker   — refresh price cache in Redis every N seconds
 pub mod ingest;
+#[cfg(feature = "grpc")]
+pub mod ingest_grpc;
 pub mod oracle;
 pub mod price;
 pub mod score;

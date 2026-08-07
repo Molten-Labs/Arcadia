@@ -643,6 +643,7 @@ pub async fn insert_waitlist_user(
     email: &str, name: &str, role: &str, experience: &str,
     twitter: &str, discord: &str, wallet: &str,
     referred_by: Option<&str>,
+    email_verified: bool,
     source: &str,
     utm_source: &str, utm_medium: &str, utm_campaign: &str, utm_term: &str,
     ip_hash: &str, user_agent: &str,
@@ -651,20 +652,33 @@ pub async fn insert_waitlist_user(
     Ok(sqlx::query_as::<_, DbWaitlistUser>(
         "INSERT INTO waitlist_users
             (email, name, role, experience, twitter, discord, wallet,
-             referral_code, referred_by, source,
+             referral_code, referred_by, email_verified, source,
              utm_source, utm_medium, utm_campaign, utm_term,
              ip_hash, user_agent)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          ON CONFLICT (email) DO NOTHING
          RETURNING *",
     )
     .bind(email).bind(name).bind(role).bind(experience)
     .bind(twitter).bind(discord).bind(wallet)
-    .bind(&code).bind(referred_by).bind(source)
+    .bind(&code).bind(referred_by).bind(email_verified).bind(source)
     .bind(utm_source).bind(utm_medium).bind(utm_campaign).bind(utm_term)
     .bind(ip_hash).bind(user_agent)
     .fetch_optional(pool)
     .await?)
+}
+
+/// Credit one verified referral to the user holding `ref_code`.
+pub async fn credit_referral(pool: &PgPool, ref_code: &str) -> Result<()> {
+    sqlx::query(
+        "UPDATE waitlist_users
+         SET referral_count = referral_count + 1, updated_at = now()
+         WHERE referral_code = $1"
+    )
+    .bind(ref_code)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 pub async fn get_waitlist_user_by_email(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
@@ -679,12 +693,19 @@ pub async fn list_waitlist_users(pool: &PgPool) -> Result<Vec<DbWaitlistUser>> {
     ).fetch_all(pool).await?)
 }
 
-/// Queue position (computed from created_at order, all users count).
+/// Queue position (creation order), boosted by verified referrals.
+/// Each referral moves the user up one slot, capped at MAX_REFERRAL_BOOST.
+pub const MAX_REFERRAL_BOOST: i64 = 100;
+
 pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
-    let count: (i64,) = sqlx::query_as(
+    let row: (i64, i64) = sqlx::query_as(
         "SELECT COUNT(*) FROM waitlist_users WHERE id < $1"
     ).bind(user_id).fetch_one(pool).await?;
-    Ok(count.0 + 1)
+    let base = row.0 + 1;
+    let refs: (i64,) = sqlx::query_as(
+        "SELECT referral_count FROM waitlist_users WHERE id = $1"
+    ).bind(user_id).fetch_one(pool).await?;
+    Ok((base - refs.0.min(MAX_REFERRAL_BOOST)).max(1))
 }
 
 // ── Execution Wallet ─────────────────────────────────────────────────────────
@@ -722,11 +743,14 @@ pub async fn list_execution_wallets_by_status(pool: &PgPool, status: i16) -> Res
     .await?)
 }
 
-pub async fn verify_waitlist_user(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
+/// Mark a waitlist user's email verified — guarded so a user is verified
+/// (and their referrer credited) at most once. Returns the user only if this
+/// call performed the verification.
+pub async fn verify_waitlist_email(pool: &PgPool, email: &str) -> Result<Option<DbWaitlistUser>> {
     Ok(sqlx::query_as::<_, DbWaitlistUser>(
         "UPDATE waitlist_users
          SET email_verified = true, status = 'verified', verified_at = COALESCE(verified_at, now()), updated_at = now()
-         WHERE email = $1
+         WHERE email = $1 AND NOT email_verified
          RETURNING *"
     ).bind(email).fetch_optional(pool).await?)
 }
