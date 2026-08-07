@@ -45,7 +45,10 @@ export const IDL = {
         { name: "tokenProgram" },
         { name: "rent", address: "SysvarRent111111111111111111111111111111111" },
       ],
-      args: [{ name: "maxLeverage", type: "u8" }],
+      args: [
+        { name: "maxLeverage", type: "u8" },
+        { name: "maxDrawdownBps", type: "u16" },
+      ],
     },
     {
       name: "setCapacity",
@@ -293,6 +296,7 @@ export const IDL = {
           { name: "status",           type: "u8" },
           { name: "scoreTier",        type: "u8" },
           { name: "maxLeverage",      type: "u8" },
+          { name: "maxDrawdownBps",   type: "u16" },
           { name: "bump",             type: "u8" },
         ],
       },

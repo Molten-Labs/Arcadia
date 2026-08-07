@@ -246,7 +246,7 @@ describe("arcadia_vault final binary (offline surfpool)", () => {
     vaultToken = vaultKeypair.publicKey;
 
     const tx = await program.methods
-      .initializeProfile(10)
+      .initializeProfile(10, 5000)
       .accounts({
         trader: trader.publicKey,
         config: configPda,

@@ -42,7 +42,7 @@ they land, no one should deposit.
 
 | # | Fact | Evidence |
 |---|------|----------|
-| F-1 | The scoring engine is fed by **real, chain-proven** data via a live ingest worker. `workers/ingest.rs` polls `SOLANA_RPC_URL` (`getSignaturesForAddress` + `getTransaction`, batched, cursor-advanced), decodes `Program data:` logs through `arcadia_decode`, and projects to the `flow`/`trade` tables keyed on real `(signature, event_index)`. The HTTP paths `/v1/trades/simulate` and `/v1/events` are **disabled** in production by the `EXECUTION_ONLY` flag (403), so self-reported trades/deposits can no longer feed scoring. | `workers/src/ingest.rs`; `decode/src/lib.rs`; `api/src/simulate.rs`, `events.rs`; `state.rs::execution_only` |
+| F-1 | The scoring engine is fed by **real, chain-proven** data via a live ingest worker. `workers/ingest.rs` polls `SOLANA_RPC_URL` (`getSignaturesForAddress` + `getTransaction`, batched, cursor-advanced), decodes `Program data:` logs through `arcadia_decode`, and projects to the `flow`/`trade` tables keyed on real `(signature, event_index)`. The HTTP write path `/v1/trades/simulate` is **disabled** in production by the `EXECUTION_ONLY` flag (403); the old `/v1/events` endpoint was **deleted** (ingest is the only writer), so self-reported trades/deposits can no longer feed scoring. | `workers/src/ingest.rs`; `decode/src/lib.rs`; `api/src/simulate.rs`; `state.rs::execution_only` |
 | F-2 | The Score is **now built from the equity curve**, and the worker no longer silently skips profiles. When on-chain history has fewer than 2 points, the score worker seeds `equity_point` (NAV starts 1.0, compounds realized-PnL/deployed per day) via `metrics::derive_equity_curve`, so `curve.len() < 2` no longer starves scoring. | `workers/src/score.rs`; `scoring/src/metrics.rs` |
 | F-3 | The oracle does **not** touch the chain. `arcadia-chain::push_set_capacity`/`submit_record_trade` return `STUB_*` with `confirmed:false`; the `solana` feature is disabled. Capacity lives only in Postgres as `trader_shares × multiplier` (Stake×Multiplier). | `crates/chain/src/lib.rs`; `workers/src/score.rs:76` |
 | F-4 | **Documentation disagrees with code in at least six places**, uncaught. | see §Inconsistencies |
@@ -142,8 +142,9 @@ investors, not the protocol, decide allocation.
 transactions.
 
 **Actual:** chain events → real ingest worker (`getSignaturesForAddress` poller) → decode →
-DB → score → DB → display. The HTTP write paths (`/v1/trades/simulate`, `/v1/events`) are
-**disabled by `EXECUTION_ONLY` (403)** in production; the remaining gap is that the score →
+DB → score → DB → display. The HTTP write path `/v1/trades/simulate` is
+**disabled by `EXECUTION_ONLY` (403)** in production (the `/v1/events` endpoint was deleted; ingest is the
+only writer); the remaining gap is that the score →
 oracle → chain push (`arcadia-chain`) is still a stub (capacity stays in Postgres).
 
 This is the single most important architectural correction (see §Redesign).
@@ -258,8 +259,7 @@ loud audit trail.** It does not pretend to be trustless.
    on-chain capacity and DB capacity can still diverge.
 2. **Single oracle key** with broad power (sets tier, co-signs every trade). If it leaks or is
    corrupted, capacity is arbitrary and every trade is approved.
-3. **`/v1/events`/`simulate` are disabled in production by `EXECUTION_ONLY` (403).** The old constant
-   `"frontend"` signature and `sim:`-pollution of the live `trade` table can no longer occur through
+3. **`/v1/trades/simulate` is disabled in production by `EXECUTION_ONLY` (403); the old `/v1/events` endpoint was deleted.** The constant `"frontend"` signature and `sim:`-pollution of the live `trade` table can no longer occur through
    the public API — the only writers are the real ingest worker (real `(signature, event_index)` PK).
 5. **No on-chain drawdown halt** — a vault can bleed down to the per-trade floor with no circuit
    breaker.
@@ -576,7 +576,7 @@ Honest staged plan (none of this is required for v1 to be safe, because v1 is op
 | 1 | Score inputs are real, but chain→oracle push is unwired (F-1/F-2) | Critical — on-chain capacity can diverge |
 | 2 | Single oracle key, broad power | Critical |
 | 3 | No on-chain drawdown halt | High |
-| 4 | Execute-only gateway (`simulate`/`events` 403) removes API ingestion attacks (was `frontend`+`sim:` collisions) | Resolved |
+| 4 | Execute-only gateway (`simulate` 403) removes API ingestion attacks (was `frontend`+`sim:` collisions; `/v1/events` deleted) | Resolved |
 | 5 | Unauthenticated sidecar | High (bearer auth added — re-verify) |
 | 6 | Unpinned `initialize_platform` | Medium |
 | 7 | OPM leverage coupling to tier | Medium |
@@ -731,7 +731,7 @@ Be ready with, in order:
 
 | Gap | Simplest production fix | Where |
 |-----|--------------------------|-------|
-| Score fed by self-report | **DONE:** `/v1/trades/simulate` + `/v1/events` are 403-gated by `EXECUTION_ONLY`; real ingest worker reads chain (`getSignaturesForAddress`) → `decode` → `flow`/`trade` | `api/simulate.rs`, `api/events.rs`, `workers/ingest.rs` |
+| Score fed by self-report | **DONE:** `/v1/trades/simulate` is 403-gated by `EXECUTION_ONLY`; `/v1/events` deleted; real ingest worker reads chain (`getSignaturesForAddress`) → `decode` → `flow`/`trade` | `api/simulate.rs`, `workers/ingest.rs` |
 | `equity_point` never written | **DONE:** worker seeds `equity_point` from verified `flow`+`trade` via `derive_equity_curve` | `workers/score.rs`, `scoring/metrics.rs` |
 | `"frontend"` signature collision | **DONE:** real tx signature + `event_index` PK from ingest; public write paths disabled | `workers/ingest.rs` |
 | `sim:` deterministic collisions + polling live table | **DONE:** simulate 403'd in production; only ingest writes to `trade` | `api/simulate.rs` |

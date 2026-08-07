@@ -9,9 +9,9 @@ pub struct AppState {
     pub public_url: String,
     pub cfg:        ApiConfig,
     pub admin_key:  String,
-    /// When true, the public self-reporting write paths (/v1/trades/simulate,
-    /// /v1/events) are disabled: only the execution pipeline may write trades
-    /// and capital flows. Defaults to true (production posture).
+    /// When true, the public self-reporting write path (/v1/trades/simulate)
+    /// is disabled: only the execution pipeline may write trades and capital
+    /// flows. Defaults to true (production posture).
     pub execution_only: bool,
 }
 

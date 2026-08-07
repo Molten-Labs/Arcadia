@@ -180,10 +180,15 @@ fn initialize_profile_ix(
     base_mint: anchor_lang::prelude::Pubkey,
     vault_token: anchor_lang::prelude::Pubkey,
     max_leverage: u8,
+    max_drawdown_bps: u16,
 ) -> Instruction {
     Instruction::new_with_bytes(
         arcadia_vault::id(),
-        &arcadia_vault::instruction::InitializeProfile { max_leverage }.data(),
+        &arcadia_vault::instruction::InitializeProfile {
+            max_leverage,
+            max_drawdown_bps,
+        }
+        .data(),
         arcadia_vault::accounts::InitializeProfile {
             trader,
             config,
@@ -261,6 +266,7 @@ fn initialize_profile_happy_path_sets_profile_and_vault_authority() {
         fixture.base_mint,
         vault_token.pubkey(),
         5,
+        5_000,
     );
 
     let (cu, logs) = send_tx(
@@ -286,6 +292,7 @@ fn initialize_profile_happy_path_sets_profile_and_vault_authority() {
     assert_eq!(profile_state.status, arcadia_vault::PROFILE_STATUS_ACTIVE);
     assert_eq!(profile_state.score_tier, arcadia_vault::NOT_FUNDABLE_TIER);
     assert_eq!(profile_state.max_leverage, 5);
+    assert_eq!(profile_state.max_drawdown_bps, 5_000);
     assert_eq!(profile_state.bump, profile_bump);
 
     let vault_state = read_token_account(&fixture.svm, &vault_token.pubkey());
@@ -309,6 +316,7 @@ fn initialize_profile_reinit_for_same_trader_fails() {
         fixture.base_mint,
         first_vault.pubkey(),
         5,
+        5_000,
     );
     send_tx(
         &mut fixture.svm,
@@ -324,6 +332,7 @@ fn initialize_profile_reinit_for_same_trader_fails() {
         fixture.base_mint,
         second_vault.pubkey(),
         5,
+        5_000,
     );
     assert!(tx_fails(
         &mut fixture.svm,
@@ -347,6 +356,34 @@ fn initialize_profile_rejects_invalid_leverage() {
             fixture.base_mint,
             vault_token.pubkey(),
             max_leverage,
+            5_000,
+        );
+
+        assert!(tx_fails(
+            &mut fixture.svm,
+            &[ix],
+            &fixture.trader,
+            &[&fixture.trader, &vault_token],
+        ));
+        assert!(fixture.svm.get_account(&profile).is_none());
+        assert!(fixture.svm.get_account(&vault_token.pubkey()).is_none());
+    }
+}
+
+#[test]
+fn initialize_profile_rejects_invalid_drawdown() {
+    for max_drawdown_bps in [arcadia_vault::BPS_DENOMINATOR + 1, u16::MAX] {
+        let mut fixture = setup();
+        let vault_token = Keypair::new();
+        let (profile, _) = profile_pda(&fixture.trader.pubkey());
+        let ix = initialize_profile_ix(
+            fixture.trader.pubkey(),
+            fixture.config,
+            profile,
+            fixture.base_mint,
+            vault_token.pubkey(),
+            5,
+            max_drawdown_bps,
         );
 
         assert!(tx_fails(
@@ -372,6 +409,7 @@ fn initialize_profile_rejects_wrong_profile_pda() {
         fixture.base_mint,
         vault_token.pubkey(),
         5,
+        5_000,
     );
 
     assert!(tx_fails(
@@ -396,6 +434,7 @@ fn initialize_profile_rejects_base_mint_not_bound_to_config() {
         fixture.wrong_mint,
         vault_token.pubkey(),
         5,
+        5_000,
     );
 
     assert!(tx_fails(

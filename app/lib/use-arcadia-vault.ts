@@ -15,16 +15,10 @@ import {
   findInvestorPosition,
   findPlatformConfig,
   findTraderProfile,
-  fetchTraderProfile,
-  fetchInvestorPosition,
-  usdcToUsd,
-  sharesToHuman,
-  navPerShareToMultiplier,
 } from "./arcadia-sdk";
 import {
   getVaultChainStatus,
   makeArcadiaProgram,
-  pushEvent,
   IDLE_TX_STATE,
   type VaultChainStatus,
   type VaultTxState,
@@ -151,7 +145,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
   }, [connection, publicKey, traderProfilePubkey]);
 
   const initializeProfile = useCallback(
-    async (handle: string, maxLeverage: number): Promise<boolean> => {
+    async (handle: string, maxLeverage: number, maxDrawdownBps = 5_000): Promise<boolean> => {
       if (!publicKey || !anchorWallet) return fail("Connect your wallet first.");
       progress("checking", `Creating trader profile "${handle}"…`);
       try {
@@ -170,7 +164,7 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const vaultKeypair = Keypair.generate();
         progress("signing", "Confirm in wallet…");
         const tx = await program.methods
-          .initializeProfile(maxLeverage)
+          .initializeProfile(maxLeverage, maxDrawdownBps)
           .accountsPartial({
             trader: publicKey,
             config: configPda,
@@ -186,12 +180,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
         const sig = await sendTransaction!(tx, connection);
 
         succeed(`Profile "${handle}" created on-chain. Signature: ${sig.slice(0, 8)}…`, sig);
-        pushEvent({
-          event_type: "ProfileInitialized",
-          profile: profAddr.toBase58(),
-          trader: publicKey.toBase58(),
-          ts: Math.floor(Date.now() / 1000),
-        });
         return true;
       } catch (err) {
         console.error("[initializeProfile] full error:", err);
@@ -227,11 +215,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           .transaction();
         const sig = await sendTransaction!(tx, connection);
         succeed(`Investor account created. Signature: ${sig.slice(0, 8)}…`, sig);
-        pushEvent({
-          event_type: "InvestorInitialized",
-          investor: publicKey.toBase58(),
-          ts: Math.floor(Date.now() / 1000),
-        });
         return true;
       } catch (err) {
         return fail(`Initialize investor failed: ${errorMessage(err)}`);
@@ -292,29 +275,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           `Deposit of $${amountUsdc.toFixed(2)} confirmed. Signature: ${sig.slice(0, 8)}…`,
           sig,
         );
-        let sharesMinted = "0";
-        let navPerShare = "0";
-        try {
-          const profile = await fetchTraderProfile(connection, traderKey);
-          if (profile && profile.hwmPerShare > 0n) {
-            navPerShare = navPerShareToMultiplier(profile.hwmPerShare).toString();
-            const amountRaw = BigInt(Math.floor(amountUsdc * 1_000_000));
-            const sharesRaw = (amountRaw * profile.totalShares) / (profile.hwmPerShare > 0n ? profile.hwmPerShare : 1n);
-            sharesMinted = sharesToHuman(sharesRaw).toString();
-          }
-        } catch {
-          /* best-effort: indexer catches up from chain state */
-        }
-        pushEvent({
-          event_type: "Deposited",
-          profile: profilePda.toBase58(),
-          depositor: publicKey.toBase58(),
-          is_trader: false,
-          amount_usd: amountUsdc.toString(),
-          shares_minted: sharesMinted,
-          nav_per_share: navPerShare,
-          ts: Math.floor(Date.now() / 1000),
-        });
         return true;
       } catch (err) {
         return fail(`Deposit failed: ${errorMessage(err)}`);
@@ -349,23 +309,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           .transaction();
         const sig = await sendTransaction!(tx, connection);
         succeed(`Withdraw request submitted. Signature: ${sig.slice(0, 8)}…`, sig);
-        try {
-          const profile = await fetchTraderProfile(connection, traderKey);
-          const navPerShare = profile && profile.hwmPerShare > 0n
-            ? navPerShareToMultiplier(profile.hwmPerShare).toString()
-            : "0";
-          pushEvent({
-            event_type: "WithdrawRequested",
-            profile: profilePda.toBase58(),
-            owner: publicKey.toBase58(),
-            shares: (shares * 1_000_000).toString(),
-            withdraw_ready_ts: 0,
-            nav_per_share: navPerShare,
-            ts: Math.floor(Date.now() / 1000),
-          });
-        } catch {
-          /* best-effort */
-        }
         return true;
       } catch (err) {
         return fail(`Withdraw request failed: ${errorMessage(err)}`);
@@ -409,29 +352,6 @@ export function useArcadiaVault(traderProfilePubkey?: string) {
           .transaction();
         const sig = await sendTransaction!(tx, connection);
         succeed(`Withdrawal executed. Signature: ${sig.slice(0, 8)}…`, sig);
-        let sharesBurned = "0";
-        let amountUsd = "0";
-        try {
-          const profile = await fetchTraderProfile(connection, traderKey);
-          if (profile && profile.hwmPerShare > 0n) {
-            const navPerShare = navPerShareToMultiplier(profile.hwmPerShare);
-            const position = await fetchInvestorPosition(connection, publicKey, profilePda);
-            if (position) {
-              const pendingShares = Number(position.pendingWithdrawShares) / 1_000_000;
-              sharesBurned = pendingShares.toFixed(4);
-              amountUsd = (pendingShares * navPerShare).toFixed(2);
-            }
-          }
-        } catch {
-          /* best-effort: indexer catches up from chain state */
-        }
-        pushEvent({
-          event_type: "Withdrawn",
-          profile: profilePda.toBase58(),
-          owner: publicKey.toBase58(),
-          shares_burned: sharesBurned,
-          amount_usd: amountUsd,
-        });
         return true;
       } catch (err) {
         return fail(`Process withdraw failed: ${errorMessage(err)}`);

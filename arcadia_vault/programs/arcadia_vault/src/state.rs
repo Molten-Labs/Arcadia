@@ -29,6 +29,7 @@ pub struct TraderProfile {
     pub status: u8,
     pub score_tier: u8,
     pub max_leverage: u8,
+    pub max_drawdown_bps: u16,
     pub bump: u8,
 }
 

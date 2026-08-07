@@ -86,6 +86,7 @@ export interface TraderProfileData {
   status: number;
   scoreTier: number;
   maxLeverage: number;
+  maxDrawdownBps: number;
   bump: number;
 }
 
@@ -219,6 +220,7 @@ export function decodeTraderProfile(data: Buffer): TraderProfileData {
     status: r.u8(),
     scoreTier: r.u8(),
     maxLeverage: r.u8(),
+    maxDrawdownBps: r.u16(),
     bump: r.u8(),
   };
 }

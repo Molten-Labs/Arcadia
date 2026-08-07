@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::{
     token::Mint, token::Token, token::TokenAccount, ArcadiaError, PlatformConfig,
-    ProfileInitialized, TraderProfile, MAX_LEVERAGE_CEILING, NOT_FUNDABLE_TIER, PROFILE_SEED,
-    PROFILE_STATUS_ACTIVE, SHARE_SCALE,
+    ProfileInitialized, TraderProfile, BPS_DENOMINATOR, MAX_LEVERAGE_CEILING, NOT_FUNDABLE_TIER,
+    PROFILE_SEED, PROFILE_STATUS_ACTIVE, SHARE_SCALE,
 };
 
 #[derive(Accounts)]
@@ -34,10 +34,14 @@ pub struct InitializeProfile<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-pub fn handler(ctx: Context<InitializeProfile>, max_leverage: u8) -> Result<()> {
+pub fn handler(ctx: Context<InitializeProfile>, max_leverage: u8, max_drawdown_bps: u16) -> Result<()> {
     require!(
         max_leverage > 0 && max_leverage <= MAX_LEVERAGE_CEILING,
         ArcadiaError::InvalidLeverage
+    );
+    require!(
+        max_drawdown_bps <= BPS_DENOMINATOR,
+        ArcadiaError::InvalidDrawdown
     );
 
     let now = Clock::get()?.unix_timestamp;
@@ -55,6 +59,7 @@ pub fn handler(ctx: Context<InitializeProfile>, max_leverage: u8) -> Result<()> 
     profile.status = PROFILE_STATUS_ACTIVE;
     profile.score_tier = NOT_FUNDABLE_TIER;
     profile.max_leverage = max_leverage;
+    profile.max_drawdown_bps = max_drawdown_bps;
     profile.bump = ctx.bumps.profile;
 
     emit!(ProfileInitialized {

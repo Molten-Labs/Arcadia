@@ -121,21 +121,3 @@ export function makeArcadiaProgram(
   const provider = new AnchorProvider(connection, wallet, { commitment: "confirmed" });
   return new Program<ArcadiaIdl>(getArcadiaIdl(), provider);
 }
-
-/* ── Backend event push (best-effort indexer notification) ──────────── */
-
-export async function pushEvent(event: Record<string, unknown>): Promise<void> {
-  const token = getStoredToken();
-  try {
-    await fetch("/api/v1/events", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ events: [event] }),
-    });
-  } catch {
-    // best-effort: the indexer catches up from chain state
-  }
-}

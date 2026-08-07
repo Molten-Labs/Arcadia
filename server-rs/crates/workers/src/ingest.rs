@@ -1,11 +1,10 @@
 /// Ingest worker: poll the chain for arcadia_vault transactions, decode the
 /// Anchor events they emit, and apply them to the DB.
 ///
-/// This is the authoritative bridge from chain → DB. It replaces the old
-/// frontend-driven `/v1/events` path (which wrote `signature = "frontend"` and
-/// lost rows to PK collisions). Every row here is keyed on the **real** tx
-/// signature + slot, so replays are idempotent (`ON CONFLICT DO NOTHING`) and
-/// the score engine reads chain-originated flow/trade data.
+/// This is the authoritative bridge from chain → DB. Every row here is keyed
+/// on the real tx signature + slot, so replays are idempotent
+/// (`ON CONFLICT DO NOTHING`) and the score engine reads chain-originated
+/// flow/trade data.
 ///
 /// Transport choice: JSON-RPC polling (`getSignaturesForAddress` +
 /// `getTransaction`) against `SOLANA_RPC_URL`. This is the simplest production
@@ -162,8 +161,27 @@ async fn project_event(ctx: &WorkerCtx, sig: &str, slot: i64, event: ArcadiaEven
                     kind: "withdraw".into(),
                     amount_usd: e.amount_usd,
                     shares: e.shares_burned,
-                    nav_per_share: Decimal::ZERO,
+                    nav_per_share: e.nav_per_share,
                     ts: chrono::Utc::now(),
+                },
+            )
+            .await?;
+        }
+        ArcadiaEvent::WithdrawRequested(e) => {
+            queries::insert_flow(
+                &ctx.db,
+                &DbFlow {
+                    signature: sig.to_string(),
+                    event_index: 0,
+                    slot,
+                    profile: e.profile.clone(),
+                    owner: e.owner.clone(),
+                    is_trader: false,
+                    kind: "withdraw_request".into(),
+                    amount_usd: Decimal::ZERO,
+                    shares: e.shares,
+                    nav_per_share: e.nav_per_share,
+                    ts: e.withdraw_ready_ts,
                 },
             )
             .await?;
@@ -192,8 +210,7 @@ async fn project_event(ctx: &WorkerCtx, sig: &str, slot: i64, event: ArcadiaEven
             )
             .await?;
         }
-        ArcadiaEvent::WithdrawRequested(..)
-        | ArcadiaEvent::Settled(..)
+        ArcadiaEvent::Settled(..)
         | ArcadiaEvent::ProfitWithdrawn(..) => {
             // Derived state — consumed by the score/withdraw workers.
         }

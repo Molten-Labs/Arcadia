@@ -231,7 +231,7 @@ See §1b. Operational requirements on top of the signals:
 ## 7. Backend / DB hygiene (real bugs that block production)
 
 - **`equity_point` seeding** — DONE: worker seeds from `flow`+`trade` (§1f); curve no longer starves.
-- **`/v1/events` `"frontend"` signature collision** — DONE: `EXECUTION_ONLY` 403s the public write path; ingest writes real `(signature, event_index)`.
+- **`/v1/events` `"frontend"` signature collision** — DONE: the `/v1/events` endpoint was deleted; ingest is the only writer and uses real `(signature, event_index)`.
 - **`sim:` deterministic collisions / live-table pollution** — DONE: simulate 403'd in production; only ingest writes `trade`.
 - **`deposits_open` hardcoded `true`** for everyone (`oracle.rs` doc claims `score >= 600` gate;
   code always `true`). Reconcile.

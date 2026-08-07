@@ -1,6 +1,5 @@
 pub mod auth;
 pub mod error;
-pub mod events;
 pub mod routes;
 pub mod simulate;
 pub mod state;
@@ -40,6 +39,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/score",                       get(routes::get_score))
         .route("/v1/me",                          get(routes::me))
         .route("/v1/waitlist",                    post(routes::post_waitlist))
+        .route("/v1/waitlist/verify",             post(routes::post_waitlist_verify))
         .route("/v1/waitlist/position",           get(routes::get_waitlist_position))
         .route("/v1/waitlist/me",                 get(routes::get_waitlist_me))
         .route("/v1/admin/waitlist",              get(routes::get_admin_waitlist));
@@ -50,8 +50,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/v1/investors/:wallet/flows",         get(routes::get_investor_flows))
         .route("/v1/investors/:wallet/notifications", get(routes::get_investor_notifications))
         .route("/v1/trades/simulate",                 post(simulate::handler))
-        .route("/v1/traders/init",                    post(routes::init_trader))
-        .route("/v1/events",                          post(events::handler));
+        .route("/v1/traders/init",                    post(routes::init_trader));
 
     Router::new()
         .merge(public)

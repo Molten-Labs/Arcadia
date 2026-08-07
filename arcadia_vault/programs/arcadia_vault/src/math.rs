@@ -62,6 +62,17 @@ pub fn trade_notional_cap(total_assets: u64, max_notional_bps: u16) -> Result<u6
     )
 }
 
+/// Lowest permitted `nav_per_share` given the high-water mark and the trader's
+/// max drawdown. `hwm` is in SHARE_SCALE units; result is likewise scaled.
+/// A `max_drawdown_bps` of 10000 means the floor is zero (trader may lose all).
+pub fn drawdown_floor_nav(hwm_per_share: u64, max_drawdown_bps: u16) -> Result<u64> {
+    require!(max_drawdown_bps <= BPS_DENOMINATOR, ArcadiaError::InvalidDrawdown);
+    let keep_bps = (BPS_DENOMINATOR as u32)
+        .checked_sub(max_drawdown_bps as u32)
+        .ok_or_else(math_error)? as u16;
+    checked_mul_div_u64(hwm_per_share, keep_bps as u64, BPS_DENOMINATOR as u64)
+}
+
 pub fn fee_from_bps(amount: u64, bps: u16) -> Result<u64> {
     checked_mul_div_u64(amount, bps as u64, BPS_DENOMINATOR as u64)
 }
@@ -229,6 +240,25 @@ mod tests {
             withdrawal_ready_ts(50, 1_000, 0, 1_000, now).unwrap(),
             next_daily_settlement_window(now).unwrap()
         );
+    }
+
+    #[test]
+    fn drawdown_floor_is_hwm_minus_drawdown() {
+        // hwm $1.00, 50% drawdown → floor $0.50
+        assert_eq!(drawdown_floor_nav(SHARE_SCALE, 5000).unwrap(), 500_000);
+        // 20% drawdown → floor $0.80
+        assert_eq!(drawdown_floor_nav(SHARE_SCALE, 2000).unwrap(), 800_000);
+        // 0 bps → floor equals hwm (no losses allowed)
+        assert_eq!(drawdown_floor_nav(SHARE_SCALE, 0).unwrap(), SHARE_SCALE);
+        // 100% drawdown → floor zero
+        assert_eq!(drawdown_floor_nav(SHARE_SCALE, 10_000).unwrap(), 0);
+        // hwm of $2.00, 50% → floor $1.00
+        assert_eq!(drawdown_floor_nav(2 * SHARE_SCALE, 5000).unwrap(), SHARE_SCALE);
+    }
+
+    #[test]
+    fn drawdown_floor_rejects_overflowing_bps() {
+        assert!(drawdown_floor_nav(SHARE_SCALE, 10_001).is_err());
     }
 
     #[test]

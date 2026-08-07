@@ -270,7 +270,11 @@ fn initialize_profile_ix(
 ) -> Instruction {
     Instruction::new_with_bytes(
         arcadia_vault::id(),
-        &arcadia_vault::instruction::InitializeProfile { max_leverage }.data(),
+        &arcadia_vault::instruction::InitializeProfile {
+            max_leverage,
+            max_drawdown_bps: arcadia_vault::BPS_DENOMINATOR,
+        }
+        .data(),
         arcadia_vault::accounts::InitializeProfile {
             trader,
             config,

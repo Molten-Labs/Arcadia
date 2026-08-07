@@ -16,6 +16,10 @@ pub enum ArcadiaError {
     LeverageTooHigh,
     #[msg("Trade notional exceeds 20% of AUM")]
     NotionalTooLarge,
+    #[msg("Trade loss would exceed trader's max drawdown floor")]
+    MaxDrawdownExceeded,
+    #[msg("Max drawdown must be within 0..=10000 bps")]
+    InvalidDrawdown,
     #[msg("Invalid trade parameters")]
     InvalidTradeParams,
     #[msg("Vault has no shares; NAV undefined")]

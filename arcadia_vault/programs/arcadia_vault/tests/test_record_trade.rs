@@ -309,7 +309,11 @@ fn initialize_profile_ix(
 ) -> Instruction {
     Instruction::new_with_bytes(
         arcadia_vault::id(),
-        &arcadia_vault::instruction::InitializeProfile { max_leverage }.data(),
+        &arcadia_vault::instruction::InitializeProfile {
+            max_leverage,
+            max_drawdown_bps: arcadia_vault::BPS_DENOMINATOR,
+        }
+        .data(),
         arcadia_vault::accounts::InitializeProfile {
             trader,
             config,
@@ -657,6 +661,126 @@ fn record_trade_loss_floors_at_nav_bearing_assets() {
     assert_eq!(
         arcadia_vault::nav_per_share(1_000_000_000, 1_000_000_000, profile.total_shares).unwrap(),
         0
+    );
+}
+
+#[test]
+fn record_trade_rejects_loss_breaching_drawdown_floor() {
+    let mut fixture = setup(true);
+    let mut profile = read_profile(&fixture.svm, &fixture.profile);
+    profile.max_drawdown_bps = 5_000;
+    write_profile(&mut fixture.svm, fixture.profile, &profile);
+    assert_eq!(
+        read_token_account(&fixture.svm, &fixture.vault_token).amount,
+        5_000_000_000
+    );
+
+    // 5x long, -40% price move → -3,000,000,000. NAV would drop to 400,000
+    // ($0.40) < floor 500,000 ($0.50), so the trade must be rejected.
+    let args = TradeArgs {
+        direction: arcadia_vault::DIRECTION_LONG,
+        size_usd: 1_000_000_000,
+        leverage_x100: 500,
+        entry_px: 100,
+        exit_px: 40,
+        fees_usd: 0,
+        was_liquidated: false,
+        ..TradeArgs::default()
+    };
+    assert_eq!(
+        arcadia_vault::realized_pnl(
+            args.direction,
+            args.size_usd,
+            args.leverage_x100,
+            args.entry_px,
+            args.exit_px,
+            args.fees_usd,
+        )
+        .unwrap(),
+        -3_000_000_000
+    );
+
+    let ix = record_trade_ix(
+        &fixture,
+        fixture.trader.pubkey(),
+        fixture.oracle_authority.pubkey(),
+        fixture.oracle_authority.pubkey(),
+        args,
+    );
+    let trader = fixture.trader.insecure_clone();
+    let oracle = fixture.oracle_authority.insecure_clone();
+    assert!(tx_fails(
+        &mut fixture.svm,
+        &[ix],
+        &trader,
+        &[&trader, &oracle],
+    ));
+    // No state changed.
+    assert_eq!(
+        read_token_account(&fixture.svm, &fixture.vault_token).amount,
+        5_000_000_000
+    );
+    assert_eq!(
+        read_token_account(&fixture.svm, &fixture.treasury_token).amount,
+        10_000_000_000
+    );
+}
+
+#[test]
+fn record_trade_allows_loss_exactly_at_drawdown_floor() {
+    let mut fixture = setup(true);
+    let mut profile = read_profile(&fixture.svm, &fixture.profile);
+    profile.max_drawdown_bps = 5_000;
+    write_profile(&mut fixture.svm, fixture.profile, &profile);
+
+    // 5x long, -50% price move → -2,500,000,000. NAV lands exactly at the
+    // floor (500,000 = $0.50), which is permitted.
+    let args = TradeArgs {
+        direction: arcadia_vault::DIRECTION_LONG,
+        size_usd: 1_000_000_000,
+        leverage_x100: 500,
+        entry_px: 100,
+        exit_px: 50,
+        fees_usd: 0,
+        was_liquidated: false,
+        ..TradeArgs::default()
+    };
+    assert_eq!(
+        arcadia_vault::realized_pnl(
+            args.direction,
+            args.size_usd,
+            args.leverage_x100,
+            args.entry_px,
+            args.exit_px,
+            args.fees_usd,
+        )
+        .unwrap(),
+        -2_500_000_000
+    );
+    let ix = record_trade_ix(
+        &fixture,
+        fixture.trader.pubkey(),
+        fixture.oracle_authority.pubkey(),
+        fixture.oracle_authority.pubkey(),
+        args,
+    );
+    let trader = fixture.trader.insecure_clone();
+    let oracle = fixture.oracle_authority.insecure_clone();
+    let (cu, _) = send_tx(&mut fixture.svm, &[ix], &trader, &[&trader, &oracle]);
+    record_cu("record_trade:drawdown_floor_boundary", cu);
+
+    assert_eq!(
+        read_token_account(&fixture.svm, &fixture.vault_token).amount,
+        2_500_000_000
+    );
+    assert_eq!(
+        read_token_account(&fixture.svm, &fixture.treasury_token).amount,
+        12_500_000_000
+    );
+    let profile = read_profile(&fixture.svm, &fixture.profile);
+    assert_eq!(
+        arcadia_vault::nav_per_share(2_500_000_000, 0, profile.total_shares).unwrap(),
+        500_000
     );
 }
 

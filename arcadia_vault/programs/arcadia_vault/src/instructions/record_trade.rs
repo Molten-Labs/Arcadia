@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    nav_bearing_assets, realized_pnl,     token::profile_signer_seeds, token::transfer_checked_accounts,
+    checked_sub_u64, drawdown_floor_nav, nav_bearing_assets, nav_per_share, realized_pnl,
+    token::profile_signer_seeds, token::transfer_checked_accounts,
     token::transfer_checked_accounts_with_signer, token::Mint, token::Token,
     token::TokenAccount, trade_notional_cap, ArcadiaError, PlatformConfig,
     TradeClosed, TraderProfile, MAX_NOTIONAL_BPS, PROFILE_STATUS_ACTIVE,
@@ -107,6 +108,26 @@ pub fn handler(
             .try_into()
             .map_err(|_| ArcadiaError::MathOverflow)?;
         applied_pnl = loss.min(nav_excl);
+
+        // Reject any loss that would push NAV below the trader's max-drawdown
+        // floor. This is the investor's hard guarantee: nobody can lose more
+        // than `max_drawdown_bps` of the high-water mark.
+        if applied_pnl > 0 {
+            let floor_nav = drawdown_floor_nav(
+                ctx.accounts.profile.hwm_per_share,
+                ctx.accounts.profile.max_drawdown_bps,
+            )?;
+            let vault_after = checked_sub_u64(vault_balance_before, applied_pnl)?;
+            let nav_after = nav_per_share(
+                vault_after,
+                ctx.accounts.profile.trader_claimable,
+                ctx.accounts.profile.total_shares,
+            )?;
+            require!(
+                nav_after >= floor_nav,
+                ArcadiaError::MaxDrawdownExceeded
+            );
+        }
 
         if applied_pnl > 0 {
             let profile_bump = [ctx.accounts.profile.bump];

@@ -54,8 +54,12 @@ pub mod arcadia_vault {
         )
     }
 
-    pub fn initialize_profile(ctx: Context<InitializeProfile>, max_leverage: u8) -> Result<()> {
-        instructions::initialize_profile::handler(ctx, max_leverage)
+    pub fn initialize_profile(
+        ctx: Context<InitializeProfile>,
+        max_leverage: u8,
+        max_drawdown_bps: u16,
+    ) -> Result<()> {
+        instructions::initialize_profile::handler(ctx, max_leverage, max_drawdown_bps)
     }
 
     pub fn set_capacity(ctx: Context<SetCapacity>, cap_usd: u64, score_tier: u8) -> Result<()> {
