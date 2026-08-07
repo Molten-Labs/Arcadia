@@ -869,7 +869,7 @@ pub async fn post_waitlist(
 
 /// Verified-referral reward tiers. Queue influence is capped in
 /// `get_waitlist_position`; fee discounts apply to live platform fees only.
-fn referral_tier(count: i64) -> (String, i64, Vec<&'static str>) {
+fn referral_tier(count: i32) -> (String, i64, Vec<&'static str>) {
     if count >= 5 {
         (
             "Arcadian III".into(), 20,

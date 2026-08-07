@@ -73,7 +73,9 @@ function LiveLeaderboardInner() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <Kicker>Live Leaderboard</Kicker>
-              <SectionHeading className="mt-4">The proven, ranked.</SectionHeading>
+              <SectionHeading className="mt-4 !text-[clamp(1.6rem,4.2vw,3rem)]">
+                The proven, ranked.
+              </SectionHeading>
             </div>
             <Link
               href={LINKS.leaderboard}

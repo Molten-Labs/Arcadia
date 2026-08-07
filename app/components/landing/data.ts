@@ -21,16 +21,6 @@ export const NAV_LINKS = [
   { label: "Docs", href: LINKS.docs },
 ] as const;
 
-/** Trust-strip marquee tokens. `icon` keys map to marks in TrustStrip. */
-export const TRUST_ITEMS = [
-  { label: "Solana", icon: "solana" },
-  { label: "Drift", icon: "drift" },
-  { label: "Jupiter", icon: "jupiter" },
-  { label: "Verified reputation", icon: "verified" },
-  { label: "Smart-contract allocation", icon: "contract" },
-  { label: "Non-custodial vaults", icon: "vault" },
-] as const;
-
 /** Diagonal acid band phrases. */
 export const SLASH_PHRASES = [
   "PROOF REPLACES PROMISES",
@@ -79,7 +69,7 @@ export const ALLOCATION_SPECS = [
   { label: "Trader withdrawal", value: "Performance share only" },
   { label: "Investor visibility", value: "Score, vault, and activity" },
   { label: "Allocation logic", value: "Reputation-based capacity" },
-  { label: "Protected against", value: "Theft -- not trading losses" },
+  { label: "Protected against", value: "Theft, not trading losses" },
 ] as const;
 
 export const HOW_STEPS = [
@@ -92,7 +82,7 @@ export const HOW_STEPS = [
   {
     n: "02",
     title: "Arcadia builds a reputation score",
-    body: "Measures consistency, risk control, drawdown, and real performance -- not screenshots or hype.",
+    body: "Measures consistency, risk control, drawdown, and real performance straight from the on-chain record.",
     wide: false,
   },
   {
@@ -172,23 +162,35 @@ export const TWO_SIDES = {
 export const FAQ_ITEMS = [
   {
     q: "What is Arcadia?",
-    a: "The allocation rail for on-chain trading talent. It turns real trading history into verified reputation, then lets investor capital flow to traders through smart-contract vaults instead of screenshots or direct custody.",
+    a: "The allocation rail for on-chain trading talent. It turns real trading history into verified reputation, then routes investor capital to proven traders through smart-contract vaults.",
   },
   {
     q: "What is the Arcadia Score?",
-    a: "A 0-1000 reputation number built from real trading history. It rewards consistent, risk-aware performance, not loud claims or lucky screenshots.",
+    a: "A 0-1000 reputation number built from real trading history. It rewards consistent, risk-aware performance on the public record.",
   },
   {
     q: "Can a trader fake their reputation?",
-    a: "No. Arcadia is based on on-chain trading activity, not uploaded screenshots. Reputation comes from the public record.",
+    a: "No. Arcadia reads on-chain trading activity and scores what is on the public record. Reputation is built from that record, so there is nothing left to fake in a screenshot.",
   },
   {
     q: "Can a trader run away with investor funds?",
     a: "No. Investor capital goes into a smart-contract vault, not the trader's wallet. They can trade under protocol rules but cannot withdraw investor capital.",
   },
   {
+    q: "Do I need to be an expert to invest?",
+    a: "No. You pick a trader by their verified score and record, deposit into their vault, and track the vault's activity in one dashboard. The reputation layer does the diligence for you.",
+  },
+  {
+    q: "What does a trader need to get started?",
+    a: "A Solana wallet and real on-chain trading history. Arcadia reads the public record, scores it, and turns consistent, risk-aware performance into a vault with allocation capacity.",
+  },
+  {
     q: "Can I lose money as an investor?",
     a: "Yes. Arcadia protects you from theft, not from trading losses. You hold vault shares alongside the trader; if the vault loses, your share loses value proportionally. Verified skill lowers risk over time; it does not remove it.",
+  },
+  {
+    q: "What is a max drawdown floor?",
+    a: "Every vault enforces a drawdown floor tied to the trader's high-water mark. A trade that would push the vault's net asset value below that floor is rejected outright, so losses can never run unchecked on allocated capital.",
   },
   {
     q: "How does Arcadia make money?",

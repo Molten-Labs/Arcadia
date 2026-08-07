@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type FormEvent } from "react";import { useLoginWithEmail, usePrivy, useToken } from "@privy-io/react-auth";
+import { useState, type FormEvent } from "react";import { useLoginWithEmail, usePrivy, useToken } from "@privy-io/react-auth";
 import { AlertTriangle, CheckCircle, Loader2, Copy, BadgeCheck } from "lucide-react";
 const ROLE_OPTIONS = ["trader", "investor", "both"] as const;
 const EXP_OPTIONS = ["", "beginner", "<1", "1-3", "3+"] as const;

@@ -698,14 +698,14 @@ pub async fn list_waitlist_users(pool: &PgPool) -> Result<Vec<DbWaitlistUser>> {
 pub const MAX_REFERRAL_BOOST: i64 = 100;
 
 pub async fn get_waitlist_position(pool: &PgPool, user_id: i64) -> Result<i64> {
-    let row: (i64, i64) = sqlx::query_as(
+    let row: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM waitlist_users WHERE id < $1"
     ).bind(user_id).fetch_one(pool).await?;
     let base = row.0 + 1;
-    let refs: (i64,) = sqlx::query_as(
+    let refs: (i32,) = sqlx::query_as(
         "SELECT referral_count FROM waitlist_users WHERE id = $1"
     ).bind(user_id).fetch_one(pool).await?;
-    Ok((base - refs.0.min(MAX_REFERRAL_BOOST)).max(1))
+    Ok((base - (refs.0 as i64).min(MAX_REFERRAL_BOOST)).max(1))
 }
 
 // ── Execution Wallet ─────────────────────────────────────────────────────────

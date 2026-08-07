@@ -3,13 +3,13 @@ import { AllocationRail } from "@/components/landing/AllocationRail";
 import { Container, Kicker, SectionHeading } from "@/components/landing/bits";
 import { DualCta } from "@/components/landing/DualCta";
 import { Faq } from "@/components/landing/Faq";
+import { FAQ_ITEMS } from "@/components/landing/data";
 import { FlowSection } from "@/components/landing/FlowSection";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { LiveLeaderboard } from "@/components/landing/LiveLeaderboard";
 import { TheScore } from "@/components/landing/TheScore";
-import { TrustStrip } from "@/components/landing/TrustStrip";
 import { TwoSides } from "@/components/landing/TwoSides";
 
 /**
@@ -27,9 +27,8 @@ export default function LandingPage() {
       <div className="relative z-10">
         <LandingNav />
 
-        <div id="top">
+        <main id="main">
           <HeroSection />
-          <TrustStrip />
           <FlowSection />
           <AllocationRail />
           <TheScore />
@@ -64,8 +63,23 @@ export default function LandingPage() {
             </Container>
           </section>
 
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                mainEntity: FAQ_ITEMS.map((item) => ({
+                  "@type": "Question",
+                  name: item.q,
+                  acceptedAnswer: { "@type": "Answer", text: item.a },
+                })),
+              }),
+            }}
+          />
+
           <DualCta />
-        </div>
+        </main>
 
         <LandingFooter />
       </div>

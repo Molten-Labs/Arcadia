@@ -5,7 +5,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const acidButtonVariants = cva(
-  "relative inline-flex items-center justify-center gap-2.5 rounded-[10px] font-mono text-sm font-bold tracking-[0.08em] whitespace-nowrap uppercase outline-none transition-[transform,box-shadow,filter,border-color] duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[18px] [&_svg]:shrink-0",
+  "relative inline-flex items-center justify-center gap-2.5 rounded-[10px] font-mono text-sm font-bold tracking-[0.08em] whitespace-nowrap uppercase outline-none transition-[transform,box-shadow,filter,border-color] duration-300 ease-[cubic-bezier(0.19,1,0.22,1)] active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-acid focus-visible:ring-offset-2 focus-visible:ring-offset-void disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[18px] [&_svg]:shrink-0",
   {
     variants: {
       variant: {

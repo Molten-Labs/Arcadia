@@ -36,6 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={fontVariables}>
       <body className="bg-void font-sans text-ink antialiased">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:border focus:border-acid/40 focus:bg-panel focus:px-4 focus:py-2 focus:font-mono focus:text-sm focus:text-acid"
+        >
+          Skip to content
+        </a>
         {children}
         <SpeedInsights />
       </body>
