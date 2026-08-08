@@ -1,7 +1,6 @@
 import {
   AnchorProvider,
   BN,
-  Wallet,
 } from "@coral-xyz/anchor";
 import {
   FlashPerpetualsClient,
@@ -17,6 +16,8 @@ import {
   Connection,
   Keypair,
   type PublicKey,
+  type Transaction,
+  type VersionedTransaction,
 } from "@solana/web3.js";
 
 const DEVNET_POOL_NAMES = [
@@ -314,6 +315,36 @@ export function resolveFlashTradeMarket(args: {
   );
 }
 
+/**
+ * Minimal `Wallet` for `AnchorProvider`. `@coral-xyz/anchor`'s `Wallet`
+ * (NodeWallet) is Node-only and absent from its browser/ESM bundles, so the
+ * Turbopack prod build fails on `import { Wallet }`. Provide the same
+ * signer behaviour inline: versioned txs sign in-place, legacy txs partialSign.
+ */
+function toAnchorWallet(keypair: Keypair): {
+  publicKey: PublicKey;
+  signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T>;
+  signAllTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]>;
+} {
+  const sign = (tx: Transaction | VersionedTransaction) => {
+    if ("version" in tx) {
+      (tx as VersionedTransaction).sign([keypair]);
+    } else {
+      (tx as Transaction).partialSign(keypair);
+    }
+    return tx;
+  };
+  return {
+    publicKey: keypair.publicKey,
+    async signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T> {
+      return sign(tx) as T;
+    },
+    async signAllTransactions<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]> {
+      return txs.map(sign) as T[];
+    },
+  };
+}
+
 export function createFlashTradeExecutionClient(
   seedBytes: Uint8Array,
   rpcUrl?: string,
@@ -323,7 +354,7 @@ export function createFlashTradeExecutionClient(
   const erRpcUrl = getFlashTradeErRpcUrl(cluster);
   const keypair = Keypair.fromSeed(seedBytes);
   const connection = new Connection(rpc, "confirmed");
-  const provider = new AnchorProvider(connection, new Wallet(keypair), {
+  const provider = new AnchorProvider(connection, toAnchorWallet(keypair), {
     commitment: "confirmed",
   });
 
