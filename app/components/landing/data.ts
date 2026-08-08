@@ -17,7 +17,6 @@ export const LINKS = {
 export const NAV_LINKS = [
   { label: "Traders", href: LINKS.traders },
   { label: "Leaderboard", href: LINKS.leaderboard },
-  { label: "Demo", href: LINKS.terminal },
   { label: "Docs", href: LINKS.docs },
 ] as const;
 

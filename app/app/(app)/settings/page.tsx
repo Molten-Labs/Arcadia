@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useWalletCompat } from "@/lib/use-wallet-compat";
 import { useRouter } from "next/navigation";
 import type { ElementType } from "react";
@@ -134,6 +134,16 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [showKey, setShowKey] = useState(false);
 
+  // Persist every change immediately (mirrors terminal/role autosave) so a
+  // refresh never loses unsaved edits; the Save button is confirmation only.
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch {
+      // storage full/blocked: degrade silently, in-memory state still works
+    }
+  }, [settings]);
+
   // Render defaults until hydrated so the client's first paint matches the
   // server (no hydration mismatch); the persisted values swap in after mount.
   const view = hydrated ? settings : DEFAULTS;
@@ -144,7 +154,6 @@ export default function SettingsPage() {
   };
 
   const save = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -169,7 +178,7 @@ export default function SettingsPage() {
       <PageHeader
         kicker="Preferences"
         title="Settings"
-        subtitle="Preferences saved to this browser"
+        subtitle="Auto-saved to this browser"
         actions={
           <Button variant={saved ? "secondary" : "default"} onClick={save}>
             {saved ? <CheckCircle className="size-3.5 text-success" /> : <Save className="size-3.5" />}
@@ -342,7 +351,7 @@ export default function SettingsPage() {
             {saved ? "All changes saved" : "Save Settings"}
           </Button>
           <p className="mt-2 text-center text-[0.625rem] text-faint">
-            Settings are stored in your browser via localStorage
+            Changes are auto-saved to this browser
           </p>
         </div>
       </div>

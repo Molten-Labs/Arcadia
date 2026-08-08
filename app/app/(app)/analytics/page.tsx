@@ -16,9 +16,8 @@ import {
 import { RiskRadar } from "@/components/pages/discovery/RiskRadar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { useMe } from "@/lib/hooks";
 import { type TraderProfile, type DailyPnL } from "@/lib/types";
-
-const FALLBACK_HANDLE = "nova";
 
 function pnlTone(n: number) {
   if (n > 0) return "text-success";
@@ -28,17 +27,19 @@ function pnlTone(n: number) {
 
 export default function AnalyticsPage() {
   const { connected } = useWalletCompat();
+  const { data: me } = useMe();
+  const handle = me?.handle;
 
   const { data: trader } = useQuery<TraderProfile>({
-    queryKey: ["trader", FALLBACK_HANDLE],
-    queryFn: () => apiFetch(`/traders/${FALLBACK_HANDLE}`),
-    enabled: connected,
+    queryKey: ["trader", handle],
+    queryFn: () => apiFetch(`/traders/${handle}`),
+    enabled: connected && !!handle,
   });
 
   const { data: dailyPnl } = useQuery<DailyPnL[]>({
-    queryKey: ["pnl-history", FALLBACK_HANDLE],
-    queryFn: () => apiFetch(`/traders/${FALLBACK_HANDLE}/pnl-history?days=365`),
-    enabled: connected,
+    queryKey: ["pnl-history", handle],
+    queryFn: () => apiFetch(`/traders/${handle}/pnl-history?days=365`),
+    enabled: connected && !!handle,
   });
 
   if (!connected) {
@@ -55,16 +56,31 @@ export default function AnalyticsPage() {
     );
   }
 
+  if (!handle) {
+    return (
+      <div className="grid min-h-[70vh] place-items-center bg-void px-5">
+        <Panel className="max-w-sm p-10 text-center">
+          <div className="mx-auto mb-5 grid size-14 place-items-center rounded-full border border-acid/25 bg-acid/10">
+            <Wallet size={24} className="text-acid" />
+          </div>
+          <p className="mb-2 text-base font-semibold text-ink">No trader profile yet</p>
+          <p className="text-sm text-faint">
+            Create your trader profile from the terminal to unlock your analytics.
+          </p>
+        </Panel>
+      </div>
+    );
+  }
+
   const metrics = trader?.metrics;
   const equityCurve = trader?.equity_curve ?? [];
-  const handle = trader?.handle ?? FALLBACK_HANDLE;
 
   if (!trader) {
     return (
       <div className="min-h-full bg-void">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <PageHeader title="Analytics">
-            <EnvChip>@{FALLBACK_HANDLE}</EnvChip>
+            <EnvChip>@{handle}</EnvChip>
           </PageHeader>
           <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
