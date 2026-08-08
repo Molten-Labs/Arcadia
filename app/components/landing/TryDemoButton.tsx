@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { PrivyProvider, useLogin } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 
 import { AcidButton } from "@/components/acid";
+import { describePrivyError } from "@/lib/privy-error";
 
 const PRIVY_APP_ID = "cmowmjzxf002r0cl5zonkvtai";
 
@@ -17,14 +19,33 @@ function TryDemoButtonInner({
   className?: string;
 }) {
   const router = useRouter();
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useLogin({
     onComplete: () => router.push("/onboarding"),
+    onError(error) {
+      console.error("[privy] login error:", error);
+      setLoginError(describePrivyError(error));
+    },
   });
 
   return (
-    <AcidButton size={size} className={className} onClick={login}>
-      Try Demo <ArrowRight />
-    </AcidButton>
+    <div className="flex flex-col items-center gap-1">
+      <AcidButton
+        size={size}
+        className={className}
+        onClick={() => {
+          setLoginError(null);
+          login();
+        }}
+      >
+        Try Demo <ArrowRight />
+      </AcidButton>
+      {loginError && (
+        <span className="font-mono text-[10px] leading-tight text-danger">
+          {loginError}
+        </span>
+      )}
+    </div>
   );
 }
 
